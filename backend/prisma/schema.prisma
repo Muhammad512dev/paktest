@@ -1,0 +1,330 @@
+// backend/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  SCHOOL_ADMIN
+  TEACHER
+}
+
+enum SchoolStatus {
+  Active
+  Suspended
+  Trial
+}
+
+model School {
+  id                    String        @id @default(uuid())
+  name                  String
+  logo                  String?
+  address               String?
+  principalName         String?
+  contactEmail          String        @unique
+  contactPhone          String?
+  subscriptionPlan      String        @default("Starter")
+  status                SchoolStatus  @default(Active)
+  validTill             DateTime
+  subscriptionStartDate DateTime      @default(now())
+  discount              Float         @default(0)
+  totalPaid             Float         @default(0)
+  assignedSyllabuses    String[]      // Array of Syllabus IDs
+  
+  // --- SETTINGS MODULES ---
+  branding              Json?         // { themeColor, font, etc. }
+  securityConfig        Json?         // { mfaEnabled: boolean, passwordPolicy: string }
+  notificationSettings  Json?         // { emailAlerts: boolean, systemUpdates: boolean }
+  
+  stats                 Json?         
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  users                 User[]
+  papers                ExamPaper[]
+  activityLogs          ActivityLog[]
+  transactions          Transaction[]
+}
+
+model User {
+  id                 String    @id @default(uuid())
+  name               String
+  email              String    @unique
+  password           String
+  role               UserRole  @default(TEACHER)
+  avatar             String?
+  lastLogin          DateTime?
+  assignedSyllabuses String[]
+  
+  schoolId           String?
+  school             School?   @relation(fields: [schoolId], references: [id])
+
+  // --- USER PREFERENCES ---
+  preferences        Json?     // { themeMode: 'light'|'dark', density: 'compact' }
+  notificationConfig Json?     // { email: boolean, push: boolean, marketing: boolean }
+  securityConfig     Json?     // { twoFactorEnabled: boolean, lastPasswordChange: DateTime }
+
+  papers             ExamPaper[]
+  activityLogs       ActivityLog[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model SubscriptionPlan {
+  id             String   @id @default(uuid())
+  name           String   @unique
+  price          Float
+  currencySymbol String   @default("$")
+  features       String[]
+  limits         Json     
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// --- CURRICULUM HIERARCHY ---
+
+model Syllabus {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  logo        String?
+  createdAt   DateTime @default(now())
+  
+  classes     ClassLevel[]
+  subjects    Subject[] 
+  chapters    Chapter[] 
+}
+
+model ClassLevel {
+  id          String   @id @default(uuid())
+  name        String
+  syllabusId  String
+  syllabus    Syllabus @relation(fields: [syllabusId], references: [id], onDelete: Cascade)
+  logo        String?
+  
+  subjects    Subject[]
+  chapters    Chapter[]
+  createdAt   DateTime @default(now())
+
+  @@unique([name, syllabusId])
+}
+
+model Subject {
+  id          String     @id @default(uuid())
+  name        String
+  classId     String
+  classLevel  ClassLevel @relation(fields: [classId], references: [id], onDelete: Cascade)
+  syllabusId  String
+  syllabus    Syllabus   @relation(fields: [syllabusId], references: [id])
+  logo        String?
+  
+  chapters    Chapter[]
+  createdAt   DateTime   @default(now())
+
+  @@unique([name, classId])
+}
+
+model Chapter {
+  id          String     @id @default(uuid())
+  name        String
+  subjectId   String
+  subject     Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  classId     String
+  classLevel  ClassLevel @relation(fields: [classId], references: [id])
+  syllabusId  String
+  syllabus    Syllabus   @relation(fields: [syllabusId], references: [id])
+  
+  topics      Topic[]
+  createdAt   DateTime   @default(now())
+
+  @@unique([name, subjectId])
+}
+
+model Topic {
+  id        String   @id @default(uuid())
+  name      String
+  chapterId String
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([name, chapterId])
+}
+
+model Source {
+  id   String @id @default(uuid())
+  name String @unique
+}
+
+// --- QUESTION BANK ---
+
+model Question {
+  id                String   @id @default(uuid())
+  text              String
+  textUrdu          String?
+  type              String   
+  subject           String
+  classLevel        String
+  topic             String
+  subtopic          String?
+  difficulty        String   
+  marks             Int      @default(1)
+  options           String[]
+  optionsUrdu       String[]
+  matchingPairs     Json?    
+  imageUrl          String?
+  correctAnswer     String?
+  correctAnswerUrdu String?
+  chapter           String?
+  source            String?
+  sources           String[]
+  year              Int?
+  isCompulsory      Boolean  @default(false)
+  medium            String   @default("Bilingual") 
+  
+  schoolId          String?  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// --- EXAM PAPERS ---
+
+model ExamPaper {
+  id              String   @id @default(uuid())
+  title           String
+  subject         String
+  classLevel      String
+  totalMarks      Int
+  durationMinutes Int      @default(60)
+  
+  questions       Json     
+  headerConfig    Json     
+  structure       Json     
+  
+  watermark       String   @default("None")
+  layoutMode      String   @default("Standard")
+  status          String   @default("Draft")
+  
+  examDate        DateTime?
+  testType        String?  
+
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  createdBy       String   
+  
+  schoolId        String
+  school          School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// --- SYSTEM & LOGS ---
+
+model Notification {
+  id             String   @id @default(uuid())
+  title          String
+  message        String
+  type           String   
+  targetSchoolId String   
+  createdBy      String?
+  timestamp      DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  userName  String
+  schoolId  String?
+  school    School?  @relation(fields: [schoolId], references: [id])
+  type      String   
+  action    String
+  details   String?
+  timestamp DateTime @default(now())
+}
+
+model SystemSetting {
+  id              String   @id @default("global")
+  currencyCode    String   @default("USD")
+  currencySymbol  String   @default("$")
+  platformName    String   @default("ExamForge AI")
+  platformEmail   String?
+  platformAddress String?
+  platformContact String?  // <--- Add this field for the contact number
+  platformLogo    String?  
+  
+  branding        Json?    
+  updatedAt       DateTime @updatedAt
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  invoiceId   String   @unique
+  amount      Float
+  currency    String   @default("$")
+  status      String   // Values: "Completed", "Pending", "Failed"
+  type        String   // Values: "Subscription", "Add-on", "Service"
+  date        DateTime @default(now())
+  
+  // Snapshot of the school name at the time of transaction
+  schoolName  String?
+
+  // Relation to School
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+// --- CONTENT MANAGEMENT SYSTEM ---
+
+model BlogPost {
+  id        String   @id @default(uuid())
+  title     String
+  excerpt   String
+  content   String   @db.Text
+  category  String
+  author    String
+  role      String?
+  date      DateTime @default(now())
+  readTime  String   @default("5 min read")
+  image     String?  // Base64 or URL
+  featured  Boolean  @default(false)
+}
+
+model StudyNote {
+  id          String   @id @default(uuid())
+  title       String
+  subject     String
+  grade       String
+  author      String
+  fileUrl     String?  // Base64 or URL
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model PastPaper {
+  id        String   @id @default(uuid())
+  title     String
+  year      Int
+  board     String
+  level     String
+  subject   String?
+  fileUrl   String?  // Base64 or URL
+  createdAt DateTime @default(now())
+}
+model ContactQuery {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String
+  message   String
+  status    String   @default("New") // New, Read, Resolved
+  createdAt DateTime @default(now())
+}

@@ -1,0 +1,5 @@
+{
+  "name": "IngTest2",
+  "description": "A comprehensive SaaS platform for schools to generate, edit, and manage exam papers with AI-powered question generation and multi-tenant architecture.",
+  "requestFramePermissions": []
+}

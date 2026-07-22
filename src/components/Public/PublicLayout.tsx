@@ -78,7 +78,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
             </div>
 
             {/* Mobile Menu Button */}
-            <div className="md:hidden">
+            <div className="lg:hidden">
               <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-slate-600">
                 {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
@@ -88,7 +88,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-white border-t border-slate-100 absolute w-full left-0 shadow-xl">
+          <div className="lg:hidden bg-white border-t border-slate-100 absolute w-full left-0 shadow-xl">
             <div className="px-4 pt-2 pb-6 space-y-2">
               {navItems.map((item) => (
                 <button

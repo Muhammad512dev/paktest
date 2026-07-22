@@ -6,7 +6,15 @@ export default {
     "./**/*.tsx",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        brand: {
+          DEFAULT: 'var(--brand-primary)',
+          secondary: 'var(--brand-secondary)',
+          light: 'var(--brand-light)',
+        }
+      }
+    },
   },
   plugins: [],
 }

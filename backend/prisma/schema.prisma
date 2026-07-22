@@ -1,5 +1,3 @@
-// backend/prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,18 +5,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-enum UserRole {
-  SUPER_ADMIN
-  SCHOOL_ADMIN
-  TEACHER
-}
-
-enum SchoolStatus {
-  Active
-  Suspended
-  Trial
 }
 
 model School {
@@ -35,45 +21,40 @@ model School {
   subscriptionStartDate DateTime      @default(now())
   discount              Float         @default(0)
   totalPaid             Float         @default(0)
-  assignedSyllabuses    String[]      // Array of Syllabus IDs
-  
-  // --- SETTINGS MODULES ---
-  branding              Json?         // { themeColor, font, etc. }
-  securityConfig        Json?         // { mfaEnabled: boolean, passwordPolicy: string }
-  notificationSettings  Json?         // { emailAlerts: boolean, systemUpdates: boolean }
-  
-  stats                 Json?         
+  assignedSyllabuses    String[]
+  branding              Json?
+  securityConfig        Json?
+  notificationSettings  Json?
+  stats                 Json?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
-
-  users                 User[]
-  papers                ExamPaper[]
   activityLogs          ActivityLog[]
+  papers                ExamPaper[]
+  students              Student[]
   transactions          Transaction[]
+  users                 User[]
 }
 
 model User {
-  id                 String    @id @default(uuid())
+  id                 String        @id @default(uuid())
   name               String
-  email              String    @unique
+  email              String        @unique
   password           String
-  role               UserRole  @default(TEACHER)
+  role               UserRole      @default(TEACHER)
   avatar             String?
   lastLogin          DateTime?
   assignedSyllabuses String[]
-  
   schoolId           String?
-  school             School?   @relation(fields: [schoolId], references: [id])
-
-  // --- USER PREFERENCES ---
-  preferences        Json?     // { themeMode: 'light'|'dark', density: 'compact' }
-  notificationConfig Json?     // { email: boolean, push: boolean, marketing: boolean }
-  securityConfig     Json?     // { twoFactorEnabled: boolean, lastPasswordChange: DateTime }
-
-  papers             ExamPaper[]
+  preferences        Json?
+  notificationConfig Json?
+  securityConfig     Json?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  assignedClasses    String[]
+  assignedSubjects   String[]
   activityLogs       ActivityLog[]
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  papers             ExamPaper[]
+  school             School?       @relation(fields: [schoolId], references: [id])
 }
 
 model SubscriptionPlan {
@@ -82,66 +63,61 @@ model SubscriptionPlan {
   price          Float
   currencySymbol String   @default("$")
   features       String[]
-  limits         Json     
+  limits         Json
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
 
-// --- CURRICULUM HIERARCHY ---
-
 model Syllabus {
-  id          String   @id @default(uuid())
-  name        String   @unique
+  id          String       @id @default(uuid())
+  name        String       @unique
   description String?
   logo        String?
-  createdAt   DateTime @default(now())
-  
+  createdAt   DateTime     @default(now())
+  chapters    Chapter[]
   classes     ClassLevel[]
-  subjects    Subject[] 
-  chapters    Chapter[] 
+  subjects    Subject[]
 }
 
 model ClassLevel {
-  id          String   @id @default(uuid())
-  name        String
-  syllabusId  String
-  syllabus    Syllabus @relation(fields: [syllabusId], references: [id], onDelete: Cascade)
-  logo        String?
-  
-  subjects    Subject[]
-  chapters    Chapter[]
-  createdAt   DateTime @default(now())
+  id         String    @id @default(uuid())
+  name       String
+  syllabusId String
+  logo       String?
+  createdAt  DateTime  @default(now())
+  chapters   Chapter[]
+  syllabus   Syllabus  @relation(fields: [syllabusId], references: [id], onDelete: Cascade)
+  students   Student[]
+  subjects   Subject[]
 
   @@unique([name, syllabusId])
 }
 
 model Subject {
-  id          String     @id @default(uuid())
-  name        String
-  classId     String
-  classLevel  ClassLevel @relation(fields: [classId], references: [id], onDelete: Cascade)
-  syllabusId  String
-  syllabus    Syllabus   @relation(fields: [syllabusId], references: [id])
-  logo        String?
-  
-  chapters    Chapter[]
-  createdAt   DateTime   @default(now())
+  id         String     @id @default(uuid())
+  name       String
+  classId    String
+  syllabusId String
+  logo       String?
+  createdAt  DateTime   @default(now())
+  chapters   Chapter[]
+  classLevel ClassLevel @relation(fields: [classId], references: [id], onDelete: Cascade)
+  syllabus   Syllabus   @relation(fields: [syllabusId], references: [id])
 
   @@unique([name, classId])
 }
 
 model Chapter {
-  id          String     @id @default(uuid())
-  name        String
-  subjectId   String
-  subject     Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  classId     String
-  classLevel  ClassLevel @relation(fields: [classId], references: [id])
-  syllabusId  String
-  syllabus    Syllabus   @relation(fields: [syllabusId], references: [id])
-  
-  topics      Topic[]
-  createdAt   DateTime   @default(now())
+  id         String     @id @default(uuid())
+  name       String
+  subjectId  String
+  classId    String
+  syllabusId String
+  createdAt  DateTime   @default(now())
+  classLevel ClassLevel @relation(fields: [classId], references: [id])
+  subject    Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  syllabus   Syllabus   @relation(fields: [syllabusId], references: [id])
+  topics     Topic[]
 
   @@unique([name, subjectId])
 }
@@ -150,8 +126,8 @@ model Topic {
   id        String   @id @default(uuid())
   name      String
   chapterId String
-  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 
   @@unique([name, chapterId])
 }
@@ -161,22 +137,20 @@ model Source {
   name String @unique
 }
 
-// --- QUESTION BANK ---
-
 model Question {
   id                String   @id @default(uuid())
   text              String
   textUrdu          String?
-  type              String   
+  type              String
   subject           String
   classLevel        String
   topic             String
   subtopic          String?
-  difficulty        String   
+  difficulty        String
   marks             Int      @default(1)
   options           String[]
   optionsUrdu       String[]
-  matchingPairs     Json?    
+  matchingPairs     Json?
   imageUrl          String?
   correctAnswer     String?
   correctAnswerUrdu String?
@@ -185,53 +159,56 @@ model Question {
   sources           String[]
   year              Int?
   isCompulsory      Boolean  @default(false)
-  medium            String   @default("Bilingual") 
-  
-  schoolId          String?  
+  medium            String   @default("Bilingual")
+  schoolId          String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  @@index([classLevel])
+  @@index([createdAt])
+  @@index([medium])
+  @@index([schoolId])
+  @@index([subject])
+  @@index([topic])
+  @@index([type])
 }
 
-// --- EXAM PAPERS ---
-
 model ExamPaper {
-  id              String   @id @default(uuid())
+  id              String           @id @default(uuid())
   title           String
   subject         String
   classLevel      String
   totalMarks      Int
-  durationMinutes Int      @default(60)
-  
-  questions       Json     
-  headerConfig    Json     
-  structure       Json     
-  
-  watermark       String   @default("None")
-  layoutMode      String   @default("Standard")
-  status          String   @default("Draft")
-  
+  durationMinutes Int              @default(60)
+  questions       Json
+  headerConfig    Json
+  structure       Json
+  watermark       String           @default("None")
+  layoutMode      String           @default("Standard")
+  status          String           @default("Draft")
   examDate        DateTime?
-  testType        String?  
-
+  testType        String?
   userId          String
-  user            User     @relation(fields: [userId], references: [id])
-  createdBy       String   
-  
+  createdBy       String
   schoolId        String
-  school          School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  isOnline        Boolean          @default(false)
+  onlineStartDate DateTime?
+  onlineEndDate   DateTime?
+  languageMode    String           @default("Bilingual")
+  printConfig     Json?
+  school          School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id])
+  submissions     ExamSubmission[]
 }
-
-// --- SYSTEM & LOGS ---
 
 model Notification {
   id             String   @id @default(uuid())
   title          String
   message        String
-  type           String   
-  targetSchoolId String   
+  type           String
+  targetSchoolId String
   createdBy      String?
   timestamp      DateTime @default(now())
 }
@@ -239,14 +216,14 @@ model Notification {
 model ActivityLog {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
   userName  String
   schoolId  String?
-  school    School?  @relation(fields: [schoolId], references: [id])
-  type      String   
+  type      String
   action    String
   details   String?
   timestamp DateTime @default(now())
+  school    School?  @relation(fields: [schoolId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model SystemSetting {
@@ -256,46 +233,39 @@ model SystemSetting {
   platformName    String   @default("ExamForge AI")
   platformEmail   String?
   platformAddress String?
-  platformContact String?  // <--- Add this field for the contact number
-  platformLogo    String?  
-  
-  branding        Json?    
+  platformLogo    String?
+  branding        Json?
   updatedAt       DateTime @updatedAt
+  platformContact String?
 }
 
 model Transaction {
-  id          String   @id @default(uuid())
-  invoiceId   String   @unique
-  amount      Float
-  currency    String   @default("$")
-  status      String   // Values: "Completed", "Pending", "Failed"
-  type        String   // Values: "Subscription", "Add-on", "Service"
-  date        DateTime @default(now())
-  
-  // Snapshot of the school name at the time of transaction
-  schoolName  String?
-
-  // Relation to School
-  schoolId    String
-  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(uuid())
+  invoiceId  String   @unique
+  amount     Float
+  currency   String   @default("$")
+  status     String
+  type       String
+  date       DateTime @default(now())
+  schoolName String?
+  schoolId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 }
-// --- CONTENT MANAGEMENT SYSTEM ---
 
 model BlogPost {
-  id        String   @id @default(uuid())
-  title     String
-  excerpt   String
-  content   String   @db.Text
-  category  String
-  author    String
-  role      String?
-  date      DateTime @default(now())
-  readTime  String   @default("5 min read")
-  image     String?  // Base64 or URL
-  featured  Boolean  @default(false)
+  id       String   @id @default(uuid())
+  title    String
+  excerpt  String
+  content  String
+  category String
+  author   String
+  role     String?
+  date     DateTime @default(now())
+  readTime String   @default("5 min read")
+  image    String?
+  featured Boolean  @default(false)
 }
 
 model StudyNote {
@@ -303,8 +273,11 @@ model StudyNote {
   title       String
   subject     String
   grade       String
+  board       String?
+  noteType    String?
+  book        String?
   author      String
-  fileUrl     String?  // Base64 or URL
+  fileUrl     String?
   description String?
   createdAt   DateTime @default(now())
 }
@@ -316,15 +289,74 @@ model PastPaper {
   board     String
   level     String
   subject   String?
-  fileUrl   String?  // Base64 or URL
+  fileUrl   String?
   createdAt DateTime @default(now())
 }
+
 model ContactQuery {
   id        String   @id @default(uuid())
   firstName String
   lastName  String
   email     String
   message   String
-  status    String   @default("New") // New, Read, Resolved
+  status    String   @default("New")
   createdAt DateTime @default(now())
+}
+
+model Student {
+  id               String           @id @default(uuid())
+  name             String
+  email            String           @unique
+  password         String
+  rollNo           String?
+  classId          String
+  schoolId         String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  assignedSubjects String[]
+  drafts           ExamDraft[]
+  submissions      ExamSubmission[]
+  classLevel       ClassLevel       @relation(fields: [classId], references: [id])
+  school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+}
+
+model ExamSubmission {
+  id          String    @id @default(uuid())
+  studentId   String
+  paperId     String
+  answers     Json
+  totalScore  Float     @default(0)
+  isGraded    Boolean   @default(false)
+  gradedBy    String?
+  gradedAt    DateTime?
+  submittedAt DateTime  @default(now())
+  paper       ExamPaper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model ExamDraft {
+  id         String   @id @default(uuid())
+  studentId  String
+  paperId    String
+  answers    Json
+  timeLeft   Int
+  currentIdx Int      @default(0)
+  visitedSet String[]
+  savedSet   String[]
+  updatedAt  DateTime @updatedAt
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, paperId])
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  SCHOOL_ADMIN
+  TEACHER
+}
+
+enum SchoolStatus {
+  Active
+  Suspended
+  Trial
 }

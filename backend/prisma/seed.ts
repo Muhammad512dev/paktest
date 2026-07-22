@@ -246,24 +246,57 @@ async function main() {
     }
   ];
 
-  for (const q of questionsData) {
-      // Ensure chapter name matches what we created
-      const chapter = await prisma.chapter.findFirst({ where: { name: q.chapter } });
-      await prisma.question.create({ 
-          data: { 
-              ...q, 
-              chapter: chapter ? chapter.name : 'General' // Fallback
-          } 
-      });
-  }
+  await prisma.question.createMany({
+    data: questionsData,
+    skipDuplicates: true
+  });
 
-  console.log('✅ Seeding complete. Users: admin@examforge.com, principal@beaconhigh.edu');
+  // --- 7. CREATE DEMO STUDENTS ---
+  console.log("🌱 Seeding Students...");
+
+  // Create class level for students if needed
+  const classForStudent = await prisma.classLevel.findFirst();
+
+  await prisma.student.createMany({
+    data: [
+      {
+        email: 'student1@beaconhigh.edu',
+        name: 'Ahmed Ali',
+        password: hashedPassword,
+        schoolId: school.id,
+        classId: grade10.id,
+        rollNumber: '001',
+        assignedSubjects: ['Physics', 'Mathematics']
+      },
+      {
+        email: 'student2@beaconhigh.edu',
+        name: 'Fatima Khan',
+        password: hashedPassword,
+        schoolId: school.id,
+        classId: grade10.id,
+        rollNumber: '002',
+        assignedSubjects: ['Physics', 'Mathematics']
+      },
+      {
+        email: 'student3@beaconhigh.edu',
+        name: 'Hassan Raza',
+        password: hashedPassword,
+        schoolId: school.id,
+        classId: grade11.id,
+        rollNumber: '001',
+        assignedSubjects: ['Physics']
+      }
+    ],
+    skipDuplicates: true
+  });
+
+  console.log('✅ Seed completed successfully!');
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
-    (process as any).exit(1);
+  .catch(e => {
+    console.error('❌ Seed error:', e);
+    process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();

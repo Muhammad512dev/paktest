@@ -10,11 +10,18 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
-    define: {
-      // This ensures process.env.API_KEY is replaced with the actual string value during build
-      'process.env.API_KEY': JSON.stringify(env.API_KEY)
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'react-vendor': ['react', 'react-dom'],
+            'ui-vendor': ['lucide-react'],
+            'math-vendor': ['katex'],
+            'spreadsheet-vendor': ['xlsx']
+          }
+        }
+      }
     },
-    
     server: {
       port: 3000,
       open: true,

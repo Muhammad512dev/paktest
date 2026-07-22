@@ -1,0 +1,347 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model School {
+  id                    String        @id @default(uuid())
+  name                  String
+  logo                  String?
+  address               String?
+  principalName         String?
+  contactEmail          String        @unique
+  contactPhone          String?
+  subscriptionPlan      String        @default("Starter")
+  status                SchoolStatus  @default(Active)
+  validTill             DateTime
+  subscriptionStartDate DateTime      @default(now())
+  discount              Float         @default(0)
+  totalPaid             Float         @default(0)
+  assignedSyllabuses    String[]
+  branding              Json?
+  securityConfig        Json?
+  notificationSettings  Json?
+  stats                 Json?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  activityLogs          ActivityLog[]
+  papers                ExamPaper[]
+  students              Student[]
+  transactions          Transaction[]
+  users                 User[]
+}
+
+model User {
+  id                 String        @id @default(uuid())
+  name               String
+  email              String        @unique
+  password           String
+  role               UserRole      @default(TEACHER)
+  avatar             String?
+  lastLogin          DateTime?
+  assignedSyllabuses String[]
+  schoolId           String?
+  preferences        Json?
+  notificationConfig Json?
+  securityConfig     Json?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  assignedClasses    String[]
+  assignedSubjects   String[]
+  activityLogs       ActivityLog[]
+  papers             ExamPaper[]
+  school             School?       @relation(fields: [schoolId], references: [id])
+}
+
+model SubscriptionPlan {
+  id             String   @id @default(uuid())
+  name           String   @unique
+  price          Float
+  currencySymbol String   @default("$")
+  features       String[]
+  limits         Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Syllabus {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  description String?
+  logo        String?
+  createdAt   DateTime     @default(now())
+  chapters    Chapter[]
+  classes     ClassLevel[]
+  subjects    Subject[]
+}
+
+model ClassLevel {
+  id         String    @id @default(uuid())
+  name       String
+  syllabusId String
+  logo       String?
+  createdAt  DateTime  @default(now())
+  chapters   Chapter[]
+  syllabus   Syllabus  @relation(fields: [syllabusId], references: [id], onDelete: Cascade)
+  students   Student[]
+  subjects   Subject[]
+
+  @@unique([name, syllabusId])
+}
+
+model Subject {
+  id         String     @id @default(uuid())
+  name       String
+  classId    String
+  syllabusId String
+  logo       String?
+  createdAt  DateTime   @default(now())
+  chapters   Chapter[]
+  classLevel ClassLevel @relation(fields: [classId], references: [id], onDelete: Cascade)
+  syllabus   Syllabus   @relation(fields: [syllabusId], references: [id])
+
+  @@unique([name, classId])
+}
+
+model Chapter {
+  id         String     @id @default(uuid())
+  name       String
+  subjectId  String
+  classId    String
+  syllabusId String
+  createdAt  DateTime   @default(now())
+  classLevel ClassLevel @relation(fields: [classId], references: [id])
+  subject    Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  syllabus   Syllabus   @relation(fields: [syllabusId], references: [id])
+  topics     Topic[]
+
+  @@unique([name, subjectId])
+}
+
+model Topic {
+  id        String   @id @default(uuid())
+  name      String
+  chapterId String
+  createdAt DateTime @default(now())
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@unique([name, chapterId])
+}
+
+model Source {
+  id   String @id @default(uuid())
+  name String @unique
+}
+
+model Question {
+  id                String   @id @default(uuid())
+  text              String
+  textUrdu          String?
+  type              String
+  subject           String
+  classLevel        String
+  topic             String
+  subtopic          String?
+  difficulty        String
+  marks             Int      @default(1)
+  options           String[]
+  optionsUrdu       String[]
+  matchingPairs     Json?
+  imageUrl          String?
+  correctAnswer     String?
+  correctAnswerUrdu String?
+  chapter           String?
+  source            String?
+  sources           String[]
+  year              Int?
+  isCompulsory      Boolean  @default(false)
+  medium            String   @default("Bilingual")
+  schoolId          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model ExamPaper {
+  id              String           @id @default(uuid())
+  title           String
+  subject         String
+  classLevel      String
+  totalMarks      Int
+  durationMinutes Int              @default(60)
+  questions       Json
+  headerConfig    Json
+  structure       Json
+  watermark       String           @default("None")
+  layoutMode      String           @default("Standard")
+  status          String           @default("Draft")
+  examDate        DateTime?
+  testType        String?
+  userId          String
+  createdBy       String
+  schoolId        String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  isOnline        Boolean          @default(false)
+  school          School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id])
+  submissions     ExamSubmission[]
+}
+
+model Notification {
+  id             String   @id @default(uuid())
+  title          String
+  message        String
+  type           String
+  targetSchoolId String
+  createdBy      String?
+  timestamp      DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String
+  userName  String
+  schoolId  String?
+  type      String
+  action    String
+  details   String?
+  timestamp DateTime @default(now())
+  school    School?  @relation(fields: [schoolId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model SystemSetting {
+  id              String   @id @default("global")
+  currencyCode    String   @default("USD")
+  currencySymbol  String   @default("$")
+  platformName    String   @default("ExamForge AI")
+  platformEmail   String?
+  platformAddress String?
+  platformLogo    String?
+  branding        Json?
+  updatedAt       DateTime @updatedAt
+  platformContact String?
+}
+
+model Transaction {
+  id         String   @id @default(uuid())
+  invoiceId  String   @unique
+  amount     Float
+  currency   String   @default("$")
+  status     String
+  type       String
+  date       DateTime @default(now())
+  schoolName String?
+  schoolId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+}
+
+model BlogPost {
+  id       String   @id @default(uuid())
+  title    String
+  excerpt  String
+  content  String
+  category String
+  author   String
+  role     String?
+  date     DateTime @default(now())
+  readTime String   @default("5 min read")
+  image    String?
+  featured Boolean  @default(false)
+}
+
+model StudyNote {
+  id          String   @id @default(uuid())
+  title       String
+  subject     String
+  grade       String
+  author      String
+  fileUrl     String?
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model PastPaper {
+  id        String   @id @default(uuid())
+  title     String
+  year      Int
+  board     String
+  level     String
+  subject   String?
+  fileUrl   String?
+  createdAt DateTime @default(now())
+}
+
+model ContactQuery {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String
+  message   String
+  status    String   @default("New")
+  createdAt DateTime @default(now())
+}
+
+model Student {
+  id               String           @id @default(uuid())
+  name             String
+  email            String           @unique
+  password         String
+  rollNo           String?
+  classId          String
+  schoolId         String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  assignedSubjects String[]
+  drafts           ExamDraft[]
+  submissions      ExamSubmission[]
+  classLevel       ClassLevel       @relation(fields: [classId], references: [id])
+  school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+}
+
+model ExamSubmission {
+  id          String    @id @default(uuid())
+  studentId   String
+  paperId     String
+  answers     Json
+  totalScore  Float     @default(0)
+  isGraded    Boolean   @default(false)
+  gradedBy    String?
+  gradedAt    DateTime?
+  submittedAt DateTime  @default(now())
+  paper       ExamPaper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model ExamDraft {
+  id         String   @id @default(uuid())
+  studentId  String
+  paperId    String
+  answers    Json
+  timeLeft   Int
+  currentIdx Int      @default(0)
+  visitedSet String[]
+  savedSet   String[]
+  updatedAt  DateTime @updatedAt
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, paperId])
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  SCHOOL_ADMIN
+  TEACHER
+}
+
+enum SchoolStatus {
+  Active
+  Suspended
+  Trial
+}

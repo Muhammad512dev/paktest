@@ -122,19 +122,37 @@ const authenticate = (req: any, res: any, next: any) => {
   }
 };
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const getGeminiKeys = (): string[] => {
+  const raw = process.env.GEMINI_API_KEY || '';
+  return raw.split(',').map(k => k.trim()).filter(Boolean);
+};
+
 const runGemini = async (model: string, parts: any[], json = true) => {
+  const keys = getGeminiKeys();
+  if (keys.length === 0) throw new Error('Gemini AI is not configured on the server. Set GEMINI_API_KEY.');
   const activeModel = process.env.GEMINI_MODEL || model;
-  if (!GEMINI_API_KEY) throw new Error('Gemini AI is not configured on the server. Set GEMINI_API_KEY.');
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts }], generationConfig: json ? { responseMimeType: 'application/json', temperature: 0.6 } : { temperature: 0.3 } })
-  });
-  const payload: any = await response.json();
-  if (!response.ok) throw new Error(payload?.error?.message || 'Gemini request failed');
-  const text = payload?.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('') || '';
-  return json ? JSON.parse(text || '{}') : text.trim();
+  
+  let lastError: Error | null = null;
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${encodeURIComponent(key)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts }], generationConfig: json ? { responseMimeType: 'application/json', temperature: 0.6 } : { temperature: 0.3 } })
+      });
+      const payload: any = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || `API request failed with status ${response.status}`);
+      }
+      const text = payload?.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('') || '';
+      return json ? JSON.parse(text || '{}') : text.trim();
+    } catch (e: any) {
+      console.warn(`Gemini API key ${i + 1}/${keys.length} failed: ${e.message}`);
+      lastError = e;
+    }
+  }
+  throw new Error(`All Gemini API keys failed. Last error: ${lastError?.message}`);
 };
 
 const requireStaffAI = (req: any, res: any, next: any) => {
@@ -144,13 +162,14 @@ const requireStaffAI = (req: any, res: any, next: any) => {
 
 // AI Health Check — returns key status and a test ping to Gemini
 app.get('/api/health/ai', async (req: any, res: any) => {
-  if (!GEMINI_API_KEY) {
+  const keys = getGeminiKeys();
+  if (keys.length === 0) {
     return res.json({ status: 'error', connected: false, message: 'GEMINI_API_KEY is not set in environment variables.' });
   }
   try {
     const result: any = await runGemini('gemini-2.0-flash', [{ text: 'Reply with exactly: {"ok":true}' }]);
     if (result?.ok === true) {
-      return res.json({ status: 'ok', connected: true, message: 'Gemini AI is connected and responding correctly.' });
+      return res.json({ status: 'ok', connected: true, message: `Gemini AI is connected and responding correctly (active keys: ${keys.length}).` });
     }
     return res.json({ status: 'ok', connected: true, message: 'Gemini AI is reachable (response parsed).' });
   } catch (e: any) {

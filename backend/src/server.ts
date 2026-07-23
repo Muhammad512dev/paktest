@@ -124,8 +124,9 @@ const authenticate = (req: any, res: any, next: any) => {
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const runGemini = async (model: string, parts: any[], json = true) => {
+  const activeModel = process.env.GEMINI_MODEL || model;
   if (!GEMINI_API_KEY) throw new Error('Gemini AI is not configured on the server. Set GEMINI_API_KEY.');
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`, {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ contents: [{ parts }], generationConfig: json ? { responseMimeType: 'application/json', temperature: 0.6 } : { temperature: 0.3 } })

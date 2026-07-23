@@ -93,7 +93,8 @@ app.use(cors({
 // Add compression for response optimization
 app.use(compression() as any);
 // Fixed: Cast express.json to any to resolve middleware type mismatch with app.use overloads in TypeScript
-app.use(express.json({ limit: '5mb' }) as any);
+app.use(express.json({ limit: '50mb' }) as any);
+app.use(express.urlencoded({ limit: '50mb', extended: true }) as any);
 
 // Request Logger Middleware (Debug 404s)
 app.use(((req: any, res: any, next: any) => {

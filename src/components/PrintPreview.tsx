@@ -22,8 +22,8 @@ interface PrintPreviewProps {
 
 // Compact Helper Component for Slider
 const RangeControl = ({ label, value, setValue, min, max, step = 1, unit = '', width = 'w-24' }: { label: string, value: number, setValue: (v: number) => void, min: number, max: number, step?: number, unit?: string, width?: string }) => (
-  <div className={`flex flex-col justify-center space-y-0.5 ${width}`}>
-    <div className="flex justify-between items-center text-[8px] font-bold text-slate-400 uppercase tracking-wider">
+  <div className={`flex flex-col justify-center space-y-1 ${width}`}>
+    <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
       <span className="truncate mr-1">{label}</span>
       <span className="text-indigo-400">{value}{unit}</span>
     </div>
@@ -34,7 +34,7 @@ const RangeControl = ({ label, value, setValue, min, max, step = 1, unit = '', w
       step={step}
       value={value} 
       onChange={(e) => setValue(parseFloat(e.target.value))} 
-      className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500 block" 
+      className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500 block" 
     />
   </div>
 );
@@ -510,43 +510,42 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
       `}</style>
 
       {/* COMPACT TOP TOOLBAR */}
-      <header className="bg-[#0F172A] border-b border-slate-800 text-white shrink-0 z-50 print:hidden shadow-md flex items-center justify-between px-5 py-3 h-20">
+      <header className="bg-[#0F172A] border-b border-slate-800 text-white shrink-0 z-50 print:hidden shadow-md flex flex-wrap items-center justify-between px-3 sm:px-5 py-2 sm:py-3 min-h-[56px] sm:min-h-[72px] gap-2">
         
         {/* Left: Branding & Exit */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
            {!isEmbedded && (
-             <button onClick={onClose} className="text-slate-400 hover:text-white p-1.5 hover:bg-slate-800 rounded-lg transition-colors">
-                <X size={20} />
+             <button onClick={onClose} className="text-slate-400 hover:text-white p-2 hover:bg-slate-800 rounded-lg transition-colors">
+                <X size={22} />
              </button>
            )}
            <div className="flex flex-col">
-              <span className="font-black text-base tracking-wide text-white">Print Preview</span>
-              <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">{pageSize} Mode</span>
+              <span className="font-black text-sm sm:text-lg tracking-wide text-white">Print Preview</span>
+              <span className="text-[11px] text-indigo-400 font-bold uppercase tracking-widest">{pageSize} Mode</span>
            </div>
         </div>
 
         {/* Center: Scrollable Controls */}
-        <div className="flex-1 flex items-center gap-4 overflow-x-auto custom-scrollbar px-4 mx-4">
-           {/* ... (Existing Controls) ... */}
+        <div className="flex-1 flex items-center gap-3 sm:gap-4 overflow-x-auto custom-scrollbar px-2 sm:px-4 mx-1 sm:mx-4 min-w-0">
            {/* 1. Language & Layout */}
-           <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 rounded-lg border border-slate-700 shrink-0">
-              <select value={languageMode} onChange={e => setLanguageMode(e.target.value as any)} className="print-preview-select bg-transparent text-[11px] font-black text-white outline-none w-24">
+           <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700 shrink-0">
+              <select value={languageMode} onChange={e => setLanguageMode(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-24">
                  <option value="Bilingual">Bilingual</option>
                  <option value="English">English</option>
                  <option value="Urdu">Urdu</option>
               </select>
-              <div className="w-px h-4 bg-slate-700"></div>
+              <div className="w-px h-5 bg-slate-700"></div>
               <button
                 onClick={() => setLayoutMode(m => m === 'DoubleColumn' ? 'Standard' : 'DoubleColumn')}
-                className={`p-1.5 rounded ${layoutMode === 'DoubleColumn' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                className={`p-2 rounded ${layoutMode === 'DoubleColumn' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
                 title={layoutMode === 'DoubleColumn' ? 'Double Print (2 Columns)' : 'Single Print (1 Column)'}
               >
-                 <Columns size={14} />
+                 <Columns size={18} />
               </button>
-              <button onClick={() => setIsGridView(!isGridView)} className={`p-1.5 rounded ${isGridView ? 'bg-indigo-600 text-white' : 'text-slate-400'}`} title="Grid Mode">
-                 <TableIcon size={14} />
+              <button onClick={() => setIsGridView(!isGridView)} className={`p-2 rounded ${isGridView ? 'bg-indigo-600 text-white' : 'text-slate-400'}`} title="Grid Mode">
+                 <TableIcon size={18} />
               </button>
-              <select value={pageSize} onChange={e => setPageSize(e.target.value as any)} className="print-preview-select bg-transparent text-[11px] font-black text-white outline-none w-20">
+              <select value={pageSize} onChange={e => setPageSize(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-20">
                  <option value="A4">A4</option>
                  <option value="Legal">Legal</option>
                  <option value="Letter">Letter</option>
@@ -554,13 +553,13 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
            </div>
 
            {/* 2. Enhanced Font Size Controls */}
-           <div className="flex items-center gap-3 px-3 py-1.5 bg-slate-800/50 rounded-lg border border-slate-700 shrink-0">
+           <div className="flex items-center gap-3 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700 shrink-0">
               <div className="flex flex-col space-y-1">
-                 <span className="text-[7px] font-bold text-slate-400 uppercase tracking-wider">Select Text</span>
+                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Text</span>
                  <select 
                     value={textSizeMode} 
                     onChange={e => setTextSizeMode(e.target.value as any)} 
-                    className="print-preview-select bg-transparent text-[10px] font-black text-white outline-none w-28 border-b border-slate-600 pb-0.5"
+                    className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-28 border-b border-slate-600 pb-0.5"
                  >
                     <option value="English">English</option>
                     <option value="Urdu">Urdu</option>
@@ -569,86 +568,86 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     <option value="OptionText">Options</option>
                   </select>
               </div>
-              <div className="flex items-center gap-1">
-                 <button onClick={() => adjustFontSize(-1)} className="p-1.5 bg-slate-700 rounded hover:bg-slate-600 text-white"><Minus size={12} /></button>
-                 <span className="w-8 text-center text-[10px] font-bold text-indigo-300">{activeFontSizeDisplay}px</span>
-                 <button onClick={() => adjustFontSize(1)} className="p-1.5 bg-slate-700 rounded hover:bg-slate-600 text-white"><Plus size={12} /></button>
+              <div className="flex items-center gap-1.5">
+                 <button onClick={() => adjustFontSize(-1)} className="p-2 bg-slate-700 rounded hover:bg-slate-600 text-white"><Minus size={16} /></button>
+                 <span className="w-10 text-center text-xs font-bold text-indigo-300">{activeFontSizeDisplay}px</span>
+                 <button onClick={() => adjustFontSize(1)} className="p-2 bg-slate-700 rounded hover:bg-slate-600 text-white"><Plus size={16} /></button>
               </div>
            </div>
 
            {/* 3. Spacing */}
-           <div className="flex items-center gap-3 px-3 py-1.5 bg-slate-800/50 rounded-lg border border-slate-700 shrink-0">
-              <RangeControl label="Gap" value={questionGap} setValue={setQuestionGap} min={0} max={40} width="w-12" />
-              <RangeControl label="Margin" value={pagePadding} setValue={setPagePadding} min={0} max={40} unit="mm" width="w-14" />
-              {!isGridView && <RangeControl label="MCQ Cols" value={mcqColumns} setValue={setMcqColumns} min={1} max={4} width="w-12" />}
+           <div className="flex items-center gap-3 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700 shrink-0">
+              <RangeControl label="Gap" value={questionGap} setValue={setQuestionGap} min={0} max={40} width="w-14" />
+              <RangeControl label="Margin" value={pagePadding} setValue={setPagePadding} min={0} max={40} unit="mm" width="w-16" />
+              {!isGridView && <RangeControl label="MCQ Cols" value={mcqColumns} setValue={setMcqColumns} min={1} max={4} width="w-14" />}
            </div>
 
            {/* 4. Visibility & Watermark */}
-           <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 rounded-lg border border-slate-700 shrink-0">
-              <button onClick={() => setHeaderVisibility(v => ({...v, logo: !v.logo}))} className={`p-1.5 rounded border ${headerVisibility.logo ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-300' : 'bg-transparent border-slate-700 text-slate-500'}`} title="Logo">
-                 <ImageIcon size={14} />
+           <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700 shrink-0">
+              <button onClick={() => setHeaderVisibility(v => ({...v, logo: !v.logo}))} className={`p-2 rounded border ${headerVisibility.logo ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-300' : 'bg-transparent border-slate-700 text-slate-500'}`} title="Logo">
+                 <ImageIcon size={18} />
               </button>
-              <button onClick={() => setHeaderVisibility(v => ({...v, marksBox: !v.marksBox}))} className={`p-1.5 rounded border ${headerVisibility.marksBox ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-300' : 'bg-transparent border-slate-700 text-slate-500'}`} title="Marks Box">
-                 <Square size={14} />
+              <button onClick={() => setHeaderVisibility(v => ({...v, marksBox: !v.marksBox}))} className={`p-2 rounded border ${headerVisibility.marksBox ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-300' : 'bg-transparent border-slate-700 text-slate-500'}`} title="Marks Box">
+                 <Square size={18} />
               </button>
-              <div className="w-px h-4 bg-slate-700"></div>
-              <button onClick={cycleWatermark} className={`p-1.5 rounded border ${watermark !== 'None' ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-300' : 'bg-transparent border-slate-700 text-slate-500'}`} title={`Watermark: ${watermark}`}>
-                 <Globe size={14} />
+              <div className="w-px h-5 bg-slate-700"></div>
+              <button onClick={cycleWatermark} className={`p-2 rounded border ${watermark !== 'None' ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-300' : 'bg-transparent border-slate-700 text-slate-500'}`} title={`Watermark: ${watermark}`}>
+                 <Globe size={18} />
               </button>
               {watermark !== 'None' && (
                  <>
-                    <RangeControl label="Opacity" value={watermarkOpacity} setValue={setWatermarkOpacity} min={0.05} max={1.0} step={0.05} width="w-14" />
-                    <RangeControl label="Size" value={watermarkSize} setValue={setWatermarkSize} min={20} max={200} step={10} width="w-14" />
+                    <RangeControl label="Opacity" value={watermarkOpacity} setValue={setWatermarkOpacity} min={0.05} max={1.0} step={0.05} width="w-16" />
+                    <RangeControl label="Size" value={watermarkSize} setValue={setWatermarkSize} min={20} max={200} step={10} width="w-16" />
                  </>
               )}
            </div>
 
            {/* 5. Extras */}
            <div className="flex items-center gap-2 shrink-0">
-              <button onClick={() => setStudentInfoStyle(prev => prev === 'Standard' ? 'Grid' : 'Standard')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[9px] font-bold uppercase whitespace-nowrap transition-all ${studentInfoStyle === 'Grid' ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-400' : 'bg-transparent border-slate-700 text-slate-400'}`} title="Student Grid Header">
-                 <UserSquare2 size={12} /> Header Grid
+              <button onClick={() => setStudentInfoStyle(prev => prev === 'Standard' ? 'Grid' : 'Standard')} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${studentInfoStyle === 'Grid' ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-400' : 'bg-transparent border-slate-700 text-slate-400'}`} title="Student Grid Header">
+                 <UserSquare2 size={16} /> Header Grid
               </button>
-              <button onClick={() => setPrintBubbleSheet(!printBubbleSheet)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[9px] font-bold uppercase whitespace-nowrap transition-all ${printBubbleSheet ? 'bg-emerald-600/20 border-emerald-600/50 text-emerald-400' : 'bg-transparent border-slate-700 text-slate-400'}`}>
-                 <Grid3X3 size={12} /> OMR
+              <button onClick={() => setPrintBubbleSheet(!printBubbleSheet)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${printBubbleSheet ? 'bg-emerald-600/20 border-emerald-600/50 text-emerald-400' : 'bg-transparent border-slate-700 text-slate-400'}`}>
+                 <Grid3X3 size={16} /> OMR
               </button>
-              <button onClick={() => setPrintAnswerKey(!printAnswerKey)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[9px] font-bold uppercase whitespace-nowrap transition-all ${printAnswerKey ? 'bg-emerald-600/20 border-emerald-600/50 text-emerald-400' : 'bg-transparent border-slate-700 text-slate-400'}`}>
-                 <CheckSquare size={12} /> Key
+              <button onClick={() => setPrintAnswerKey(!printAnswerKey)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${printAnswerKey ? 'bg-emerald-600/20 border-emerald-600/50 text-emerald-400' : 'bg-transparent border-slate-700 text-slate-400'}`}>
+                 <CheckSquare size={16} /> Key
               </button>
               <button 
                 onClick={() => setSeparateSubjective(!separateSubjective)} 
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[9px] font-bold uppercase whitespace-nowrap transition-all ${separateSubjective ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-400' : 'bg-transparent border-slate-700 text-slate-400'}`}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${separateSubjective ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-400' : 'bg-transparent border-slate-700 text-slate-400'}`}
                 title="Print Subjective Part on Separate Page"
               >
-                 <Layers size={12} /> Split
+                 <Layers size={16} /> Split
               </button>
            </div>
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-3 pl-4 border-l border-slate-700">
-           <div className="flex items-center gap-1 bg-slate-900/40 border border-slate-700 rounded-lg px-2 py-1.5">
-              <button onClick={() => setCanvasScale(s => Math.max(0.6, Math.round((s - 0.1) * 10) / 10))} className="p-1.5 rounded hover:bg-slate-800 text-slate-300" title="Zoom out">
-                 <Minus size={14} />
+        <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-slate-700 shrink-0">
+           <div className="hidden sm:flex items-center gap-1 bg-slate-900/40 border border-slate-700 rounded-lg px-2 py-2">
+              <button onClick={() => setCanvasScale(s => Math.max(0.6, Math.round((s - 0.1) * 10) / 10))} className="p-2 rounded hover:bg-slate-800 text-slate-300" title="Zoom out">
+                 <Minus size={16} />
               </button>
-              <span className="w-12 text-center text-[10px] font-black text-slate-200 tabular-nums">{Math.round(canvasScale * 100)}%</span>
-              <button onClick={() => setCanvasScale(s => Math.min(1.6, Math.round((s + 0.1) * 10) / 10))} className="p-1.5 rounded hover:bg-slate-800 text-slate-300" title="Zoom in">
-                 <Plus size={14} />
+              <span className="w-12 text-center text-xs font-black text-slate-200 tabular-nums">{Math.round(canvasScale * 100)}%</span>
+              <button onClick={() => setCanvasScale(s => Math.min(1.6, Math.round((s + 0.1) * 10) / 10))} className="p-2 rounded hover:bg-slate-800 text-slate-300" title="Zoom in">
+                 <Plus size={16} />
               </button>
-              <button onClick={() => setCanvasScale(1)} className="ml-1 px-2 py-1 rounded hover:bg-slate-800 text-[9px] font-black text-slate-300 uppercase tracking-widest" title="Reset zoom">
+              <button onClick={() => setCanvasScale(1)} className="ml-1 px-2 py-1.5 rounded hover:bg-slate-800 text-[11px] font-black text-slate-300 uppercase tracking-widest" title="Reset zoom">
                  100
               </button>
            </div>
-           <button onClick={() => setIsManualEdit(!isManualEdit)} className={`p-2 rounded-lg transition-colors ${isManualEdit ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Edit Mode">
-              <Edit3 size={18} />
+           <button onClick={() => setIsManualEdit(!isManualEdit)} className={`p-2.5 rounded-lg transition-colors ${isManualEdit ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Edit Mode">
+              <Edit3 size={20} />
            </button>
-           <button onClick={handlePrint} className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-indigo-900/50 transition-all active:scale-95">
-              <Printer size={16} /> Print PDF
+           <button onClick={handlePrint} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 sm:px-5 py-2.5 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-indigo-900/50 transition-all active:scale-95">
+              <Printer size={18} /> <span className="hidden sm:inline">Print</span> PDF
            </button>
         </div>
       </header>
 
       {/* PAPER CANVAS */}
-      <main className="flex-1 overflow-y-auto bg-gray-100 p-8 flex justify-center custom-scrollbar scroll-smooth print:p-0 print:overflow-visible print:h-auto print:block relative">
+      <main className="flex-1 overflow-y-auto bg-gray-100 p-4 sm:p-8 flex justify-center custom-scrollbar scroll-smooth print:p-0 print:overflow-visible print:h-auto print:block relative">
          <div className="screen-scale-wrapper transition-transform" style={{ transform: `scale(${canvasScale})`, transformOrigin: 'top center' }}>
          <div 
            id="exam-paper-container"

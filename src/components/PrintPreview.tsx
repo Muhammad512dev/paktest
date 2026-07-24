@@ -340,6 +340,16 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
     }
   };
 
+  // Direct font size setter for typed input
+  const setFontSizeDirectly = (val: number) => {
+    if (isNaN(val) || val < 1) return;
+    if (textSizeMode === 'English') setEnglishFontSize(Math.max(8, Math.min(32, val)));
+    else if (textSizeMode === 'Urdu') setUrduFontSize(Math.max(12, Math.min(48, val)));
+    else if (textSizeMode === 'Header') setSchoolNameSize(Math.max(16, Math.min(64, val)));
+    else if (textSizeMode === 'OptionLabel') setOptionLabelSize(Math.max(8, Math.min(20, val)));
+    else if (textSizeMode === 'OptionText') setOptionTextSize(Math.max(9, Math.min(20, val)));
+  };
+
   const activeFontSizeDisplay = useMemo(() => {
       if (textSizeMode === 'English') return englishFontSize;
       if (textSizeMode === 'Urdu') return urduFontSize;
@@ -509,26 +519,50 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
         }
       `}</style>
 
-      {/* COMPACT TOP TOOLBAR */}
-      <header className="bg-[#0F172A] border-b border-slate-800 text-white shrink-0 z-50 print:hidden shadow-md flex flex-wrap items-center justify-between px-3 sm:px-5 py-2 sm:py-3 min-h-[56px] sm:min-h-[72px] gap-2">
-        
-        {/* Left: Branding & Exit */}
-        <div className="flex items-center gap-3 shrink-0">
-           {!isEmbedded && (
-             <button onClick={onClose} className="text-slate-400 hover:text-white p-2 hover:bg-slate-800 rounded-lg transition-colors">
-                <X size={22} />
+      {/* TOP TOOLBAR — wraps instead of scrolling */}
+      <header className="bg-[#0F172A] border-b border-slate-800 text-white shrink-0 z-50 print:hidden shadow-md px-3 sm:px-5 py-2 sm:py-3">
+        {/* Row 1: Branding + Actions */}
+        <div className="flex items-center justify-between gap-3 mb-2">
+          {/* Left: Branding & Exit */}
+          <div className="flex items-center gap-3 shrink-0">
+             {!isEmbedded && (
+               <button onClick={onClose} className="text-slate-400 hover:text-white p-2 hover:bg-slate-800 rounded-lg transition-colors">
+                  <X size={22} />
+               </button>
+             )}
+             <div className="flex flex-col">
+                <span className="font-black text-sm sm:text-lg tracking-wide text-white">Print Preview</span>
+                <span className="text-[11px] text-indigo-400 font-bold uppercase tracking-widest">{pageSize} Mode</span>
+             </div>
+          </div>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+             <div className="hidden sm:flex items-center gap-1 bg-slate-900/40 border border-slate-700 rounded-lg px-2 py-2">
+                <button onClick={() => setCanvasScale(s => Math.max(0.6, Math.round((s - 0.1) * 10) / 10))} className="p-2 rounded hover:bg-slate-800 text-slate-300" title="Zoom out">
+                   <Minus size={16} />
+                </button>
+                <span className="w-12 text-center text-xs font-black text-slate-200 tabular-nums">{Math.round(canvasScale * 100)}%</span>
+                <button onClick={() => setCanvasScale(s => Math.min(1.6, Math.round((s + 0.1) * 10) / 10))} className="p-2 rounded hover:bg-slate-800 text-slate-300" title="Zoom in">
+                   <Plus size={16} />
+                </button>
+                <button onClick={() => setCanvasScale(1)} className="ml-1 px-2 py-1.5 rounded hover:bg-slate-800 text-[11px] font-black text-slate-300 uppercase tracking-widest" title="Reset zoom">
+                   100
+                </button>
+             </div>
+             <button onClick={() => setIsManualEdit(!isManualEdit)} className={`p-2.5 rounded-lg transition-colors ${isManualEdit ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Edit Mode">
+                <Edit3 size={20} />
              </button>
-           )}
-           <div className="flex flex-col">
-              <span className="font-black text-sm sm:text-lg tracking-wide text-white">Print Preview</span>
-              <span className="text-[11px] text-indigo-400 font-bold uppercase tracking-widest">{pageSize} Mode</span>
-           </div>
+             <button onClick={handlePrint} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 sm:px-5 py-2.5 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-indigo-900/50 transition-all active:scale-95">
+                <Printer size={18} /> <span className="hidden sm:inline">Print</span> PDF
+             </button>
+          </div>
         </div>
 
-        {/* Center: Scrollable Controls */}
-        <div className="flex-1 flex items-center gap-3 sm:gap-4 overflow-x-auto custom-scrollbar px-2 sm:px-4 mx-1 sm:mx-4 min-w-0">
+        {/* Row 2: All Controls — wraps into rows, NO scrollbar */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
            {/* 1. Language & Layout */}
-           <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700 shrink-0">
+           <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
               <select value={languageMode} onChange={e => setLanguageMode(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-24">
                  <option value="Bilingual">Bilingual</option>
                  <option value="English">English</option>
@@ -552,38 +586,44 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               </select>
            </div>
 
-           {/* 2. Enhanced Font Size Controls */}
-           <div className="flex items-center gap-3 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700 shrink-0">
-              <div className="flex flex-col space-y-1">
-                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Text</span>
-                 <select 
-                    value={textSizeMode} 
-                    onChange={e => setTextSizeMode(e.target.value as any)} 
-                    className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-28 border-b border-slate-600 pb-0.5"
-                 >
-                    <option value="English">English</option>
-                    <option value="Urdu">Urdu</option>
-                    <option value="Header">Header</option>
-                    <option value="OptionLabel">A/B/C</option>
-                    <option value="OptionText">Options</option>
-                  </select>
-              </div>
-              <div className="flex items-center gap-1.5">
-                 <button onClick={() => adjustFontSize(-1)} className="p-2 bg-slate-700 rounded hover:bg-slate-600 text-white"><Minus size={16} /></button>
-                 <span className="w-10 text-center text-xs font-bold text-indigo-300">{activeFontSizeDisplay}px</span>
-                 <button onClick={() => adjustFontSize(1)} className="p-2 bg-slate-700 rounded hover:bg-slate-600 text-white"><Plus size={16} /></button>
+           {/* 2. Font Size Controls with editable input */}
+           <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
+              <select 
+                 value={textSizeMode} 
+                 onChange={e => setTextSizeMode(e.target.value as any)} 
+                 className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-24 sm:w-28"
+              >
+                 <option value="English">English</option>
+                 <option value="Urdu">Urdu</option>
+                 <option value="Header">Header</option>
+                 <option value="OptionLabel">A/B/C</option>
+                 <option value="OptionText">Options</option>
+              </select>
+              <div className="w-px h-5 bg-slate-700"></div>
+              <div className="flex items-center gap-1">
+                 <button onClick={() => adjustFontSize(-1)} className="p-1.5 bg-slate-700 rounded hover:bg-slate-600 text-white"><Minus size={14} /></button>
+                 <input 
+                    type="number" 
+                    value={activeFontSizeDisplay} 
+                    onChange={e => setFontSizeDirectly(parseInt(e.target.value))} 
+                    className="w-12 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    min={8}
+                    max={64}
+                 />
+                 <span className="text-[10px] text-slate-500 font-bold">px</span>
+                 <button onClick={() => adjustFontSize(1)} className="p-1.5 bg-slate-700 rounded hover:bg-slate-600 text-white"><Plus size={14} /></button>
               </div>
            </div>
 
            {/* 3. Spacing */}
-           <div className="flex items-center gap-3 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700 shrink-0">
+           <div className="flex items-center gap-3 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
               <RangeControl label="Gap" value={questionGap} setValue={setQuestionGap} min={0} max={40} width="w-14" />
               <RangeControl label="Margin" value={pagePadding} setValue={setPagePadding} min={0} max={40} unit="mm" width="w-16" />
               {!isGridView && <RangeControl label="MCQ Cols" value={mcqColumns} setValue={setMcqColumns} min={1} max={4} width="w-14" />}
            </div>
 
            {/* 4. Visibility & Watermark */}
-           <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700 shrink-0">
+           <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
               <button onClick={() => setHeaderVisibility(v => ({...v, logo: !v.logo}))} className={`p-2 rounded border ${headerVisibility.logo ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-300' : 'bg-transparent border-slate-700 text-slate-500'}`} title="Logo">
                  <ImageIcon size={18} />
               </button>
@@ -603,9 +643,9 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
            </div>
 
            {/* 5. Extras */}
-           <div className="flex items-center gap-2 shrink-0">
+           <div className="flex items-center gap-2">
               <button onClick={() => setStudentInfoStyle(prev => prev === 'Standard' ? 'Grid' : 'Standard')} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${studentInfoStyle === 'Grid' ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-400' : 'bg-transparent border-slate-700 text-slate-400'}`} title="Student Grid Header">
-                 <UserSquare2 size={16} /> Header Grid
+                 <UserSquare2 size={16} /> <span className="hidden sm:inline">Header</span> Grid
               </button>
               <button onClick={() => setPrintBubbleSheet(!printBubbleSheet)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${printBubbleSheet ? 'bg-emerald-600/20 border-emerald-600/50 text-emerald-400' : 'bg-transparent border-slate-700 text-slate-400'}`}>
                  <Grid3X3 size={16} /> OMR
@@ -621,28 +661,6 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                  <Layers size={16} /> Split
               </button>
            </div>
-        </div>
-
-        {/* Right: Actions */}
-        <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-slate-700 shrink-0">
-           <div className="hidden sm:flex items-center gap-1 bg-slate-900/40 border border-slate-700 rounded-lg px-2 py-2">
-              <button onClick={() => setCanvasScale(s => Math.max(0.6, Math.round((s - 0.1) * 10) / 10))} className="p-2 rounded hover:bg-slate-800 text-slate-300" title="Zoom out">
-                 <Minus size={16} />
-              </button>
-              <span className="w-12 text-center text-xs font-black text-slate-200 tabular-nums">{Math.round(canvasScale * 100)}%</span>
-              <button onClick={() => setCanvasScale(s => Math.min(1.6, Math.round((s + 0.1) * 10) / 10))} className="p-2 rounded hover:bg-slate-800 text-slate-300" title="Zoom in">
-                 <Plus size={16} />
-              </button>
-              <button onClick={() => setCanvasScale(1)} className="ml-1 px-2 py-1.5 rounded hover:bg-slate-800 text-[11px] font-black text-slate-300 uppercase tracking-widest" title="Reset zoom">
-                 100
-              </button>
-           </div>
-           <button onClick={() => setIsManualEdit(!isManualEdit)} className={`p-2.5 rounded-lg transition-colors ${isManualEdit ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Edit Mode">
-              <Edit3 size={20} />
-           </button>
-           <button onClick={handlePrint} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 sm:px-5 py-2.5 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-indigo-900/50 transition-all active:scale-95">
-              <Printer size={18} /> <span className="hidden sm:inline">Print</span> PDF
-           </button>
         </div>
       </header>
 

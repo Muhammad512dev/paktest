@@ -535,25 +535,26 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
   );
 
   // --- NEW AI AGENT STEP ---
+  // --- NEW AI AGENT STEP ---
   if (state.step === 'AI_AGENT') return (
-    <div className="p-4 md:p-12 max-w-7xl h-full flex flex-col">
-       <button onClick={() => setState({...state, step: 'SYLLABUS'})} className="text-gray-400 hover:text-gray-900 flex items-center gap-2 mb-8 font-bold text-sm uppercase tracking-widest transition-colors"><ArrowLeft size={18} /> Back to Selection</button>
+    <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full pb-16">
+       <button onClick={() => setState({...state, step: 'SYLLABUS'})} className="text-gray-400 hover:text-gray-900 flex items-center gap-2 mb-6 font-bold text-sm uppercase tracking-widest transition-colors"><ArrowLeft size={18} /> Back to Selection</button>
        
-       <div className="flex items-center gap-4 mb-10">
-          <div className="w-12 h-12 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+       <div className="flex items-center gap-4 mb-8">
+          <div className="w-12 h-12 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shrink-0">
              <Wand2 size={24} />
           </div>
           <div>
-             <h2 className="text-3xl font-black text-gray-900 tracking-tight">AI Paper Architect</h2>
-             <p className="text-sm text-gray-500 font-medium">Upload your source material and let Gemini construct the exam.</p>
+             <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">AI Paper Architect</h2>
+             <p className="text-xs sm:text-sm text-gray-500 font-medium">Upload your source material and let Gemini construct the exam.</p>
           </div>
        </div>
 
-       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8 overflow-hidden h-full">
+       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 items-start">
           
           {/* COLUMN 1: UPLOAD & CONTEXT */}
-          <div className="space-y-6 flex flex-col">
-             <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex-1 flex flex-col">
+          <div className="space-y-6">
+             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                 <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2"><FileCode size={18} className="text-indigo-600"/> 1. Exam Context</h3>
                 <div className="space-y-4">
                    <div>
@@ -594,11 +595,11 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                 </div>
              </div>
 
-             <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex-1 flex flex-col">
+             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                 <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2"><Upload size={18} className="text-indigo-600"/> 2. Source Material</h3>
                 <div 
                    onClick={() => fileInputRef.current?.click()}
-                   className={`flex-1 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center p-6 cursor-pointer transition-all ${uploadedFile ? 'border-emerald-400 bg-emerald-50/30' : 'border-slate-300 hover:border-indigo-400 hover:bg-slate-50'}`}
+                   className={`min-h-[140px] border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center p-6 cursor-pointer transition-all ${uploadedFile ? 'border-emerald-400 bg-emerald-50/30' : 'border-slate-300 hover:border-indigo-400 hover:bg-slate-50'}`}
                 >
                    {uploadedFile ? (
                       <>
@@ -619,22 +620,22 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
           </div>
 
           {/* COLUMN 2 & 3: SECTION CONFIG */}
-          <div className="lg:col-span-2 bg-slate-900 rounded-[2.5rem] p-8 text-white flex flex-col shadow-2xl relative overflow-hidden">
+          <div className="lg:col-span-2 bg-slate-900 rounded-3xl p-6 sm:p-8 text-white flex flex-col shadow-2xl relative">
              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
              
-             <div className="flex justify-between items-center mb-8 relative z-10">
-                <h3 className="font-bold text-xl flex items-center gap-2"><Settings2 size={20} className="text-indigo-400"/> Initializing Sections</h3>
+             <div className="flex flex-wrap justify-between items-center gap-4 mb-6 relative z-10">
+                <h3 className="font-bold text-lg sm:text-xl flex items-center gap-2"><Settings2 size={20} className="text-indigo-400"/> Initializing Sections</h3>
                 <button onClick={addAiSection} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2">
                    <Plus size={14}/> Add Custom Section
                 </button>
              </div>
 
-             <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2 relative z-10">
+             <div className="space-y-3 relative z-10 max-h-[420px] overflow-y-auto custom-scrollbar pr-1">
                 {aiSections.map((sec, idx) => (
                    <div key={sec.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col md:flex-row items-center gap-4 animate-in slide-in-from-right-4 duration-300">
                       <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">{idx + 1}</div>
                       
-                      <div className="flex-1 grid grid-cols-3 gap-4 w-full">
+                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
                          <div>
                             <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Question Type</label>
                             <select 
@@ -673,7 +674,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                          </div>
                       </div>
 
-                      <button onClick={() => removeAiSection(sec.id)} className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
+                      <button onClick={() => removeAiSection(sec.id)} className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors shrink-0">
                          <Trash2 size={18}/>
                       </button>
                    </div>
@@ -686,7 +687,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                 )}
              </div>
 
-             <div className="pt-8 mt-4 border-t border-white/10 relative z-10">
+             <div className="pt-6 mt-6 border-t border-white/10 relative z-10">
                 <div className="flex justify-between items-center mb-6">
                    <span className="text-sm font-bold text-slate-400">Total Marks: <span className="text-white ml-2 text-lg">{aiSections.reduce((acc, s) => acc + (s.count * s.marks), 0)}</span></span>
                    <span className="text-sm font-bold text-slate-400">Total Questions: <span className="text-white ml-2 text-lg">{aiSections.reduce((acc, s) => acc + s.count, 0)}</span></span>
@@ -695,7 +696,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                 <button 
                    onClick={() => { handleGenerateClick(); }}
                    disabled={isGenerating || !uploadedFile || !state.selectedSubject || aiSections.length === 0}
-                   className="w-full py-5 bg-white text-slate-900 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-indigo-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-indigo-500/20 active:scale-[0.98]"
+                   className="w-full py-4 sm:py-5 bg-white text-slate-900 rounded-2xl font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] hover:bg-indigo-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-indigo-500/20 active:scale-[0.98] text-sm sm:text-base"
                 >
                    {isGenerating ? (
                       <>

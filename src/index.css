@@ -393,8 +393,10 @@ html, body {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Adjust grid columns for mobile */
-  .grid-cols-2, .grid-cols-3, .grid-cols-4 {
+  /* Adjust grid columns for mobile (except print paper container) */
+  :not(#exam-paper-container) > .grid-cols-2:not(#exam-paper-container *), 
+  :not(#exam-paper-container) > .grid-cols-3:not(#exam-paper-container *), 
+  :not(#exam-paper-container) > .grid-cols-4:not(#exam-paper-container *) {
     grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
   }
 

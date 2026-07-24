@@ -517,6 +517,24 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             transform: none !important;
           }
         }
+
+        /* FORCE STRICT GRID LAYOUT FOR PRINT PAPER CONTAINER ACROSS ALL ZOOM LEVELS & SCREEN MEDIA QUERIES */
+        #exam-paper-container .print-header-grid {
+          display: grid !important;
+          grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        }
+        #exam-paper-container .grid-cols-2 {
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+        #exam-paper-container .grid-cols-3 {
+          display: grid !important;
+          grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        }
+        #exam-paper-container .grid-cols-4 {
+          display: grid !important;
+          grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        }
       `}</style>
 
       {/* TOP TOOLBAR — wraps instead of scrolling */}
@@ -808,7 +826,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                           </div>
                        ) : (
                           /* STANDARD LIST HEADER */
-                          <div className="grid grid-cols-3 gap-y-3 gap-x-8 border-t border-slate-200 pt-4 relative">
+                          <div className="grid grid-cols-3 print-header-grid gap-y-3 gap-x-6 sm:gap-x-8 border-t border-slate-200 pt-4 relative">
                              {infoFields.map((field, i) => (
                                 <div key={i} className="flex items-baseline border-b border-dotted border-slate-300 pb-1 relative group/field">
                                    {isManualEdit && <button onClick={() => removeInfoField(field.label)} className="absolute -left-4 top-0 text-red-500 opacity-0 group-hover/field:opacity-100 transition-opacity print:hidden hover:scale-110"><X size={10}/></button>}

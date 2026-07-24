@@ -76,12 +76,16 @@ async function main() {
   console.log("🌱 Seeding Curriculum...");
 
   // Syllabuses
-  const cambridge = await prisma.syllabus.create({
-    data: { name: 'Cambridge International', description: 'IGCSE & O Levels global curriculum' }
+  const cambridge = await prisma.syllabus.upsert({
+    where: { name: 'Cambridge International' },
+    update: {},
+    create: { name: 'Cambridge International', description: 'IGCSE & O Levels global curriculum' }
   });
 
-  const federal = await prisma.syllabus.create({
-    data: { name: 'Federal Board (FBISE)', description: 'Official Federal Government Board' }
+  const federal = await prisma.syllabus.upsert({
+    where: { name: 'Federal Board (FBISE)' },
+    update: {},
+    create: { name: 'Federal Board (FBISE)', description: 'Official Federal Government Board' }
   });
 
   // Classes
@@ -265,7 +269,7 @@ async function main() {
         password: hashedPassword,
         schoolId: school.id,
         classId: grade10.id,
-        rollNumber: '001',
+        rollNo: '001',
         assignedSubjects: ['Physics', 'Mathematics']
       },
       {
@@ -274,7 +278,7 @@ async function main() {
         password: hashedPassword,
         schoolId: school.id,
         classId: grade10.id,
-        rollNumber: '002',
+        rollNo: '002',
         assignedSubjects: ['Physics', 'Mathematics']
       },
       {
@@ -283,7 +287,7 @@ async function main() {
         password: hashedPassword,
         schoolId: school.id,
         classId: grade11.id,
-        rollNumber: '001',
+        rollNo: '001',
         assignedSubjects: ['Physics']
       }
     ],

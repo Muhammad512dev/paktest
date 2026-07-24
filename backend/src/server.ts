@@ -128,29 +128,121 @@ const getGeminiKeys = (): string[] => {
   return raw.split(',').map(k => k.trim()).filter(Boolean);
 };
 
+const GEMINI_MODELS = ['gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3-flash-preview'];
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const cleanGeminiJSON = (text: string): any => {
+  let cleaned = text.trim();
+  // Strip markdown code fences (multi-line aware)
+  cleaned = cleaned.replace(/^```(?:json)?\s*/im, '').replace(/\s*```\s*$/m, '').trim();
+  // Fix trailing commas before } or ]
+  cleaned = cleaned.replace(/,\s*([}\]])/g, '$1');
+  
+  if (!cleaned || cleaned === '') return {};
+  
+  // First try parsing as-is
+  try {
+    return JSON.parse(cleaned);
+  } catch (_) {}
+  
+  // Fix unescaped newlines/tabs inside JSON string values
+  // Replace raw newlines inside strings with escaped versions
+  cleaned = cleaned
+    .replace(/\r\n/g, '\\n')
+    .replace(/\r/g, '\\n')
+    .replace(/\n/g, '\\n')
+    .replace(/\t/g, '\\t');
+  
+  try {
+    return JSON.parse(cleaned);
+  } catch (_) {}
+  
+  // Try to extract the first valid JSON object/array
+  const match = text.match(/[\[{][\s\S]*[\]}]/);
+  if (match) {
+    let extracted = match[0]
+      .replace(/,\s*([}\]])/g, '$1')
+      .replace(/\r\n/g, '\\n')
+      .replace(/\r/g, '\\n')  
+      .replace(/\n/g, '\\n')
+      .replace(/\t/g, '\\t');
+    try {
+      return JSON.parse(extracted);
+    } catch (_) {}
+  }
+  
+  // Last resort: try to manually fix common issues
+  // Remove any thoughtSignature or other non-JSON fields that Gemini 3.x adds
+  const jsonMatch = text.match(/\{[\s\S]*"questions"\s*:\s*\[[\s\S]*\][\s\S]*\}/);
+  if (jsonMatch) {
+    let lastResort = jsonMatch[0]
+      .replace(/,\s*([}\]])/g, '$1')
+      .replace(/\r?\n/g, '\\n')
+      .replace(/\t/g, '\\t');
+    try {
+      return JSON.parse(lastResort);
+    } catch (_) {}
+  }
+  
+  console.error('cleanGeminiJSON: All parsing attempts failed. Raw text (first 500 chars):', text.substring(0, 500));
+  throw new Error('Failed to parse Gemini response as JSON');
+};
+
 const runGemini = async (model: string, parts: any[], json = true) => {
   const keys = getGeminiKeys();
   if (keys.length === 0) throw new Error('Gemini AI is not configured on the server. Set GEMINI_API_KEY.');
-  const activeModel = process.env.GEMINI_MODEL || model;
+  
+  // Build list of models to try: env override first, then requested, then fallbacks
+  const envModel = process.env.GEMINI_MODEL;
+  const modelsToTry = envModel 
+    ? [envModel] 
+    : [model, ...GEMINI_MODELS.filter(m => m !== model)];
   
   let lastError: Error | null = null;
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${encodeURIComponent(key)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts }], generationConfig: json ? { responseMimeType: 'application/json', temperature: 0.6 } : { temperature: 0.3 } })
-      });
-      const payload: any = await response.json();
-      if (!response.ok) {
-        throw new Error(payload?.error?.message || `API request failed with status ${response.status}`);
+  const maxRetries = 2;
+  
+  for (const currentModel of modelsToTry) {
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          if (attempt > 0) {
+            console.log(`Retry ${attempt}/${maxRetries} for model ${currentModel}...`);
+            await delay(3000 * attempt); // 3s, 6s backoff
+          }
+          
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${encodeURIComponent(key)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts }], generationConfig: json ? { responseMimeType: 'application/json', temperature: 0.6 } : { temperature: 0.3 } })
+          });
+          const payload: any = await response.json();
+          
+          if (!response.ok) {
+            const errMsg = payload?.error?.message || `API request failed with status ${response.status}`;
+            // Retryable errors: rate limit, overloaded, high demand
+            if ((response.status === 429 || response.status === 503 || errMsg.includes('high demand') || errMsg.includes('overloaded')) && attempt < maxRetries) {
+              console.warn(`Model ${currentModel} temporarily unavailable (${response.status}), retrying...`);
+              continue;
+            }
+            throw new Error(errMsg);
+          }
+          
+          const text = payload?.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('') || '';
+          if (!json) return text.trim();
+          return cleanGeminiJSON(text);
+          
+        } catch (e: any) {
+          console.warn(`Gemini [${currentModel}] key ${i + 1}/${keys.length} attempt ${attempt + 1}: ${e.message}`);
+          lastError = e;
+          // If it's a retryable error and we have retries left, continue the retry loop
+          if ((e.message?.includes('high demand') || e.message?.includes('overloaded') || e.message?.includes('429') || e.message?.includes('503')) && attempt < maxRetries) {
+            continue;
+          }
+          break; // Non-retryable error, move to next key/model
+        }
       }
-      const text = payload?.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('') || '';
-      return json ? JSON.parse(text || '{}') : text.trim();
-    } catch (e: any) {
-      console.warn(`Gemini API key ${i + 1}/${keys.length} failed: ${e.message}`);
-      lastError = e;
     }
   }
   throw new Error(`All Gemini API keys failed. Last error: ${lastError?.message}`);
@@ -168,7 +260,7 @@ app.get('/api/health/ai', async (req: any, res: any) => {
     return res.json({ status: 'error', connected: false, message: 'GEMINI_API_KEY is not set in environment variables.' });
   }
   try {
-    const result: any = await runGemini('gemini-2.0-flash', [{ text: 'Reply with exactly: {"ok":true}' }]);
+    const result: any = await runGemini('gemini-3.5-flash', [{ text: 'Reply with exactly: {"ok":true}' }]);
     if (result?.ok === true) {
       return res.json({ status: 'ok', connected: true, message: `Gemini AI is connected and responding correctly (active keys: ${keys.length}).` });
     }
@@ -183,7 +275,7 @@ app.post('/api/ai/questions', authenticate, requireStaffAI, async (req: any, res
     const { subject, topic, count, type, difficulty, classLevel, bilingual } = req.body;
     const typeGuide = type === 'MCQ' ? 'For MCQ, include exactly 4 options and the correctAnswer.' : type === 'Match Columns' ? 'For Match Columns, include matchingPairs with left/right values.' : '';
     const prompt = `Generate ${count} academic questions. Subject: ${subject}. Topic: ${topic}. Level: ${classLevel}. Difficulty: ${difficulty}. Type: ${type}. ${bilingual ? 'Include high-quality Urdu translations in textUrdu and optionsUrdu.' : ''} ${typeGuide} Return JSON only: {"questions":[{"text":"","textUrdu":"","type":"","options":[],"optionsUrdu":[],"matchingPairs":[],"correctAnswer":"","marks":1,"difficulty":"","topic":""}]}.`;
-    const result: any = await runGemini('gemini-2.0-flash', [{ text: prompt }]);
+    const result: any = await runGemini('gemini-3.5-flash', [{ text: prompt }]);
     res.json({ questions: (result.questions || []).map((q: any) => ({ id: `ai_${Date.now()}_${Math.random().toString(36).slice(2)}`, subject, topic, classLevel, ...q })) });
   } catch (error: any) { res.status(500).json({ error: error.message || 'AI generation failed' }); }
 });
@@ -192,19 +284,33 @@ app.post('/api/ai/document', authenticate, requireStaffAI, async (req: any, res:
   try {
     const { base64Data, mimeType, sections, subject, bilingual } = req.body;
     const requirement = (sections || []).map((s: any) => `${s.count} ${s.type} question(s), ${s.marks} marks each`).join('; ');
-    const prompt = `Analyze this source document and generate questions. Subject: ${subject}. Required: ${requirement}. ${bilingual ? 'Include Urdu translations.' : ''} Return JSON only as {"questions":[{"text":"","textUrdu":"","type":"","options":[],"optionsUrdu":[],"matchingPairs":[],"correctAnswer":"","marks":1,"difficulty":"","topic":""}]}.`;
-    const result: any = await runGemini('gemini-2.0-flash', [{ inlineData: { mimeType, data: base64Data } }, { text: prompt }]);
+    const prompt = `You are an exam paper generator. You MUST read and analyze the uploaded document carefully.
+
+CRITICAL INSTRUCTIONS:
+1. READ the entire uploaded document thoroughly first.
+2. ALL questions MUST be based ONLY on the content, facts, concepts, and information found in the uploaded document.
+3. DO NOT generate random or generic questions. Every question must directly reference specific content from the document.
+4. Use exact terminology, names, dates, definitions, and examples from the document.
+5. For MCQ options, the correct answer must come from the document, and distractors should be plausible but clearly wrong based on the document content.
+
+Subject: ${subject}
+Required sections: ${requirement}
+${bilingual ? 'Include high-quality Urdu translations for each question in textUrdu and optionsUrdu fields.' : ''}
+
+Return ONLY valid JSON in this exact format:
+{"questions":[{"text":"question text from document","textUrdu":"","type":"MCQ or Short Answer etc","options":["A","B","C","D"],"optionsUrdu":[],"matchingPairs":[],"correctAnswer":"correct answer from document","marks":1,"difficulty":"Medium","topic":"topic from document"}]}`;
+    const result: any = await runGemini('gemini-3.5-flash', [{ inlineData: { mimeType, data: base64Data } }, { text: prompt }]);
     res.json({ questions: (result.questions || []).map((q: any) => ({ id: `ai_${Date.now()}_${Math.random().toString(36).slice(2)}`, subject, ...q })) });
   } catch (error: any) { res.status(500).json({ error: error.message || 'Document AI generation failed' }); }
 });
 
 app.post('/api/ai/translate', authenticate, requireStaffAI, async (req: any, res: any) => {
-  try { res.json({ text: await runGemini('gemini-2.0-flash', [{ text: `Translate into high-quality Urdu (Nastaliq style). Return only the translation: ${req.body.text}` }], false) }); }
+  try { res.json({ text: await runGemini('gemini-3.5-flash', [{ text: `Translate into high-quality Urdu (Nastaliq style). Return only the translation: ${req.body.text}` }], false) }); }
   catch (error: any) { res.status(500).json({ error: error.message || 'Translation failed' }); }
 });
 
 app.post('/api/ai/topics', authenticate, requireStaffAI, async (req: any, res: any) => {
-  try { const result: any = await runGemini('gemini-2.0-flash', [{ text: `List 5 curriculum topics for ${req.body.classLevel} ${req.body.subject}. Return JSON only: {"topics":[""]}.` }]); res.json({ topics: result.topics || [] }); }
+  try { const result: any = await runGemini('gemini-3.5-flash', [{ text: `List 5 curriculum topics for ${req.body.classLevel} ${req.body.subject}. Return JSON only: {"topics":[""]}.` }]); res.json({ topics: result.topics || [] }); }
   catch (error: any) { res.status(500).json({ error: error.message || 'Topic generation failed' }); }
 });
 
@@ -212,7 +318,7 @@ app.post('/api/ai/analyze-book', authenticate, requireStaffAI, async (req: any, 
   try {
     const { base64Data, mimeType, mode, config } = req.body;
     const prompt = mode === 'QUESTIONS' ? `Generate ${config?.count || 10} exam questions for ${config?.classLevel || ''} ${config?.subject || ''}. Return JSON.` : 'Extract the curriculum structure from this textbook. Return JSON.';
-    res.json(await runGemini('gemini-2.0-flash', [{ inlineData: { mimeType, data: base64Data } }, { text: prompt }]));
+    res.json(await runGemini('gemini-3.5-flash', [{ inlineData: { mimeType, data: base64Data } }, { text: prompt }]));
   } catch (error: any) { res.status(500).json({ error: error.message || 'Book analysis failed' }); }
 });
 

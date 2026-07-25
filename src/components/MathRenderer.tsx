@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import renderMathInElement from 'katex/dist/contrib/auto-render';
+import 'katex/dist/contrib/mhchem';
 
 interface MathRendererProps {
   text: string;
@@ -23,9 +24,17 @@ const MathRenderer: React.FC<MathRendererProps> = ({
     const el = inline ? spanRef.current : divRef.current;
     if (!el) return;
 
+    if (!text) {
+      el.innerHTML = '';
+      return;
+    }
+
+    // Normalize double-escaped LaTeX strings (e.g. \\ce -> \ce, \\frac -> \frac)
+    let processedText = text.replace(/\\\\([a-zA-Z]+)/g, '\\$1');
+
     // reset content
     el.innerHTML = '';
-    el.textContent = text;
+    el.textContent = processedText;
 
     renderMathInElement(el, {
       delimiters: [

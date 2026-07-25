@@ -274,7 +274,12 @@ app.post('/api/ai/questions', authenticate, requireStaffAI, async (req: any, res
   try {
     const { subject, topic, count, type, difficulty, classLevel, bilingual } = req.body;
     const typeGuide = type === 'MCQ' ? 'For MCQ, include exactly 4 options and the correctAnswer.' : type === 'Match Columns' ? 'For Match Columns, include matchingPairs with left/right values.' : '';
-    const prompt = `Generate ${count} academic questions. Subject: ${subject}. Topic: ${topic}. Level: ${classLevel}. Difficulty: ${difficulty}. Type: ${type}. ${bilingual ? 'Include high-quality Urdu translations in textUrdu and optionsUrdu.' : ''} ${typeGuide} Return JSON only: {"questions":[{"text":"","textUrdu":"","type":"","options":[],"optionsUrdu":[],"matchingPairs":[],"correctAnswer":"","marks":1,"difficulty":"","topic":""}]}.`;
+    const prompt = `Generate ${count} academic questions. Subject: ${subject}. Topic: ${topic}. Level: ${classLevel}. Difficulty: ${difficulty}. Type: ${type}. ${bilingual ? 'Include high-quality Urdu translations in textUrdu and optionsUrdu.' : ''} ${typeGuide}
+IMPORTANT FORMULA GUIDELINES:
+- For mathematical formulas/equations, use LaTeX enclosed in single dollar signs (inline: $x^2 + y^2 = z^2$) or double dollar signs (block: $$\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$).
+- For chemistry equations and formulas, use mhchem LaTeX syntax: $\\ce{2H2 + O2 -> 2H2O}$, $\\ce{H2SO4}$, $\\ce{Fe^3+ + e- -> Fe^2+}$.
+
+Return JSON only: {"questions":[{"text":"","textUrdu":"","type":"","options":[],"optionsUrdu":[],"matchingPairs":[],"correctAnswer":"","marks":1,"difficulty":"","topic":""}]}.`;
     const result: any = await runGemini('gemini-3.5-flash', [{ text: prompt }]);
     res.json({ questions: (result.questions || []).map((q: any) => ({ id: `ai_${Date.now()}_${Math.random().toString(36).slice(2)}`, subject, topic, classLevel, ...q })) });
   } catch (error: any) { res.status(500).json({ error: error.message || 'AI generation failed' }); }
@@ -292,6 +297,7 @@ CRITICAL INSTRUCTIONS:
 3. DO NOT generate random or generic questions. Every question must directly reference specific content from the document.
 4. Use exact terminology, names, dates, definitions, and examples from the document.
 5. For MCQ options, the correct answer must come from the document, and distractors should be plausible but clearly wrong based on the document content.
+6. FORMULAS & EQUATIONS: Format ALL mathematical formulas using LaTeX ($...$ or $$...$$) and ALL chemical formulas/reactions using mhchem ($\\ce{...}$, e.g. $\\ce{2H2 + O2 -> 2H2O}$).
 
 Subject: ${subject}
 Required sections: ${requirement}
@@ -305,7 +311,7 @@ Return ONLY valid JSON in this exact format:
 });
 
 app.post('/api/ai/translate', authenticate, requireStaffAI, async (req: any, res: any) => {
-  try { res.json({ text: await runGemini('gemini-3.5-flash', [{ text: `Translate into high-quality Urdu (Nastaliq style). Return only the translation: ${req.body.text}` }], false) }); }
+  try { res.json({ text: await runGemini('gemini-3.5-flash', [{ text: `Translate into high-quality Urdu (Nastaliq style). Preserve any LaTeX math ($...$) or chemistry ($\\ce{...}$) formulas unchanged. Return only the translation: ${req.body.text}` }], false) }); }
   catch (error: any) { res.status(500).json({ error: error.message || 'Translation failed' }); }
 });
 
@@ -317,7 +323,7 @@ app.post('/api/ai/topics', authenticate, requireStaffAI, async (req: any, res: a
 app.post('/api/ai/analyze-book', authenticate, requireStaffAI, async (req: any, res: any) => {
   try {
     const { base64Data, mimeType, mode, config } = req.body;
-    const prompt = mode === 'QUESTIONS' ? `Generate ${config?.count || 10} exam questions for ${config?.classLevel || ''} ${config?.subject || ''}. Return JSON.` : 'Extract the curriculum structure from this textbook. Return JSON.';
+    const prompt = mode === 'QUESTIONS' ? `Generate ${config?.count || 10} exam questions for ${config?.classLevel || ''} ${config?.subject || ''}. Format math using LaTeX ($...$) and chemistry using mhchem ($\\ce{...}$). Return JSON.` : 'Extract the curriculum structure from this textbook. Return JSON.';
     res.json(await runGemini('gemini-3.5-flash', [{ inlineData: { mimeType, data: base64Data } }, { text: prompt }]));
   } catch (error: any) { res.status(500).json({ error: error.message || 'Book analysis failed' }); }
 });

@@ -29,7 +29,7 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
 
         setPlatformConfig({ 
             logo: configData.platformLogo || '', 
-            name: configData.platformName || 'Exam Solution AI' 
+            name: configData.platformName || 'PakParcha AI' 
         });
         setRecentBlogs(Array.isArray(blogsData) ? blogsData.slice(0, 5) : []);
         setRecentNotes(Array.isArray(notesData) ? notesData.slice(0, 5) : []);

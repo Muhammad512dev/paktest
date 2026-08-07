@@ -2,20 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { getTeacherSubmissions, submitGrade, submitAllGrades, getClasses, getSubjects, getPapersBySchool, getSyllabuses, getPlans, getSchoolById, getStudents } from '../../services/dataService';
 import { ExamSubmission, User, ClassLevel, Subject, SavedPaper, Syllabus, Student } from '../../types';
 import { Search, CheckCircle, Clock, ChevronRight, User as UserIcon, BookOpen, AlertCircle, Save, Key, Printer, FileCheck, X, FileSpreadsheet, Calendar } from 'lucide-react';
+import MathRenderer from '../MathRenderer';
 
 const renderFormattedText = (text: string) => {
     if (!text) return 'No response provided.';
-    let html = text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-    
-    html = html
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/\[size=(\d+)\](.*?)\[\/size\]/g, '<span style="font-size: $1px">$2</span>');
-
-    return <span dangerouslySetInnerHTML={{ __html: html }} />;
+    return <MathRenderer text={text} />;
 };
 
 interface ExamGradingProps {
@@ -403,8 +394,8 @@ const ExamGrading: React.FC<ExamGradingProps> = ({ user }) => {
                        <h3 className="font-bold text-gray-800 text-lg mb-2">{ans.isObjective ? 'Objective Question' : 'Subjective Question'}</h3>
                        {question && (
                           <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200 mb-3">
-                            <p className="text-gray-700 font-medium">{question.text || 'Question text not available'}</p>
-                            {question.textUrdu && <p className="text-gray-600 font-urdu mt-2 text-right">{question.textUrdu}</p>}
+                            <div className="text-gray-700 font-medium"><MathRenderer text={question.text || 'Question text not available'} /></div>
+                            {question.textUrdu && <div className="text-gray-600 font-urdu mt-2 text-right"><MathRenderer text={question.textUrdu} /></div>}
                             
                             {/* MCQ OPTIONS DISPLAY */}
                             {question.type === 'MCQ' && (
@@ -428,13 +419,13 @@ const ExamGrading: React.FC<ExamGradingProps> = ({ user }) => {
                                                 <div key={i} className={`p-3 rounded-xl border flex flex-col gap-1 transition-all ${isStudentPick ? 'bg-indigo-100 border-indigo-300 shadow-sm' : isCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-100'}`}>
                                                     <div className="flex gap-2 items-center">
                                                         <span className="text-indigo-600 font-black text-[10px]">{letter}.</span>
-                                                        <span className={`flex-1 text-xs ${isStudentPick || isCorrect ? 'font-bold' : ''}`}>{opt}</span>
+                                                        <div className={`flex-1 text-xs ${isStudentPick || isCorrect ? 'font-bold' : ''}`}><MathRenderer text={opt} inline /></div>
                                                         {isStudentPick && <span className="text-[8px] uppercase text-indigo-500 font-black">Student's Choice</span>}
                                                         {isCorrect && !isStudentPick && <span className="text-[8px] uppercase text-emerald-500 font-black">Key</span>}
                                                     </div>
                                                     {optUrdu && (
                                                         <div className="text-right font-urdu text-sm text-gray-600 mt-1" dir="rtl">
-                                                            {optUrdu}
+                                                            <MathRenderer text={optUrdu} inline />
                                                         </div>
                                                     )}
                                                 </div>
@@ -453,7 +444,7 @@ const ExamGrading: React.FC<ExamGradingProps> = ({ user }) => {
                                   </span>
                                   {question.correctAnswer && (
                                     <span className="text-xs text-amber-600 font-bold flex items-center gap-1">
-                                      <Key size={12}/> Key: {question.correctAnswer}
+                                      <Key size={12}/> Key: <MathRenderer text={question.correctAnswer} inline />
                                     </span>
                                   )}
                                 </>

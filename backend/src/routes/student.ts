@@ -342,33 +342,33 @@ router.post('/submit', authenticateStudent, async (req: any, res: any) => {
                 if (resolvedStudentIdx !== -1 && resolvedCorrectIdx !== -1) {
                     isCorrect = resolvedStudentIdx === resolvedCorrectIdx;
                 } else {
-                const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-                const studentLetterIdx = letters.indexOf(studentStr);       // e.g. studentStr='b' → idx=1
-                const correctLetterIdx = letters.indexOf(correctKey);       // e.g. correctKey='b' → idx=1
+                    const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+                    const studentLetterIdx = letters.indexOf(studentStr);       // e.g. studentStr='b' → idx=1
+                    const correctLetterIdx = letters.indexOf(correctKey);       // e.g. correctKey='b' → idx=1
 
-                // PASS 1: Student gave a letter (e.g. "B") AND correct key is also a letter (e.g. "B")
-                if (studentLetterIdx !== -1 && correctLetterIdx !== -1) {
-                    isCorrect = studentLetterIdx === correctLetterIdx;
-                }
-                // PASS 2: Student gave a letter (e.g. "B") AND correct key is full text of that option
-                else if (studentLetterIdx !== -1 && opts[studentLetterIdx]) {
-                    isCorrect = normalize(opts[studentLetterIdx]) === correctKey;
-                }
-                // PASS 3: Correct key is a letter (e.g. "B") AND student gave the full text of that option
-                else if (correctLetterIdx !== -1 && opts[correctLetterIdx]) {
-                    isCorrect = normalize(opts[correctLetterIdx]) === studentStr;
-                }
-                // PASS 4: Both gave full option text — direct comparison
-                else {
-                    isCorrect = studentStr === correctKey || studentStr === correctKeyUrdu;
+                    // PASS 1: Student gave a letter (e.g. "B") AND correct key is also a letter (e.g. "B")
+                    if (studentLetterIdx !== -1 && correctLetterIdx !== -1) {
+                        isCorrect = studentLetterIdx === correctLetterIdx;
+                    }
+                    // PASS 2: Student gave a letter (e.g. "B") AND correct key is full text of that option
+                    else if (studentLetterIdx !== -1 && opts[studentLetterIdx]) {
+                        isCorrect = normalize(opts[studentLetterIdx]) === correctKey;
+                    }
+                    // PASS 3: Correct key is a letter (e.g. "B") AND student gave the full text of that option
+                    else if (correctLetterIdx !== -1 && opts[correctLetterIdx]) {
+                        isCorrect = normalize(opts[correctLetterIdx]) === studentStr;
+                    }
+                    // PASS 4: Both gave full option text — direct comparison
+                    else {
+                        isCorrect = studentStr === correctKey || studentStr === correctKeyUrdu;
+                    }
                 }
 
                 if (isCorrect) {
-                    autoScore = q.marks;
-                    console.log(`[GRADE] ✅ CORRECT`);
+                    autoScore = Number(q.marks || 1);
+                    console.log(`[GRADE] ✅ CORRECT | Marks: ${autoScore}`);
                 } else {
                     console.log(`[GRADE] ❌ INCORRECT`);
-                }
                 }
             }
             else if (q.type === 'True/False') {

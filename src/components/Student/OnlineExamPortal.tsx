@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getPaperForExam, submitExam, saveExamDraft, getExamDraft } from '../../services/dataService';
 import { ExamPaper } from '../../types';
 import { Clock, Shield, CheckCircle, Send, AlertCircle, Save, Lock, ChevronLeft, ChevronRight, CloudUpload, Bold, Italic, Copy, Clipboard } from 'lucide-react';
+import MathRenderer from '../MathRenderer';
 
 interface OnlineExamPortalProps {
   paperId: string;
@@ -376,15 +377,15 @@ const OnlineExamPortal: React.FC<OnlineExamPortalProps> = ({ paperId, onComplete
                 <div className="mb-6">
                   {/* Show English if medium is English or Bilingual */}
                   {(q.text && (q.medium !== 'Urdu')) && (
-                    <h2 className="text-lg md:text-xl font-bold text-gray-900 leading-relaxed">
-                      {q.text}
-                    </h2>
+                    <div className="text-lg md:text-xl font-bold text-gray-900 leading-relaxed">
+                      <MathRenderer text={q.text} />
+                    </div>
                   )}
                   {/* Show Urdu if medium is Urdu or Bilingual */}
                   {(q.textUrdu && (q.medium === 'Urdu' || q.medium === 'Bilingual')) && (
-                    <p className="text-xl md:text-2xl font-urdu text-gray-900 leading-loose text-right mt-3" dir="rtl">
-                      {q.textUrdu}
-                    </p>
+                    <div className="text-xl md:text-2xl font-urdu text-gray-900 leading-loose text-right mt-3" dir="rtl">
+                      <MathRenderer text={q.textUrdu} />
+                    </div>
                   )}
                   {/* Fallback: show whatever text is available */}
                   {(!q.text && !q.textUrdu) && (
@@ -408,10 +409,10 @@ const OnlineExamPortal: React.FC<OnlineExamPortalProps> = ({ paperId, onComplete
                             <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black shrink-0 ${isSelected ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500'}`}>{letter}</span>
                             <div className="flex-1">
                               {/* Show English option if not Urdu-only */}
-                              {opt && q.medium !== 'Urdu' && <span className="text-gray-700 text-sm">{opt}</span>}
+                              {opt && q.medium !== 'Urdu' && <div className="text-gray-700 text-sm"><MathRenderer text={opt} inline /></div>}
                               {/* Show Urdu option if Urdu or Bilingual */}
                               {optsUrdu[i] && (q.medium === 'Urdu' || q.medium === 'Bilingual') && (
-                                <p className="text-right font-urdu text-base text-gray-700 mt-1" dir="rtl">{optsUrdu[i]}</p>
+                                <div className="text-right font-urdu text-base text-gray-700 mt-1" dir="rtl"><MathRenderer text={optsUrdu[i]} inline /></div>
                               )}
                             </div>
                           </div>

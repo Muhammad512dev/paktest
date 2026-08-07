@@ -3,20 +3,11 @@ import { getAssignedPapers, getStudentResults, getSchoolById, getPlans } from '.
 import { ExamSubmission, School } from '../../types';
 import { BookOpen, Clock, Play, FileText, BarChart2, Calendar, Layout, Award, TrendingUp, User, HelpCircle, ChevronRight, CheckCircle, AlertCircle, Target, GraduationCap, Lock, Filter, Eye, Key, Zap, Edit3, Check, X, Printer, FileCheck } from 'lucide-react';
 import OnlineExamPortal from './OnlineExamPortal';
+import MathRenderer from '../MathRenderer';
 
 const renderFormattedText = (text: string) => {
   if (!text) return 'No response provided.';
-  let html = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-
-  html = html
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/\[size=(\d+)\](.*?)\[\/size\]/g, '<span style="font-size: $1px">$2</span>');
-
-  return <span dangerouslySetInnerHTML={{ __html: html }} />;
+  return <MathRenderer text={text} />;
 };
 
 interface StudentDashboardProps {
@@ -726,7 +717,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, initialTab })
                                                   }`}>
                                                   <div className="flex gap-2 items-center">
                                                     <span className={`font-black text-[10px] ${isCorrect ? 'text-emerald-600' : 'text-indigo-600'}`}>{letter}.</span>
-                                                    <span className={`flex-1 text-xs ${isStudentPick || isCorrect ? 'font-bold' : ''}`}>{opt}</span>
+                                                    <div className={`flex-1 text-xs ${isStudentPick || isCorrect ? 'font-bold' : ''}`}><MathRenderer text={opt} inline /></div>
                                                     {isCorrect && (
                                                       <span className="text-[8px] uppercase text-emerald-600 font-black flex items-center gap-1">
                                                         {isStudentPick ? <CheckCircle size={10} /> : null} Correct Answer
@@ -740,7 +731,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, initialTab })
                                                   </div>
                                                   {optUrdu && (
                                                     <div className="text-right font-urdu text-sm text-gray-600 mt-1" dir="rtl">
-                                                      {optUrdu}
+                                                      <MathRenderer text={optUrdu} inline />
                                                     </div>
                                                   )}
                                                 </div>

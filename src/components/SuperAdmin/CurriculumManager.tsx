@@ -296,6 +296,21 @@ const CurriculumManager: React.FC = () => {
     setIsAddModalOpen(true);
   };
 
+  const handleDeleteItem = async (type: 'syllabuses' | 'classes' | 'subjects' | 'chapters' | 'topics' | 'sources', id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${name}"? This will permanently remove it from the curriculum.`)) return;
+    try {
+      if (type === 'syllabuses') await deleteSyllabus(id);
+      else if (type === 'classes') await deleteClass(id);
+      else if (type === 'subjects') await deleteSubject(id);
+      else if (type === 'chapters') await deleteChapter(id);
+      else if (type === 'topics') await deleteTopic(id);
+      else if (type === 'sources') await deleteSource(id);
+      await refreshData();
+    } catch (err: any) {
+      alert(err.message || `Failed to delete ${type}`);
+    }
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-gray-200 pb-6">
@@ -338,7 +353,7 @@ const CurriculumManager: React.FC = () => {
                      </div>
                      <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                        <button onClick={() => openEditModal('syllabuses', s)} className="p-2 bg-white/20 backdrop-blur-md text-white rounded-lg hover:bg-indigo-600" title="Edit board"><Edit2 size={16}/></button>
-                       <button onClick={() => { deleteSyllabus(s.id); refreshData(); }} className="p-2 bg-white/20 backdrop-blur-md text-white rounded-lg hover:bg-red-600" title="Delete board"><Trash2 size={16}/></button>
+                       <button onClick={() => handleDeleteItem('syllabuses', s.id, s.name)} className="p-2 bg-white/20 backdrop-blur-md text-white rounded-lg hover:bg-red-600" title="Delete board"><Trash2 size={16}/></button>
                      </div>
                   </div>
                 ))}
@@ -357,7 +372,7 @@ const CurriculumManager: React.FC = () => {
                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{getSyllabusName(c.syllabusId)}</span>
                          <div className="mt-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                            <button onClick={() => openEditModal('classes', c)} className="p-2 text-gray-400 hover:text-indigo-600" title="Edit grade"><Edit2 size={16}/></button>
-                           <button onClick={() => { deleteClass(c.id); refreshData(); }} className="p-2 text-gray-400 hover:text-red-500" title="Delete grade"><Trash2 size={16}/></button>
+                           <button onClick={() => handleDeleteItem('classes', c.id, c.name)} className="p-2 text-gray-400 hover:text-red-500" title="Delete grade"><Trash2 size={16}/></button>
                          </div>
                       </div>
                    ))}
@@ -375,7 +390,7 @@ const CurriculumManager: React.FC = () => {
                         </div>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                           <button onClick={() => openEditModal('subjects', s)} className="p-1.5 text-gray-300 hover:text-indigo-600" title="Edit subject"><Edit2 size={14}/></button>
-                          <button onClick={() => { deleteSubject(s.id); refreshData(); }} className="p-1.5 text-gray-300 hover:text-red-500" title="Delete subject"><Trash2 size={14}/></button>
+                          <button onClick={() => handleDeleteItem('subjects', s.id, s.name)} className="p-1.5 text-gray-300 hover:text-red-500" title="Delete subject"><Trash2 size={14}/></button>
                         </div>
                      </div>
                      <h4 className="font-bold text-gray-900">{s.name}</h4>
@@ -392,7 +407,7 @@ const CurriculumManager: React.FC = () => {
                      <span className="font-bold text-gray-700 text-sm">{src.name}</span>
                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                        <button onClick={() => openEditModal('sources', src)} className="text-gray-400 hover:text-indigo-600" title="Edit source"><Edit2 size={14}/></button>
-                       <button onClick={() => { deleteSource(src.id); refreshData(); }} className="text-gray-400 hover:text-red-500" title="Delete source"><Trash2 size={14}/></button>
+                       <button onClick={() => handleDeleteItem('sources', src.id, src.name)} className="text-gray-400 hover:text-red-500" title="Delete source"><Trash2 size={14}/></button>
                      </div>
                   </div>
                ))}
@@ -416,11 +431,7 @@ const CurriculumManager: React.FC = () => {
                       </div>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => openEditModal(activeTab === 'CHAPTER' ? 'chapters' : 'topics', item)} className="text-gray-400 hover:text-indigo-600 p-2" title={`Edit ${activeTab.toLowerCase()}`}><Edit2 size={16}/></button>
-                        <button onClick={() => { 
-                           if(activeTab === 'CHAPTER') deleteChapter(item.id); 
-                           else deleteTopic(item.id);
-                           refreshData();
-                        }} className="text-red-500 p-2" title={`Delete ${activeTab.toLowerCase()}`}><Trash2 size={16}/></button>
+                        <button onClick={() => handleDeleteItem(activeTab === 'CHAPTER' ? 'chapters' : 'topics', item.id, item.name)} className="text-red-500 p-2" title={`Delete ${activeTab.toLowerCase()}`}><Trash2 size={16}/></button>
                       </div>
                    </div>
                 ))}

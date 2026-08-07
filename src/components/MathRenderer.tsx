@@ -30,11 +30,29 @@ const MathRenderer: React.FC<MathRendererProps> = ({
     }
 
     // Normalize double-escaped LaTeX strings (e.g. \\ce -> \ce, \\frac -> \frac)
-    let processedText = text.replace(/\\\\([a-zA-Z]+)/g, '\\$1');
+    let processedText = String(text).replace(/\\\\([a-zA-Z]+)/g, '\\$1');
 
-    // reset content
-    el.innerHTML = '';
-    el.textContent = processedText;
+    // Split by LaTeX Math expressions to preserve equations while converting markdown formatting
+    const mathRegex = /(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\])/gs;
+    const parts = processedText.split(mathRegex);
+
+    const formattedParts = parts.map(part => {
+      // If it's a math expression, keep it intact
+      if (/^(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\])$/s.test(part)) {
+        return part;
+      }
+      // Process markdown bold (**text**), italic (*text*), size tags, and newlines
+      return part
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\[size=(\d+)\](.*?)\[\/size\]/g, '<span style="font-size: $1px">$2</span>')
+        .replace(/\n/g, '<br />');
+    });
+
+    el.innerHTML = formattedParts.join('');
 
     renderMathInElement(el, {
       delimiters: [

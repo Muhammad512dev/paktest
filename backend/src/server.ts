@@ -1768,10 +1768,18 @@ app.post('/api/teacher/grade', authenticate, async (req: any, res: any) => {
             answers[questionId].feedback = feedback;
         }
 
-        // Recalculate total score
+        // Recalculate total score:
+        // - Objective questions: use teacherScore if teacher has overridden it (>0), otherwise autoScore
+        // - Subjective questions: use teacherScore (autoScore is 0 for subjective)
         let newTotal = 0;
         Object.values(answers).forEach((ans: any) => {
-            newTotal += (ans.autoScore || 0) + (ans.teacherScore || 0);
+            if (ans.isObjective) {
+                // Teacher override replaces auto-score; if not overridden (teacherScore=0), use autoScore
+                const hasTeacherOverride = typeof ans.teacherScore === 'number' && ans.teacherScore > 0;
+                newTotal += hasTeacherOverride ? Number(ans.teacherScore || 0) : Number(ans.autoScore || 0);
+            } else {
+                newTotal += Number(ans.teacherScore || 0);
+            }
         });
 
         const updated = await prisma.examSubmission.update({
@@ -1807,9 +1815,17 @@ app.post('/api/teacher/grade-all', authenticate, async (req: any, res: any) => {
             }
         });
 
+        // Recalculate total score:
+        // - Objective: teacherScore if overridden (>0), otherwise autoScore
+        // - Subjective: teacherScore only
         let newTotal = 0;
         Object.values(answers).forEach((ans: any) => {
-            newTotal += (ans.autoScore || 0) + (ans.teacherScore || 0);
+            if (ans.isObjective) {
+                const hasTeacherOverride = typeof ans.teacherScore === 'number' && ans.teacherScore > 0;
+                newTotal += hasTeacherOverride ? Number(ans.teacherScore || 0) : Number(ans.autoScore || 0);
+            } else {
+                newTotal += Number(ans.teacherScore || 0);
+            }
         });
 
         const updated = await prisma.examSubmission.update({

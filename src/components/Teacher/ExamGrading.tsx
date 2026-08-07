@@ -254,19 +254,25 @@ const ExamGrading: React.FC<ExamGradingProps> = ({ user }) => {
         return;
     }
     setSelectedSubmission(s);
-    // Initialize grading data with current values
+    // Initialize grading data for ALL questions (objective get autoScore as default, subjective get teacherScore)
     const initial: any = {};
     Object.entries(s.answers || {}).forEach(([id, ans]: [string, any]) => {
-        if (!ans.isObjective) {
-            initial[id] = { score: ans.teacherScore || 0, feedback: ans.feedback || '' };
-        }
+        initial[id] = {
+            score: ans.isObjective
+                ? (ans.teacherScore > 0 ? ans.teacherScore : (ans.autoScore || 0))
+                : (ans.teacherScore || 0),
+            feedback: ans.feedback || ''
+        };
     });
     setGradingData(initial);
   };
 
   const handleSaveGrade = async (questionId: string) => {
     if (!selectedSubmission) return;
-    const { score, feedback } = gradingData[questionId];
+    const gradeEntry = gradingData[questionId];
+    const ans = (selectedSubmission.answers as any)[questionId];
+    const score = gradeEntry?.score ?? (ans?.isObjective ? (ans?.autoScore || 0) : 0);
+    const feedback = gradeEntry?.feedback ?? (ans?.feedback || '');
     try {
         await submitGrade({
             submissionId: selectedSubmission.id,
@@ -341,7 +347,18 @@ const ExamGrading: React.FC<ExamGradingProps> = ({ user }) => {
                 Print Response
               </button>
               <div className="text-right ml-4">
-                <div className="text-3xl font-black text-indigo-600">{selectedSubmission.totalScore}</div>
+                <div className="text-3xl font-black text-indigo-600">
+                  {/* Live recalculated total: objective=autoScore (or teacher override), subjective=teacherScore */}
+                  {Object.entries(selectedSubmission.answers).reduce((total, [qId, ans]: [string, any]) => {
+                    const g = gradingData[qId];
+                    if (ans.isObjective) {
+                      const tScore = g?.score ?? (ans.teacherScore > 0 ? ans.teacherScore : (ans.autoScore || 0));
+                      return total + (tScore > 0 ? tScore : (ans.autoScore || 0));
+                    } else {
+                      return total + (g?.score ?? ans.teacherScore ?? 0);
+                    }
+                  }, 0)}
+                </div>
                 <div className="text-xs text-gray-400 font-bold uppercase">Current Total</div>
               </div>
             </div>
@@ -453,15 +470,17 @@ const ExamGrading: React.FC<ExamGradingProps> = ({ user }) => {
                           </div>
                        )}
                     </div>
-                    <div className="flex flex-col items-end gap-2 ml-4">
-                       <label className="text-xs font-bold text-gray-400 uppercase">Score</label>
-                       <input 
-                         type="number"
-                         className="w-20 px-3 py-2 border-2 border-indigo-100 rounded-lg focus:border-indigo-600 outline-none font-black text-center text-lg text-indigo-600"
-                         value={gradingData[qId]?.score ?? (ans.isObjective ? ans.autoScore : 0)}
-                         onChange={e => setGradingData({...gradingData, [qId]: { ...gradingData[qId], score: parseFloat(e.target.value) || 0 }})}
-                       />
-                    </div>
+                     <div className="flex flex-col items-end gap-2 ml-4">
+                        <label className="text-xs font-bold text-gray-400 uppercase">Score</label>
+                        <input 
+                          type="number"
+                          min={0}
+                          max={ans.questionMarks || 99}
+                          className="w-20 px-3 py-2 border-2 border-indigo-100 rounded-lg focus:border-indigo-600 outline-none font-black text-center text-lg text-indigo-600"
+                          value={gradingData[qId]?.score ?? (ans.teacherScore ?? (ans.isObjective ? (ans.autoScore || 0) : 0))}
+                          onChange={e => setGradingData({...gradingData, [qId]: { ...gradingData[qId], score: parseFloat(e.target.value) || 0, feedback: gradingData[qId]?.feedback || '' }})}
+                        />
+                     </div>
                  </div>
 
                  <div className={`p-6 rounded-xl border transition-colors ${ans.isCorrect ? 'bg-emerald-50/50 border-emerald-100' : 'bg-red-50/50 border-red-100'}`}>

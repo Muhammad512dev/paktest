@@ -3,6 +3,8 @@ import { getTeacherSubmissions, getClasses, getSubjects, getPapersBySchool, getS
 import { ExamSubmission, ClassLevel, Subject, SavedPaper, User, Student, Syllabus } from '../../types';
 import { Search, Filter, Download, FileSpreadsheet, Calendar, BookOpen, GraduationCap, ArrowRight, ChevronDown, CheckCircle, Clock, X, Printer, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface ResultCenterProps {
   user: User;
@@ -320,6 +322,156 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
   }, [viewMode, selectedPaper, availablePapers, papers, classes, students, submissions]);
 
 
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const schoolName = user.school?.name || 'Academic Institution';
+    const dateStr = new Date().toLocaleDateString();
+
+    // 1. Multi-test cumulative report PDF export
+    if (selectedPaperIds.length > 0 || (viewMode === 'CLASS_SUMMARY' && classSummaryData)) {
+      const activePapersList = selectedPaperIds.length > 0 
+        ? papers.filter(p => selectedPaperIds.includes(p.id))
+        : (classSummaryData ? classSummaryData.tests.map(t => t.paper) : []);
+
+      if (activePapersList.length > 0) {
+        const sanitize = (s: string) => (s || '').toLowerCase().replace(/class|grade|year|\s+/g, '');
+        const targetClassName = activePapersList[0].classLevel;
+        const targetClass = classes.find(c => sanitize(c.name) === sanitize(targetClassName));
+        const classStudents = students.filter(s => targetClass && s.classId === targetClass.id);
+
+        doc.setFontSize(18);
+        doc.setTextColor(0, 168, 107);
+        doc.text(schoolName.toUpperCase(), 14, 15);
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Multi-Test Cumulative Academic Performance Report - Class ${targetClassName}`, 14, 22);
+        doc.text(`Generated: ${dateStr} | Selected Tests: ${activePapersList.length}`, 14, 27);
+
+        const tableHeaders = [
+          'Roll No',
+          'Student Name',
+          ...activePapersList.map(p => `${p.title}\n(${p.subject})`),
+          'Total Obtained',
+          'Grand Max',
+          'Percentage'
+        ];
+
+        const tableRows = classStudents.map(student => {
+          let grandObtained = 0;
+          let grandMaxMarks = 0;
+          const scores = activePapersList.map(p => {
+            const sub = submissions.find(s => s.studentId === student.id && s.paperId === p.id);
+            const score = sub ? sub.totalScore : 0;
+            const maxM = p.totalMarks || 0;
+            grandObtained += score;
+            grandMaxMarks += maxM;
+            return sub ? `${score} / ${maxM}` : 'ABSENT';
+          });
+
+          const pct = grandMaxMarks > 0 ? ((grandObtained / grandMaxMarks) * 100).toFixed(1) + '%' : '0%';
+          return [
+            student.rollNo || 'N/A',
+            student.name,
+            ...scores,
+            String(grandObtained),
+            String(grandMaxMarks),
+            pct
+          ];
+        });
+
+        autoTable(doc, {
+          startY: 32,
+          head: [tableHeaders],
+          body: tableRows,
+          theme: 'grid',
+          headStyles: { fillColor: [0, 168, 107], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+          styles: { fontSize: 8, cellPadding: 3, halign: 'center' },
+          columnStyles: { 0: { halign: 'left' }, 1: { halign: 'left', fontStyle: 'bold' } }
+        });
+
+        doc.save(`Class_${targetClassName.replace(/\s+/g, '_')}_Cumulative_Result_Report.pdf`);
+        return;
+      }
+    }
+
+    // 2. Class Single-Test PDF report export
+    if (viewMode === 'TEST_VIEW' && activePaperData) {
+      doc.setFontSize(16);
+      doc.setTextColor(0, 168, 107);
+      doc.text(schoolName.toUpperCase(), 14, 15);
+      doc.setFontSize(11);
+      doc.setTextColor(100);
+      doc.text(`Test Result Report: ${activePaperData.paper.title}`, 14, 22);
+      doc.text(`Subject: ${activePaperData.paper.subject} | Class: ${activePaperData.paper.classLevel} | Max Marks: ${activePaperData.paper.totalMarks} | Date: ${new Date(activePaperData.paper.examDate || activePaperData.paper.dateCreated).toLocaleDateString()}`, 14, 27);
+
+      const tableHeaders = ['Student Name', 'Roll Number', 'Obtained Score', 'Max Marks', 'Percentage', 'Status'];
+      const tableRows = activePaperData.results.map(r => {
+        const hasSub = !!r.submission;
+        const score = hasSub ? r.submission!.totalScore : 0;
+        const maxM = activePaperData.paper.totalMarks || 1;
+        const pct = hasSub ? ((score / maxM) * 100).toFixed(1) + '%' : '0%';
+        const status = !hasSub ? 'Absent' : r.submission!.isGraded ? 'Graded' : 'In Review';
+        return [r.student.name, r.student.rollNo || 'N/A', String(score), String(maxM), pct, status];
+      });
+
+      autoTable(doc, {
+        startY: 32,
+        head: [tableHeaders],
+        body: tableRows,
+        theme: 'striped',
+        headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: { fontSize: 9, cellPadding: 4 }
+      });
+
+      doc.save(`${activePaperData.paper.title.replace(/\s+/g, '_')}_Result_Report.pdf`);
+      return;
+    }
+
+    // 3. Student Individual PDF Report
+    if (viewMode === 'STUDENT_VIEW' && studentViewData) {
+      doc.setFontSize(16);
+      doc.setTextColor(0, 168, 107);
+      doc.text(schoolName.toUpperCase(), 14, 15);
+      doc.setFontSize(11);
+      doc.setTextColor(100);
+      doc.text(`Student Academic Card: ${studentViewData.student.name} (Roll No: ${studentViewData.student.rollNo || 'N/A'})`, 14, 22);
+      doc.text(`Attempted Avg: ${studentViewData.stats.attemptedAvg.toFixed(1)} | Attempted Pct: ${studentViewData.stats.attemptedPct.toFixed(1)}% | Overall Pct: ${studentViewData.stats.overallPct.toFixed(1)}%`, 14, 27);
+
+      const tableHeaders = ['Assessment Title', 'Subject', 'Date', 'Obtained Score', 'Max Marks', 'Percentage', 'Status'];
+      const tableRows = studentViewData.displayPapers.map(paper => {
+        const test = studentViewData.tests.find(t => t.paperId === paper.id);
+        const hasAttempted = !!test;
+        const score = hasAttempted ? test.totalScore : 0;
+        const maxM = paper.totalMarks || 1;
+        const pct = hasAttempted ? ((score / maxM) * 100).toFixed(1) + '%' : '0%';
+        return [
+          paper.title,
+          paper.subject,
+          new Date(paper.examDate || paper.dateCreated).toLocaleDateString(),
+          String(score),
+          String(maxM),
+          pct,
+          !hasAttempted ? 'Absent' : test.isGraded ? 'Graded' : 'In Review'
+        ];
+      });
+
+      autoTable(doc, {
+        startY: 32,
+        head: [tableHeaders],
+        body: tableRows,
+        theme: 'grid',
+        headStyles: { fillColor: [0, 168, 107], textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: { fontSize: 9, cellPadding: 4 }
+      });
+
+      doc.save(`${studentViewData.student.name.replace(/\s+/g, '_')}_Academic_Report.pdf`);
+      return;
+    }
+
+    // Default browser print fallback
+    window.print();
+  };
+
   const handleExport = () => {
     // Multi-test selection or full class cumulative report
     if (selectedPaperIds.length > 0 || (viewMode === 'CLASS_SUMMARY' && classSummaryData)) {
@@ -442,11 +594,11 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
             </div>
             <div className="flex gap-3">
                 <button 
-                    onClick={() => window.print()}
-                    className="px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs flex items-center gap-3 transition-all shadow-xl active:scale-95"
+                    onClick={handleDownloadPDF}
+                    className="px-6 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs flex items-center gap-3 transition-all shadow-xl active:scale-95"
                 >
-                    <Printer size={18} />
-                    Print PDF
+                    <Download size={18} />
+                    Download PDF Report
                 </button>
                 <button 
                     onClick={handleExport}

@@ -78,7 +78,7 @@ const SignUp: React.FC<SignUpProps> = ({ onLogin, onNavigate }) => {
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
               <span className="font-bold text-lg">E</span>
             </div>
-            <span className="font-bold text-xl tracking-tight">ExamForge</span>
+            <span className="font-bold text-xl tracking-tight">PakParcha</span>
           </div>
           <h2 className="text-4xl font-black leading-tight mb-6">
             {isSelectedFree ? 'Start your 14-day free trial.' : `Request ${selectedPlanName} Access.`}
@@ -91,7 +91,7 @@ const SignUp: React.FC<SignUpProps> = ({ onLogin, onNavigate }) => {
           </ul>
         </div>
         <div className="relative z-10 text-xs text-slate-500">
-          &copy; 2024 ExamForge AI. All rights reserved.
+          &copy; 2024 PakParcha AI. All rights reserved.
         </div>
       </div>
 

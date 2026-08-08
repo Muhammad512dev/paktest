@@ -41,7 +41,7 @@ const Support: React.FC = () => {
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-12">
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900 mb-4">Support & Documentation</h1>
-        <p className="text-gray-500 mb-8">Resources to help you master ExamForge AI platform</p>
+        <p className="text-gray-500 mb-8">Resources to help you master PakParcha AI platform</p>
         <div className="relative max-w-xl mx-auto">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
           <input 
@@ -101,7 +101,7 @@ const Support: React.FC = () => {
              <div className="space-y-4">
                 <h4 className="text-xs font-bold uppercase tracking-widest text-indigo-300">Smart Sync Logic</h4>
                 <p className="text-sm text-indigo-100 leading-relaxed">
-                   The ExamForge engine automatically verifies every node in the hierarchy. If a Board or Subject is missing, it is created instantly. This ensures your repository remains consistent without manual data entry for every grade.
+                   The PakParcha engine automatically verifies every node in the hierarchy. If a Board or Subject is missing, it is created instantly. This ensures your repository remains consistent without manual data entry for every grade.
                 </p>
                 <div className="p-4 bg-white/10 rounded-xl border border-white/10 text-xs">
                    <strong>Pro Tip:</strong> Export a template from the 'Curriculum Manager' to ensure perfect compatibility.

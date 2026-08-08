@@ -7,9 +7,9 @@ const Contact: React.FC = () => {
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', message: '' });
   const [status, setStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'>('IDLE');
   const [config, setConfig] = useState({ 
-    platformEmail: 'support@examforge.com', 
+    platformEmail: 'support@PakParcha.com', 
     platformAddress: '123 Tech Park, SF, CA', 
-    platformName: 'ExamForge AI',
+    platformName: 'PakParcha AI',
     platformContact: '+1 (555) 123-4567'
   });
 
@@ -18,9 +18,9 @@ const Contact: React.FC = () => {
         try {
             const data = await getSystemConfig();
             setConfig({
-                platformEmail: data.platformEmail || 'support@examforge.com',
+                platformEmail: data.platformEmail || 'support@PakParcha.com',
                 platformAddress: data.platformAddress || '123 Tech Park, SF, CA',
-                platformName: data.platformName || 'ExamForge AI',
+                platformName: data.platformName || 'PakParcha AI',
                 platformContact: data.platformContact || '+1 (555) 123-4567'
             });
         } catch (e) {}

@@ -538,7 +538,7 @@ const GlobalQuestionBank: React.FC = () => {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Questions");
-    XLSX.writeFile(wb, `ExamForge_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb, `PakParcha_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const downloadTemplate = (format: 'CSV' | 'XLSX', type: string, contextual: boolean = false) => {

@@ -263,9 +263,9 @@ const RevenueAnalytics: React.FC = () => {
             <div className="p-8 space-y-6 overflow-y-auto">
               <div className="flex justify-between items-start border-b border-slate-100 pb-6">
                 <div>
-                  <h4 className="font-black text-slate-900 text-xl tracking-tight">ExamForge AI Platform</h4>
+                  <h4 className="font-black text-slate-900 text-xl tracking-tight">PakParcha AI Platform</h4>
                   <p className="text-xs text-slate-500 mt-1">Enterprise Subscription Billing</p>
-                  <p className="text-xs text-slate-500">billing@examforge.com</p>
+                  <p className="text-xs text-slate-500">billing@PakParcha.com</p>
                 </div>
                 <div className="text-right">
                   <span className="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-black uppercase rounded-full border border-emerald-200">

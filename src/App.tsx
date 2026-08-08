@@ -58,7 +58,7 @@ const App: React.FC = () => {
   const [systemConfig, setSystemConfig] = useState<SystemConfig>({
     currencyCode: 'USD',
     currencySymbol: '$',
-    platformName: 'ExamForge AI',
+    platformName: 'PakParcha AI',
     platformLogo: ''
   });
 
@@ -179,12 +179,12 @@ const App: React.FC = () => {
       <PublicLayout 
         currentView={publicView} 
         onNavigate={setPublicView} 
-        systemName={systemConfig.platformName || 'ExamForge'}
+        systemName={systemConfig.platformName || 'PakParcha'}
         logoUrl={systemConfig.platformLogo}
       >
         {publicView === 'HOME' && <Home onNavigate={setPublicView} />}
         {publicView === 'PRICING' && <Pricing onNavigate={setPublicView} />}
-        {publicView === 'ABOUT' && <About appName={systemConfig.platformName || 'ExamForge'} />}
+        {publicView === 'ABOUT' && <About appName={systemConfig.platformName || 'PakParcha'} />}
         {publicView === 'CONTACT' && <Contact />}
         {publicView === 'NOTES' && <Notes />}
         {publicView === 'PAST_PAPERS' && <PastPapers />}

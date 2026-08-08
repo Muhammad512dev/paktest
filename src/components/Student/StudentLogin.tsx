@@ -108,7 +108,7 @@ const StudentLogin: React.FC<StudentLoginProps> = ({ onLogin, onSwitchToAdmin, o
               Switch to Teacher / Admin Login
             </button>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-              Secure Session • Powered by ExamForge AI
+              Secure Session • Powered by PakParcha AI
             </p>
           </div>
         </div>

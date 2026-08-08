@@ -301,7 +301,7 @@ const SystemUsers: React.FC = () => {
                             <input 
                                 type="email" 
                                 className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                                placeholder="user@examforge.com"
+                                placeholder="user@PakParcha.com"
                                 value={newUser.email}
                                 onChange={(e) => setNewUser({...newUser, email: e.target.value})}
                             />

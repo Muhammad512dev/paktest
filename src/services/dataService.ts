@@ -79,7 +79,7 @@ export const getSystemConfig = async () => {
     const res = await fetch(`${API_URL}/api/public/settings`);
     return await handleResponse(res);
   } catch (e) {
-    return { currencySymbol: '$', platformName: 'ExamForge' };
+    return { currencySymbol: '$', platformName: 'PakParcha' };
   }
 };
 

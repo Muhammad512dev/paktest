@@ -400,7 +400,7 @@ const Settings: React.FC<SettingsProps> = ({ userRole, onConfigUpdate, onUserUpd
                               value={systemConfig.platformName || ''}
                               onChange={(e) => setSystemConfigState({...systemConfig, platformName: e.target.value})}
                               className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-brand/5 focus:border-brand outline-none transition-all font-bold text-gray-700"
-                              placeholder="ExamForge AI"
+                              placeholder="PakParcha AI"
                            />
                         </div>
                         <div>

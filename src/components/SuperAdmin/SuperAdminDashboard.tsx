@@ -150,7 +150,7 @@ const SuperAdminDashboard: React.FC = () => {
              <LayoutDashboard size={40} className="text-indigo-600" />
              Platform Control Center
           </h1>
-          <p className="text-slate-500 mt-2 uppercase font-black tracking-[0.3em] text-[11px]">ExamForge AI • Platform Administrator</p>
+          <p className="text-slate-500 mt-2 uppercase font-black tracking-[0.3em] text-[11px]">PakParcha AI • Platform Administrator</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="hidden md:flex items-center gap-3 text-sm font-bold text-slate-600 bg-white px-6 py-3 rounded-2xl border border-slate-200 shadow-sm">

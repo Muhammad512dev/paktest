@@ -642,52 +642,52 @@ const ExamGrading: React.FC<ExamGradingProps> = ({ user }) => {
                   <div className="space-y-1">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Syllabus / Board</label>
                       <select 
-                          className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-xs"
+                          className="w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-xs"
                           value={selectedSyllabus}
                           onChange={e => { setSelectedSyllabus(e.target.value); setSelectedClass('ALL'); setSelectedSubject('ALL'); setSelectedPaper('ALL'); }}
                           disabled={!!searchTerm}
                       >
-                          <option value="ALL">All Boards</option>
-                          {syllabuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                          <option value="ALL" className="bg-white text-slate-800">All Boards</option>
+                          {syllabuses.map(s => <option key={s.id} value={s.id} className="bg-white text-slate-800">{s.name}</option>)}
                       </select>
                   </div>
 
                   <div className="space-y-1">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Class / Grade</label>
                       <select 
-                          className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-xs"
+                          className="w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-xs"
                           value={selectedClass}
                           onChange={e => { setSelectedClass(e.target.value); setSelectedSubject('ALL'); setSelectedPaper('ALL'); }}
                           disabled={!!searchTerm}
                       >
-                          <option value="ALL">All Classes</option>
-                          {availableClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          <option value="ALL" className="bg-white text-slate-800">All Classes</option>
+                          {availableClasses.map(c => <option key={c.id} value={c.id} className="bg-white text-slate-800">{c.name}</option>)}
                       </select>
                   </div>
 
                   <div className="space-y-1">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Subject</label>
                       <select 
-                          className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-xs"
+                          className="w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-xs"
                           value={selectedSubject}
                           onChange={e => { setSelectedSubject(e.target.value); setSelectedPaper('ALL'); }}
                           disabled={!!searchTerm}
                       >
-                          <option value="ALL">All Subjects</option>
-                          {availableSubjects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                          <option value="ALL" className="bg-white text-slate-800">All Subjects</option>
+                          {availableSubjects.map(s => <option key={s.id} value={s.name} className="bg-white text-slate-800">{s.name}</option>)}
                       </select>
                   </div>
 
                   <div className="space-y-1">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Specific Test</label>
                       <select 
-                          className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-xs"
+                          className="w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-xs"
                           value={selectedPaper}
                           onChange={e => setSelectedPaper(e.target.value)}
                           disabled={!!searchTerm}
                       >
-                          <option value="ALL">Latest / Auto</option>
-                          {availablePapers.map(p => <option key={p.id} value={p.id}>{new Date(p.examDate || p.dateCreated).toLocaleDateString()} — {p.subject} — {p.title}</option>)}
+                          <option value="ALL" className="bg-white text-slate-800">Latest / Auto</option>
+                          {availablePapers.map(p => <option key={p.id} value={p.id} className="bg-white text-slate-800">{new Date(p.examDate || p.dateCreated).toLocaleDateString()} — {p.subject} — {p.title}</option>)}
                       </select>
                   </div>
               </div>

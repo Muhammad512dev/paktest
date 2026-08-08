@@ -21,6 +21,20 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Custom dropdown option styling */
+select option {
+  background-color: #ffffff;
+  color: #0f172a;
+  padding: 8px 12px;
+}
+
+select option:hover,
+select option:focus,
+select option:checked {
+  background-color: #00a86b !important;
+  color: #ffffff !important;
+}
+
 /* Keep native dropdown menus aligned with the dark print-preview toolbar. */
 .print-preview-select {
   color-scheme: dark;
@@ -33,7 +47,7 @@ body {
 
 .print-preview-select option:checked,
 .print-preview-select option:hover {
-  background-color: #4f46e5;
+  background-color: #00a86b;
   color: #ffffff;
 }
 

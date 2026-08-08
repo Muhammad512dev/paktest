@@ -176,9 +176,16 @@ const ContentManager: React.FC = () => {
                        <input type="text" placeholder="Book (optional)" className="w-full p-3 border rounded-xl" value={noteForm.book} onChange={e => setNoteForm({...noteForm, book: e.target.value})} />
                        <input type="text" placeholder="Author" className="w-full p-3 border rounded-xl" value={noteForm.author} onChange={e => setNoteForm({...noteForm, author: e.target.value})} />
                        <textarea placeholder="Description" className="w-full p-3 border rounded-xl h-24" value={noteForm.description} onChange={e => setNoteForm({...noteForm, description: e.target.value})} />
-                       <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer" onClick={() => document.getElementById('note-file')?.click()}>
-                          <p className="text-sm text-gray-500">{noteForm.fileUrl ? 'File Selected' : 'Upload PDF/Doc'}</p>
-                          <input id="note-file" type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'file')} />
+                       
+                       <div className="space-y-3">
+                         <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-indigo-400 transition-colors" onClick={() => document.getElementById('note-file')?.click()}>
+                            <p className="text-sm font-bold text-gray-600">{noteForm.fileUrl ? `Selected File / Link: ${noteForm.fileUrl.substring(0, 40)}...` : '📄 Click to Upload PDF / Doc file'}</p>
+                            <input id="note-file" type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'file')} />
+                         </div>
+                         <div className="flex items-center gap-2">
+                           <span className="text-xs text-gray-400 font-bold uppercase">OR</span>
+                           <input type="url" placeholder="Paste Google Drive / External PDF Link (https://drive.google.com/...)" className="w-full p-3 border rounded-xl text-sm font-mono" value={noteForm.fileUrl} onChange={e => setNoteForm({...noteForm, fileUrl: e.target.value})} />
+                         </div>
                        </div>
                     </>
                  )}
@@ -194,9 +201,16 @@ const ContentManager: React.FC = () => {
                           <input type="text" placeholder="Level/Grade" className="w-full p-3 border rounded-xl" value={paperForm.level} onChange={e => setPaperForm({...paperForm, level: e.target.value})} />
                           <input type="text" placeholder="Subject" className="w-full p-3 border rounded-xl" value={paperForm.subject} onChange={e => setPaperForm({...paperForm, subject: e.target.value})} />
                        </div>
-                       <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer" onClick={() => document.getElementById('paper-file')?.click()}>
-                          <p className="text-sm text-gray-500">{paperForm.fileUrl ? 'File Selected' : 'Upload Paper PDF'}</p>
-                          <input id="paper-file" type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'file')} />
+                       
+                       <div className="space-y-3">
+                         <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-indigo-400 transition-colors" onClick={() => document.getElementById('paper-file')?.click()}>
+                            <p className="text-sm font-bold text-gray-600">{paperForm.fileUrl ? `Selected File / Link: ${paperForm.fileUrl.substring(0, 40)}...` : '📄 Click to Upload Past Paper PDF'}</p>
+                            <input id="paper-file" type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'file')} />
+                         </div>
+                         <div className="flex items-center gap-2">
+                           <span className="text-xs text-gray-400 font-bold uppercase">OR</span>
+                           <input type="url" placeholder="Paste Google Drive / External PDF Link (https://drive.google.com/...)" className="w-full p-3 border rounded-xl text-sm font-mono" value={paperForm.fileUrl} onChange={e => setPaperForm({...paperForm, fileUrl: e.target.value})} />
+                         </div>
                        </div>
                     </>
                  )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getTeacherSubmissions, submitGrade, submitAllGrades, getClasses, getSubjects, getPapersBySchool, getSyllabuses, getPlans, getSchoolById, getStudents } from '../../services/dataService';
 import { ExamSubmission, User, ClassLevel, Subject, SavedPaper, Syllabus, Student } from '../../types';
-import { Search, CheckCircle, Clock, ChevronRight, User as UserIcon, BookOpen, AlertCircle, Save, Key, Printer, FileCheck, X, FileSpreadsheet, Calendar } from 'lucide-react';
+import { Search, Filter, CheckCircle, Clock, ChevronRight, User as UserIcon, BookOpen, AlertCircle, Save, Key, Printer, FileCheck, X, FileSpreadsheet, Calendar } from 'lucide-react';
 import MathRenderer from '../MathRenderer';
 
 const renderFormattedText = (text: string) => {
@@ -31,7 +31,8 @@ const ExamGrading: React.FC<ExamGradingProps> = ({ user }) => {
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
 
-  // Filters
+  // Filters & Mode
+  const [filterMode, setFilterMode] = useState<'WIZARD' | 'DROPDOWN'>('WIZARD');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSyllabus, setSelectedSyllabus] = useState('ALL');
   const [selectedClass, setSelectedClass] = useState('ALL');
@@ -562,60 +563,136 @@ const ExamGrading: React.FC<ExamGradingProps> = ({ user }) => {
         <div className="absolute right-[-20px] bottom-[-20px] w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
       </div>
 
-      {/* Step-by-Step Interactive Wizard Navigation */}
+      {/* Filter Mode Switch & Navigation */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden print:hidden">
-        {/* Wizard Header / Breadcrumb */}
+        {/* Top Control Bar */}
         <div className="p-6 border-b border-slate-100 bg-slate-50/70 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-xs font-bold">
-                <button 
-                    onClick={() => { setSelectedSyllabus('ALL'); setSelectedClass('ALL'); setSelectedSubject('ALL'); setSelectedPaper('ALL'); }}
-                    className={`px-3 py-1.5 rounded-lg transition-all ${selectedSyllabus === 'ALL' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200/60 text-slate-600 hover:bg-slate-300/60'}`}
-                >
-                    1. Board
-                </button>
-                <ChevronRight size={14} className="text-slate-400" />
-                <button 
-                    disabled={selectedSyllabus === 'ALL'}
-                    onClick={() => { setSelectedClass('ALL'); setSelectedSubject('ALL'); setSelectedPaper('ALL'); }}
-                    className={`px-3 py-1.5 rounded-lg transition-all disabled:opacity-40 ${selectedClass === 'ALL' && selectedSyllabus !== 'ALL' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200/60 text-slate-600 hover:bg-slate-300/60'}`}
-                >
-                    2. Class
-                </button>
-                <ChevronRight size={14} className="text-slate-400" />
-                <button 
-                    disabled={selectedClass === 'ALL'}
-                    onClick={() => { setSelectedSubject('ALL'); setSelectedPaper('ALL'); }}
-                    className={`px-3 py-1.5 rounded-lg transition-all disabled:opacity-40 ${selectedSubject === 'ALL' && selectedClass !== 'ALL' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200/60 text-slate-600 hover:bg-slate-300/60'}`}
-                >
-                    3. Subject
-                </button>
-                <ChevronRight size={14} className="text-slate-400" />
-                <button 
-                    disabled={selectedSubject === 'ALL'}
-                    onClick={() => { setSelectedPaper('ALL'); }}
-                    className={`px-3 py-1.5 rounded-lg transition-all disabled:opacity-40 ${selectedPaper === 'ALL' && selectedSubject !== 'ALL' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200/60 text-slate-600 hover:bg-slate-300/60'}`}
-                >
-                    4. Test / Exam
-                </button>
-            </div>
+            {filterMode === 'WIZARD' ? (
+              <div className="flex items-center gap-2 text-xs font-bold">
+                  <button 
+                      onClick={() => { setSelectedSyllabus('ALL'); setSelectedClass('ALL'); setSelectedSubject('ALL'); setSelectedPaper('ALL'); }}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${selectedSyllabus === 'ALL' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200/60 text-slate-600 hover:bg-slate-300/60'}`}
+                  >
+                      1. Board
+                  </button>
+                  <ChevronRight size={14} className="text-slate-400" />
+                  <button 
+                      disabled={selectedSyllabus === 'ALL'}
+                      onClick={() => { setSelectedClass('ALL'); setSelectedSubject('ALL'); setSelectedPaper('ALL'); }}
+                      className={`px-3 py-1.5 rounded-lg transition-all disabled:opacity-40 ${selectedClass === 'ALL' && selectedSyllabus !== 'ALL' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200/60 text-slate-600 hover:bg-slate-300/60'}`}
+                  >
+                      2. Class
+                  </button>
+                  <ChevronRight size={14} className="text-slate-400" />
+                  <button 
+                      disabled={selectedClass === 'ALL'}
+                      onClick={() => { setSelectedSubject('ALL'); setSelectedPaper('ALL'); }}
+                      className={`px-3 py-1.5 rounded-lg transition-all disabled:opacity-40 ${selectedSubject === 'ALL' && selectedClass !== 'ALL' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200/60 text-slate-600 hover:bg-slate-300/60'}`}
+                  >
+                      3. Subject
+                  </button>
+                  <ChevronRight size={14} className="text-slate-400" />
+                  <button 
+                      disabled={selectedSubject === 'ALL'}
+                      onClick={() => { setSelectedPaper('ALL'); }}
+                      className={`px-3 py-1.5 rounded-lg transition-all disabled:opacity-40 ${selectedPaper === 'ALL' && selectedSubject !== 'ALL' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200/60 text-slate-600 hover:bg-slate-300/60'}`}
+                  >
+                      4. Test / Exam
+                  </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                <Filter size={16} className="text-emerald-600" /> Standard Dropdown Filters Active
+              </div>
+            )}
 
-            {/* Quick Search */}
-            <div className="relative min-w-[260px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input 
-                    type="text" 
-                    className="w-full pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-bold text-xs"
-                    placeholder="Search student or roll no..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                />
-                {searchTerm && (
-                    <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                        <X size={14} />
-                    </button>
-                )}
+            <div className="flex items-center gap-3">
+              {/* Filter Mode Toggle Button */}
+              <button 
+                onClick={() => setFilterMode(m => m === 'WIZARD' ? 'DROPDOWN' : 'WIZARD')}
+                className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl shadow-sm flex items-center gap-2 transition-all"
+              >
+                <Filter size={14} className="text-emerald-600" />
+                {filterMode === 'WIZARD' ? 'Switch to Classic Dropdowns' : 'Switch to Step Wizard'}
+              </button>
+
+              {/* Quick Search */}
+              <div className="relative min-w-[220px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input 
+                      type="text" 
+                      className="w-full pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-bold text-xs"
+                      placeholder="Search student or roll no..."
+                      value={searchTerm}
+                      onChange={e => setSearchTerm(e.target.value)}
+                  />
+                  {searchTerm && (
+                      <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                          <X size={14} />
+                      </button>
+                  )}
+              </div>
             </div>
         </div>
+
+        {/* Dropdown Mode View */}
+        {filterMode === 'DROPDOWN' && (
+          <div className="p-6 bg-slate-50/40 border-b border-slate-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Syllabus / Board</label>
+                      <select 
+                          className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-xs"
+                          value={selectedSyllabus}
+                          onChange={e => { setSelectedSyllabus(e.target.value); setSelectedClass('ALL'); setSelectedSubject('ALL'); setSelectedPaper('ALL'); }}
+                          disabled={!!searchTerm}
+                      >
+                          <option value="ALL">All Boards</option>
+                          {syllabuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                  </div>
+
+                  <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Class / Grade</label>
+                      <select 
+                          className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-xs"
+                          value={selectedClass}
+                          onChange={e => { setSelectedClass(e.target.value); setSelectedSubject('ALL'); setSelectedPaper('ALL'); }}
+                          disabled={!!searchTerm}
+                      >
+                          <option value="ALL">All Classes</option>
+                          {availableClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                  </div>
+
+                  <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Subject</label>
+                      <select 
+                          className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-xs"
+                          value={selectedSubject}
+                          onChange={e => { setSelectedSubject(e.target.value); setSelectedPaper('ALL'); }}
+                          disabled={!!searchTerm}
+                      >
+                          <option value="ALL">All Subjects</option>
+                          {availableSubjects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                      </select>
+                  </div>
+
+                  <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Specific Test</label>
+                      <select 
+                          className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-xs"
+                          value={selectedPaper}
+                          onChange={e => setSelectedPaper(e.target.value)}
+                          disabled={!!searchTerm}
+                      >
+                          <option value="ALL">Latest / Auto</option>
+                          {availablePapers.map(p => <option key={p.id} value={p.id}>{new Date(p.examDate || p.dateCreated).toLocaleDateString()} — {p.subject} — {p.title}</option>)}
+                      </select>
+                  </div>
+              </div>
+          </div>
+        )}
 
         <div className="p-6">
             {/* STEP 1: SELECT BOARD */}

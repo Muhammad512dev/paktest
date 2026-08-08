@@ -29,6 +29,7 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
   const [selectedClass, setSelectedClass] = useState('ALL');
   const [selectedSubject, setSelectedSubject] = useState('ALL');
   const [selectedPaper, setSelectedPaper] = useState('ALL');
+  const [selectedPaperIds, setSelectedPaperIds] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState('');
@@ -319,6 +320,53 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
 
 
   const handleExport = () => {
+    // Multi-test selection or full class cumulative report
+    if (selectedPaperIds.length > 0 || (viewMode === 'CLASS_SUMMARY' && classSummaryData)) {
+      const activePapersList = selectedPaperIds.length > 0 
+        ? papers.filter(p => selectedPaperIds.includes(p.id))
+        : (classSummaryData ? classSummaryData.tests.map(t => t.paper) : []);
+
+      if (activePapersList.length > 0) {
+        const sanitize = (s: string) => (s || '').toLowerCase().replace(/class|grade|year|\s+/g, '');
+        const targetClassName = activePapersList[0].classLevel;
+        const targetClass = classes.find(c => sanitize(c.name) === sanitize(targetClassName));
+        const classStudents = students.filter(s => targetClass && s.classId === targetClass.id);
+
+        const data = classStudents.map(student => {
+          let grandObtained = 0;
+          let grandMaxMarks = 0;
+          const rowData: any = {
+            RollNumber: student.rollNo || 'N/A',
+            StudentName: student.name,
+            Class: targetClassName
+          };
+
+          activePapersList.forEach(p => {
+            const sub = submissions.find(s => s.studentId === student.id && s.paperId === p.id);
+            const score = sub ? sub.totalScore : 0;
+            const maxM = p.totalMarks || 0;
+            grandObtained += score;
+            grandMaxMarks += maxM;
+
+            rowData[`Test: ${p.title} (${p.subject})`] = sub ? `${score} / ${maxM}` : 'ABSENT';
+          });
+
+          const totalPct = grandMaxMarks > 0 ? ((grandObtained / grandMaxMarks) * 100).toFixed(2) + '%' : '0%';
+          rowData['Total Marks Obtained'] = grandObtained;
+          rowData['Grand Total Marks'] = grandMaxMarks;
+          rowData['Overall Percentage'] = totalPct;
+
+          return rowData;
+        });
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Full_Class_Report");
+        XLSX.writeFile(wb, `Class_${targetClassName.replace(/\s+/g, '_')}_Full_Result_Report.xlsx`);
+        return;
+      }
+    }
+
     if (viewMode === 'TEST_VIEW' && activePaperData) {
         const data = activePaperData.results.map(r => ({
             StudentName: r.student.name,
@@ -625,6 +673,33 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
                     </div>
                 </div>
 
+                <div className="space-y-2 col-span-full border-t border-slate-100 pt-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Multi-Test Select (For Cumulative Export Report)</label>
+                      {selectedPaperIds.length > 0 && (
+                        <button onClick={() => setSelectedPaperIds([])} className="text-xs text-rose-500 font-bold hover:underline">Clear Selection ({selectedPaperIds.length})</button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 bg-slate-50 border border-slate-200 rounded-2xl">
+                      {availablePapers.map(p => {
+                        const isChecked = selectedPaperIds.includes(p.id);
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              if (isChecked) setSelectedPaperIds(selectedPaperIds.filter(id => id !== p.id));
+                              else setSelectedPaperIds([...selectedPaperIds, p.id]);
+                            }}
+                            className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${isChecked ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'}`}
+                          >
+                            {isChecked ? '✓ ' : '+ '} {p.title} ({p.subject})
+                          </button>
+                        );
+                      })}
+                      {availablePapers.length === 0 && <span className="text-xs text-slate-400 italic">No tests match current class/subject filter</span>}
+                    </div>
+                </div>
             </div>
         </div>
       </div>

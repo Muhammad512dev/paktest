@@ -2036,7 +2036,81 @@ const registerCurriculumRoutes = (modelName: string, model: any) => {
 
     app.delete(`/api/curriculum/${modelName}/:id`, authenticate, async (req: any, res: any) => {
         if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Only Super Admin can modify curriculum' });
-        try { await model.delete({ where: { id: req.params.id } }); res.json({ success: true }); } catch(e) { res.status(500).json({}); }
+        const id = req.params.id;
+        try {
+            // Cascade delete: remove all dependent records before deleting the parent
+            if (modelName === 'syllabuses') {
+                // Get all classes, subjects, chapters under this syllabus
+                const classes = await prisma.classLevel.findMany({ where: { syllabusId: id }, select: { id: true } });
+                const subjects = await prisma.subject.findMany({ where: { syllabusId: id }, select: { id: true } });
+                const chapters = await prisma.chapter.findMany({ where: { syllabusId: id }, select: { id: true } });
+                const chapterIds = chapters.map((c: any) => c.id);
+                const subjectIds = subjects.map((s: any) => s.id);
+                const classIds = classes.map((c: any) => c.id);
+                // Delete questions
+                if (chapterIds.length > 0) await prisma.question.deleteMany({ where: { chapterId: { in: chapterIds } } });
+                if (subjectIds.length > 0) await prisma.question.deleteMany({ where: { subjectId: { in: subjectIds } } });
+                await prisma.question.deleteMany({ where: { syllabusId: id } });
+                // Delete topics
+                if (chapterIds.length > 0) await prisma.topic.deleteMany({ where: { chapterId: { in: chapterIds } } });
+                // Delete chapters
+                await prisma.chapter.deleteMany({ where: { syllabusId: id } });
+                // Delete subjects
+                await prisma.subject.deleteMany({ where: { syllabusId: id } });
+                // Delete classes
+                await prisma.classLevel.deleteMany({ where: { syllabusId: id } });
+                // Delete syllabus
+                await prisma.syllabus.delete({ where: { id } });
+
+            } else if (modelName === 'classes') {
+                const subjects = await prisma.subject.findMany({ where: { classId: id }, select: { id: true } });
+                const subjectIds = subjects.map((s: any) => s.id);
+                const chapters = await prisma.chapter.findMany({ where: { classId: id }, select: { id: true } });
+                const chapterIds = chapters.map((c: any) => c.id);
+                // Delete questions
+                if (chapterIds.length > 0) await prisma.question.deleteMany({ where: { chapterId: { in: chapterIds } } });
+                if (subjectIds.length > 0) await prisma.question.deleteMany({ where: { subjectId: { in: subjectIds } } });
+                await prisma.question.deleteMany({ where: { classId: id } });
+                // Delete topics
+                if (chapterIds.length > 0) await prisma.topic.deleteMany({ where: { chapterId: { in: chapterIds } } });
+                // Delete chapters
+                await prisma.chapter.deleteMany({ where: { classId: id } });
+                // Delete subjects
+                await prisma.subject.deleteMany({ where: { classId: id } });
+                // Delete class
+                await prisma.classLevel.delete({ where: { id } });
+
+            } else if (modelName === 'subjects') {
+                const chapters = await prisma.chapter.findMany({ where: { subjectId: id }, select: { id: true } });
+                const chapterIds = chapters.map((c: any) => c.id);
+                // Delete questions
+                if (chapterIds.length > 0) await prisma.question.deleteMany({ where: { chapterId: { in: chapterIds } } });
+                await prisma.question.deleteMany({ where: { subjectId: id } });
+                // Delete topics
+                if (chapterIds.length > 0) await prisma.topic.deleteMany({ where: { chapterId: { in: chapterIds } } });
+                // Delete chapters
+                await prisma.chapter.deleteMany({ where: { subjectId: id } });
+                // Delete subject
+                await prisma.subject.delete({ where: { id } });
+
+            } else if (modelName === 'chapters') {
+                // Delete questions and topics under this chapter
+                await prisma.question.deleteMany({ where: { chapterId: id } });
+                await prisma.topic.deleteMany({ where: { chapterId: id } });
+                await prisma.chapter.delete({ where: { id } });
+
+            } else if (modelName === 'topics') {
+                await prisma.question.deleteMany({ where: { topicId: id } });
+                await prisma.topic.delete({ where: { id } });
+
+            } else {
+                await model.delete({ where: { id } });
+            }
+            res.json({ success: true });
+        } catch(e: any) {
+            console.error(`Cascade delete failed for ${modelName}/${id}:`, e?.message);
+            res.status(500).json({ error: `Failed to delete ${modelName}: ${e?.message || 'unknown error'}` });
+        }
     });
 };
 

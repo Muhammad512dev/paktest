@@ -40,6 +40,7 @@ interface SettingsProps {
 }
 
 const THEMES = [
+  { id: 'pakgreen', name: 'Pakistan Green ✦', primary: '#00a86b', secondary: '#007a4d', light: 'rgba(0,168,107,0.08)' },
   { id: 'indigo', name: 'Midnight Indigo', primary: '#4f46e5', secondary: '#4338ca', light: '#eef2ff' },
   { id: 'emerald', name: 'Emerald Forest', primary: '#10b981', secondary: '#059669', light: '#ecfdf5' },
   { id: 'violet', name: 'Royal Violet', primary: '#8b5cf6', secondary: '#7c3aed', light: '#f5f3ff' },
@@ -101,6 +102,35 @@ const Settings: React.FC<SettingsProps> = ({ userRole, onConfigUpdate, onUserUpd
 
   // Security State
   const [twoFactor, setTwoFactor] = useState(false);
+  const [appMode, setAppMode] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('app_mode') as 'light' | 'dark') || 'light';
+  });
+
+  const applyAppMode = (mode: 'light' | 'dark') => {
+    const root = document.documentElement;
+    if (mode === 'dark') {
+      root.style.setProperty('--app-bg', '#0a0f1e');
+      root.style.setProperty('--app-surface', 'rgba(255,255,255,0.04)');
+      root.style.setProperty('--app-text', '#ffffff');
+      root.style.setProperty('--app-text-muted', 'rgba(255,255,255,0.5)');
+      root.style.setProperty('--app-border', 'rgba(255,255,255,0.08)');
+      document.body.style.backgroundColor = '#0a0f1e';
+      document.body.style.color = '#ffffff';
+    } else {
+      root.style.removeProperty('--app-bg');
+      root.style.removeProperty('--app-surface');
+      root.style.removeProperty('--app-text');
+      root.style.removeProperty('--app-text-muted');
+      root.style.removeProperty('--app-border');
+      document.body.style.backgroundColor = '#f8fafc';
+      document.body.style.color = '#1e293b';
+    }
+    localStorage.setItem('app_mode', mode);
+  };
+
+  useEffect(() => {
+    applyAppMode(appMode);
+  }, [appMode]);
 
   const [branding, setBranding] = useState<SchoolBranding>({
     themeColor: '#4f46e5',
@@ -602,6 +632,62 @@ const Settings: React.FC<SettingsProps> = ({ userRole, onConfigUpdate, onUserUpd
                  <Palette size={20} className="text-brand" /> Theme & Experience
               </h3>
               
+              {/* APP DESIGN MODE */}
+              <div className="border border-slate-100 rounded-[2rem] p-6 bg-gradient-to-br from-slate-50 to-white">
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-5">App Design Mode</label>
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Light Mode */}
+                  <button
+                    onClick={() => setAppMode('light')}
+                    className={`relative p-5 rounded-[1.5rem] border-2 text-left transition-all flex flex-col gap-3 hover:shadow-lg ${
+                      appMode === 'light'
+                        ? 'border-brand bg-brand-light ring-4 ring-brand/5 shadow-md'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    {/* Light preview */}
+                    <div className="w-full h-20 bg-white border border-slate-200 rounded-xl overflow-hidden relative shadow-sm">
+                      <div className="w-10 h-full bg-slate-100 border-r border-slate-200 absolute left-0"/>
+                      <div className="absolute left-14 top-3 right-3 h-3 bg-slate-200 rounded-full"/>
+                      <div className="absolute left-14 top-9 right-6 h-2 bg-slate-100 rounded-full"/>
+                      <div className="absolute left-14 top-14 w-8 h-4 rounded-lg" style={{background: branding.themeColor}}/>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className={`text-sm font-black ${appMode === 'light' ? 'text-brand' : 'text-slate-700'}`}>☀️ Light Mode</p>
+                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">Clean white surfaces</p>
+                      </div>
+                      {appMode === 'light' && <CheckCircle2 size={18} className="text-brand" />}
+                    </div>
+                  </button>
+
+                  {/* Dark Mode */}
+                  <button
+                    onClick={() => setAppMode('dark')}
+                    className={`relative p-5 rounded-[1.5rem] border-2 text-left transition-all flex flex-col gap-3 hover:shadow-lg ${
+                      appMode === 'dark'
+                        ? 'border-brand bg-brand-light ring-4 ring-brand/5 shadow-md'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    {/* Dark preview */}
+                    <div className="w-full h-20 rounded-xl overflow-hidden relative shadow-sm" style={{background:'#0a0f1e'}}>
+                      <div className="w-10 h-full absolute left-0" style={{background:'rgba(255,255,255,0.05)',borderRight:'1px solid rgba(255,255,255,0.06)'}}/>
+                      <div className="absolute left-14 top-3 right-3 h-3 rounded-full" style={{background:'rgba(255,255,255,0.1)'}}/>
+                      <div className="absolute left-14 top-9 right-6 h-2 rounded-full" style={{background:'rgba(255,255,255,0.06)'}}/>
+                      <div className="absolute left-14 top-14 w-8 h-4 rounded-lg" style={{background: branding.themeColor}}/>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className={`text-sm font-black ${appMode === 'dark' ? 'text-brand' : 'text-slate-700'}`}>🌙 Dark Mode</p>
+                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">Navy glassmorphism</p>
+                      </div>
+                      {appMode === 'dark' && <CheckCircle2 size={18} className="text-brand" />}
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Dashboard Visual Palette</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">

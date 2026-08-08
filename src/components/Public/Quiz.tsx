@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { CheckCircle2, XCircle, RefreshCw, ArrowRight, Settings, BookOpen, Layers, Filter, Hash, Play, Award, CheckSquare, AlertCircle, GraduationCap, X, Languages } from 'lucide-react';
 import { getPublicCurriculum, generatePublicQuiz } from '../../services/dataService';
 import { Syllabus, ClassLevel, Subject } from '../../types';
+import MathRenderer from '../MathRenderer';
 
 const ALL_SOURCES = [
   'Textbook Exercise',
@@ -338,10 +339,14 @@ const Quiz: React.FC = () => {
                       <div>
                         {/* Display based on medium preference */}
                         {(config.medium === 'English' || config.medium === 'Bilingual') && q.text && (
-                            <h3 className="font-bold text-lg text-slate-900 leading-snug">{q.text}</h3>
+                            <h3 className="font-bold text-lg text-slate-900 leading-snug">
+                               <MathRenderer text={q.text} />
+                            </h3>
                         )}
                         {(config.medium === 'Urdu' || config.medium === 'Bilingual') && q.textUrdu && (
-                            <div className="text-right font-urdu text-xl mt-2 text-slate-700 leading-loose" dir="rtl">{q.textUrdu}</div>
+                            <div className="text-right font-urdu text-xl mt-2 text-slate-700 leading-loose" dir="rtl">
+                               <MathRenderer text={q.textUrdu} dir="rtl" />
+                            </div>
                         )}
                         <div className="flex gap-2 mt-3">
                            <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2 py-1 rounded border border-indigo-100 uppercase tracking-wider">{q.source}</span>
@@ -369,10 +374,10 @@ const Quiz: React.FC = () => {
                           </span>
                           <div className="flex flex-col w-full">
                              {(config.medium === 'English' || config.medium === 'Bilingual') && (
-                                <span className="text-sm font-medium">{opt}</span>
+                                <span className="text-sm font-medium"><MathRenderer text={opt} inline /></span>
                              )}
                              {(config.medium === 'Urdu' || config.medium === 'Bilingual') && q.optionsUrdu && q.optionsUrdu[idx] && (
-                                <span className="text-right font-urdu text-lg mt-1" dir="rtl">{q.optionsUrdu[idx]}</span>
+                                <span className="text-right font-urdu text-lg mt-1" dir="rtl"><MathRenderer text={q.optionsUrdu[idx]} inline dir="rtl" /></span>
                              )}
                           </div>
                         </span>
@@ -456,7 +461,9 @@ const Quiz: React.FC = () => {
                                     {qIndex + 1}
                                 </span>
                                 <div className="flex-1">
-                                    <h4 className="font-bold text-slate-900 text-lg leading-snug">{q.text}</h4>
+                                    <h4 className="font-bold text-slate-900 text-lg leading-snug">
+                                       <MathRenderer text={q.text} />
+                                    </h4>
                                     
                                     <div className="mt-4 space-y-2">
                                         {q.options && q.options.map((opt: string, idx: number) => {
@@ -477,7 +484,7 @@ const Quiz: React.FC = () => {
                                                 <div key={idx} className={`flex justify-between items-center p-3 rounded-xl border-2 text-sm transition-all ${optionClass}`}>
                                                     <div className="flex items-center gap-3">
                                                         <span className="text-xs font-black opacity-50">{String.fromCharCode(65+idx)}</span>
-                                                        <span>{opt}</span>
+                                                        <MathRenderer text={opt} inline />
                                                     </div>
                                                     {icon}
                                                 </div>

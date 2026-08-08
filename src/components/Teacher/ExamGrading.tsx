@@ -562,118 +562,176 @@ const ExamGrading: React.FC<ExamGradingProps> = ({ user }) => {
         <div className="absolute right-[-20px] bottom-[-20px] w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
       </div>
 
-      {/* Sheet-like Filters (Mirrors ResultCenter) */}
+      {/* Step-by-Step Interactive Wizard Navigation */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden print:hidden">
-        <div className="p-8 border-b border-slate-100 bg-slate-50/50">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                
-                {/* Search Override */}
-                <div className="space-y-2 lg:col-span-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Search Submission (Student or Roll No)</label>
-                    <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <input 
-                            type="text" 
-                            className="w-full pl-12 pr-10 py-3 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-sm"
-                            placeholder="Type to find specific student submissions..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                        />
-                        {searchTerm && (
-                            <button onClick={() => setSearchTerm('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                                <X size={16} />
+        {/* Wizard Header / Breadcrumb */}
+        <div className="p-6 border-b border-slate-100 bg-slate-50/70 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-xs font-bold">
+                <button 
+                    onClick={() => { setSelectedSyllabus('ALL'); setSelectedClass('ALL'); setSelectedSubject('ALL'); setSelectedPaper('ALL'); }}
+                    className={`px-3 py-1.5 rounded-lg transition-all ${selectedSyllabus === 'ALL' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200/60 text-slate-600 hover:bg-slate-300/60'}`}
+                >
+                    1. Board
+                </button>
+                <ChevronRight size={14} className="text-slate-400" />
+                <button 
+                    disabled={selectedSyllabus === 'ALL'}
+                    onClick={() => { setSelectedClass('ALL'); setSelectedSubject('ALL'); setSelectedPaper('ALL'); }}
+                    className={`px-3 py-1.5 rounded-lg transition-all disabled:opacity-40 ${selectedClass === 'ALL' && selectedSyllabus !== 'ALL' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200/60 text-slate-600 hover:bg-slate-300/60'}`}
+                >
+                    2. Class
+                </button>
+                <ChevronRight size={14} className="text-slate-400" />
+                <button 
+                    disabled={selectedClass === 'ALL'}
+                    onClick={() => { setSelectedSubject('ALL'); setSelectedPaper('ALL'); }}
+                    className={`px-3 py-1.5 rounded-lg transition-all disabled:opacity-40 ${selectedSubject === 'ALL' && selectedClass !== 'ALL' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200/60 text-slate-600 hover:bg-slate-300/60'}`}
+                >
+                    3. Subject
+                </button>
+                <ChevronRight size={14} className="text-slate-400" />
+                <button 
+                    disabled={selectedSubject === 'ALL'}
+                    onClick={() => { setSelectedPaper('ALL'); }}
+                    className={`px-3 py-1.5 rounded-lg transition-all disabled:opacity-40 ${selectedPaper === 'ALL' && selectedSubject !== 'ALL' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200/60 text-slate-600 hover:bg-slate-300/60'}`}
+                >
+                    4. Test / Exam
+                </button>
+            </div>
+
+            {/* Quick Search */}
+            <div className="relative min-w-[260px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input 
+                    type="text" 
+                    className="w-full pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-bold text-xs"
+                    placeholder="Search student or roll no..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                />
+                {searchTerm && (
+                    <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                        <X size={14} />
+                    </button>
+                )}
+            </div>
+        </div>
+
+        <div className="p-6">
+            {/* STEP 1: SELECT BOARD */}
+            {selectedSyllabus === 'ALL' && !searchTerm && (
+                <div className="space-y-4">
+                    <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider">Step 1: Select Educational Board</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {syllabuses.map(s => (
+                            <button
+                                key={s.id}
+                                onClick={() => { setSelectedSyllabus(s.id); setSelectedClass('ALL'); setSelectedSubject('ALL'); setSelectedPaper('ALL'); }}
+                                className="p-5 rounded-2xl border border-slate-200 bg-white hover:border-emerald-500 hover:shadow-lg transition-all text-left group"
+                            >
+                                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-sm mb-3 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                                    {s.name.substring(0, 2).toUpperCase()}
+                                </div>
+                                <h4 className="font-bold text-slate-800 text-sm">{s.name}</h4>
+                                <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">{s.description || 'Click to view classes'}</p>
                             </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* STEP 2: SELECT CLASS */}
+            {selectedSyllabus !== 'ALL' && selectedClass === 'ALL' && !searchTerm && (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider">Step 2: Select Grade / Class</h3>
+                        <button onClick={() => setSelectedSyllabus('ALL')} className="text-xs text-emerald-600 font-bold hover:underline">Change Board</button>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {availableClasses.map(c => (
+                            <button
+                                key={c.id}
+                                onClick={() => { setSelectedClass(c.id); setSelectedSubject('ALL'); setSelectedPaper('ALL'); }}
+                                className="p-5 rounded-2xl border border-slate-200 bg-white hover:border-emerald-500 hover:shadow-lg transition-all text-left group"
+                            >
+                                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-sm mb-3 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                                    {c.name.substring(0, 3)}
+                                </div>
+                                <h4 className="font-bold text-slate-800 text-sm">{c.name}</h4>
+                                <p className="text-[11px] text-slate-400 mt-1">Select class to view subjects</p>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* STEP 3: SELECT SUBJECT */}
+            {selectedClass !== 'ALL' && selectedSubject === 'ALL' && !searchTerm && (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider">Step 3: Select Subject</h3>
+                        <button onClick={() => setSelectedClass('ALL')} className="text-xs text-emerald-600 font-bold hover:underline">Change Class</button>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {availableSubjects.map(s => (
+                            <button
+                                key={s.id}
+                                onClick={() => { setSelectedSubject(s.name); setSelectedPaper('ALL'); }}
+                                className="p-5 rounded-2xl border border-slate-200 bg-white hover:border-emerald-500 hover:shadow-lg transition-all text-left group"
+                            >
+                                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-sm mb-3 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                                    {s.name.substring(0, 2).toUpperCase()}
+                                </div>
+                                <h4 className="font-bold text-slate-800 text-sm">{s.name}</h4>
+                                <p className="text-[11px] text-slate-400 mt-1">Select subject to view tests</p>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* STEP 4: SELECT TEST & DATE FILTER */}
+            {selectedSubject !== 'ALL' && !searchTerm && (
+                <div className="space-y-4">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-2 border-b border-slate-100">
+                        <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider">Step 4: Select Exam / Test</h3>
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 text-xs">
+                                <Calendar size={14} className="text-slate-400" />
+                                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="px-2 py-1 border border-slate-200 rounded-lg text-xs font-bold" />
+                                <span>to</span>
+                                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="px-2 py-1 border border-slate-200 rounded-lg text-xs font-bold" />
+                            </div>
+                            <button onClick={() => setSelectedSubject('ALL')} className="text-xs text-emerald-600 font-bold hover:underline">Change Subject</button>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {availablePapers.map(p => (
+                            <button
+                                key={p.id}
+                                onClick={() => setSelectedPaper(p.id)}
+                                className={`p-5 rounded-2xl border text-left transition-all ${
+                                    (selectedPaper === p.id || (!selectedPaper && activePaperId === p.id))
+                                        ? 'border-emerald-600 bg-emerald-50/50 shadow-md ring-1 ring-emerald-600'
+                                        : 'border-slate-200 bg-white hover:border-emerald-400'
+                                }`}
+                            >
+                                <div className="flex justify-between items-start mb-2">
+                                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">{p.subject}</span>
+                                    <span className="text-xs text-slate-400 font-bold">{new Date(p.examDate || p.dateCreated).toLocaleDateString()}</span>
+                                </div>
+                                <h4 className="font-bold text-slate-800 text-sm line-clamp-1">{p.title}</h4>
+                                <p className="text-xs text-slate-500 mt-1">{p.totalMarks || 100} Marks • Class {p.classLevel}</p>
+                            </button>
+                        ))}
+                        {availablePapers.length === 0 && (
+                            <div className="col-span-full py-8 text-center text-slate-400 text-sm italic">
+                                No test papers found for the selected criteria and date range.
+                            </div>
                         )}
                     </div>
                 </div>
-
-                <div className="space-y-2 lg:col-span-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Test Date Range</label>
-                    <div className="flex gap-4">
-                        <div className="relative flex-1">
-                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                            <input 
-                                type="date" 
-                                className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl outline-none font-bold text-sm disabled:opacity-50"
-                                value={dateFrom}
-                                onChange={e => setDateFrom(e.target.value)}
-                                disabled={!!searchTerm}
-                            />
-                        </div>
-                        <div className="relative flex-1">
-                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                            <input 
-                                type="date" 
-                                className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl outline-none font-bold text-sm disabled:opacity-50"
-                                value={dateTo}
-                                onChange={e => setDateTo(e.target.value)}
-                                disabled={!!searchTerm}
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Syllabus</label>
-                    <div className="relative">
-                        <select 
-                            className="w-full pl-4 pr-4 py-3 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-sm appearance-none disabled:opacity-50"
-                            value={selectedSyllabus}
-                            onChange={e => { setSelectedSyllabus(e.target.value); setSelectedClass('ALL'); setSelectedSubject('ALL'); setSelectedPaper('ALL'); }}
-                            disabled={!!searchTerm}
-                        >
-                            <option value="ALL">All Boards</option>
-                            {syllabuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </select>
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Class</label>
-                    <div className="relative">
-                        <select 
-                            className="w-full pl-4 pr-4 py-3 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-sm appearance-none disabled:opacity-50"
-                            value={selectedClass}
-                            onChange={e => { setSelectedClass(e.target.value); setSelectedSubject('ALL'); setSelectedPaper('ALL'); }}
-                            disabled={!!searchTerm}
-                        >
-                            <option value="ALL">All Classes</option>
-                            {availableClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Subject</label>
-                    <div className="relative">
-                        <select 
-                            className="w-full pl-4 pr-4 py-3 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-sm appearance-none disabled:opacity-50"
-                            value={selectedSubject}
-                            onChange={e => { setSelectedSubject(e.target.value); setSelectedPaper('ALL'); }}
-                            disabled={!!searchTerm}
-                        >
-                            <option value="ALL">All Subjects</option>
-                            {availableSubjects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                        </select>
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Specific Test</label>
-                    <div className="relative">
-                        <select 
-                            className="w-full pl-4 pr-4 py-3 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-sm appearance-none disabled:opacity-50"
-                            value={selectedPaper}
-                            onChange={e => setSelectedPaper(e.target.value)}
-                            disabled={!!searchTerm}
-                        >
-                            <option value="ALL">Latest / Auto</option>
-                            {availablePapers.map(p => <option key={p.id} value={p.id}>{new Date(p.examDate || p.dateCreated).toLocaleDateString()} — {p.subject} — {p.title}</option>)}
-                        </select>
-                    </div>
-                </div>
-
-            </div>
+            )}
         </div>
       </div>
 

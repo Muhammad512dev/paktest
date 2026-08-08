@@ -77,6 +77,17 @@ const App: React.FC = () => {
         if (b.appFont) root.style.setProperty('--app-font', b.appFont);
       } catch (_) {}
     }
+    // Restore dark/light app mode
+    const savedMode = localStorage.getItem('app_mode');
+    if (savedMode === 'dark') {
+      document.body.style.backgroundColor = '#0a0f1e';
+      document.body.style.color = '#ffffff';
+      document.documentElement.style.setProperty('--app-bg', '#0a0f1e');
+      document.documentElement.style.setProperty('--app-surface', 'rgba(255,255,255,0.04)');
+      document.documentElement.style.setProperty('--app-text', '#ffffff');
+      document.documentElement.style.setProperty('--app-text-muted', 'rgba(255,255,255,0.5)');
+      document.documentElement.style.setProperty('--app-border', 'rgba(255,255,255,0.08)');
+    }
   }, []);
 
   // Effect to load School details when a School Admin or Teacher logs in

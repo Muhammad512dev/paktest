@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Calendar, Clock, User, ArrowRight, Tag, ChevronLeft, Share2, Bookmark, Facebook, Twitter, Linkedin, ChevronRight as ChevronRightIcon, Sparkles as SparklesIcon } from 'lucide-react';
 import { getBlogs } from '../../services/dataService';
+import renderMathInElement from 'katex/dist/contrib/auto-render';
+import 'katex/dist/contrib/mhchem';
 
 const Blog: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,6 +61,27 @@ const Blog: React.FC = () => {
 
   const selectedPost = blogPosts.find(p => p.id === selectedPostId);
 
+  // Ref for the blog post content area — used to run KaTeX after HTML content renders
+  const postContentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!postContentRef.current || !selectedPost) return;
+    // Run KaTeX auto-render over the raw HTML content from CMS
+    try {
+      renderMathInElement(postContentRef.current, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false },
+          { left: '\\(', right: '\\)', display: false },
+          { left: '\\[', right: '\\]', display: true },
+        ],
+        throwOnError: false,
+        trust: true,
+        output: 'html',
+      });
+    } catch (e) { /* silently ignore */ }
+  }, [selectedPost]);
+
   if (selectedPost) {
     const relatedPosts = blogPosts.filter(p => p.id !== selectedPost.id && p.category === selectedPost.category).slice(0, 3);
     
@@ -104,9 +127,10 @@ const Blog: React.FC = () => {
                 </div>
               )}
 
-              <div 
-                className="prose prose-lg prose-indigo max-w-none text-slate-600 leading-relaxed font-medium"
-                dangerouslySetInnerHTML={{ __html: selectedPost.content || '' }} 
+              <div
+                ref={postContentRef}
+                className="prose prose-lg prose-slate max-w-none text-slate-600 leading-relaxed font-medium"
+                dangerouslySetInnerHTML={{ __html: selectedPost.content || '' }}
               />
            </div>
 

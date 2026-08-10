@@ -301,7 +301,7 @@ const App: React.FC = () => {
       <main className={`flex-1 flex flex-col overflow-hidden relative print:overflow-visible print:h-auto print:block ${isFullScreen ? 'z-[100]' : ''}`}>
         {!isFullScreen && (
           <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 shrink-0 print:hidden">
-             <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 text-gray-600">
+             <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 text-gray-600" aria-label="Open Sidebar Menu">
                 <Menu size={24} />
              </button>
              <span className="font-bold text-gray-900">{systemConfig.platformName}</span>

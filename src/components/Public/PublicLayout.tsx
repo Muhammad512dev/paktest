@@ -79,7 +79,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
 
             {/* Mobile Menu Button */}
             <div className="lg:hidden">
-              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-slate-600">
+              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-slate-600" aria-label="Toggle Mobile Menu">
                 {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
             </div>
@@ -149,10 +149,10 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
                 Empowering academic institutions with AI-driven assessment tools and curriculum management.
               </p>
               <div className="flex gap-4 mt-6">
-                <a href="#" className="text-slate-400 hover:text-white"><Facebook size={18} /></a>
-                <a href="#" className="text-slate-400 hover:text-white"><Twitter size={18} /></a>
-                <a href="#" className="text-slate-400 hover:text-white"><Linkedin size={18} /></a>
-                <a href="#" className="text-slate-400 hover:text-white"><Instagram size={18} /></a>
+                <a href="#" className="text-slate-400 hover:text-white" aria-label="Facebook Profile"><Facebook size={18} /></a>
+                <a href="#" className="text-slate-400 hover:text-white" aria-label="Twitter Profile"><Twitter size={18} /></a>
+                <a href="#" className="text-slate-400 hover:text-white" aria-label="LinkedIn Profile"><Linkedin size={18} /></a>
+                <a href="#" className="text-slate-400 hover:text-white" aria-label="Instagram Profile"><Instagram size={18} /></a>
               </div>
             </div>
             

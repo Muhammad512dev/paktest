@@ -6,7 +6,7 @@ import {
   Layers, FileText, CheckCircle2, ChevronDown, MonitorPlay, Layout, Library, Settings2,
   Hash, Info, Edit3, Tag, RefreshCw, Zap, Upload, FileUp, Briefcase, Wand2, FileCode, Paperclip, Database, Shuffle
 } from 'lucide-react';
-import { WizardState, Question, Difficulty, PaperStructure, PaperSectionConfig, User, WatermarkType, PaperLayoutMode, School, UserRole, QuestionType } from '../types';
+import { WizardState, Question, Difficulty, PaperStructure, PaperSectionConfig, User, WatermarkType, PaperLayoutMode, School, UserRole, QuestionType, getDefaultSectionInstruction } from '../types';
 import { 
   getSyllabuses, getClasses, getSubjects, getChapters, getTopics, getQuestions, getQuestionTypes, getSchoolById, getSystemConfig, checkAndTrackAiUsage
 } from '../services/dataService';
@@ -200,14 +200,17 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
       const id = `sec_${Date.now()}_${idx}`;
       // Determine category based on type
       const isObjective = ['MCQ', 'Match Columns', 'Fill in the Blanks', 'True/False', 'Spelling Check'].includes(type);
+      const totalCount = type === 'MCQ' ? 10 : 8;
+      const selectCount = type === 'MCQ' ? 10 : 6;
       
       structure[id] = {
         id: id,
         title: `Q.${idx + 1} ${type}`,
+        instruction: getDefaultSectionInstruction(type, selectCount, totalCount),
         questionType: type,
         marksPerQuestion: type === 'MCQ' ? 1 : type === 'Short Answer' ? 2 : 5,
-        totalCount: type === 'MCQ' ? 10 : 8,
-        selectCount: type === 'MCQ' ? 10 : 6, 
+        totalCount: totalCount,
+        selectCount: selectCount, 
         blankLines: 0,
         blankLineType: 'Line',
         questionsPerLine: false,
@@ -223,8 +226,15 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
   const updateSection = (id: string, updates: Partial<PaperSectionConfig>) => {
     // Automatically update category if question type changes in updates
     let finalUpdates = { ...updates };
-    if (updates.questionType) {
-        const isObjective = ['MCQ', 'Match Columns', 'Fill in the Blanks', 'True/False', 'Spelling Check'].includes(updates.questionType);
+    const currentSec = state.paperStructure[id];
+    if (updates.questionType || updates.selectCount !== undefined || updates.totalCount !== undefined) {
+        const type = updates.questionType || currentSec?.questionType || 'MCQ';
+        const sel = updates.selectCount !== undefined ? updates.selectCount : (currentSec?.selectCount || 5);
+        const tot = updates.totalCount !== undefined ? updates.totalCount : (currentSec?.totalCount || 5);
+        if (!updates.instruction) {
+          finalUpdates.instruction = getDefaultSectionInstruction(type, sel, tot);
+        }
+        const isObjective = ['MCQ', 'Match Columns', 'Fill in the Blanks', 'True/False', 'Spelling Check'].includes(type);
         finalUpdates.category = isObjective ? 'Objective' : 'Subjective';
     }
 
@@ -247,6 +257,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
     const newSec: PaperSectionConfig = {
       id: id,
       title: `Q.${nextNum} New Section`,
+      instruction: getDefaultSectionInstruction(defaultType, 5, 5),
       questionType: defaultType,
       marksPerQuestion: 1,
       totalCount: 5,
@@ -862,7 +873,16 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                <button onClick={() => removeSection(sec.id)} className="p-2 bg-white text-gray-400 hover:text-red-500 rounded-xl shadow-sm border border-gray-100 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16}/></button>
                             </div>
                          </div>
-                         <div className="flex flex-wrap gap-3 ml-12">
+                          <div className="ml-12 mb-3">
+                             <input 
+                                type="text"
+                                value={sec.instruction || getDefaultSectionInstruction(sec.questionType, sec.selectCount, sec.totalCount)}
+                                onChange={e => updateSection(sec.id, { instruction: e.target.value })}
+                                placeholder="Section instruction statement..."
+                                className="w-full text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:border-indigo-500"
+                             />
+                          </div>
+                          <div className="flex flex-wrap gap-3 ml-12">
                             <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-500 uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-slate-200">
                                <Library size={12} className="text-indigo-500" /> {sec.questionType}
                             </div>

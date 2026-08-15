@@ -21,7 +21,7 @@ const Notes: React.FC = () => {
     syllabuses: [],
     classes: []
   });
-  const [filters, setFilters] = useState({ board: '', grade: '', noteType: '' });
+  const [filters, setFilters] = useState({ board: '', grade: '', noteType: '', resource: '' });
   
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -74,16 +74,44 @@ const Notes: React.FC = () => {
     return list;
   }, [notes]);
 
+  // Dynamic note types strictly extracted from actual existing notes
+  const availableNoteTypes = useMemo(() => {
+    const set = new Set<string>();
+    notes.forEach(n => {
+      if (n.noteType) set.add(n.noteType);
+    });
+    return Array.from(set);
+  }, [notes]);
+
+  // Dynamic resources strictly extracted from comma-separated resource inputs in notes
+  const availableResources = useMemo(() => {
+    const set = new Set<string>();
+    notes.forEach(n => {
+      const raw = n.resource || n.source || n.book || '';
+      if (raw) {
+        raw.split(',').map((s: string) => s.trim()).filter(Boolean).forEach((r: string) => set.add(r));
+      }
+    });
+    return Array.from(set);
+  }, [notes]);
+
   const filteredClasses = useMemo(() => {
-    return availableClasses.filter(c => !filters.board || !c.syllabusId || c.syllabusId === filters.board || c.syllabusId === filters.board);
+    return availableClasses.filter(c => !filters.board || !c.syllabusId || c.syllabusId === filters.board);
   }, [availableClasses, filters.board]);
+
+  const filteredNotes = useMemo(() => {
+    if (!filters.resource) return notes;
+    return notes.filter(n => {
+      const raw = n.resource || n.source || n.book || '';
+      const items = raw.split(',').map((s: string) => s.trim().toLowerCase());
+      return items.includes(filters.resource.toLowerCase());
+    });
+  }, [notes, filters.resource]);
 
   // Recent 5 added notes for right-side widget
   const recentFiveNotes = useMemo(() => {
-    return [...notes].slice(0, 5);
-  }, [notes]);
-
-  const filteredNotes = notes;
+    return [...filteredNotes].slice(0, 5);
+  }, [filteredNotes]);
 
   // Pagination Logic
   const totalPages = Math.ceil(filteredNotes.length / itemsPerPage);
@@ -109,9 +137,9 @@ const Notes: React.FC = () => {
             <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Interactive Step Wizard</span>
             <h2 className="text-xl font-black text-white tracking-tight mt-0.5">Filter Notes Step-by-Step</h2>
           </div>
-          {(filters.board || filters.grade || filters.noteType) && (
+          {(filters.board || filters.grade || filters.noteType || filters.resource) && (
             <button 
-              onClick={() => setFilters({ board: '', grade: '', noteType: '' })}
+              onClick={() => setFilters({ board: '', grade: '', noteType: '', resource: '' })}
               className="px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
             >
               Reset Step Filters
@@ -168,7 +196,7 @@ const Notes: React.FC = () => {
         </div>
 
         {/* Step 3: Type Selection */}
-        <div className="space-y-3">
+        <div className="space-y-3 mb-6">
           <p className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
             <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-[10px]">3</span> Select Resource Type
           </p>
@@ -179,7 +207,7 @@ const Notes: React.FC = () => {
             >
               All Resource Types
             </button>
-            {NOTE_TYPES.map(t => (
+            {(availableNoteTypes.length > 0 ? availableNoteTypes : NOTE_TYPES).map(t => (
               <button
                 key={t}
                 onClick={() => setFilters(prev => ({ ...prev, noteType: t }))}
@@ -190,6 +218,32 @@ const Notes: React.FC = () => {
             ))}
           </div>
         </div>
+
+        {/* Step 4: Resource Source Selection */}
+        {availableResources.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-[10px]">4</span> Select Specific Resource (Source)
+            </p>
+            <div className="flex flex-wrap gap-2.5">
+              <button 
+                onClick={() => setFilters(prev => ({ ...prev, resource: '' }))}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${!filters.resource ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md font-black' : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+              >
+                All Resources
+              </button>
+              {availableResources.map(r => (
+                <button
+                  key={r}
+                  onClick={() => setFilters(prev => ({ ...prev, resource: r }))}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${filters.resource === r ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md font-black' : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-8 flex flex-col md:flex-row gap-4 justify-between items-center">
@@ -210,7 +264,7 @@ const Notes: React.FC = () => {
             <span className="text-sm font-bold text-slate-500 whitespace-nowrap">Classic Filters:</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full md:w-[520px]">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 w-full md:w-[640px]">
             <div className="relative">
               <GraduationCap className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <select
@@ -247,8 +301,22 @@ const Notes: React.FC = () => {
                 className="w-full pl-9 pr-3 py-3 border border-slate-200 rounded-xl bg-white text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
                 <option value="">All Types</option>
-                {NOTE_TYPES.map(t => (
+                {(availableNoteTypes.length > 0 ? availableNoteTypes : NOTE_TYPES).map(t => (
                   <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <select
+                value={filters.resource}
+                onChange={(e) => setFilters(prev => ({ ...prev, resource: e.target.value }))}
+                className="w-full pl-9 pr-3 py-3 border border-slate-200 rounded-xl bg-white text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              >
+                <option value="">All Resources</option>
+                {availableResources.map(r => (
+                  <option key={r} value={r}>{r}</option>
                 ))}
               </select>
             </div>

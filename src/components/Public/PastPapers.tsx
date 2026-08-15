@@ -6,7 +6,7 @@ import { getPastPaperFilters, getPastPapers } from '../../services/dataService';
 const PastPapers: React.FC = () => {
   const [papers, setPapers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({ board: '', level: '', subject: '', year: '' });
+  const [filters, setFilters] = useState({ board: '', level: '', subject: '', year: '', resource: '' });
   const [filterOptions, setFilterOptions] = useState({ boards: [] as string[], levels: [] as string[], subjects: [] as string[], years: [] as string[] });
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -87,6 +87,18 @@ const PastPapers: React.FC = () => {
     return list;
   }, [papers]);
 
+  // Extract dynamic resources strictly from comma-separated resource inputs in past papers
+  const allResources = useMemo(() => {
+    const set = new Set<string>();
+    papers.forEach(p => {
+      const raw = p.resource || p.source || '';
+      if (raw) {
+        raw.split(',').map((s: string) => s.trim()).filter(Boolean).forEach((r: string) => set.add(r));
+      }
+    });
+    return Array.from(set);
+  }, [papers]);
+
   // Recent 5 added past papers
   const recentFivePapers = useMemo(() => {
     return [...papers].slice(0, 5);
@@ -106,9 +118,9 @@ const PastPapers: React.FC = () => {
             <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Interactive Step Wizard</span>
             <h2 className="text-xl font-black text-white tracking-tight mt-0.5">Filter Past Papers Step-by-Step</h2>
           </div>
-          {(filters.board || filters.level || filters.subject || filters.year) && (
+          {(filters.board || filters.level || filters.subject || filters.year || filters.resource) && (
             <button 
-              onClick={() => setFilters({ board: '', level: '', subject: '', year: '' })}
+              onClick={() => setFilters({ board: '', level: '', subject: '', year: '', resource: '' })}
               className="px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
             >
               Reset Step Filters
@@ -189,7 +201,7 @@ const PastPapers: React.FC = () => {
         </div>
 
         {/* Step 4: Year */}
-        <div className="space-y-3">
+        <div className="space-y-3 mb-6">
           <p className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
             <span className="w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center text-[10px]">4</span> Select Exam Year
           </p>
@@ -211,6 +223,32 @@ const PastPapers: React.FC = () => {
             ))}
           </div>
         </div>
+
+        {/* Step 5: Resource */}
+        {allResources.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-[10px]">5</span> Select Resource / Source
+            </p>
+            <div className="flex flex-wrap gap-2.5">
+              <button 
+                onClick={() => setFilters(prev => ({ ...prev, resource: '' }))}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${!filters.resource ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md font-black' : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+              >
+                All Resources
+              </button>
+              {allResources.map((r: string) => (
+                <button
+                  key={r}
+                  onClick={() => setFilters(prev => ({ ...prev, resource: r }))}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${filters.resource === r ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md font-black' : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Search & Controls */}
@@ -226,12 +264,13 @@ const PastPapers: React.FC = () => {
           />
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full md:w-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 w-full md:w-auto">
           {([
             ['board', 'All Boards', allBoards],
             ['level', 'All Levels', allLevels],
             ['subject', 'All Subjects', allSubjects],
-            ['year', 'All Years', allYears]
+            ['year', 'All Years', allYears],
+            ['resource', 'All Resources', allResources]
           ] as const).map(([key, label, options]) => (
             <select key={key} value={filters[key]} onChange={e => setFilters(prev => ({ ...prev, [key]: e.target.value }))}
               className="px-3 py-2.5 border border-slate-200 rounded-xl bg-white text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">

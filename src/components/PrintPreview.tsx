@@ -9,7 +9,7 @@ import {
   Droplets, Image as ImageIcon, Eye, EyeOff, Palette, Layers, FileInput,
   CreditCard, UserSquare2, Move, GripHorizontal, GripVertical, Scaling
 } from 'lucide-react';
-import { ExamPaper, Question, PaperSectionConfig, WatermarkType, PaperLayoutMode } from '../types';
+import { ExamPaper, Question, PaperSectionConfig, WatermarkType, PaperLayoutMode, getDefaultSectionInstruction } from '../types';
 import MathRenderer from './MathRenderer';
 
 interface PrintPreviewProps {
@@ -982,15 +982,23 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
       return (
         <section key={sec.id} className="relative print:break-inside-auto mb-4" style={{ marginBottom: `${questionGap}px` }}>
            {showPartHeadings && (
-              <div className="flex justify-between items-baseline border-b border-black mb-4 pb-1 relative group break-inside-avoid">
-                 {isManualEdit && <button onClick={() => removeSection(sec.id)} className="absolute -left-8 top-1 p-1 bg-red-500 text-white rounded-md z-20 shadow-lg print:hidden opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all"><Trash2 size={12}/></button>}
-                 <h3 style={{ fontSize: `${sectionHeaderSize}px`, fontWeight: 900 }} contentEditable={isManualEdit} suppressContentEditableWarning={true} className="uppercase tracking-tighter outline-none">
-                    {sec.title}
-                 </h3>
-                 <div className="flex gap-4 items-baseline shrink-0">
-                    <span className="text-[10px] font-black text-indigo-600 uppercase italic">Attempt {sec.selectCount}</span>
-                 </div>
-              </div>
+              <>
+               <div className="flex justify-between items-baseline border-b border-black mb-2 pb-1 relative group break-inside-avoid">
+                  {isManualEdit && <button onClick={() => removeSection(sec.id)} className="absolute -left-8 top-1 p-1 bg-red-500 text-white rounded-md z-20 shadow-lg print:hidden opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all"><Trash2 size={12}/></button>}
+                  <h3 style={{ fontSize: `${sectionHeaderSize}px`, fontWeight: 900 }} contentEditable={isManualEdit} suppressContentEditableWarning={true} className="uppercase tracking-tighter outline-none">
+                     {sec.title}
+                  </h3>
+                  <div className="flex gap-4 items-baseline shrink-0">
+                     <span className="text-[10px] font-black text-indigo-600 uppercase italic">Attempt {sec.selectCount}</span>
+                  </div>
+               </div>
+
+               <div className="mb-3 break-inside-avoid">
+                  <p style={{ fontSize: `${englishFontSize}px` }} contentEditable={isManualEdit} suppressContentEditableWarning={true} className="font-bold text-black italic outline-none">
+                     {sec.instruction || getDefaultSectionInstruction(sec.questionType, sec.selectCount, sec.totalCount)}
+                  </p>
+               </div>
+              </>
            )}
 
            {isGridView ? (

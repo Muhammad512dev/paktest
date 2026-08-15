@@ -141,6 +141,8 @@ export type PaperLayoutMode = 'Standard' | 'DoubleColumn';
 export interface PaperSectionConfig {
   id: string;
   title: string;
+  instruction?: string;
+  instructionUrdu?: string;
   questionType: string;
   marksPerQuestion: number;
   totalCount: number; // Required questions
@@ -153,6 +155,33 @@ export interface PaperSectionConfig {
   category: 'Objective' | 'Subjective';
   subQuestionNumbering: NumberingStyle;
 }
+
+export const getDefaultSectionInstruction = (type: string, selectCount: number, totalCount: number): string => {
+  const isAll = selectCount >= totalCount;
+  const normType = String(type || '').trim().toLowerCase();
+  
+  if (normType.includes('mcq') || normType.includes('multiple choice')) {
+    return 'Choose the correct option.';
+  } else if (normType.includes('short')) {
+    return isAll 
+      ? 'Write short answers to all questions.' 
+      : `Write short answers to any ${selectCount} out of ${totalCount} questions.`;
+  } else if (normType.includes('long') || normType.includes('essay') || normType.includes('subjective')) {
+    return isAll 
+      ? 'Answer all of the following questions in detail.' 
+      : `Answer any ${selectCount} out of ${totalCount} questions in detail.`;
+  } else if (normType.includes('blank')) {
+    return 'Fill in the blanks with appropriate words.';
+  } else if (normType.includes('true') || normType.includes('false')) {
+    return 'Mark the following statements as True or False.';
+  } else if (normType.includes('match') || normType.includes('column')) {
+    return 'Match the items in Column A with Column B.';
+  } else {
+    return isAll 
+      ? `Answer all of the following ${type} questions.` 
+      : `Attempt any ${selectCount} out of ${totalCount} questions.`;
+  }
+};
 
 export type PaperStructure = Record<string, PaperSectionConfig>;
 

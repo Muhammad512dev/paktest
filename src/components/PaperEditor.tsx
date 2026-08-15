@@ -5,7 +5,7 @@ import {
   Library, RefreshCw, Box, ListFilter, Edit3, Trash, PlusCircle, Layers, FileText, Check, Tag, Filter,
   Calendar, Clock, ClipboardList, Info as InfoIcon, CheckSquare, Square, ChevronDown, Globe, Languages, GraduationCap, ChevronRight, ChevronUp, BookOpen, Settings2, HelpCircle, Eye, EyeOff, Key, FileCheck
 } from 'lucide-react';
-import { ExamPaper, Question, PaperSectionConfig, Difficulty, User, QuestionSource, SavedPaper, QuestionType, Syllabus, ClassLevel, Subject } from '../types';
+import { ExamPaper, Question, PaperSectionConfig, Difficulty, User, QuestionSource, SavedPaper, QuestionType, Syllabus, ClassLevel, Subject, getDefaultSectionInstruction } from '../types';
 import { getQuestions, getChapters, getTopics, savePaper, getQuestionTypes } from '../services/dataService';
 import PrintPreview from './PrintPreview';
 import MathRenderer from './MathRenderer';

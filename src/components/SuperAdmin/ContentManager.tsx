@@ -13,8 +13,8 @@ const ContentManager: React.FC = () => {
   
   // Forms State
   const [blogForm, setBlogForm] = useState({ title: '', excerpt: '', content: '', category: 'EdTech', author: '', image: '' });
-  const [noteForm, setNoteForm] = useState({ title: '', subject: '', grade: '', board: '', noteType: '', book: '', author: '', fileUrl: '', description: '' });
-  const [paperForm, setPaperForm] = useState({ title: '', year: new Date().getFullYear(), board: '', level: '', subject: '', fileUrl: '' });
+  const [noteForm, setNoteForm] = useState({ title: '', subject: '', grade: '', board: '', noteType: '', resource: '', book: '', author: '', fileUrl: '', description: '' });
+  const [paperForm, setPaperForm] = useState({ title: '', year: new Date().getFullYear(), board: '', level: '', subject: '', resource: '', fileUrl: '' });
 
   const loadData = async () => {
     let data = [];
@@ -36,11 +36,11 @@ const ContentManager: React.FC = () => {
     } else if (activeTab === 'NOTES') {
        if (!noteForm.title) return;
        await addNote(noteForm);
-       setNoteForm({ title: '', subject: '', grade: '', board: '', noteType: '', book: '', author: '', fileUrl: '', description: '' });
+       setNoteForm({ title: '', subject: '', grade: '', board: '', noteType: '', resource: '', book: '', author: '', fileUrl: '', description: '' });
     } else {
        if (!paperForm.title) return;
        await addPastPaper({ ...paperForm, year: parseInt(paperForm.year as any) });
-       setPaperForm({ title: '', year: new Date().getFullYear(), board: '', level: '', subject: '', fileUrl: '' });
+       setPaperForm({ title: '', year: new Date().getFullYear(), board: '', level: '', subject: '', resource: '', fileUrl: '' });
     }
     setIsModalOpen(false);
     loadData();
@@ -173,6 +173,7 @@ const ContentManager: React.FC = () => {
                           <input type="text" placeholder="Subject" className="w-full p-3 border rounded-xl" value={noteForm.subject} onChange={e => setNoteForm({...noteForm, subject: e.target.value})} />
                           <input type="text" placeholder="Grade" className="w-full p-3 border rounded-xl" value={noteForm.grade} onChange={e => setNoteForm({...noteForm, grade: e.target.value})} />
                        </div>
+                       <input type="text" placeholder="Resources / Sources (comma-separated, e.g. KIPS, PGC, Star)" className="w-full p-3 border rounded-xl" value={noteForm.resource} onChange={e => setNoteForm({...noteForm, resource: e.target.value})} />
                        <input type="text" placeholder="Book (optional)" className="w-full p-3 border rounded-xl" value={noteForm.book} onChange={e => setNoteForm({...noteForm, book: e.target.value})} />
                        <input type="text" placeholder="Author" className="w-full p-3 border rounded-xl" value={noteForm.author} onChange={e => setNoteForm({...noteForm, author: e.target.value})} />
                        <textarea placeholder="Description" className="w-full p-3 border rounded-xl h-24" value={noteForm.description} onChange={e => setNoteForm({...noteForm, description: e.target.value})} />
@@ -201,6 +202,7 @@ const ContentManager: React.FC = () => {
                           <input type="text" placeholder="Level/Grade" className="w-full p-3 border rounded-xl" value={paperForm.level} onChange={e => setPaperForm({...paperForm, level: e.target.value})} />
                           <input type="text" placeholder="Subject" className="w-full p-3 border rounded-xl" value={paperForm.subject} onChange={e => setPaperForm({...paperForm, subject: e.target.value})} />
                        </div>
+                       <input type="text" placeholder="Resources / Sources (comma-separated, e.g. KIPS, PGC, Star)" className="w-full p-3 border rounded-xl" value={paperForm.resource} onChange={e => setPaperForm({...paperForm, resource: e.target.value})} />
                        
                        <div className="space-y-3">
                          <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-indigo-400 transition-colors" onClick={() => document.getElementById('paper-file')?.click()}>

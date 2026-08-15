@@ -61,12 +61,13 @@ const App: React.FC = () => {
       if (path === '/' || path === '') {
         setPublicView('HOME');
       } else {
-        const route = path.substring(1).toUpperCase();
+        const parts = path.substring(1).split('/');
+        const route = parts[0].toUpperCase();
         const publicRoutes = ['PRICING', 'ABOUT', 'CONTACT', 'NOTES', 'PAST_PAPERS', 'QUIZ', 'BLOG', 'LOGIN', 'STUDENT_LOGIN', 'SIGNUP'];
         if (publicRoutes.includes(route)) {
           setPublicView(route);
         } else {
-          setActiveView(path.substring(1).toLowerCase());
+          setActiveView(parts[0].toLowerCase());
         }
       }
     };
@@ -79,6 +80,11 @@ const App: React.FC = () => {
   // URL Routing Sync: Push publicView changes to URL
   useEffect(() => {
     if (!user) {
+      const currentPrimaryPath = window.location.pathname.split('/')[1]?.toUpperCase();
+      if (currentPrimaryPath === publicView) {
+        // Do not force overwrite if we are already on the correct route (handles nested routes like /blog/slug)
+        return;
+      }
       const path = publicView === 'HOME' ? '/' : `/${publicView.toLowerCase()}`;
       if (window.location.pathname !== path) {
         window.history.pushState(null, '', path);

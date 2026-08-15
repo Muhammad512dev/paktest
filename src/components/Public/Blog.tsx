@@ -4,6 +4,8 @@ import { getBlogs } from '../../services/dataService';
 import renderMathInElement from 'katex/dist/contrib/auto-render';
 import 'katex/dist/contrib/mhchem';
 
+const createSlug = (title: string) => title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+
 const Blog: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
@@ -17,9 +19,33 @@ const Blog: React.FC = () => {
     const fetchBlogs = async () => {
       const posts = await getBlogs();
       setBlogPosts(posts);
+
+      // Check initial URL for a slug
+      const pathParts = window.location.pathname.split('/');
+      if (pathParts[1] === 'blog' && pathParts[2]) {
+        const slug = pathParts[2];
+        const post = posts.find((p: any) => createSlug(p.title) === slug);
+        if (post) setSelectedPostId(post.id);
+      }
     };
     fetchBlogs();
   }, []);
+
+  // Handle browser back/forward for blog posts
+  useEffect(() => {
+    const handlePopState = () => {
+      const pathParts = window.location.pathname.split('/');
+      if (pathParts[1] === 'blog' && pathParts[2]) {
+        const slug = pathParts[2];
+        const post = blogPosts.find(p => createSlug(p.title) === slug);
+        if (post) setSelectedPostId(post.id);
+      } else {
+        setSelectedPostId(null);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [blogPosts]);
 
   const filteredPosts = blogPosts.filter(post => 
     post.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -49,13 +75,15 @@ const Blog: React.FC = () => {
     setCurrentPage(1);
   }, [searchTerm, itemsPerPage]);
 
-  const openPost = (id: string) => {
-    setSelectedPostId(id);
+  const openPost = (post: any) => {
+    setSelectedPostId(post.id);
+    window.history.pushState(null, '', `/blog/${createSlug(post.title)}`);
     window.scrollTo(0, 0);
   };
 
   const closePost = () => {
     setSelectedPostId(null);
+    window.history.pushState(null, '', '/blog');
     window.scrollTo(0, 0);
   };
 
@@ -139,7 +167,7 @@ const Blog: React.FC = () => {
                  <h3 className="font-bold text-slate-900 text-lg mb-6">Related Articles</h3>
                  <div className="space-y-6">
                     {relatedPosts.length > 0 ? relatedPosts.map(post => (
-                       <div key={post.id} onClick={() => openPost(post.id)} className="group cursor-pointer flex gap-4 items-start">
+                       <div key={post.id} onClick={() => openPost(post)} className="group cursor-pointer flex gap-4 items-start">
                           {post.image && (
                             <div className="w-24 h-24 rounded-2xl overflow-hidden shrink-0">
                                <img src={post.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
@@ -206,7 +234,7 @@ const Blog: React.FC = () => {
             </h2>
             <div 
               className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center group cursor-pointer"
-              onClick={() => openPost(featuredPost.id)}
+              onClick={() => openPost(featuredPost)}
             >
               {featuredPost.image && (
                 <div className="relative overflow-hidden rounded-[2rem] shadow-xl">
@@ -236,7 +264,7 @@ const Blog: React.FC = () => {
           {gridPosts.map(post => (
             <div 
               key={post.id} 
-              onClick={() => openPost(post.id)}
+              onClick={() => openPost(post)}
               className="group bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden cursor-pointer"
             >
               {post.image && (

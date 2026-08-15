@@ -54,6 +54,48 @@ const App: React.FC = () => {
   // Public Route State
   const [publicView, setPublicView] = useState('HOME');
 
+  // URL Routing Sync: Read initial URL and handle Back/Forward buttons
+  useEffect(() => {
+    const handleUrlChange = () => {
+      const path = window.location.pathname;
+      if (path === '/' || path === '') {
+        setPublicView('HOME');
+      } else {
+        const route = path.substring(1).toUpperCase();
+        const publicRoutes = ['PRICING', 'ABOUT', 'CONTACT', 'NOTES', 'PAST_PAPERS', 'QUIZ', 'BLOG', 'LOGIN', 'STUDENT_LOGIN', 'SIGNUP'];
+        if (publicRoutes.includes(route)) {
+          setPublicView(route);
+        } else {
+          setActiveView(path.substring(1).toLowerCase());
+        }
+      }
+    };
+
+    handleUrlChange();
+    window.addEventListener('popstate', handleUrlChange);
+    return () => window.removeEventListener('popstate', handleUrlChange);
+  }, []);
+
+  // URL Routing Sync: Push publicView changes to URL
+  useEffect(() => {
+    if (!user) {
+      const path = publicView === 'HOME' ? '/' : `/${publicView.toLowerCase()}`;
+      if (window.location.pathname !== path) {
+        window.history.pushState(null, '', path);
+      }
+    }
+  }, [publicView, user]);
+
+  // URL Routing Sync: Push activeView changes to URL
+  useEffect(() => {
+    if (user) {
+      const path = `/${activeView.toLowerCase()}`;
+      if (window.location.pathname !== path) {
+        window.history.pushState(null, '', path);
+      }
+    }
+  }, [activeView, user]);
+
   // Global System Configuration State
   const [systemConfig, setSystemConfig] = useState<SystemConfig>({
     currencyCode: 'USD',

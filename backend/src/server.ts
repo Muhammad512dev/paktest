@@ -14,12 +14,31 @@ import compression from 'compression';
 import cron from 'node-cron';
 import studentRoutes from './routes/student';
 
+// ─── Performance: Redis cache + Rate limiters ─────────────────────────────────
+import { getOrSet, cacheDelPattern } from './lib/redis';
+import { globalLimiter, authLimiter, questionLimiter, aiLimiter, submitLimiter } from './middleware/rateLimiter';
+
 
 dotenv.config();
 
 // Fixed: Resolve PrismaClient export error by extracting it from the namespace via any casting
 const { PrismaClient } = Prisma as any;
-const prisma = new PrismaClient();
+
+// ─── Connection Pooling ───────────────────────────────────────────────────────
+// Limits simultaneous DB connections. Without this, 8K users can exhaust
+// PostgreSQL's default max_connections (100) and crash the database.
+// pgbouncer-style pooling via the connection string is the other approach,
+// but Prisma's built-in pool works well for a single-server deployment.
+const POOL_SIZE = parseInt(process.env.DATABASE_POOL_SIZE || '20', 10);
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL + (process.env.DATABASE_URL?.includes('?') ? '&' : '?') + `connection_limit=${POOL_SIZE}&pool_timeout=20`,
+    },
+  },
+  log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
+});
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -65,6 +84,14 @@ const upload = multer({
 });
 
 // --- MIDDLEWARE ---
+
+// ─── Rate Limiting (must be FIRST middleware, before routes) ──────────────────
+// Apply global limiter to all /api/* endpoints
+app.use('/api', globalLimiter as any);
+// Apply strict auth limiter only to login/register routes
+app.use('/api/auth', authLimiter as any);
+// Apply AI limiter to all AI generation endpoints
+app.use('/api/ai', aiLimiter as any);
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -2164,8 +2191,8 @@ app.post('/api/curriculum/sync', authenticate, async (req: any, res: any) => {
     }
 });
 
-// Questions
-app.get('/api/questions', authenticate, async (req: any, res: any) => {
+// Questions — with Redis caching + rate limiting
+app.get('/api/questions', authenticate, questionLimiter as any, async (req: any, res: any) => {
     try {
         const { skip, pageSize, page } = getPaginationParams(req);
         const where: any = {};
@@ -2187,49 +2214,43 @@ app.get('/api/questions', authenticate, async (req: any, res: any) => {
             ];
         }
 
-        // Add medium filter if provided
-        if (req.query.medium) {
-            where.medium = req.query.medium;
-        }
-        
-        // Add subject filter if provided
-        if (req.query.subject) {
-            where.subject = req.query.subject;
-        }
-        
-        // Add classLevel filter if provided
-        if (req.query.classLevel) {
-            where.classLevel = req.query.classLevel;
-        }
+        if (req.query.medium) where.medium = req.query.medium;
+        if (req.query.subject) where.subject = req.query.subject;
+        if (req.query.classLevel) where.classLevel = req.query.classLevel;
+        if (req.query.type) where.type = req.query.type;
+        if (req.query.difficulty) where.difficulty = req.query.difficulty;
 
-        // Add question type filter if provided
-        if (req.query.type) {
-            where.type = req.query.type;
-        }
+        // ─── Redis Cache: skip cache for text searches (always unique)
+        const schoolKey = req.user?.schoolId || 'global';
+        const useCache = !q; // Don't cache free-text searches
+        const cacheKey = `questions:${schoolKey}:p${page}:ps${pageSize}:sub=${req.query.subject || ''}:cls=${req.query.classLevel || ''}:typ=${req.query.type || ''}:dif=${req.query.difficulty || ''}:med=${req.query.medium || ''}`;
 
-        if (req.query.difficulty) {
-            where.difficulty = req.query.difficulty;
-        }
-        
-        const [questions, total] = await Promise.all([
-            prisma.question.findMany({ 
-                where, 
-                orderBy: { createdAt: 'desc' },
-                skip,
-                take: pageSize
-            }),
-            prisma.question.count({ where })
-        ]);
-        
-        res.json({
-            data: questions,
-            pagination: {
-                page,
-                pageSize,
-                total,
-                pages: Math.ceil(total / pageSize)
+        const result = await getOrSet(
+            cacheKey,
+            useCache ? 600 : 0, // 10 min TTL for filtered queries, 0 for searches (bypasses cache)
+            async () => {
+                const [questions, total] = await Promise.all([
+                    prisma.question.findMany({ 
+                        where, 
+                        orderBy: { createdAt: 'desc' },
+                        skip,
+                        take: pageSize
+                    }),
+                    prisma.question.count({ where })
+                ]);
+                return {
+                    data: questions,
+                    pagination: {
+                        page,
+                        pageSize,
+                        total,
+                        pages: Math.ceil(total / pageSize)
+                    }
+                };
             }
-        });
+        );
+        
+        res.json(result);
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Failed to fetch questions' });
@@ -2247,6 +2268,9 @@ app.post('/api/questions', authenticate, async (req: any, res: any) => {
         }
 
         const question = await prisma.question.create({ data: sanitized });
+        // Invalidate question cache so next fetch gets fresh data
+        await cacheDelPattern(`questions:${schoolId || 'global'}:*`);
+        await cacheDelPattern('questions:global:*');
         await trackActivity(req, 'CURRICULUM', `Added question`);
         res.json(question);
     } catch (e: any) {
@@ -2309,6 +2333,9 @@ app.post('/api/questions/bulk', authenticate, async (req: any, res: any) => {
             }
         }
         
+        // Bust cache after bulk import
+        await cacheDelPattern(`questions:${schoolId || 'global'}:*`);
+        await cacheDelPattern('questions:global:*');
         await trackActivity(req, 'CURRICULUM', `Bulk imported ${results.imported}/${questions.length} questions`);
         
         res.json({ 
@@ -2326,6 +2353,10 @@ app.put('/api/questions/:id', authenticate, async (req: any, res: any) => {
   const { id, ...data } = req.body;
   try {
       const updated = await prisma.question.update({ where: { id: req.params.id }, data });
+      // Bust caches for both school-specific and global questions
+      const schoolId = req.user?.schoolId || 'global';
+      await cacheDelPattern(`questions:${schoolId}:*`);
+      await cacheDelPattern('questions:global:*');
       res.json(updated);
   } catch (e) {
       res.status(500).json({ error: "Update failed" });
@@ -2334,6 +2365,10 @@ app.put('/api/questions/:id', authenticate, async (req: any, res: any) => {
 
 app.delete('/api/questions/:id', authenticate, async (req: any, res: any) => {
     await prisma.question.delete({ where: { id: req.params.id } });
+    // Bust caches
+    const schoolId = req.user?.schoolId || 'global';
+    await cacheDelPattern(`questions:${schoolId}:*`);
+    await cacheDelPattern('questions:global:*');
     res.json({ success: true });
 });
 
@@ -2600,5 +2635,8 @@ cron.schedule('0 * * * *', async () => {
 });
 
 app.listen(PORT, async () => {
-  console.log(`🚀 API Server running on port ${PORT}`);
+  console.log(`🚀 PakParcha AI — API Server running on port ${PORT}`);
+  console.log(`   📦 DB connection pool size: ${POOL_SIZE}`);
+  console.log(`   🔒 Rate limiting: enabled (global 500/15min, auth 20/15min, AI 30/10min)`);
+  console.log(`   🗄️  Redis cache: ${process.env.REDIS_URL ? 'enabled' : 'disabled (set REDIS_URL to enable)'}`);
 });

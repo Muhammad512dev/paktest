@@ -164,6 +164,8 @@ model Question {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  // --- Performance Indexes ---
+  // Single-column indexes (fast lookups by one field)
   @@index([classLevel])
   @@index([createdAt])
   @@index([medium])
@@ -171,6 +173,18 @@ model Question {
   @@index([subject])
   @@index([topic])
   @@index([type])
+  @@index([difficulty])
+  @@index([chapter])
+
+  // Composite indexes (cover common multi-field filter combinations)
+  // Used by paper generation: filter by subject + class + type + difficulty
+  @@index([subject, classLevel, type])
+  @@index([subject, classLevel, type, difficulty])
+  @@index([subject, classLevel, type, difficulty, schoolId])
+  // Used by school-specific question bank listing
+  @@index([schoolId, subject, classLevel])
+  // Used by topic-based filtering
+  @@index([chapter, topic, type])
 }
 
 model ExamPaper {

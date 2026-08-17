@@ -42,6 +42,42 @@ const SavedPapers: React.FC<SavedPapersProps> = ({ user }) => {
     }
   };
 
+  // Delete Target Modal state
+  const [deletingPaperItem, setDeletingPaperItem] = useState<any | null>(null);
+  const [deleteTargets, setDeleteTargets] = useState<{
+    deleteSaved: boolean;
+    deleteGrading: boolean;
+    deleteResult: boolean;
+  }>({
+    deleteSaved: true,
+    deleteGrading: false,
+    deleteResult: false,
+  });
+
+  const openDeleteModal = (paper: any) => {
+    setDeletingPaperItem(paper);
+    setDeleteTargets({
+      deleteSaved: true,
+      deleteGrading: false,
+      deleteResult: false,
+    });
+  };
+
+  const confirmSelectiveDelete = async () => {
+    if (!deletingPaperItem) return;
+    if (!deleteTargets.deleteSaved && !deleteTargets.deleteGrading && !deleteTargets.deleteResult) {
+      alert("Please select at least one item to delete.");
+      return;
+    }
+    try {
+      await deletePaper(deletingPaperItem.id, deleteTargets);
+      setDeletingPaperItem(null);
+      await loadPapers();
+    } catch (err: any) {
+      alert("Failed to delete paper: " + (err.message || 'Unknown error'));
+    }
+  };
+
   const handlePrint = async (paper: any) => {
       try {
           const fullPaper = await getPaperById(paper.id);
@@ -187,7 +223,7 @@ const SavedPapers: React.FC<SavedPapersProps> = ({ user }) => {
                         <Edit size={18} />
                       </button>
                       <button 
-                        onClick={() => handleDelete(paper.id)} 
+                        onClick={() => openDeleteModal(paper)} 
                         title="Delete" 
                         className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       >
@@ -207,6 +243,111 @@ const SavedPapers: React.FC<SavedPapersProps> = ({ user }) => {
            </div>
         )}
       </div>
+
+      {/* DELETE TARGET SELECTOR MODAL */}
+      {deletingPaperItem && (
+        <div className="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-150">
+            <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center font-bold">
+                  <Trash2 size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-lg">Delete Paper & Data</h3>
+                  <p className="text-xs text-gray-500 font-medium">Select areas to delete for this paper</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setDeletingPaperItem(null)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="py-4">
+              <div className="p-3 bg-gray-50 rounded-xl border border-gray-200/80 mb-4">
+                <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Paper Selected</p>
+                <p className="text-sm font-bold text-gray-900 mt-0.5">{deletingPaperItem.title}</p>
+                <p className="text-xs text-indigo-600 font-semibold">{deletingPaperItem.subject} • {deletingPaperItem.classLevel}</p>
+              </div>
+
+              <p className="text-xs font-bold text-gray-700 mb-3 uppercase tracking-wider">Where should this paper be deleted from?</p>
+
+              <div className="space-y-3">
+                <label className="flex items-start gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input 
+                    type="checkbox" 
+                    className="mt-1 rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                    checked={deleteTargets.deleteSaved}
+                    onChange={(e) => setDeleteTargets(prev => ({ ...prev, deleteSaved: e.target.checked }))}
+                  />
+                  <div>
+                    <span className="text-sm font-bold text-gray-900 block">Saved Papers</span>
+                    <span className="text-xs text-gray-500">Remove paper definition from your Saved Papers repository</span>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input 
+                    type="checkbox" 
+                    className="mt-1 rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                    checked={deleteTargets.deleteGrading}
+                    onChange={(e) => setDeleteTargets(prev => ({ ...prev, deleteGrading: e.target.checked }))}
+                  />
+                  <div>
+                    <span className="text-sm font-bold text-gray-900 block">Exam Grading</span>
+                    <span className="text-xs text-gray-500">Remove pending/ungraded student attempts for this paper</span>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input 
+                    type="checkbox" 
+                    className="mt-1 rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                    checked={deleteTargets.deleteResult}
+                    onChange={(e) => setDeleteTargets(prev => ({ ...prev, deleteResult: e.target.checked }))}
+                  />
+                  <div>
+                    <span className="text-sm font-bold text-gray-900 block">Result Center & Student Marks</span>
+                    <span className="text-xs text-gray-500">Remove all student final marks & results recorded for this paper</span>
+                  </div>
+                </label>
+              </div>
+
+              <div className="flex justify-between items-center mt-4">
+                <button
+                  type="button"
+                  onClick={() => setDeleteTargets({ deleteSaved: true, deleteGrading: true, deleteResult: true })}
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 underline"
+                >
+                  Select All
+                </button>
+
+                <p className="text-[11px] text-gray-400 font-medium">Only deletes for this paper</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setDeletingPaperItem(null)}
+                className="flex-1 py-2.5 px-4 rounded-xl border border-gray-300 font-bold text-gray-700 text-sm hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmSelectiveDelete}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-700 font-bold text-white text-sm shadow-md transition-colors flex items-center justify-center gap-2"
+              >
+                <Trash2 size={16} /> Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* OVERLAYS */}
       {printingPaper && (

@@ -462,8 +462,33 @@ export const savePaper = async (paper: ExamPaper) => {
   return handleResponse(res);
 };
 
-export const deletePaper = async (id: string) => {
-  const res = await fetch(`${API_URL}/api/papers/${id}`, {
+export const deletePaper = async (
+  id: string, 
+  options?: { deleteSaved?: boolean; deleteGrading?: boolean; deleteResult?: boolean }
+) => {
+  const sp = new URLSearchParams();
+  if (options?.deleteSaved !== undefined) sp.set('deleteSaved', String(options.deleteSaved));
+  if (options?.deleteGrading !== undefined) sp.set('deleteGrading', String(options.deleteGrading));
+  if (options?.deleteResult !== undefined) sp.set('deleteResult', String(options.deleteResult));
+
+  const url = `${API_URL}/api/papers/${id}${sp.toString() ? `?${sp.toString()}` : ''}`;
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+};
+
+export const deleteSubmission = async (submissionId: string) => {
+  const res = await fetch(`${API_URL}/api/teacher/submissions/${submissionId}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+};
+
+export const deletePaperSubmissions = async (paperId: string) => {
+  const res = await fetch(`${API_URL}/api/teacher/submissions/paper/${paperId}`, {
     method: 'DELETE',
     headers: getHeaders()
   });

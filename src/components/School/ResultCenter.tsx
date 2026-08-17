@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getTeacherSubmissions, getClasses, getSubjects, getPapersBySchool, getSyllabuses, getStudents, getPlans, getSchoolById } from '../../services/dataService';
+import { getTeacherSubmissions, getClasses, getSubjects, getPapersBySchool, getSyllabuses, getStudents, getPlans, getSchoolById, deleteSubmission, deletePaperSubmissions } from '../../services/dataService';
 import { ExamSubmission, ClassLevel, Subject, SavedPaper, User, Student, Syllabus } from '../../types';
-import { Search, Filter, Download, FileSpreadsheet, Calendar, BookOpen, GraduationCap, ArrowRight, ChevronDown, CheckCircle, Clock, X, Printer, AlertCircle } from 'lucide-react';
+import { Search, Filter, Download, FileSpreadsheet, Calendar, BookOpen, GraduationCap, ArrowRight, ChevronDown, CheckCircle, Clock, X, Printer, AlertCircle, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -1258,17 +1258,31 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
                               <Download size={15} /> Download this class test
                           </button>
                       </div>
-                      <div className="p-8 border-b border-slate-100 bg-emerald-50/30 print:p-0 print:border-b-2 print:border-slate-900 print:mb-8">
-                          <h2 className="text-2xl font-black text-slate-900">{activePaperData.paper.title}</h2>
-                          <div className="flex gap-4 mt-2 text-sm font-bold text-slate-500">
-                              <span>Subject: {activePaperData.paper.subject}</span>
-                              <span>•</span>
-                              <span>Class: {activePaperData.paper.classLevel}</span>
-                              <span>•</span>
-                              <span>Date: {new Date(activePaperData.paper.examDate || activePaperData.paper.dateCreated).toLocaleDateString()}</span>
-                              <span>•</span>
-                              <span>Total Marks: {activePaperData.paper.totalMarks}</span>
+                      <div className="p-8 border-b border-slate-100 bg-emerald-50/30 print:p-0 print:border-b-2 print:border-slate-900 print:mb-8 flex justify-between items-start">
+                          <div>
+                              <h2 className="text-2xl font-black text-slate-900">{activePaperData.paper.title}</h2>
+                              <div className="flex flex-wrap gap-4 mt-2 text-sm font-bold text-slate-500">
+                                  <span>Subject: {activePaperData.paper.subject}</span>
+                                  <span>•</span>
+                                  <span>Class: {activePaperData.paper.classLevel}</span>
+                                  <span>•</span>
+                                  <span>Date: {new Date(activePaperData.paper.examDate || activePaperData.paper.dateCreated).toLocaleDateString()}</span>
+                                  <span>•</span>
+                                  <span>Total Marks: {activePaperData.paper.totalMarks}</span>
+                              </div>
                           </div>
+                          <button
+                              onClick={async () => {
+                                  if (window.confirm(`Delete ALL results for "${activePaperData.paper.title}"? This will remove all student marks for this paper from student portals.`)) {
+                                      await deletePaperSubmissions(activePaperData.paper.id);
+                                      await loadData();
+                                  }
+                              }}
+                              className="px-4 py-2 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 rounded-xl text-xs font-bold transition-all print:hidden flex items-center gap-2"
+                              title="Delete all student results for this paper"
+                          >
+                              <Trash2 size={16} /> Clear Paper Results
+                          </button>
                       </div>
 
                       {activePaperData.results.length === 0 ? (
@@ -1327,10 +1341,27 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
                                                       )}
                                                   </td>
                                                   <td className="px-8 py-5 text-right">
-                                                      <button onClick={(event) => { event.stopPropagation(); setSelectedStudentId(row.student.id); setSearchTerm(row.student.rollNo || row.student.name); }} className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-indigo-600 border border-indigo-100 rounded-lg hover:bg-indigo-50">
-                                                          Full Report
-                                                      </button>
-                                                  </td>
+                                                       <div className="flex items-center justify-end gap-2">
+                                                           <button onClick={(event) => { event.stopPropagation(); setSelectedStudentId(row.student.id); setSearchTerm(row.student.rollNo || row.student.name); }} className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-indigo-600 border border-indigo-100 rounded-lg hover:bg-indigo-50">
+                                                               Full Report
+                                                           </button>
+                                                           {hasSub && (
+                                                               <button 
+                                                                   onClick={async (event) => {
+                                                                       event.stopPropagation();
+                                                                       if (window.confirm(`Delete test result for ${row.student.name}? This will remove marks from student portal.`)) {
+                                                                           await deleteSubmission(row.submission!.id);
+                                                                           await loadData();
+                                                                       }
+                                                                   }}
+                                                                   title="Delete Result"
+                                                                   className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                                               >
+                                                                   <Trash2 size={16} />
+                                                               </button>
+                                                           )}
+                                                       </div>
+                                                   </td>
                                               </tr>
                                           );
                                       })}

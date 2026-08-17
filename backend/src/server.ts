@@ -2474,8 +2474,70 @@ app.post('/api/papers', authenticate, async (req: any, res: any) => {
 });
 
 app.delete('/api/papers/:id', authenticate, async (req: any, res: any) => {
-    await prisma.examPaper.deleteMany({ where: { id: req.params.id, schoolId: req.user.schoolId } });
-    res.json({ success: true });
+    try {
+        const { id } = req.params;
+        const deleteSaved = req.query.deleteSaved !== 'false';
+        const deleteGrading = req.query.deleteGrading === 'true';
+        const deleteResult = req.query.deleteResult === 'true';
+
+        // 1. Target ungraded/pending submissions if deleteGrading requested
+        if (deleteGrading) {
+            await prisma.examSubmission.deleteMany({
+                where: { paperId: id, isGraded: false }
+            });
+        }
+
+        // 2. Target graded results if deleteResult requested
+        if (deleteResult) {
+            await prisma.examSubmission.deleteMany({
+                where: { paperId: id, isGraded: true }
+            });
+        }
+
+        // If both deleteGrading and deleteResult requested without saved deletion or if pure clean up requested
+        if (deleteGrading && deleteResult && !deleteSaved) {
+            await prisma.examSubmission.deleteMany({
+                where: { paperId: id }
+            });
+        }
+
+        // 3. Delete Paper from Saved Papers if requested
+        if (deleteSaved) {
+            // Note: If submissions still exist and Prisma schema enforces relation, delete submissions first or handle safely
+            await prisma.examSubmission.deleteMany({ where: { paperId: id } }).catch(() => {});
+            await prisma.examPaper.deleteMany({ where: { id, schoolId: req.user.schoolId } });
+        }
+
+        res.json({ success: true });
+    } catch (e: any) {
+        console.error("Delete paper error:", e);
+        res.status(500).json({ error: "Failed to delete paper" });
+    }
+});
+
+// Delete specific submission (Result Center & Grading deletion)
+app.delete('/api/teacher/submissions/:id', authenticate, async (req: any, res: any) => {
+    try {
+        await prisma.examSubmission.deleteMany({
+            where: { id: req.params.id }
+        });
+        res.json({ success: true });
+    } catch (e: any) {
+        res.status(500).json({ error: "Failed to delete submission" });
+    }
+});
+
+// Delete all submissions for a paper (Batch result delete)
+app.delete('/api/teacher/submissions/paper/:paperId', authenticate, async (req: any, res: any) => {
+    try {
+        const { paperId } = req.params;
+        const deleted = await prisma.examSubmission.deleteMany({
+            where: { paperId }
+        });
+        res.json({ success: true, count: deleted.count });
+    } catch (e: any) {
+        res.status(500).json({ error: "Failed to delete paper submissions" });
+    }
 });
 
 // 7. System Routes

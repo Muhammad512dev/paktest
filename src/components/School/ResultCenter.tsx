@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getTeacherSubmissions, getClasses, getSubjects, getPapersBySchool, getSyllabuses, getStudents, getPlans, getSchoolById, deleteSubmission, deleteSubmissionsByPaper } from '../../services/dataService';
+import { getTeacherSubmissions, getClasses, getSubjects, getPapersBySchool, getSyllabuses, getStudents, getPlans, getSchoolById } from '../../services/dataService';
 import { ExamSubmission, ClassLevel, Subject, SavedPaper, User, Student, Syllabus } from '../../types';
 import { Search, Filter, Download, FileSpreadsheet, Calendar, BookOpen, GraduationCap, ArrowRight, ChevronDown, CheckCircle, Clock, X, Printer, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -61,35 +61,10 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
         getSyllabuses(),
         getStudents({ pageSize: 1000 }) 
       ]);
-      const papsWithDeleted = [...paps];
-      const seenDeletedPapers = new Set();
-      subs.forEach((s: any) => {
-        if (!s.paperId && s.paperSnapshot) {
-           const snap = s.paperSnapshot as any;
-           // Group mock papers by subject, title, classLevel
-           const key = `${snap.title}-${snap.subject}-${snap.classLevel}`;
-           if (!seenDeletedPapers.has(key)) {
-               seenDeletedPapers.add(key);
-               const mockPaperId = `mock-${key}`;
-               papsWithDeleted.push({
-                   id: mockPaperId,
-                   title: `${snap.title} (Deleted)`,
-                   subject: snap.subject,
-                   classLevel: snap.classLevel,
-                   totalMarks: snap.totalMarks,
-                   examDate: snap.examDate,
-                   dateCreated: s.submittedAt,
-                   isDeleted: true
-               } as any);
-           }
-           s.paperId = `mock-${key}`;
-        }
-      });
-
       setSubmissions(subs);
       setClasses(cls);
       setSubjects(subsj);
-      setPapers(papsWithDeleted);
+      setPapers(paps);
       setSyllabuses(syls);
       
       // If getStudents returns { data: [] } pagination object vs array
@@ -153,8 +128,6 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
       const studentClass = classes.find(c => c.id === matchedStudent.classId);
       const assignedPapers = papers.filter(p => sanitize(p.classLevel) === sanitize(studentClass?.name ?? ''));
 
-      // Submissions already have their paperId mapped to the mock paper in loadData
-
       // Subject Filter logic for the student view
       const displaySubmissions = selectedSubject === 'ALL' 
         ? studentSubs 
@@ -213,21 +186,10 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
       if (viewMode === 'STUDENT_VIEW' && studentViewData) {
           classId = studentViewData.student.classId;
       }
-      let filteredSubjects = classId === 'ALL' 
+      return classId === 'ALL' 
         ? subjects 
         : subjects.filter(s => s.classId === classId);
-
-      if (classId !== 'ALL') {
-          const targetClass = classes.find(c => c.id === classId);
-          if (targetClass) {
-              const sanitize = (s: string) => (s || '').toLowerCase().replace(/class|grade|year|\\s+/g, '');
-              const classPapers = papers.filter(p => sanitize(p.classLevel) === sanitize(targetClass.name));
-              const paperSubjectNames = new Set(classPapers.map(p => p.subject.toLowerCase()));
-              filteredSubjects = filteredSubjects.filter(s => paperSubjectNames.has(s.name.toLowerCase()));
-          }
-      }
-      return filteredSubjects;
-  }, [subjects, selectedClass, viewMode, studentViewData, classes, papers]);
+  }, [subjects, selectedClass, viewMode, studentViewData]);
 
   const availablePapers = useMemo(() => {
       return papers.filter(p => {
@@ -603,30 +565,8 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Class_Summary");
-        XLSX.writeFile(wb, `${classSummaryData.class.name.replace(/\\s+/g, '_')}_Summary.xlsx`);
+        XLSX.writeFile(wb, `${classSummaryData.class.name.replace(/\s+/g, '_')}_Summary.xlsx`);
     }
-  };
-
-  const handleDeleteSubmission = async (id: string, e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (!window.confirm("Are you sure you want to delete this student's result? This action cannot be undone.")) return;
-      try {
-          await deleteSubmission(id);
-          setSubmissions(prev => prev.filter(s => s.id !== id));
-      } catch (err) {
-          alert("Failed to delete submission.");
-      }
-  };
-
-  const handleDeleteAllSubmissions = async () => {
-      if (!activePaperData?.paper.id) return;
-      if (!window.confirm(`Are you sure you want to clear ALL results for ${activePaperData.paper.title}? This action cannot be undone.`)) return;
-      try {
-          await deleteSubmissionsByPaper(activePaperData.paper.id);
-          setSubmissions(prev => prev.filter(s => s.paperId !== activePaperData.paper.id));
-      } catch (err) {
-          alert("Failed to clear results.");
-      }
   };
 
   return (
@@ -1314,16 +1254,9 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
                               <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Class test result</p>
                               <p className="mt-1 text-sm font-bold text-slate-700">The download contains only students from {activePaperData.paper.classLevel} for this selected test.</p>
                           </div>
-                          <div className="flex gap-2">
-                              {(user.role === 'SCHOOL_ADMIN' || user.role === 'SUPER_ADMIN') && activePaperData.results.some(r => !!r.submission) && (
-                                  <button onClick={handleDeleteAllSubmissions} className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-100 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-rose-700 hover:bg-rose-200 border border-rose-200 transition-all">
-                                      <X size={15} /> Clear All Results
-                                  </button>
-                              )}
-                              <button onClick={handleExport} className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-indigo-700">
-                                  <Download size={15} /> Download this class test
-                              </button>
-                          </div>
+                          <button onClick={handleExport} className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-indigo-700">
+                              <Download size={15} /> Download this class test
+                          </button>
                       </div>
                       <div className="p-8 border-b border-slate-100 bg-emerald-50/30 print:p-0 print:border-b-2 print:border-slate-900 print:mb-8">
                           <h2 className="text-2xl font-black text-slate-900">{activePaperData.paper.title}</h2>
@@ -1393,15 +1326,10 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
                                                           </span>
                                                       )}
                                                   </td>
-                                                  <td className="px-8 py-5 text-right flex items-center justify-end gap-2">
+                                                  <td className="px-8 py-5 text-right">
                                                       <button onClick={(event) => { event.stopPropagation(); setSelectedStudentId(row.student.id); setSearchTerm(row.student.rollNo || row.student.name); }} className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-indigo-600 border border-indigo-100 rounded-lg hover:bg-indigo-50">
                                                           Full Report
                                                       </button>
-                                                      {(user.role === 'SCHOOL_ADMIN' || user.role === 'SUPER_ADMIN') && hasSub && (
-                                                          <button onClick={(e) => handleDeleteSubmission(row.submission!.id, e)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors border border-transparent hover:border-rose-100" title="Delete Result">
-                                                              <X size={16} />
-                                                          </button>
-                                                      )}
                                                   </td>
                                               </tr>
                                           );

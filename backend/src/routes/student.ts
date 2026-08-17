@@ -149,7 +149,7 @@ router.get('/papers', authenticateStudent, async (req: any, res: any) => {
       where: { studentId: req.student.id },
       select: { paperId: true }
     });
-    const submittedPaperIds = existingSubmissions.map((s: any) => s.paperId).filter(Boolean);
+    const submittedPaperIds = existingSubmissions.map((s: any) => s.paperId);
 
     const papersAll = await prisma.examPaper.findMany({
       where: {

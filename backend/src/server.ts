@@ -2474,64 +2474,8 @@ app.post('/api/papers', authenticate, async (req: any, res: any) => {
 });
 
 app.delete('/api/papers/:id', authenticate, async (req: any, res: any) => {
-    const paperId = req.params.id;
-    const schoolId = req.user?.schoolId;
-    
-    try {
-        // Get paper info first
-        const paper = await prisma.examPaper.findFirst({ where: { id: paperId, schoolId } });
-        if (!paper) return res.status(404).json({ error: 'Paper not found' });
-        
-        // Detach submissions: snapshot paper info, keep student results
-        await prisma.examSubmission.updateMany({
-            where: { paperId },
-            data: {
-                paperId: null, // detach from deleted paper
-                paperSnapshot: {
-                    title: paper.title,
-                    subject: paper.subject,
-                    classLevel: paper.classLevel,
-                    totalMarks: paper.totalMarks,
-                    examDate: paper.examDate,
-                }
-            }
-        });
-        
-        // Now safe to delete the paper
-        await prisma.examPaper.deleteMany({ where: { id: paperId, schoolId } });
-        res.json({ success: true });
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({ error: 'Failed to delete paper' });
-    }
-});
-
-app.delete('/api/submissions/:id', authenticate, async (req: any, res: any) => {
-    if (req.user?.role !== 'SCHOOL_ADMIN' && req.user?.role !== 'SUPER_ADMIN') {
-        return res.status(403).json({ error: 'Only School Admin can delete student marks' });
-    }
-    try {
-        await prisma.examSubmission.deleteMany({
-            where: { id: req.params.id, ...(req.user?.schoolId ? { student: { schoolId: req.user.schoolId } } : {}) }
-        });
-        res.json({ success: true });
-    } catch (e) {
-        res.status(500).json({ error: 'Failed to delete submission' });
-    }
-});
-
-app.delete('/api/submissions/by-paper/:paperId', authenticate, async (req: any, res: any) => {
-    if (req.user?.role !== 'SCHOOL_ADMIN' && req.user?.role !== 'SUPER_ADMIN') {
-        return res.status(403).json({ error: 'Only School Admin can delete student marks' });
-    }
-    try {
-        const deleted = await prisma.examSubmission.deleteMany({
-            where: { paperId: req.params.paperId, ...(req.user?.schoolId ? { student: { schoolId: req.user.schoolId } } : {}) }
-        });
-        res.json({ success: true, count: deleted.count });
-    } catch (e) {
-        res.status(500).json({ error: 'Failed to delete submissions' });
-    }
+    await prisma.examPaper.deleteMany({ where: { id: req.params.id, schoolId: req.user.schoolId } });
+    res.json({ success: true });
 });
 
 // 7. System Routes

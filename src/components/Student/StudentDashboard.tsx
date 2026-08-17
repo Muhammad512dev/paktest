@@ -351,7 +351,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, initialTab })
                       value={subjectFilter}
                     >
                       <option value="All">All Subjects</option>
-                      {Array.from(new Set(results.map(r => (r.paper || (r as any).paperSnapshot || {}).subject))).filter(Boolean).map(s => (
+                      {Array.from(new Set(results.map(r => (r.paper as any)?.subject))).filter(Boolean).map(s => (
                         <option key={s as string} value={s as string}>{s as string}</option>
                       ))}
                     </select>
@@ -372,19 +372,18 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, initialTab })
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {results.filter(r => subjectFilter === 'All' || (r.paper || (r as any).paperSnapshot || {}).subject === subjectFilter).map(r => {
-                        const pData = r.paper || (r as any).paperSnapshot || {};
-                        const pct = Math.round((r.totalScore / (pData.totalMarks || 1)) * 100);
+                      {results.filter(r => subjectFilter === 'All' || (r.paper as any)?.subject === subjectFilter).map(r => {
+                        const pct = Math.round((r.totalScore / ((r.paper as any)?.totalMarks || 1)) * 100);
                         return (
                           <tr key={r.id} className="hover:bg-gray-50/80 transition-colors group">
                             <td className="px-8 py-6">
-                              <p className="font-bold text-gray-900">{pData.title}{!r.paper && ' (Deleted)'}</p>
+                              <p className="font-bold text-gray-900">{(r.paper as any)?.title}</p>
                               <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-1">
-                                <BookOpen size={12} /> {pData.subject}
+                                <BookOpen size={12} /> {(r.paper as any)?.subject}
                               </p>
                             </td>
                             <td className="px-8 py-6 text-center">
-                              <div className="text-sm font-black text-gray-900">{r.totalScore} / {pData.totalMarks}</div>
+                              <div className="text-sm font-black text-gray-900">{r.totalScore} / {(r.paper as any)?.totalMarks}</div>
                             </td>
                             <td className="px-8 py-6 text-center">
                               <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-black ${pct >= 80 ? 'bg-emerald-50 text-emerald-600' : pct >= 50 ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'
@@ -432,7 +431,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, initialTab })
                         <div>
                           <h2 className="text-xl font-black text-gray-900 leading-none mb-1">Exam Review</h2>
                           <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
-                            {(viewingResult.paper || (viewingResult as any).paperSnapshot || {}).title}{!viewingResult.paper && ' (Deleted)'} • Submitted on {new Date(viewingResult.submittedAt).toLocaleDateString()}
+                            {(viewingResult.paper as any)?.title} • Submitted on {new Date(viewingResult.submittedAt).toLocaleDateString()}
                           </p>
                         </div>
                       </div>

@@ -775,19 +775,3 @@ export const submitAllGrades = async (data: any) => {
   });
   return handleResponse(res);
 };
-
-export const deleteSubmission = async (id: string) => {
-  const res = await fetch(`${API_URL}/api/submissions/${id}`, {
-    method: 'DELETE',
-    headers: getHeaders()
-  });
-  return handleResponse(res);
-};
-
-export const deleteSubmissionsByPaper = async (paperId: string) => {
-  const res = await fetch(`${API_URL}/api/submissions/by-paper/${paperId}`, {
-    method: 'DELETE',
-    headers: getHeaders()
-  });
-  return handleResponse(res);
-};

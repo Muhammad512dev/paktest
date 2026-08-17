@@ -7,3 +7,15 @@ Add to backend/.env:
 REDIS_URL="rediss://:your-password@your-host.upstash.io:6379"
 DATABASE_POOL_SIZE=20
 The app works perfectly without Redis — it just won't cache (safe fallback built in). Add Redis when ready to deploy at scale.
+
+
+
+
+
+
+
+
+
+
+
+again i tell full , when i create the paper and save then student online start to paper , student can solve and which student not solve , these are grading and save it result , add feature more when i delete from the save then delete from the grading only and ask me delete only in saving , grading and result if select all then delete from all  , not from result of that paper result of all student and classes , in result section we delete the that and when we delete from result section then student portal also delete that marks and information of that that i ask proerp 

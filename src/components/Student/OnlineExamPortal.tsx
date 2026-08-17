@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getPaperForExam, submitExam, saveExamDraft, getExamDraft } from '../../services/dataService';
 import { ExamPaper } from '../../types';
-import { Clock, Shield, CheckCircle, Send, AlertCircle, Save, Lock, ChevronLeft, ChevronRight, CloudUpload, Bold, Italic, Copy, Clipboard } from 'lucide-react';
+import { Clock, Shield, CheckCircle, Send, AlertCircle, Save, Lock, ChevronLeft, ChevronRight, CloudUpload, Bold, Italic, Copy, Clipboard, List, AlignLeft, AlignCenter, AlignRight, Eye } from 'lucide-react';
 import MathRenderer from '../MathRenderer';
 
 interface OnlineExamPortalProps {
@@ -82,26 +82,46 @@ const OnlineExamPortal: React.FC<OnlineExamPortalProps> = ({ paperId, onComplete
     setAnswers(prev => ({ ...prev, [qId]: answer }));
   };
 
-  const applyTextFormat = (format: 'bold' | 'italic' | 'size', value?: string) => {
+  const applyTextFormat = (format: 'bold' | 'italic' | 'size' | 'bullet' | 'align', value?: string) => {
     if (!textareaRef.current) return;
     const textarea = textareaRef.current;
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selectedText = textarea.value.substring(start, end);
     
-    if (!selectedText) return;
-
     let formatted = selectedText;
-    if (format === 'bold') formatted = `**${selectedText}**`;
-    else if (format === 'italic') formatted = `*${selectedText}*`;
-    else if (format === 'size') formatted = `[size=${value}]${selectedText}[/size]`;
+    let cursorOffset = 0;
+
+    if (format === 'bold') {
+      const txt = selectedText || 'bold text';
+      formatted = `**${txt}**`;
+      cursorOffset = selectedText ? formatted.length : 2;
+    } else if (format === 'italic') {
+      const txt = selectedText || 'italic text';
+      formatted = `*${txt}*`;
+      cursorOffset = selectedText ? formatted.length : 1;
+    } else if (format === 'bullet') {
+      const linePrefix = (start === 0 || textarea.value[start - 1] === '\n') ? '' : '\n';
+      const txt = selectedText || 'Point text';
+      formatted = `${linePrefix}- ${txt}\n`;
+      cursorOffset = formatted.length;
+    } else if (format === 'align') {
+      const txt = selectedText || 'Aligned text';
+      formatted = `[align=${value || 'center'}]${txt}[/align]`;
+      cursorOffset = selectedText ? formatted.length : 14 + (value || 'center').length;
+    } else if (format === 'size') {
+      const txt = selectedText || 'Sized text';
+      formatted = `[size=${value}]${txt}[/size]`;
+      cursorOffset = selectedText ? formatted.length : 7 + (value?.length || 2);
+    }
 
     const newText = textarea.value.substring(0, start) + formatted + textarea.value.substring(end);
     handleAnswerChange(paper?.questions[currentIdx]?.id || '', newText);
     
     setTimeout(() => {
       textarea.focus();
-      textarea.selectionStart = textarea.selectionEnd = start + formatted.length;
+      textarea.selectionStart = start + cursorOffset;
+      textarea.selectionEnd = start + cursorOffset;
     }, 0);
   };
 
@@ -435,32 +455,76 @@ const OnlineExamPortal: React.FC<OnlineExamPortalProps> = ({ paperId, onComplete
                   )}
 
                   {(q.type === 'Short Answer' || q.type === 'Long Answer') && (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {/* Formatting Toolbar */}
-                      <div className="flex gap-2 p-3 bg-slate-100 rounded-lg border border-gray-200">
+                      <div className="flex flex-wrap items-center gap-2 p-2.5 bg-slate-100 rounded-xl border border-gray-200">
                         <button 
+                          type="button"
                           onClick={() => applyTextFormat('bold')} 
                           disabled={isSaved}
-                          title="Make text bold (select text first)"
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded hover:bg-gray-100 text-sm font-bold text-gray-700 disabled:opacity-50"
+                          title="Bold (Select text or click)"
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 text-xs font-bold text-gray-700 disabled:opacity-50 shadow-xs"
                         >
                           <Bold size={14} /> Bold
                         </button>
                         <button 
+                          type="button"
                           onClick={() => applyTextFormat('italic')} 
                           disabled={isSaved}
-                          title="Make text italic (select text first)"
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded hover:bg-gray-100 text-sm font-bold text-gray-700 disabled:opacity-50"
+                          title="Italic (Select text or click)"
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 text-xs font-bold text-gray-700 disabled:opacity-50 shadow-xs"
                         >
                           <Italic size={14} /> Italic
                         </button>
+                        <button 
+                          type="button"
+                          onClick={() => applyTextFormat('bullet')} 
+                          disabled={isSaved}
+                          title="Add Bullet Point"
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 text-xs font-bold text-gray-700 disabled:opacity-50 shadow-xs"
+                        >
+                          <List size={14} /> Bullet Point
+                        </button>
                         
-                        <div className="flex items-center gap-2 ml-2">
+                        <div className="h-5 w-px bg-gray-300 mx-1 hidden sm:block"></div>
+
+                        {/* Alignment */}
+                        <div className="flex items-center gap-1 bg-white p-0.5 border border-gray-300 rounded-lg shadow-xs">
+                          <button 
+                            type="button"
+                            onClick={() => applyTextFormat('align', 'left')} 
+                            disabled={isSaved}
+                            title="Align Left"
+                            className="p-1 hover:bg-gray-100 text-gray-700 rounded disabled:opacity-50"
+                          >
+                            <AlignLeft size={14} />
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => applyTextFormat('align', 'center')} 
+                            disabled={isSaved}
+                            title="Align Center"
+                            className="p-1 hover:bg-gray-100 text-gray-700 rounded disabled:opacity-50"
+                          >
+                            <AlignCenter size={14} />
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => applyTextFormat('align', 'right')} 
+                            disabled={isSaved}
+                            title="Align Right"
+                            className="p-1 hover:bg-gray-100 text-gray-700 rounded disabled:opacity-50"
+                          >
+                            <AlignRight size={14} />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 ml-1">
                            <span className="text-[10px] font-bold text-gray-400 uppercase">Size</span>
                            <select 
                               onChange={(e) => applyTextFormat('size', e.target.value)}
                               disabled={isSaved}
-                              className="bg-white border border-gray-300 rounded px-2 py-1 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-500"
+                              className="bg-white border border-gray-300 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-500 shadow-xs"
                            >
                               <option value="14">Auto</option>
                               <option value="16">16px</option>
@@ -471,21 +535,33 @@ const OnlineExamPortal: React.FC<OnlineExamPortalProps> = ({ paperId, onComplete
                         </div>
 
                         <div className="flex-1"></div>
-                        <div className="flex items-center gap-1 text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-1 rounded border border-rose-100">
+                        <div className="flex items-center gap-1 text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-1 rounded-lg border border-rose-100">
                            <Shield size={10} /> Copy-Paste Disabled
                         </div>
                       </div>
-                      {/* Textarea for answer */}
+
+                      {/* Textarea for input */}
                       <textarea 
                         ref={textareaRef}
-                        placeholder="Type response..." 
+                        placeholder="Type your response here..." 
                         disabled={isSaved} 
-                        rows={q.type === 'Long Answer' ? 8 : 4} 
-                        className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-indigo-600 outline-none resize-none font-mono text-sm" 
+                        rows={q.type === 'Long Answer' ? 6 : 4} 
+                        className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-indigo-600 outline-none resize-none font-sans text-sm shadow-xs leading-relaxed" 
                         value={answers[q.id] || ''} 
                         onChange={e => handleAnswerChange(q.id, e.target.value)}
                       />
-                      <p className="text-[10px] text-gray-400">Tip: Use **text** for bold and *text* for italic.</p>
+
+                      {/* Live Formatted Output Box */}
+                      {answers[q.id] && (
+                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 flex items-center gap-1">
+                            <Eye size={12} /> Live Rendered Response Preview
+                          </p>
+                          <div className="text-sm font-sans text-gray-900 leading-relaxed bg-white p-3 rounded-lg border border-slate-200/80">
+                            <MathRenderer text={answers[q.id]} />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 

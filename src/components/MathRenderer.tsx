@@ -41,14 +41,16 @@ const MathRenderer: React.FC<MathRendererProps> = ({
       if (/^(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\])$/s.test(part)) {
         return part;
       }
-      // Process markdown bold (**text**), italic (*text*), size tags, and newlines
+      // Process markdown bold (**text**), italic (*text*), size tags, alignment tags, bullet points, and newlines
       return part
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
+        .replace(/\[align=(left|center|right)\](.*?)\[\/align\]/gs, '<div style="text-align: $1">$2</div>')
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
         .replace(/\[size=(\d+)\](.*?)\[\/size\]/g, '<span style="font-size: $1px">$2</span>')
+        .replace(/^[\s]*[-•*][ \t]+(.*)$/gm, '• &nbsp;$1')
         .replace(/\n/g, '<br />');
     });
 

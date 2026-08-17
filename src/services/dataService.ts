@@ -775,3 +775,20 @@ export const submitAllGrades = async (data: any) => {
   });
   return handleResponse(res);
 };
+
+export const deleteSubmission = async (submissionId: string) => {
+  const res = await fetch(`${API_URL}/api/teacher/submissions/${submissionId}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+};
+
+export const deleteBulkSubmissions = async (data: { submissionIds?: string[]; paperId?: string; studentId?: string; classId?: string }) => {
+  const res = await fetch(`${API_URL}/api/teacher/submissions/bulk-delete`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(data)
+  });
+  return handleResponse(res);
+};

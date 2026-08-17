@@ -1745,15 +1745,28 @@ app.get('/api/teacher/submissions', authenticate, requireOnlineTestFeature as an
             prisma.examSubmission.count({ where })
         ]);
 
-        // Dynamic Status Sync
+        // Dynamic Status Sync & Snapshot Paper Fallback
         const processed = submissions.map((s: any) => {
             const answers = s.answers as any;
             let hasSubjective = false;
-            Object.values(answers).forEach((ans: any) => {
-                if (ans && !ans.isObjective) hasSubjective = true;
-            });
+            if (answers && typeof answers === 'object') {
+                Object.values(answers).forEach((ans: any) => {
+                    if (ans && !ans.isObjective) hasSubjective = true;
+                });
+            }
+
+            const fallbackPaper = s.paper || {
+                id: s.paperId || 'deleted',
+                title: s.paperTitle || 'Deleted Exam',
+                subject: s.subject || 'General',
+                classLevel: s.classLevel || 'General',
+                totalMarks: s.totalMarks || 100,
+                examDate: s.submittedAt
+            };
+
             return {
                 ...s,
+                paper: fallbackPaper,
                 isGraded: s.isGraded || !hasSubjective
             };
         });
@@ -1867,6 +1880,61 @@ app.post('/api/teacher/grade-all', authenticate, async (req: any, res: any) => {
         });
         res.json(updated);
     } catch (e) { res.status(500).json({ error: 'Bulk grading failed' }); }
+});
+
+// --- SUBMISSION DELETION (SCHOOL ADMIN ONLY) ---
+app.delete('/api/teacher/submissions/:id', authenticate, async (req: any, res: any) => {
+    if (req.user.role !== 'SCHOOL_ADMIN' && req.user.role !== 'SUPER_ADMIN') {
+        return res.status(403).json({ error: 'Only School Admin can delete student marks and results.' });
+    }
+    try {
+        const sub = await prisma.examSubmission.findFirst({
+            where: {
+                id: req.params.id,
+                ...(req.user.role !== 'SUPER_ADMIN' ? { student: { schoolId: req.user.schoolId } } : {})
+            }
+        });
+        if (!sub) return res.status(404).json({ error: 'Submission not found' });
+
+        await prisma.examSubmission.delete({ where: { id: sub.id } });
+        await trackActivity(req, 'EXAM', `Deleted submission ID ${sub.id}`);
+        res.json({ success: true, message: 'Submission deleted successfully' });
+    } catch (e: any) {
+        console.error("Delete submission error:", e);
+        res.status(500).json({ error: 'Failed to delete submission' });
+    }
+});
+
+app.post('/api/teacher/submissions/bulk-delete', authenticate, async (req: any, res: any) => {
+    if (req.user.role !== 'SCHOOL_ADMIN' && req.user.role !== 'SUPER_ADMIN') {
+        return res.status(403).json({ error: 'Only School Admin can delete student marks and results.' });
+    }
+    const { submissionIds, paperId, studentId, classId } = req.body;
+    try {
+        const where: any = {};
+        if (Array.isArray(submissionIds) && submissionIds.length > 0) {
+            where.id = { in: submissionIds };
+        } else if (paperId) {
+            where.paperId = paperId;
+        } else if (studentId) {
+            where.studentId = studentId;
+        } else if (classId) {
+            where.student = { classId: classId };
+        } else {
+            return res.status(400).json({ error: 'Deletion criteria required' });
+        }
+
+        if (req.user.role !== 'SUPER_ADMIN') {
+            where.student = { ...(where.student || {}), schoolId: req.user.schoolId };
+        }
+
+        const result = await prisma.examSubmission.deleteMany({ where });
+        await trackActivity(req, 'EXAM', `Bulk deleted ${result.count} submission(s)`);
+        res.json({ success: true, count: result.count, message: `Successfully deleted ${result.count} submission(s)` });
+    } catch (e: any) {
+        console.error("Bulk delete submissions error:", e);
+        res.status(500).json({ error: 'Failed to delete submissions' });
+    }
 });
 
 // --- AUTO-CLEANUP JOB (SIMULATED ON REQUEST) ---
@@ -2474,8 +2542,30 @@ app.post('/api/papers', authenticate, async (req: any, res: any) => {
 });
 
 app.delete('/api/papers/:id', authenticate, async (req: any, res: any) => {
-    await prisma.examPaper.deleteMany({ where: { id: req.params.id, schoolId: req.user.schoolId } });
-    res.json({ success: true });
+    try {
+        const paperId = req.params.id;
+        const targetWhere = req.user.role === 'SUPER_ADMIN' ? { id: paperId } : { id: paperId, schoolId: req.user.schoolId };
+        const paper = await prisma.examPaper.findFirst({ where: targetWhere });
+
+        if (paper) {
+            // Snapshot metadata into existing submissions before removing the paper row
+            await prisma.examSubmission.updateMany({
+                where: { paperId: paperId },
+                data: {
+                    paperTitle: paper.title,
+                    subject: paper.subject,
+                    classLevel: paper.classLevel,
+                    totalMarks: paper.totalMarks
+                }
+            });
+            await prisma.examPaper.delete({ where: { id: paper.id } });
+            await trackActivity(req, 'PAPER', `Deleted paper: ${paper.title}`);
+        }
+        res.json({ success: true });
+    } catch (e: any) {
+        console.error("Paper deletion error:", e);
+        res.status(500).json({ error: "Failed to delete paper" });
+    }
 });
 
 // 7. System Routes

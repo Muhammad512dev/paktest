@@ -1,0 +1,9 @@
+One thing you need to do yourself:
+To enable Redis caching, add your REDIS_URL to the backend .env file:
+
+Go to console.upstash.com → Create database (free)
+Copy the Redis URL (starts with rediss://)
+Add to backend/.env:
+REDIS_URL="rediss://:your-password@your-host.upstash.io:6379"
+DATABASE_POOL_SIZE=20
+The app works perfectly without Redis — it just won't cache (safe fallback built in). Add Redis when ready to deploy at scale.

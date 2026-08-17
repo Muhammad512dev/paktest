@@ -433,6 +433,10 @@ router.post('/submit', authenticateStudent, async (req: any, res: any) => {
       data: {
         studentId: req.student.id,
         paperId: paperId,
+        paperTitle: paper.title || '',
+        subject: paper.subject || '',
+        classLevel: paper.classLevel || '',
+        totalMarks: paper.totalMarks || 0,
         answers: submissionAnswers,
         totalScore: totalScore,
         isGraded: !hasSubjective,

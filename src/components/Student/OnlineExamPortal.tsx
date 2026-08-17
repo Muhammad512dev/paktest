@@ -28,8 +28,63 @@ const OnlineExamPortal: React.FC<OnlineExamPortalProps> = ({ paperId, onComplete
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [syncCounter, setSyncCounter] = useState(0);
   const lastSyncRef = useRef<string>('');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [textEditorState, setTextEditorState] = useState<'bold' | 'italic' | 'normal'>('normal');
+  const editorRef = useRef<HTMLDivElement>(null);
+  const [isEditorFocused, setIsEditorFocused] = useState(false);
+  const [selectedFontSize, setSelectedFontSize] = useState('14');
+  const [textAlignment, setTextAlignment] = useState<'left' | 'center' | 'right'>('left');
+
+  // Keep editor innerHTML in sync when navigating questions or restoring saved answers
+  useEffect(() => {
+    if (!editorRef.current || !paper) return;
+    const currentQId = paper.questions[currentIdx]?.id;
+    if (!currentQId) return;
+
+    const savedAnswer = answers[currentQId] || '';
+    if (editorRef.current.innerHTML !== savedAnswer) {
+      editorRef.current.innerHTML = savedAnswer;
+    }
+  }, [currentIdx, paper, answers]);
+
+  const handleEditorInput = () => {
+    if (!editorRef.current || !paper) return;
+    const currentQId = paper.questions[currentIdx]?.id;
+    if (!currentQId) return;
+
+    const htmlContent = editorRef.current.innerHTML;
+    handleAnswerChange(currentQId, htmlContent);
+  };
+
+  const applyTextFormat = (command: 'bold' | 'italic' | 'bullet' | 'align' | 'size', value?: string) => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+
+    if (command === 'bold') {
+      document.execCommand('bold', false);
+    } else if (command === 'italic') {
+      document.execCommand('italic', false);
+    } else if (command === 'bullet') {
+      document.execCommand('insertUnorderedList', false);
+    } else if (command === 'align') {
+      const alignCmd = value === 'center' ? 'justifyCenter' : value === 'right' ? 'justifyRight' : 'justifyLeft';
+      document.execCommand(alignCmd, false);
+      setTextAlignment((value as any) || 'left');
+    } else if (command === 'size') {
+      if (value) {
+        setSelectedFontSize(value);
+        // Apply inline style to selection or create styled span
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+          const range = selection.getRangeAt(0);
+          const span = document.createElement('span');
+          span.style.fontSize = `${value}px`;
+          span.appendChild(range.extractContents());
+          range.insertNode(span);
+        }
+      }
+    }
+
+    handleEditorInput();
+  };
 
   // --- Functions ---
   
@@ -81,50 +136,6 @@ const OnlineExamPortal: React.FC<OnlineExamPortalProps> = ({ paperId, onComplete
     if (savedSet.has(qId)) return;
     setAnswers(prev => ({ ...prev, [qId]: answer }));
   };
-
-  const applyTextFormat = (format: 'bold' | 'italic' | 'size' | 'bullet' | 'align', value?: string) => {
-    if (!textareaRef.current) return;
-    const textarea = textareaRef.current;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = textarea.value.substring(start, end);
-    
-    let formatted = selectedText;
-    let cursorOffset = 0;
-
-    if (format === 'bold') {
-      const txt = selectedText || 'bold text';
-      formatted = `**${txt}**`;
-      cursorOffset = selectedText ? formatted.length : 2;
-    } else if (format === 'italic') {
-      const txt = selectedText || 'italic text';
-      formatted = `*${txt}*`;
-      cursorOffset = selectedText ? formatted.length : 1;
-    } else if (format === 'bullet') {
-      const linePrefix = (start === 0 || textarea.value[start - 1] === '\n') ? '' : '\n';
-      const txt = selectedText || 'Point text';
-      formatted = `${linePrefix}- ${txt}\n`;
-      cursorOffset = formatted.length;
-    } else if (format === 'align') {
-      const txt = selectedText || 'Aligned text';
-      formatted = `[align=${value || 'center'}]${txt}[/align]`;
-      cursorOffset = selectedText ? formatted.length : 14 + (value || 'center').length;
-    } else if (format === 'size') {
-      const txt = selectedText || 'Sized text';
-      formatted = `[size=${value}]${txt}[/size]`;
-      cursorOffset = selectedText ? formatted.length : 7 + (value?.length || 2);
-    }
-
-    const newText = textarea.value.substring(0, start) + formatted + textarea.value.substring(end);
-    handleAnswerChange(paper?.questions[currentIdx]?.id || '', newText);
-    
-    setTimeout(() => {
-      textarea.focus();
-      textarea.selectionStart = start + cursorOffset;
-      textarea.selectionEnd = start + cursorOffset;
-    }, 0);
-  };
-
 
   const navigateTo = (idx: number) => {
     if (!paper) return;
@@ -540,28 +551,20 @@ const OnlineExamPortal: React.FC<OnlineExamPortalProps> = ({ paperId, onComplete
                         </div>
                       </div>
 
-                      {/* Textarea for input */}
-                      <textarea 
-                        ref={textareaRef}
-                        placeholder="Type your response here..." 
-                        disabled={isSaved} 
-                        rows={q.type === 'Long Answer' ? 6 : 4} 
-                        className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-indigo-600 outline-none resize-none font-sans text-sm shadow-xs leading-relaxed" 
-                        value={answers[q.id] || ''} 
-                        onChange={e => handleAnswerChange(q.id, e.target.value)}
+                      {/* Rich ContentEditable WYSIWYG Editor Container */}
+                      <div 
+                        ref={editorRef}
+                        contentEditable={!isSaved}
+                        onInput={handleEditorInput}
+                        onFocus={() => setIsEditorFocused(true)}
+                        onBlur={() => setIsEditorFocused(false)}
+                        data-placeholder="Type your response here..."
+                        style={{ fontSize: `${selectedFontSize}px`, textAlign: textAlignment }}
+                        className={`w-full min-h-[140px] p-4 rounded-xl border-2 transition-all outline-none font-sans bg-white leading-relaxed text-gray-900 cursor-text overflow-y-auto ${
+                          isEditorFocused ? 'border-indigo-600 ring-2 ring-indigo-100' : 'border-gray-200'
+                        } ${isSaved ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`}
                       />
-
-                      {/* Live Formatted Output Box */}
-                      {answers[q.id] && (
-                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 flex items-center gap-1">
-                            <Eye size={12} /> Live Rendered Response Preview
-                          </p>
-                          <div className="text-sm font-sans text-gray-900 leading-relaxed bg-white p-3 rounded-lg border border-slate-200/80">
-                            <MathRenderer text={answers[q.id]} />
-                          </div>
-                        </div>
-                      )}
+                      <p className="text-[11px] text-gray-400 font-medium">Tip: Use toolbar buttons above to format your answer directly in the editor.</p>
                     </div>
                   )}
 

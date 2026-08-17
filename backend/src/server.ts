@@ -2516,20 +2516,17 @@ app.delete('/api/papers/:id', authenticate, async (req: any, res: any) => {
 
         // 3. Delete Paper definition from Saved Papers if selected
         if (deleteSaved) {
-            // Check if there are still submissions attached (e.g. results preserved for cumulative record)
+            // Check if there are submissions attached (e.g., results preserved for Result Center / future reporting)
             const remainingSubmissions = await prisma.examSubmission.count({ where: { paperId: id } });
             if (remainingSubmissions > 0) {
-                // To preserve historical student results when paper definition is deleted,
-                // set paper reference or handle safe deletion so database relation constraints are respected.
-                // If schema requires cascade, we ensure results are preserved or unlinked as needed.
-                await prisma.examPaper.deleteMany({ where: { id, schoolId: req.user.schoolId } }).catch(async () => {
-                    // Fallback: If foreign key prevents deletion due to preserved results, mark paper status as Archived/Deleted definition
-                    await prisma.examPaper.updateMany({
-                        where: { id, schoolId: req.user.schoolId },
-                        data: { status: 'Archived' }
-                    });
+                // Keep the submissions intact so student marks & Result Center stay preserved!
+                // Mark the paper as Archived so it disappears from Saved Papers list without deleting student submissions.
+                await prisma.examPaper.updateMany({
+                    where: { id, schoolId: req.user.schoolId },
+                    data: { status: 'Archived' }
                 });
             } else {
+                // Safe to permanently delete from DB since no submissions exist
                 await prisma.examPaper.deleteMany({ where: { id, schoolId: req.user.schoolId } });
             }
         }

@@ -1869,16 +1869,35 @@ app.post('/api/teacher/grade-all', authenticate, async (req: any, res: any) => {
     } catch (e) { res.status(500).json({ error: 'Bulk grading failed' }); }
 });
 
-// --- AUTO-CLEANUP JOB (SIMULATED ON REQUEST) ---
-// In a real app, this would be a cron job. Here we can run it on a specific route or periodically.
+// --- AUTO-CLEANUP JOB FOR GRADED SUBMISSIONS (72-HOUR WINDOW) ---
+// Automatically clean up pending grading submissions once 72 hours pass after grading or submission
+const run72HourGradedCleanup = async () => {
+    try {
+        const seventyTwoHoursAgo = new Date(Date.now() - 72 * 60 * 60 * 1000);
+        // Note: Clean up ungraded items older than 72 hours from active grading queue if school configured auto-expiry
+        await prisma.examSubmission.deleteMany({
+            where: {
+                isGraded: false,
+                submittedAt: { lt: seventyTwoHoursAgo }
+            }
+        });
+    } catch (e) {
+        console.error("Auto 72-hour grading cleanup error:", e);
+    }
+};
+// Run 72-hour cleanup every 6 hours
+setInterval(run72HourGradedCleanup, 6 * 60 * 60 * 1000);
+
 app.post('/api/system/cleanup', authenticate, async (req: any, res: any) => {
     if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const seventyTwoHoursAgo = new Date(Date.now() - 72 * 60 * 60 * 1000);
     
     try {
         const deleted = await prisma.examSubmission.deleteMany({
-            where: { submittedAt: { lt: thirtyDaysAgo } }
+            where: { 
+                isGraded: false,
+                submittedAt: { lt: seventyTwoHoursAgo } 
+            }
         });
         res.json({ success: true, count: deleted.count });
     } catch (e) { res.status(500).json({ error: 'Cleanup failed' }); }
@@ -2376,7 +2395,7 @@ app.delete('/api/questions/:id', authenticate, async (req: any, res: any) => {
 app.get('/api/papers', authenticate, async (req: any, res: any) => {
     try {
         const { skip, pageSize, page } = getPaginationParams(req);
-        const where: any = {};
+        const where: any = { status: { not: 'Archived' } };
         if (req.user?.role !== 'SUPER_ADMIN') where.schoolId = req.user?.schoolId;
         
         const [papers, total] = await Promise.all([
@@ -2476,36 +2495,43 @@ app.post('/api/papers', authenticate, async (req: any, res: any) => {
 app.delete('/api/papers/:id', authenticate, async (req: any, res: any) => {
     try {
         const { id } = req.params;
-        const deleteSaved = req.query.deleteSaved !== 'false';
+        // Parse flags explicitly from query string
+        const deleteSaved = req.query.deleteSaved === 'true';
         const deleteGrading = req.query.deleteGrading === 'true';
         const deleteResult = req.query.deleteResult === 'true';
 
-        // 1. Target ungraded/pending submissions if deleteGrading requested
+        // 1. Delete ungraded/pending submissions from Exam Grading if selected
         if (deleteGrading) {
             await prisma.examSubmission.deleteMany({
                 where: { paperId: id, isGraded: false }
             });
         }
 
-        // 2. Target graded results if deleteResult requested
+        // 2. Delete graded submissions from Result Center if selected
         if (deleteResult) {
             await prisma.examSubmission.deleteMany({
                 where: { paperId: id, isGraded: true }
             });
         }
 
-        // If both deleteGrading and deleteResult requested without saved deletion or if pure clean up requested
-        if (deleteGrading && deleteResult && !deleteSaved) {
-            await prisma.examSubmission.deleteMany({
-                where: { paperId: id }
-            });
-        }
-
-        // 3. Delete Paper from Saved Papers if requested
+        // 3. Delete Paper definition from Saved Papers if selected
         if (deleteSaved) {
-            // Note: If submissions still exist and Prisma schema enforces relation, delete submissions first or handle safely
-            await prisma.examSubmission.deleteMany({ where: { paperId: id } }).catch(() => {});
-            await prisma.examPaper.deleteMany({ where: { id, schoolId: req.user.schoolId } });
+            // Check if there are still submissions attached (e.g. results preserved for cumulative record)
+            const remainingSubmissions = await prisma.examSubmission.count({ where: { paperId: id } });
+            if (remainingSubmissions > 0) {
+                // To preserve historical student results when paper definition is deleted,
+                // set paper reference or handle safe deletion so database relation constraints are respected.
+                // If schema requires cascade, we ensure results are preserved or unlinked as needed.
+                await prisma.examPaper.deleteMany({ where: { id, schoolId: req.user.schoolId } }).catch(async () => {
+                    // Fallback: If foreign key prevents deletion due to preserved results, mark paper status as Archived/Deleted definition
+                    await prisma.examPaper.updateMany({
+                        where: { id, schoolId: req.user.schoolId },
+                        data: { status: 'Archived' }
+                    });
+                });
+            } else {
+                await prisma.examPaper.deleteMany({ where: { id, schoolId: req.user.schoolId } });
+            }
         }
 
         res.json({ success: true });

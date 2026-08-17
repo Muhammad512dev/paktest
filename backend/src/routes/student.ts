@@ -68,11 +68,23 @@ const schoolHasOnlineTest = async (schoolId: string): Promise<boolean> => {
   if (!schoolId) return false;
   const school = await prisma.school.findUnique({ where: { id: schoolId }, select: { subscriptionPlan: true } });
   if (!school?.subscriptionPlan) return false;
-  const plan = await prisma.subscriptionPlan.findFirst({ where: { name: school.subscriptionPlan }, select: { features: true } });
+
+  const planName = school.subscriptionPlan.trim();
+  const plan = await prisma.subscriptionPlan.findFirst({
+    where: {
+      OR: [
+        { name: { equals: planName, mode: 'insensitive' } },
+        { name: { contains: planName, mode: 'insensitive' } }
+      ]
+    },
+    select: { features: true }
+  });
+
   const features = plan?.features || [];
-  return Array.isArray(features) && features.some((f: any) => {
-    const s = String(f || '').toLowerCase();
-    return s.includes('online') && (s.includes('test') || s.includes('exam'));
+  if (!Array.isArray(features)) return false;
+  return features.some((f: any) => {
+    const s = String(f || '').toLowerCase().trim();
+    return s.includes('online') || s.includes('portal') || s.includes('test') || s.includes('exam') || s.includes('assessment');
   });
 };
 

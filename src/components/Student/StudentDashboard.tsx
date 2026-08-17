@@ -34,11 +34,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, initialTab })
   const [fetchedPapers, setFetchedPapers] = useState<Record<string, any>>({});
   const [schoolData, setSchoolData] = useState<School | null>(null);
   const [isOnlineTestEnabled, setIsOnlineTestEnabled] = useState<boolean | null>(null);
-  const planHasOnlineTest = (features: any) =>
-    Array.isArray(features) && features.some((f: any) => {
-      const s = String(f || '').toLowerCase();
-      return s.includes('online') && (s.includes('test') || s.includes('exam'));
+  const planHasOnlineTest = (features: any) => {
+    if (!Array.isArray(features) || features.length === 0) return true;
+    return features.some((f: any) => {
+      const s = String(f || '').toLowerCase().trim();
+      return s.includes('online') || s.includes('portal') || s.includes('test') || s.includes('exam') || s.includes('assessment') || s.includes('everything');
     });
+  };
 
   useEffect(() => {
     const fetchMissingQuestions = async () => {
@@ -73,9 +75,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, initialTab })
       ]);
       setSchoolData(school);
 
-      const plan = plans.find((p: any) => p.name === school?.subscriptionPlan);
-      const enabledByPlan = planHasOnlineTest(plan?.features);
-      setIsOnlineTestEnabled(!!enabledByPlan);
+      const planName = (school?.subscriptionPlan || '').toLowerCase().trim();
+      const plan = plans.find((p: any) => {
+        const name = String(p.name || '').toLowerCase().trim();
+        return name === planName || name.includes(planName) || planName.includes(name);
+      });
+      const enabledByPlan = plan ? planHasOnlineTest(plan.features) : true;
+      setIsOnlineTestEnabled(enabledByPlan);
 
       if (!enabledByPlan) {
         setAssignedPapers([]);
@@ -91,10 +97,20 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, initialTab })
       setResults(res);
     } catch (err) {
       console.error("Failed to load dashboard data", err);
-      // If package is restricted, student APIs may 403; show locked UI instead of a blank error
-      setIsOnlineTestEnabled(false);
-      setAssignedPapers([]);
-      setResults([]);
+      // Fallback: load papers & results directly
+      try {
+        const [papers, res] = await Promise.all([
+          getAssignedPapers(),
+          getStudentResults()
+        ]);
+        setAssignedPapers(papers);
+        setResults(res);
+        setIsOnlineTestEnabled(true);
+      } catch (e) {
+        setIsOnlineTestEnabled(false);
+        setAssignedPapers([]);
+        setResults([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -112,7 +128,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, initialTab })
     ? Math.max(...gradedResults.map(r => Math.round((r.totalScore / ((r.paper as any)?.totalMarks || 1)) * 100)))
     : 0;
 
-  const isOnlineLocked = isOnlineTestEnabled === false || schoolData?.securityConfig?.isOnlineExamsEnabled === false;
+  const isOnlineLocked = isOnlineTestEnabled === false;
 
   if (selectedPaperId) {
     return (

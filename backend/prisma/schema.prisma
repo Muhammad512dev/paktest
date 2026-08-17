@@ -335,17 +335,18 @@ model Student {
 }
 
 model ExamSubmission {
-  id          String    @id @default(uuid())
-  studentId   String
-  paperId     String
-  answers     Json
-  totalScore  Float     @default(0)
-  isGraded    Boolean   @default(false)
-  gradedBy    String?
-  gradedAt    DateTime?
-  submittedAt DateTime  @default(now())
-  paper       ExamPaper @relation(fields: [paperId], references: [id], onDelete: Cascade)
-  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id            String     @id @default(uuid())
+  studentId     String
+  paperId       String?
+  paperSnapshot Json?
+  answers       Json
+  totalScore    Float      @default(0)
+  isGraded      Boolean    @default(false)
+  gradedBy      String?
+  gradedAt      DateTime?
+  submittedAt   DateTime   @default(now())
+  paper         ExamPaper? @relation(fields: [paperId], references: [id], onDelete: SetNull)
+  student       Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
 }
 
 model ExamDraft {

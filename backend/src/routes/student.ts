@@ -68,23 +68,11 @@ const schoolHasOnlineTest = async (schoolId: string): Promise<boolean> => {
   if (!schoolId) return false;
   const school = await prisma.school.findUnique({ where: { id: schoolId }, select: { subscriptionPlan: true } });
   if (!school?.subscriptionPlan) return false;
-
-  const planName = school.subscriptionPlan.trim();
-  const plan = await prisma.subscriptionPlan.findFirst({
-    where: {
-      OR: [
-        { name: { equals: planName, mode: 'insensitive' } },
-        { name: { contains: planName, mode: 'insensitive' } }
-      ]
-    },
-    select: { features: true }
-  });
-
+  const plan = await prisma.subscriptionPlan.findFirst({ where: { name: school.subscriptionPlan }, select: { features: true } });
   const features = plan?.features || [];
-  if (!Array.isArray(features)) return false;
-  return features.some((f: any) => {
-    const s = String(f || '').toLowerCase().trim();
-    return s.includes('online') || s.includes('portal') || s.includes('test') || s.includes('exam') || s.includes('assessment');
+  return Array.isArray(features) && features.some((f: any) => {
+    const s = String(f || '').toLowerCase();
+    return s.includes('online') && (s.includes('test') || s.includes('exam'));
   });
 };
 
@@ -445,10 +433,6 @@ router.post('/submit', authenticateStudent, async (req: any, res: any) => {
       data: {
         studentId: req.student.id,
         paperId: paperId,
-        paperTitle: paper.title || '',
-        subject: paper.subject || '',
-        classLevel: paper.classLevel || '',
-        totalMarks: paper.totalMarks || 0,
         answers: submissionAnswers,
         totalScore: totalScore,
         isGraded: !hasSubjective,

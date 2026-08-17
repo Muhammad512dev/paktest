@@ -51,13 +51,11 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onNavigate, onLogou
   const isStudent = user.role === UserRole.STUDENT;
   const [isGenerationLocked, setIsGenerationLocked] = useState(false);
   const [isOnlineTestEnabled, setIsOnlineTestEnabled] = useState(true);
-  const planHasOnlineTest = (features: any) => {
-    if (!Array.isArray(features) || features.length === 0) return true;
-    return features.some((f: any) => {
-      const s = String(f || '').toLowerCase().trim();
-      return s.includes('online') || s.includes('portal') || s.includes('test') || s.includes('exam') || s.includes('assessment') || s.includes('everything');
+  const planHasOnlineTest = (features: any) =>
+    Array.isArray(features) && features.some((f: any) => {
+      const s = String(f || '').toLowerCase();
+      return s.includes('online') && (s.includes('test') || s.includes('exam'));
     });
-  };
 
   // Check subscription status to lock/unlock Generate feature
   useEffect(() => {
@@ -70,13 +68,9 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onNavigate, onLogou
 
       try {
         const plans = await getPlans();
-        const planName = (school.subscriptionPlan || '').toLowerCase().trim();
-        const currentPlan = school.subscriptionPlan ? plans.find((p: any) => {
-          const name = String(p.name || '').toLowerCase().trim();
-          return name === planName || name.includes(planName) || planName.includes(name);
-        }) : null;
-        const hasOnlineTest = currentPlan ? planHasOnlineTest(currentPlan.features) : true;
-        setIsOnlineTestEnabled(hasOnlineTest);
+        const currentPlan = school.subscriptionPlan ? plans.find((p: any) => p.name === school.subscriptionPlan) : null;
+        const hasOnlineTest = planHasOnlineTest(currentPlan?.features);
+        setIsOnlineTestEnabled(!!hasOnlineTest);
 
         if (user.role === UserRole.STUDENT) {
           setIsGenerationLocked(false);

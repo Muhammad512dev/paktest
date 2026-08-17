@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getTeacherSubmissions, getClasses, getSubjects, getPapersBySchool, getSyllabuses, getStudents, getPlans, getSchoolById, deleteSubmission, deleteBulkSubmissions } from '../../services/dataService';
+import { getTeacherSubmissions, getClasses, getSubjects, getPapersBySchool, getSyllabuses, getStudents, getPlans, getSchoolById } from '../../services/dataService';
 import { ExamSubmission, ClassLevel, Subject, SavedPaper, User, Student, Syllabus } from '../../types';
-import { Search, Filter, Download, FileSpreadsheet, Calendar, BookOpen, GraduationCap, ArrowRight, ChevronDown, CheckCircle, Clock, X, Printer, AlertCircle, Trash2, ShieldAlert } from 'lucide-react';
+import { Search, Filter, Download, FileSpreadsheet, Calendar, BookOpen, GraduationCap, ArrowRight, ChevronDown, CheckCircle, Clock, X, Printer, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -12,13 +12,11 @@ interface ResultCenterProps {
 
 const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
   const [isOnlineTestEnabled, setIsOnlineTestEnabled] = useState<boolean | null>(null);
-  const planHasOnlineTest = (features: any) => {
-    if (!Array.isArray(features) || features.length === 0) return true;
-    return features.some((f: any) => {
-      const s = String(f || '').toLowerCase().trim();
-      return s.includes('online') || s.includes('portal') || s.includes('test') || s.includes('exam') || s.includes('assessment') || s.includes('everything');
+  const planHasOnlineTest = (features: any) =>
+    Array.isArray(features) && features.some((f: any) => {
+      const s = String(f || '').toLowerCase();
+      return s.includes('online') && (s.includes('test') || s.includes('exam'));
     });
-  };
   const [submissions, setSubmissions] = useState<ExamSubmission[]>([]);
   const [classes, setClasses] = useState<ClassLevel[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -44,13 +42,9 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
     try {
       if (user.schoolId) {
         const [school, plans] = await Promise.all([getSchoolById(user.schoolId), getPlans()]);
-        const planName = (school?.subscriptionPlan || '').toLowerCase().trim();
-        const plan = plans.find((p: any) => {
-          const name = String(p.name || '').toLowerCase().trim();
-          return name === planName || name.includes(planName) || planName.includes(name);
-        });
-        const enabled = plan ? planHasOnlineTest(plan.features) : true;
-        setIsOnlineTestEnabled(enabled);
+        const plan = plans.find((p: any) => p.name === school?.subscriptionPlan);
+        const enabled = planHasOnlineTest(plan?.features);
+        setIsOnlineTestEnabled(!!enabled);
         if (!enabled) {
           setLoading(false);
           return;
@@ -85,48 +79,6 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
   useEffect(() => {
     loadData();
   }, []);
-
-  const isSchoolAdmin = user.role === 'SCHOOL_ADMIN' || user.role === 'SUPER_ADMIN';
-
-  // Cascading Filter Reset Hooks
-  useEffect(() => {
-    setSelectedSubject('ALL');
-    setSelectedPaper('ALL');
-  }, [selectedClass]);
-
-  useEffect(() => {
-    setSelectedPaper('ALL');
-  }, [selectedSubject]);
-
-  const handleDeleteSingleResult = async (submissionId: string, studentName: string) => {
-    if (!isSchoolAdmin) {
-      alert("Only School Admin can delete student marks and results.");
-      return;
-    }
-    if (!confirm(`Are you sure you want to delete the result/marks for "${studentName}"? This action cannot be undone.`)) return;
-    try {
-      await deleteSubmission(submissionId);
-      alert("Result deleted successfully.");
-      loadData();
-    } catch (err: any) {
-      alert(err?.message || "Failed to delete result.");
-    }
-  };
-
-  const handleDeleteAllMarksForPaper = async (paperId: string, paperTitle: string) => {
-    if (!isSchoolAdmin) {
-      alert("Only School Admin can delete student marks and results.");
-      return;
-    }
-    if (!confirm(`Are you sure you want to delete ALL student marks/results for test "${paperTitle}"? This will wipe results for this test.`)) return;
-    try {
-      await deleteBulkSubmissions({ paperId });
-      alert("All student marks for this test deleted successfully.");
-      loadData();
-    } catch (err: any) {
-      alert(err?.message || "Failed to delete marks.");
-    }
-  };
 
   if (isOnlineTestEnabled === false) {
     return (
@@ -1296,130 +1248,94 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
                   </div>
                ) : viewMode === 'TEST_VIEW' && activePaperData ? (
                   /* TEST VIEW MODE */
-                               <div>
-                       <div className="mx-6 mt-6 rounded-2xl border border-indigo-100 bg-indigo-50 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 print:hidden">
-                           <div>
-                               <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Class test result</p>
-                               <p className="mt-1 text-sm font-bold text-slate-700">The report lists all enrolled students for {activePaperData.paper.classLevel} for this selected test.</p>
-                           </div>
-                           <div className="flex flex-wrap items-center gap-2">
-                               <button onClick={handleExport} className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-indigo-700 shadow-sm">
-                                   <Download size={15} /> Download this class test
-                               </button>
-                               {isSchoolAdmin && (
-                                   <button 
-                                       onClick={() => handleDeleteAllMarksForPaper(activePaperData.paper.id, activePaperData.paper.title)}
-                                       className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 px-3.5 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition-all active:scale-95"
-                                       title="Delete all student marks for this test (School Admin only)"
-                                   >
-                                       <Trash2 size={14} /> Wipe All Marks
-                                   </button>
-                               )}
-                           </div>
-                       </div>
+                  <div>
+                      <div className="mx-6 mt-6 rounded-2xl border border-indigo-100 bg-indigo-50 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 print:hidden">
+                          <div>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Class test result</p>
+                              <p className="mt-1 text-sm font-bold text-slate-700">The download contains only students from {activePaperData.paper.classLevel} for this selected test.</p>
+                          </div>
+                          <button onClick={handleExport} className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-indigo-700">
+                              <Download size={15} /> Download this class test
+                          </button>
+                      </div>
+                      <div className="p-8 border-b border-slate-100 bg-emerald-50/30 print:p-0 print:border-b-2 print:border-slate-900 print:mb-8">
+                          <h2 className="text-2xl font-black text-slate-900">{activePaperData.paper.title}</h2>
+                          <div className="flex gap-4 mt-2 text-sm font-bold text-slate-500">
+                              <span>Subject: {activePaperData.paper.subject}</span>
+                              <span>•</span>
+                              <span>Class: {activePaperData.paper.classLevel}</span>
+                              <span>•</span>
+                              <span>Date: {new Date(activePaperData.paper.examDate || activePaperData.paper.dateCreated).toLocaleDateString()}</span>
+                              <span>•</span>
+                              <span>Total Marks: {activePaperData.paper.totalMarks}</span>
+                          </div>
+                      </div>
 
-                       <div className="p-8 border-b border-slate-100 bg-emerald-50/30 print:p-0 print:border-b-2 print:border-slate-900 print:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                           <div>
-                               <h2 className="text-2xl font-black text-slate-900">{activePaperData.paper.title}</h2>
-                               <div className="flex flex-wrap gap-4 mt-2 text-sm font-bold text-slate-500">
-                                   <span>Subject: {activePaperData.paper.subject}</span>
-                                   <span>•</span>
-                                   <span>Class: {activePaperData.paper.classLevel}</span>
-                                   <span>•</span>
-                                   <span>Date: {new Date(activePaperData.paper.examDate || activePaperData.paper.dateCreated).toLocaleDateString()}</span>
-                                   <span>•</span>
-                                   <span>Total Marks: {activePaperData.paper.totalMarks}</span>
-                               </div>
-                           </div>
-
-                           <div className="flex items-center gap-3">
-                               <div className="px-4 py-2 bg-emerald-100/70 border border-emerald-200 rounded-xl text-center">
-                                   <span className="block text-[9px] font-black uppercase text-emerald-800 tracking-wider">Attempted</span>
-                                   <span className="text-lg font-black text-emerald-900">{activePaperData.results.filter(r => !!r.submission).length}</span>
-                               </div>
-                               <div className="px-4 py-2 bg-rose-100/70 border border-rose-200 rounded-xl text-center">
-                                   <span className="block text-[9px] font-black uppercase text-rose-800 tracking-wider">Absent / Unattempted</span>
-                                   <span className="text-lg font-black text-rose-900">{activePaperData.results.filter(r => !r.submission).length}</span>
-                               </div>
-                           </div>
-                       </div>
-
-                       {activePaperData.results.length === 0 ? (
-                           <div className="p-20 text-center text-slate-400 print:hidden">
-                               <p className="font-bold">No students found in this class.</p>
-                           </div>
-                       ) : (
-                           <div className="overflow-x-auto">
-                               <table className="w-full text-left border-collapse">
-                                   <thead>
-                                       <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 print:bg-transparent">
-                                           <th className="px-8 py-5">Student Identity</th>
-                                           <th className="px-8 py-5">Roll No</th>
-                                           <th className="px-8 py-5 text-center">Score</th>
-                                           <th className="px-8 py-5">Status</th>
-                                           <th className="px-8 py-5 text-right">Actions</th>
-                                       </tr>
-                                   </thead>
-                                   <tbody className="divide-y divide-slate-100">
-                                       {activePaperData.results.map(row => {
-                                           const hasSub = !!row.submission;
-                                           const pct = hasSub ? (row.submission!.totalScore / (activePaperData.paper.totalMarks || 1)) * 100 : 0;
-                                           return (
-                                               <tr key={row.student.id} className="hover:bg-slate-50 transition-colors">
-                                                   <td className="px-8 py-5 cursor-pointer" onClick={() => { setSelectedStudentId(row.student.id); setSearchTerm(row.student.rollNo || row.student.name); }}>
-                                                       <span className="font-bold text-slate-900 hover:text-indigo-600">{row.student.name}</span>
-                                                   </td>
-                                                   <td className="px-8 py-5 text-sm font-bold text-slate-600">
-                                                       {row.student.rollNo || 'N/A'}
-                                                   </td>
-                                                   <td className="px-8 py-5 text-center">
-                                                       {hasSub ? (
-                                                           <div className="inline-flex flex-col">
-                                                               <span className={`text-lg font-black ${pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-rose-600'}`}>
-                                                                   {row.submission!.totalScore}
-                                                               </span>
-                                                               <span className="text-[10px] font-black text-slate-400 uppercase">{pct.toFixed(1)}%</span>
-                                                           </div>
-                                                       ) : (
-                                                           <span className="text-sm font-black text-rose-500 uppercase">0 <span className="text-[10px] text-slate-400">/ {activePaperData.paper.totalMarks}</span></span>
-                                                       )}
-                                                   </td>
-                                                   <td className="px-8 py-5">
-                                                       {!hasSub ? (
-                                                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-rose-100 text-rose-700 border border-rose-200">
-                                                               <AlertCircle size={12} /> Not Attempted / Absent
-                                                           </span>
-                                                       ) : row.submission!.isGraded ? (
-                                                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-100 border border-emerald-200">
-                                                               <CheckCircle size={12} /> Graded
-                                                           </span>
-                                                       ) : (
-                                                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-amber-700 bg-amber-100 border border-amber-200">
-                                                               <Clock size={12} /> In Review
-                                                           </span>
-                                                       )}
-                                                   </td>
-                                                   <td className="px-8 py-5 text-right">
-                                                       <div className="flex items-center justify-end gap-2">
-                                                           <button onClick={() => { setSelectedStudentId(row.student.id); setSearchTerm(row.student.rollNo || row.student.name); }} className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-indigo-600 border border-indigo-100 rounded-lg hover:bg-indigo-50 transition-colors">
-                                                               Full Report
-                                                           </button>
-                                                           {isSchoolAdmin && hasSub && (
-                                                               <button 
-                                                                   onClick={() => handleDeleteSingleResult(row.submission!.id, row.student.name)}
-                                                                   className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg border border-rose-100 transition-colors"
-                                                                   title="Delete Student Mark / Result (School Admin only)"
-                                                               >
-                                                                   <Trash2 size={14} />
-                                                               </button>
-                                                           )}
-                                                       </div>
-                                                   </td>
-                                               </tr>
-                                           );
-                                       })}
-                                   </tbody>
-                               </table>
+                      {activePaperData.results.length === 0 ? (
+                          <div className="p-20 text-center text-slate-400 print:hidden">
+                              <p className="font-bold">No students found in this class.</p>
+                          </div>
+                      ) : (
+                          <div className="overflow-x-auto">
+                              <table className="w-full text-left border-collapse">
+                                  <thead>
+                                      <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 print:bg-transparent">
+                                          <th className="px-8 py-5">Student Identity</th>
+                                          <th className="px-8 py-5">Roll No</th>
+                                          <th className="px-8 py-5 text-center">Score</th>
+                                          <th className="px-8 py-5">Status</th>
+                                          <th className="px-8 py-5 text-right">Action</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100">
+                                      {activePaperData.results.map(row => {
+                                          const hasSub = !!row.submission;
+                                          const pct = hasSub ? (row.submission!.totalScore / (activePaperData.paper.totalMarks || 1)) * 100 : 0;
+                                          return (
+                                              <tr key={row.student.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => { setSelectedStudentId(row.student.id); setSearchTerm(row.student.rollNo || row.student.name); }}>
+                                                  <td className="px-8 py-5">
+                                                      <span className="font-bold text-slate-900">{row.student.name}</span>
+                                                  </td>
+                                                  <td className="px-8 py-5 text-sm font-bold text-slate-600">
+                                                      {row.student.rollNo || 'N/A'}
+                                                  </td>
+                                                  <td className="px-8 py-5 text-center">
+                                                      {hasSub ? (
+                                                          <div className="inline-flex flex-col">
+                                                              <span className={`text-lg font-black ${pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-rose-600'}`}>
+                                                                  {row.submission!.totalScore}
+                                                              </span>
+                                                              <span className="text-[10px] font-black text-slate-400 uppercase">{pct.toFixed(1)}%</span>
+                                                          </div>
+                                                      ) : (
+                                                          <span className="text-slate-300 font-bold">-</span>
+                                                      )}
+                                                  </td>
+                                                  <td className="px-8 py-5">
+                                                      {!hasSub ? (
+                                                          <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                              <Clock size={12} /> Pending
+                                                          </span>
+                                                      ) : row.submission!.isGraded ? (
+                                                          <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-emerald-600">
+                                                              <CheckCircle size={12} /> Graded
+                                                          </span>
+                                                      ) : (
+                                                          <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-amber-600">
+                                                              <Clock size={12} /> In Review
+                                                          </span>
+                                                      )}
+                                                  </td>
+                                                  <td className="px-8 py-5 text-right">
+                                                      <button onClick={(event) => { event.stopPropagation(); setSelectedStudentId(row.student.id); setSearchTerm(row.student.rollNo || row.student.name); }} className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-indigo-600 border border-indigo-100 rounded-lg hover:bg-indigo-50">
+                                                          Full Report
+                                                      </button>
+                                                  </td>
+                                              </tr>
+                                          );
+                                      })}
+                                  </tbody>
+                              </table>
                           </div>
                       )}
                   </div>

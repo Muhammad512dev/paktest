@@ -10,13 +10,11 @@ interface StudentManagerProps {
 
 const StudentManager: React.FC<StudentManagerProps> = ({ user }) => {
   const [isOnlineTestEnabled, setIsOnlineTestEnabled] = useState<boolean | null>(null);
-  const planHasOnlineTest = (features: any) => {
-    if (!Array.isArray(features) || features.length === 0) return true;
-    return features.some((f: any) => {
-      const s = String(f || '').toLowerCase().trim();
-      return s.includes('online') || s.includes('portal') || s.includes('test') || s.includes('exam') || s.includes('assessment') || s.includes('everything');
+  const planHasOnlineTest = (features: any) =>
+    Array.isArray(features) && features.some((f: any) => {
+      const s = String(f || '').toLowerCase();
+      return s.includes('online') && (s.includes('test') || s.includes('exam'));
     });
-  };
   const [students, setStudents] = useState<Student[]>([]);
   const [syllabuses, setSyllabuses] = useState<Syllabus[]>([]);
   const [allClasses, setAllClasses] = useState<ClassLevel[]>([]);
@@ -54,14 +52,10 @@ const StudentManager: React.FC<StudentManagerProps> = ({ user }) => {
     try {
       // Package gate: Online Test controls student management & import
       if (user?.schoolId) {
-        const [school, plans] = await Promise.all([getSchoolById(user?.schoolId), getPlans()]);
-        const planName = (school?.subscriptionPlan || '').toLowerCase().trim();
-        const plan = plans.find((p: any) => {
-          const name = String(p.name || '').toLowerCase().trim();
-          return name === planName || name.includes(planName) || planName.includes(name);
-        });
-        const enabled = plan ? planHasOnlineTest(plan.features) : true;
-        setIsOnlineTestEnabled(enabled);
+        const [school, plans] = await Promise.all([getSchoolById(user.schoolId), getPlans()]);
+        const plan = plans.find((p: any) => p.name === school?.subscriptionPlan);
+        const enabled = planHasOnlineTest(plan?.features);
+        setIsOnlineTestEnabled(!!enabled);
         if (!enabled) {
           setLoading(false);
           return;

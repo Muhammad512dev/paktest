@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getTeacherSubmissions, submitGrade, submitAllGrades, getClasses, getSubjects, getPapersBySchool, getSyllabuses, getPlans, getSchoolById, getStudents, deleteSubmission } from '../../services/dataService';
+import { getTeacherSubmissions, submitGrade, submitAllGrades, getClasses, getSubjects, getPapersBySchool, getSyllabuses, getPlans, getSchoolById, getStudents } from '../../services/dataService';
 import { ExamSubmission, User, ClassLevel, Subject, SavedPaper, Syllabus, Student } from '../../types';
-import { Search, Filter, CheckCircle, Clock, ChevronRight, User as UserIcon, BookOpen, AlertCircle, Save, Key, Printer, FileCheck, X, FileSpreadsheet, Calendar, Trash2 } from 'lucide-react';
+import { Search, Filter, CheckCircle, Clock, ChevronRight, User as UserIcon, BookOpen, AlertCircle, Save, Key, Printer, FileCheck, X, FileSpreadsheet, Calendar } from 'lucide-react';
 import MathRenderer from '../MathRenderer';
 
 const renderFormattedText = (text: string) => {
@@ -15,13 +15,11 @@ interface ExamGradingProps {
 
 const ExamGrading: React.FC<ExamGradingProps> = ({ user }) => {
   const [isOnlineTestEnabled, setIsOnlineTestEnabled] = useState<boolean | null>(null);
-  const planHasOnlineTest = (features: any) => {
-    if (!Array.isArray(features) || features.length === 0) return true;
-    return features.some((f: any) => {
-      const s = String(f || '').toLowerCase().trim();
-      return s.includes('online') || s.includes('portal') || s.includes('test') || s.includes('exam') || s.includes('assessment') || s.includes('everything');
+  const planHasOnlineTest = (features: any) =>
+    Array.isArray(features) && features.some((f: any) => {
+      const s = String(f || '').toLowerCase();
+      return s.includes('online') && (s.includes('test') || s.includes('exam'));
     });
-  };
   const [submissions, setSubmissions] = useState<ExamSubmission[]>([]);
   
   // Data for filters
@@ -52,13 +50,9 @@ const ExamGrading: React.FC<ExamGradingProps> = ({ user }) => {
     try {
       if (user.schoolId) {
         const [school, plans] = await Promise.all([getSchoolById(user.schoolId), getPlans()]);
-        const planName = (school?.subscriptionPlan || '').toLowerCase().trim();
-        const plan = plans.find((p: any) => {
-          const name = String(p.name || '').toLowerCase().trim();
-          return name === planName || name.includes(planName) || planName.includes(name);
-        });
-        const enabled = plan ? planHasOnlineTest(plan.features) : true;
-        setIsOnlineTestEnabled(enabled);
+        const plan = plans.find((p: any) => p.name === school?.subscriptionPlan);
+        const enabled = planHasOnlineTest(plan?.features);
+        setIsOnlineTestEnabled(!!enabled);
         if (!enabled) {
           setLoadingInitial(false);
           return;
@@ -89,36 +83,6 @@ const ExamGrading: React.FC<ExamGradingProps> = ({ user }) => {
   useEffect(() => {
     loadInitialData();
   }, []);
-
-  const isSchoolAdmin = user.role === 'SCHOOL_ADMIN' || user.role === 'SUPER_ADMIN';
-
-  // Cascading Filter Reset Hooks
-  useEffect(() => {
-    setSelectedSubject('ALL');
-    setSelectedPaper('ALL');
-  }, [selectedClass]);
-
-  useEffect(() => {
-    setSelectedPaper('ALL');
-  }, [selectedSubject]);
-
-  const handleDeleteSubmission = async (submissionId: string, studentName: string) => {
-    if (!isSchoolAdmin) {
-      alert("Only School Admin can delete student marks and results.");
-      return;
-    }
-    if (!confirm(`Are you sure you want to delete the result/marks for "${studentName}"? This action cannot be undone.`)) return;
-    try {
-      await deleteSubmission(submissionId);
-      alert("Student result deleted successfully.");
-      if (activePaperId) {
-        const data = await getTeacherSubmissions({ paperId: activePaperId, pageSize: 500 });
-        setSubmissions(data);
-      }
-    } catch (err: any) {
-      alert(err?.message || "Failed to delete submission.");
-    }
-  };
 
   if (isOnlineTestEnabled === false) {
     return (
@@ -927,52 +891,36 @@ const ExamGrading: React.FC<ExamGradingProps> = ({ user }) => {
                                  : 'Not scheduled'}
                             </td>
                             <td className="px-8 py-6 text-center">
-                               {(sub as any).isPending ? (
-                                 <span className="text-sm font-black text-rose-500 uppercase">0 <span className="text-[10px] text-slate-400">/ {(sub.paper as any)?.totalMarks || 100}</span></span>
-                               ) : (
-                                 <span className="text-xl font-black text-indigo-600">{sub.totalScore}</span>
-                               )}
+                               <span className="text-xl font-black text-indigo-600">{sub.totalScore}</span>
                             </td>
                             <td className="px-8 py-6">
                                  {(sub as any).isPending ? (
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-100 text-rose-700 rounded-lg text-[10px] font-black uppercase tracking-widest border border-rose-200">
-                                      <AlertCircle size={12} /> Not Attempted / Absent
+                                    <span className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-400 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                                      <AlertCircle size={12} /> Pending Submission
                                     </span>
                                  ) : sub.isGraded ? (
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-black uppercase tracking-widest border border-emerald-200">
+                                    <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-black uppercase tracking-widest">
                                       <CheckCircle size={12} /> Graded
                                     </span>
                                  ) : (
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-black uppercase tracking-widest border border-amber-200">
+                                    <span className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-black uppercase tracking-widest">
                                       <Clock size={12} /> Needs Review
                                     </span>
                                  )}
                             </td>
                             <td className="px-8 py-6 text-right">
-                               <div className="flex items-center justify-end gap-2">
-                                  <button 
-                                     onClick={() => handleSelectSubmission(sub)}
-                                     disabled={(sub as any).isPending}
-                                     className={`px-4 py-2 border-2 rounded-xl font-bold transition-all flex items-center gap-1.5 active:scale-95 shadow-sm text-xs ${
-                                       (sub as any).isPending 
-                                         ? 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed'
-                                         : 'bg-white border-indigo-100 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200'
-                                     }`}
-                                  >
-                                     {(sub as any).isPending ? 'Not Attempted' : 'Grade Now'}
-                                     <ChevronRight size={16} />
-                                  </button>
-
-                                  {isSchoolAdmin && !(sub as any).isPending && (
-                                     <button 
-                                        onClick={() => handleDeleteSubmission(sub.id, sub.student?.name || 'Student')}
-                                        className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl border border-rose-100 transition-colors"
-                                        title="Delete Marks / Result (School Admin only)"
-                                     >
-                                        <Trash2 size={16} />
-                                     </button>
-                                  )}
-                               </div>
+                               <button 
+                                  onClick={() => handleSelectSubmission(sub)}
+                                  disabled={(sub as any).isPending}
+                                  className={`px-5 py-2.5 border-2 rounded-xl font-bold transition-all flex items-center gap-2 ml-auto active:scale-95 shadow-sm ${
+                                    (sub as any).isPending 
+                                      ? 'bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed'
+                                      : 'bg-white border-indigo-100 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200'
+                                  }`}
+                               >
+                                  {(sub as any).isPending ? 'Not Submitted' : 'Grade Now'}
+                                  <ChevronRight size={18} />
+                               </button>
                             </td>
                           </tr>
                         ))}

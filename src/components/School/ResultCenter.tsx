@@ -61,10 +61,35 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
         getSyllabuses(),
         getStudents({ pageSize: 1000 }) 
       ]);
+      const papsWithDeleted = [...paps];
+      const seenDeletedPapers = new Set();
+      subs.forEach((s: any) => {
+        if (!s.paperId && s.paperSnapshot) {
+           const snap = s.paperSnapshot as any;
+           // Group mock papers by subject, title, classLevel
+           const key = `${snap.title}-${snap.subject}-${snap.classLevel}`;
+           if (!seenDeletedPapers.has(key)) {
+               seenDeletedPapers.add(key);
+               const mockPaperId = `mock-${key}`;
+               papsWithDeleted.push({
+                   id: mockPaperId,
+                   title: `${snap.title} (Deleted)`,
+                   subject: snap.subject,
+                   classLevel: snap.classLevel,
+                   totalMarks: snap.totalMarks,
+                   examDate: snap.examDate,
+                   dateCreated: s.submittedAt,
+                   isDeleted: true
+               } as any);
+           }
+           s.paperId = `mock-${key}`;
+        }
+      });
+
       setSubmissions(subs);
       setClasses(cls);
       setSubjects(subsj);
-      setPapers(paps);
+      setPapers(papsWithDeleted);
       setSyllabuses(syls);
       
       // If getStudents returns { data: [] } pagination object vs array
@@ -128,27 +153,7 @@ const ResultCenter: React.FC<ResultCenterProps> = ({ user }) => {
       const studentClass = classes.find(c => c.id === matchedStudent.classId);
       const assignedPapers = papers.filter(p => sanitize(p.classLevel) === sanitize(studentClass?.name ?? ''));
 
-      // Include orphaned submissions (deleted papers)
-      const orphanedSubs = studentSubs.filter(s => !s.paperId && s.paperSnapshot);
-      const mockPapers = orphanedSubs.map(s => {
-          const snap = s.paperSnapshot as any;
-          return {
-              id: `mock-${s.id}`,
-              title: `${snap.title} (Deleted)`,
-              subject: snap.subject,
-              classLevel: snap.classLevel,
-              totalMarks: snap.totalMarks,
-              examDate: snap.examDate,
-              dateCreated: s.submittedAt,
-              isDeleted: true
-          } as any;
-      });
-      assignedPapers.push(...mockPapers);
-      studentSubs.forEach(s => {
-          if (!s.paperId && s.paperSnapshot) {
-              s.paperId = `mock-${s.id}`;
-          }
-      });
+      // Submissions already have their paperId mapped to the mock paper in loadData
 
       // Subject Filter logic for the student view
       const displaySubmissions = selectedSubject === 'ALL' 

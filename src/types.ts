@@ -154,6 +154,9 @@ export interface PaperSectionConfig {
   sourceFilter: string[];
   category: 'Objective' | 'Subjective';
   subQuestionNumbering: NumberingStyle;
+  hasParts?: boolean;
+  parts?: SchemePart[];
+  chapterDistribution?: SchemeChapterRule[];
 }
 
 export const getDefaultSectionInstruction = (type: string, selectCount: number, totalCount: number): string => {
@@ -287,8 +290,58 @@ export interface School {
   notificationSettings?: any;
 }
 
+// ─── Pairing Scheme Types ──────────────────────────────────────────────────
+
+/** Defines how questions are drawn from chapters for a non-parts section (MCQ/Short) */
+export interface SchemeChapterRule {
+  chapters: string[];           // Chapter names to pull from
+  count: number;                // Number of questions from these chapters
+  minCount?: number;            // Minimum from each chapter (for short answer distribution)
+}
+
+/** A single part (a), (b) etc. inside a Long Answer question */
+export interface SchemePart {
+  label: string;                // 'a', 'b', 'c'
+  chapter?: string;             // Source chapter name (single)
+  chapters?: string[];          // OR list (student gets choice)
+  count: number;                // Questions per part (usually 1)
+  marks: number;                // Marks for this part
+  instruction?: string;         // Optional printed instruction
+}
+
+/** One section in a pairing scheme */
+export interface SchemeSectionDef {
+  id: string;
+  type: string;                 // 'MCQ', 'Short Answer', 'Long Answer'
+  title: string;                // e.g. 'Q-1 Objective', 'Q-5'
+  totalCount: number;           // Total questions provided
+  selectCount: number;          // Questions student must attempt
+  marksPerQuestion: number;
+  hasParts: boolean;            // If true, uses `parts` field
+  parts?: SchemePart[];         // For Long Answer with (a)(b)(c) breakdown
+  chapterDistribution?: SchemeChapterRule[];  // For MCQ / Short Answer
+}
+
+/** Full pairing scheme record */
+export interface PairingScheme {
+  id: string;
+  name: string;
+  syllabusId: string;
+  classId: string;
+  subjectId: string;
+  totalMarks: number;
+  durationMin: number;
+  structure: SchemeSectionDef[];
+  isGlobal: boolean;            // true = Board / Super Admin scheme
+  createdBy: string;
+  schoolId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface WizardState {
-  step: 'SYLLABUS' | 'CLASS' | 'SUBJECT' | 'CHAPTERS' | 'SETUP' | 'EDITOR' | 'AI_AGENT';
+  step: 'SYLLABUS' | 'CLASS' | 'SUBJECT' | 'SCHEME' | 'CHAPTERS' | 'SETUP' | 'EDITOR' | 'AI_AGENT';
+
   selectedSyllabus?: string;
   selectedClass?: string;
   selectedSubject?: string;

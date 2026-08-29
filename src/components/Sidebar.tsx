@@ -21,7 +21,8 @@ import {
   MessageSquare,
   GraduationCap,
   CheckSquare,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Layers
 } from 'lucide-react';
 import { User, UserRole, SystemConfig, School } from '../types';
 import { getPlans } from '../services/dataService';
@@ -98,6 +99,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onNavigate, onLogou
   const schoolMenu: MenuItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'generate', label: 'Generate Paper', icon: FilePlus, restricted: true },
+    { id: 'schemes', label: 'Pairing Schemes', icon: Layers },
     { id: 'saved', label: 'Saved Papers', icon: FolderOpen },
     { id: 'staff', label: 'Staff & Teachers', icon: Users },
     { id: 'students', label: 'Student Manager', icon: GraduationCap, requiresOnlineTest: true },
@@ -113,6 +115,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onNavigate, onLogou
   const ownerMenu: MenuItem[] = [
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
     { id: 'generate', label: 'Generate Paper', icon: FilePlus },
+    { id: 'schemes', label: 'Pairing Schemes', icon: Layers },
     { id: 'schools', label: 'Schools', icon: Building2 },
     { id: 'curriculum', label: 'Curriculum', icon: BookOpen },
     { id: 'questions', label: 'Question Bank', icon: Database },
@@ -134,6 +137,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onNavigate, onLogou
   const teacherMenu: MenuItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'generate', label: 'Generate Paper', icon: FilePlus, restricted: true },
+    { id: 'schemes', label: 'Pairing Schemes', icon: Layers },
     { id: 'saved', label: 'Saved Papers', icon: FolderOpen },
     { id: 'grading', label: 'Exam Grading', icon: CheckSquare, requiresOnlineTest: true },
     { id: 'results', label: 'Result Center', icon: FileSpreadsheet, requiresOnlineTest: true },

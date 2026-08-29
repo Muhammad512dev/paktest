@@ -1,4 +1,4 @@
-import { User, School, SubscriptionPlan, Question, ExamPaper, SavedPaper, ActivityLog, PlatformNotification, Staff, Transaction, Syllabus, ClassLevel, Subject, Chapter, Source, Student, ExamSubmission } from '../types';
+import { User, School, SubscriptionPlan, Question, ExamPaper, SavedPaper, ActivityLog, PlatformNotification, Staff, Transaction, Syllabus, ClassLevel, Subject, Chapter, Source, Student, ExamSubmission, PairingScheme } from '../types';
 import { PRICING_PLANS } from '../constants'; // Import default plans
 
 // Leave empty when the frontend and API share one domain. For separate hosting,
@@ -797,6 +797,50 @@ export const submitAllGrades = async (data: any) => {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(data)
+  });
+  return handleResponse(res);
+};
+
+// ─── Pairing Scheme APIs ───────────────────────────────────────────────────
+
+export const getSchemes = async (params?: {
+  syllabusId?: string;
+  classId?: string;
+  subjectId?: string;
+  includeGlobal?: boolean;
+}): Promise<PairingScheme[]> => {
+  const sp = new URLSearchParams();
+  if (params?.syllabusId) sp.set('syllabusId', params.syllabusId);
+  if (params?.classId) sp.set('classId', params.classId);
+  if (params?.subjectId) sp.set('subjectId', params.subjectId);
+  if (params?.includeGlobal !== undefined) sp.set('includeGlobal', String(params.includeGlobal));
+  const qs = sp.toString();
+  const res = await fetch(`${API_URL}/api/schemes${qs ? `?${qs}` : ''}`, { headers: getHeaders() });
+  return handleResponse<PairingScheme[]>(res);
+};
+
+export const createScheme = async (data: Omit<PairingScheme, 'id' | 'createdAt' | 'updatedAt'>): Promise<PairingScheme> => {
+  const res = await fetch(`${API_URL}/api/schemes`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(data)
+  });
+  return handleResponse<PairingScheme>(res);
+};
+
+export const updateScheme = async (id: string, data: Partial<PairingScheme>): Promise<PairingScheme> => {
+  const res = await fetch(`${API_URL}/api/schemes/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(data)
+  });
+  return handleResponse<PairingScheme>(res);
+};
+
+export const deleteScheme = async (id: string): Promise<void> => {
+  const res = await fetch(`${API_URL}/api/schemes/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders()
   });
   return handleResponse(res);
 };

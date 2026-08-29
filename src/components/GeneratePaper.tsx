@@ -6,9 +6,9 @@ import {
   Layers, FileText, CheckCircle2, ChevronDown, MonitorPlay, Layout, Library, Settings2,
   Hash, Info, Edit3, Tag, RefreshCw, Zap, Upload, FileUp, Briefcase, Wand2, FileCode, Paperclip, Database, Shuffle
 } from 'lucide-react';
-import { WizardState, Question, Difficulty, PaperStructure, PaperSectionConfig, User, WatermarkType, PaperLayoutMode, School, UserRole, QuestionType, getDefaultSectionInstruction } from '../types';
+import { WizardState, Question, Difficulty, PaperStructure, PaperSectionConfig, User, WatermarkType, PaperLayoutMode, School, UserRole, QuestionType, getDefaultSectionInstruction, PairingScheme, SchemeSectionDef } from '../types';
 import { 
-  getSyllabuses, getClasses, getSubjects, getChapters, getTopics, getQuestions, getQuestionTypes, getSchoolById, getSystemConfig, checkAndTrackAiUsage
+  getSyllabuses, getClasses, getSubjects, getChapters, getTopics, getQuestions, getQuestionTypes, getSchoolById, getSystemConfig, checkAndTrackAiUsage, getSchemes
 } from '../services/dataService';
 import { generatePaperFromDocument, AISectionRequest } from '../services/geminiService';
 import { MOCK_SCHOOLS } from '../constants';
@@ -29,6 +29,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
   const [allTopics, setAllTopics] = useState<any[]>([]);
   const [questionTypes, setQuestionTypes] = useState<any[]>([]);
   const [schoolData, setSchoolData] = useState<School | null>(null);
+  const [allSchemes, setAllSchemes] = useState<PairingScheme[]>([]);
   
   // Repository for Manual Generation
   const [repoQuestions, setRepoQuestions] = useState<Question[]>([]);
@@ -66,19 +67,21 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
   /* Refactored data loading to handle async responses correctly and support Super Admin */
   useEffect(() => {
     const loadAllData = async () => {
-      const [syls, clss, subs, chs, tops, types, qs] = await Promise.all([
+      const [syls, clss, subs, chs, tops, types, qs, scs] = await Promise.all([
         getSyllabuses(),
         getClasses(),
         getSubjects(),
         getChapters(),
         getTopics(),
         getQuestionTypes(),
-        getQuestions({ pageSize: 1000, maxPages: 50 }) // Pre-load questions for Auto-Gen (up to ~50k)
+        getQuestions({ pageSize: 1000, maxPages: 50 }), // Pre-load questions for Auto-Gen (up to ~50k)
+        getSchemes({ includeGlobal: true })
       ]);
       
       // Ensure repository questions are unique by ID to prevent duplication during shuffling
       const uniqueQs = Array.from(new Map(qs.map(q => [q.id, q])).values());
       setRepoQuestions(uniqueQs);
+      setAllSchemes(scs);
 
       let brandingData: School | null = null;
 
@@ -130,6 +133,11 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
   const filteredClasses = useMemo(() => classes.filter(c => c.syllabusId === state.selectedSyllabus), [classes, state.selectedSyllabus]);
   const filteredSubjects = useMemo(() => subjects.filter(s => s.classId === state.selectedClass), [subjects, state.selectedClass]);
   const relevantChapters = useMemo(() => allChapters.filter(c => c.subjectId === state.selectedSubject), [allChapters, state.selectedSubject]);
+
+  // Pairing Schemes filtered by selected Subject
+  const relevantSchemes = useMemo(() => allSchemes.filter(s => s.subjectId === state.selectedSubject), [allSchemes, state.selectedSubject]);
+  const globalSchemes = useMemo(() => relevantSchemes.filter(s => s.isGlobal), [relevantSchemes]);
+  const customSchemes = useMemo(() => relevantSchemes.filter(s => !s.isGlobal), [relevantSchemes]);
 
   // Filtering Logic for AI Agent (Independent Selection)
   const aiFilteredClasses = useMemo(() => classes.filter(c => !state.selectedSyllabus || c.syllabusId === state.selectedSyllabus), [classes, state.selectedSyllabus]);
@@ -423,25 +431,100 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
             };
 
             (Object.values(state.paperStructure) as PaperSectionConfig[]).forEach(sec => {
-                const pool = repoQuestions.filter(q => 
-                    q.type === sec.questionType &&
-                    q.subject === subjectName &&
-                    (q.classLevel === className || !q.classLevel) &&
-                    (state.selectedChapters.length === 0 || state.selectedChapters.includes(q.chapter || '')) &&
-                    matchesSectionMedium(q, sec.languageMedium)
-                );
-                
-                const shuffled = [...pool].sort(() => 0.5 - Math.random());
-                const picked = shuffled.slice(0, sec.totalCount);
-                
-                picked.forEach(q => {
-                    generatedQuestions.push({
-                        ...q,
-                        id: `${q.id}_gen_${Math.random().toString(36).substr(2, 9)}`,
-                        sectionId: sec.id,
-                        marks: sec.marksPerQuestion
+                // Scheme Handling 1: Long Answer with sub-parts (a), (b), (c)...
+                if (sec.hasParts && sec.parts && sec.parts.length > 0) {
+                    sec.parts.forEach(part => {
+                        const targetChapters = part.chapter ? [part.chapter] : (part.chapters || []);
+                        const partPool = repoQuestions.filter(q => 
+                            q.type === sec.questionType &&
+                            q.subject === subjectName &&
+                            (q.classLevel === className || !q.classLevel) &&
+                            (targetChapters.length === 0 || targetChapters.some(tc => q.chapter?.toLowerCase() === tc.toLowerCase())) &&
+                            matchesSectionMedium(q, sec.languageMedium)
+                        );
+                        const poolToUse = partPool.length > 0 ? partPool : repoQuestions.filter(q => q.type === sec.questionType && q.subject === subjectName);
+                        const picked = poolToUse.length > 0 ? poolToUse[Math.floor(Math.random() * poolToUse.length)] : null;
+                        if (picked) {
+                            generatedQuestions.push({
+                                ...picked,
+                                id: `${picked.id}_part_${part.label}_${Math.random().toString(36).substr(2, 7)}`,
+                                sectionId: sec.id,
+                                marks: part.marks,
+                                text: `(${part.label}) ${picked.text || ''}`,
+                                textUrdu: picked.textUrdu ? `(${part.label}) ${picked.textUrdu}` : undefined
+                            });
+                        }
                     });
-                });
+                }
+                // Scheme Handling 2: Section with specific chapter distribution rules
+                else if (sec.chapterDistribution && sec.chapterDistribution.length > 0) {
+                    const usedIds = new Set<string>();
+                    sec.chapterDistribution.forEach(rule => {
+                        const rulePool = repoQuestions.filter(q =>
+                            !usedIds.has(q.id) &&
+                            q.type === sec.questionType &&
+                            q.subject === subjectName &&
+                            (q.classLevel === className || !q.classLevel) &&
+                            rule.chapters.some(rc => q.chapter?.toLowerCase() === rc.toLowerCase()) &&
+                            matchesSectionMedium(q, sec.languageMedium)
+                        );
+                        const shuffled = [...rulePool].sort(() => 0.5 - Math.random());
+                        const picked = shuffled.slice(0, rule.count);
+                        picked.forEach(q => {
+                            usedIds.add(q.id);
+                            generatedQuestions.push({
+                                ...q,
+                                id: `${q.id}_gen_${Math.random().toString(36).substr(2, 9)}`,
+                                sectionId: sec.id,
+                                marks: sec.marksPerQuestion
+                            });
+                        });
+                    });
+                    // Fill any remainder from the broader chapter pool
+                    const secGenerated = generatedQuestions.filter(q => q.sectionId === sec.id).length;
+                    if (secGenerated < sec.totalCount) {
+                        const remainder = sec.totalCount - secGenerated;
+                        const fallbackPool = repoQuestions.filter(q =>
+                            !usedIds.has(q.id) &&
+                            q.type === sec.questionType &&
+                            q.subject === subjectName &&
+                            (q.classLevel === className || !q.classLevel) &&
+                            (state.selectedChapters.length === 0 || state.selectedChapters.includes(q.chapter || '')) &&
+                            matchesSectionMedium(q, sec.languageMedium)
+                        );
+                        const shuffled = [...fallbackPool].sort(() => 0.5 - Math.random());
+                        shuffled.slice(0, remainder).forEach(q => {
+                            generatedQuestions.push({
+                                ...q,
+                                id: `${q.id}_gen_${Math.random().toString(36).substr(2, 9)}`,
+                                sectionId: sec.id,
+                                marks: sec.marksPerQuestion
+                            });
+                        });
+                    }
+                }
+                // Standard Random Shuffle
+                else {
+                    const pool = repoQuestions.filter(q => 
+                        q.type === sec.questionType &&
+                        q.subject === subjectName &&
+                        (q.classLevel === className || !q.classLevel) &&
+                        (state.selectedChapters.length === 0 || state.selectedChapters.includes(q.chapter || '')) &&
+                        matchesSectionMedium(q, sec.languageMedium)
+                    );
+                    
+                    const shuffled = [...pool].sort(() => 0.5 - Math.random());
+                    const picked = shuffled.slice(0, sec.totalCount);
+                    
+                    picked.forEach(q => {
+                        generatedQuestions.push({
+                            ...q,
+                            id: `${q.id}_gen_${Math.random().toString(36).substr(2, 9)}`,
+                            sectionId: sec.id,
+                            marks: sec.marksPerQuestion
+                        });
+                    });
+                }
             });
             structure = state.paperStructure;
         }
@@ -463,8 +546,8 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
   };
 
   const StepIndicator = () => {
-     const steps = ['Board', 'Grade', 'Subject', 'Topics', 'Layout', 'Questions'];
-     const currentIdx = ['SYLLABUS', 'CLASS', 'SUBJECT', 'CHAPTERS', 'SETUP', 'EDITOR', 'AI_AGENT'].indexOf(state.step);
+     const steps = ['Board', 'Grade', 'Subject', 'Scheme', 'Topics', 'Layout', 'Questions'];
+     const currentIdx = ['SYLLABUS', 'CLASS', 'SUBJECT', 'SCHEME', 'CHAPTERS', 'SETUP', 'EDITOR', 'AI_AGENT'].indexOf(state.step);
      if (state.step === 'AI_AGENT') return null; // Hide standard indicator in AI mode
 
      return (
@@ -754,7 +837,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
        <h2 className="text-3xl font-black text-gray-900 mb-12 tracking-tight">Step 3: Select Subject</h2>
        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
           {filteredSubjects.map(s => (
-             <div key={s.id} onClick={() => setState({ ...state, selectedSubject: s.id, step: 'CHAPTERS' })} className="group p-6 bg-white border border-gray-100 rounded-[2rem] shadow-sm hover:shadow-2xl transition-all cursor-pointer">
+             <div key={s.id} onClick={() => setState({ ...state, selectedSubject: s.id, step: 'SCHEME' })} className="group p-6 bg-white border border-gray-100 rounded-[2rem] shadow-sm hover:shadow-2xl transition-all cursor-pointer">
                 <div className="flex justify-between items-start mb-6">
                    <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center overflow-hidden border border-emerald-100 shadow-inner group-hover:scale-110 transition-transform">
                       {s.logo ? <img src={s.logo} className="w-full h-full object-cover" /> : <Library size={28}/>}
@@ -773,9 +856,174 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
     </div>
   );
 
+  // ─── STEP 4: SCHEME SELECTION ─────────────────────────────────────────────
+  if (state.step === 'SCHEME') {
+    const handleApplyScheme = (scheme: PairingScheme) => {
+      const struct: PaperStructure = {};
+      const requiredChapters = new Set<string>();
+
+      (scheme.structure as SchemeSectionDef[]).forEach((secDef, idx) => {
+        const secId = `sec_scheme_${Date.now()}_${idx}`;
+        const isObjective = ['MCQ', 'Match Columns', 'Fill in the Blanks', 'True/False', 'Spelling Check'].includes(secDef.type);
+        
+        // Collect referenced chapters
+        if (secDef.hasParts && secDef.parts) {
+          secDef.parts.forEach(p => {
+            if (p.chapter) requiredChapters.add(p.chapter);
+            if (p.chapters) p.chapters.forEach(ch => requiredChapters.add(ch));
+          });
+        }
+        if (secDef.chapterDistribution) {
+          secDef.chapterDistribution.forEach(r => r.chapters.forEach(ch => requiredChapters.add(ch)));
+        }
+
+        struct[secId] = {
+          id: secId,
+          title: secDef.title || `Q.${idx + 1} ${secDef.type}`,
+          instruction: getDefaultSectionInstruction(secDef.type, secDef.selectCount, secDef.totalCount),
+          questionType: secDef.type,
+          marksPerQuestion: secDef.marksPerQuestion,
+          totalCount: secDef.totalCount,
+          selectCount: secDef.selectCount,
+          blankLines: 0,
+          blankLineType: 'Line',
+          questionsPerLine: false,
+          languageMedium: 'Bilingual',
+          sourceFilter: [],
+          category: isObjective ? 'Objective' : 'Subjective',
+          subQuestionNumbering: secDef.type === 'MCQ' ? 'Numeric' : 'Roman',
+          hasParts: secDef.hasParts,
+          parts: secDef.parts,
+          chapterDistribution: secDef.chapterDistribution
+        };
+      });
+
+      // If scheme specified chapters, use them; otherwise use all chapters for this subject
+      const finalChapters = requiredChapters.size > 0 
+        ? Array.from(requiredChapters) 
+        : relevantChapters.map(c => c.name);
+
+      setState(prev => ({
+        ...prev,
+        paperStructure: struct,
+        selectedChapters: finalChapters,
+        step: 'SETUP'
+      }));
+    };
+
+    return (
+      <div className="p-4 md:p-12 max-w-7xl">
+        <button onClick={() => setState({...state, step: 'SUBJECT'})} className="text-gray-400 hover:text-gray-900 flex items-center gap-2 mb-8 font-bold text-sm uppercase tracking-widest transition-colors"><ArrowLeft size={18} /> Back</button>
+        <StepIndicator />
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
+          <div>
+            <h2 className="text-3xl font-black text-gray-900 tracking-tight">Step 4: Select Exam Scheme</h2>
+            <p className="text-gray-500 mt-2 text-sm">Choose an official Board scheme, custom template, or create manually</p>
+          </div>
+          <button onClick={() => setState({ ...state, step: 'CHAPTERS' })}
+            className="px-6 py-3 bg-white border-2 border-indigo-200 text-indigo-600 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-indigo-50 transition-all shadow-sm">
+            <Edit3 size={16}/> Skip & Select Chapters Manually
+          </button>
+        </div>
+
+        <div className="space-y-10">
+          {/* Official Board Schemes */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                <Tag size={12}/> Official Board Schemes
+              </span>
+            </div>
+            {globalSchemes.length === 0 ? (
+              <div className="p-6 bg-amber-50/50 rounded-2xl border border-amber-100 text-amber-800 text-xs font-bold">
+                No official Board schemes configured for this subject yet. You can create one in Pairing Schemes or proceed manually.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {globalSchemes.map(sch => (
+                  <div key={sch.id} onClick={() => handleApplyScheme(sch)}
+                    className="group bg-white p-6 rounded-3xl border-2 border-amber-100 hover:border-amber-400 shadow-sm hover:shadow-xl transition-all cursor-pointer flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start mb-3">
+                        <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 rounded-lg text-[9px] font-black uppercase tracking-widest">Board Scheme</span>
+                        <div className="w-8 h-8 rounded-full bg-amber-50 group-hover:bg-amber-500 group-hover:text-white text-amber-600 flex items-center justify-center transition-all">
+                          <ChevronRight size={16}/>
+                        </div>
+                      </div>
+                      <h4 className="font-black text-gray-900 text-lg group-hover:text-amber-700 transition-colors leading-tight mb-2">{sch.name}</h4>
+                      <div className="space-y-1.5 mb-4">
+                        {(sch.structure as SchemeSectionDef[]).map((sec, i) => (
+                          <div key={i} className="text-xs text-gray-500 flex items-center justify-between">
+                            <span className="font-semibold">{sec.title} ({sec.type})</span>
+                            <span className="font-bold text-gray-700">
+                              {sec.hasParts ? `${(sec.parts||[]).length} parts` : `${sec.selectCount}/${sec.totalCount} Qs`}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t border-gray-100 flex items-center justify-between text-xs font-bold text-gray-600">
+                      <span>Total: {sch.totalMarks} Marks</span>
+                      <span>{sch.durationMin} Min</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Custom School / Teacher Schemes */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                <Layers size={12}/> Custom Schemes
+              </span>
+            </div>
+            {customSchemes.length === 0 ? (
+              <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100 text-gray-400 text-xs font-bold">
+                No custom templates for this subject.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {customSchemes.map(sch => (
+                  <div key={sch.id} onClick={() => handleApplyScheme(sch)}
+                    className="group bg-white p-6 rounded-3xl border-2 border-indigo-100 hover:border-indigo-500 shadow-sm hover:shadow-xl transition-all cursor-pointer flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start mb-3">
+                        <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 rounded-lg text-[9px] font-black uppercase tracking-widest">Custom Template</span>
+                        <div className="w-8 h-8 rounded-full bg-indigo-50 group-hover:bg-indigo-600 group-hover:text-white text-indigo-600 flex items-center justify-center transition-all">
+                          <ChevronRight size={16}/>
+                        </div>
+                      </div>
+                      <h4 className="font-black text-gray-900 text-lg group-hover:text-indigo-600 transition-colors leading-tight mb-2">{sch.name}</h4>
+                      <div className="space-y-1.5 mb-4">
+                        {(sch.structure as SchemeSectionDef[]).map((sec, i) => (
+                          <div key={i} className="text-xs text-gray-500 flex items-center justify-between">
+                            <span className="font-semibold">{sec.title} ({sec.type})</span>
+                            <span className="font-bold text-gray-700">
+                              {sec.hasParts ? `${(sec.parts||[]).length} parts` : `${sec.selectCount}/${sec.totalCount} Qs`}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t border-gray-100 flex items-center justify-between text-xs font-bold text-gray-600">
+                      <span>Total: {sch.totalMarks} Marks</span>
+                      <span>{sch.durationMin} Min</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (state.step === 'CHAPTERS') return (
     <div className="p-4 md:p-12 max-w-7xl">
-       <button onClick={() => setState({...state, step: 'SUBJECT'})} className="text-gray-400 hover:text-gray-900 flex items-center gap-2 mb-8 font-bold text-sm uppercase tracking-widest transition-colors"><ArrowLeft size={18} /> Back</button>
+       <button onClick={() => setState({...state, step: 'SCHEME'})} className="text-gray-400 hover:text-gray-900 flex items-center gap-2 mb-8 font-bold text-sm uppercase tracking-widest transition-colors"><ArrowLeft size={18} /> Back</button>
        <StepIndicator />
        <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
           <h2 className="text-3xl font-black text-gray-900 tracking-tight">Step 4: Select Chapters & Topics</h2>
@@ -795,7 +1043,11 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                       {getSubtopicsForChapter(c.name).map((sub, i) => (
                          <span key={i} onClick={() => {
                             const isSelected = state.selectedTopics.includes(sub);
-                            setState(prev => ({ ...prev, selectedTopics: isSelected ? prev.selectedTopics.filter(t=>t!==sub) : [...prev.selectedTopics, sub] }));
+                            setState(prev => {
+                               const newTopics = isSelected ? prev.selectedTopics.filter(t=>t!==sub) : [...prev.selectedTopics, sub];
+                               const newChapters = !isSelected && !prev.selectedChapters.includes(c.name) ? [...prev.selectedChapters, c.name] : prev.selectedChapters;
+                               return { ...prev, selectedTopics: newTopics, selectedChapters: newChapters };
+                            });
                          }} className={`text-[10px] px-4 py-2 rounded-xl border-2 cursor-pointer transition-all font-black uppercase tracking-widest ${state.selectedTopics.includes(sub) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-400 border-gray-100 hover:border-indigo-200'}`}>{sub}</span>
                       ))}
                    </div>

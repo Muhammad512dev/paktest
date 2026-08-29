@@ -1,4 +1,4 @@
-// ... existing imports
+﻿// ... existing imports
 import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
@@ -14,7 +14,7 @@ import compression from 'compression';
 import cron from 'node-cron';
 import studentRoutes from './routes/student';
 
-// ─── Performance: Redis cache + Rate limiters ─────────────────────────────────
+// â”€â”€â”€ Performance: Redis cache + Rate limiters â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import { getOrSet, cacheDelPattern } from './lib/redis';
 import { globalLimiter, authLimiter, questionLimiter, aiLimiter, submitLimiter } from './middleware/rateLimiter';
 
@@ -24,7 +24,7 @@ dotenv.config();
 // Fixed: Resolve PrismaClient export error by extracting it from the namespace via any casting
 const { PrismaClient } = Prisma as any;
 
-// ─── Connection Pooling ───────────────────────────────────────────────────────
+// â”€â”€â”€ Connection Pooling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Limits simultaneous DB connections. Without this, 8K users can exhaust
 // PostgreSQL's default max_connections (100) and crash the database.
 // pgbouncer-style pooling via the connection string is the other approach,
@@ -85,7 +85,7 @@ const upload = multer({
 
 // --- MIDDLEWARE ---
 
-// ─── Rate Limiting (must be FIRST middleware, before routes) ──────────────────
+// â”€â”€â”€ Rate Limiting (must be FIRST middleware, before routes) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Apply global limiter to all /api/* endpoints
 app.use('/api', globalLimiter as any);
 // Apply strict auth limiter only to login/register routes
@@ -280,7 +280,7 @@ const requireStaffAI = (req: any, res: any, next: any) => {
   next();
 };
 
-// AI Health Check — returns key status and a test ping to Gemini
+// AI Health Check â€” returns key status and a test ping to Gemini
 app.get('/api/health/ai', async (req: any, res: any) => {
   const keys = getGeminiKeys();
   if (keys.length === 0) {
@@ -2210,7 +2210,7 @@ app.post('/api/curriculum/sync', authenticate, async (req: any, res: any) => {
     }
 });
 
-// Questions — with Redis caching + rate limiting
+// Questions â€” with Redis caching + rate limiting
 app.get('/api/questions', authenticate, questionLimiter as any, async (req: any, res: any) => {
     try {
         const { skip, pageSize, page } = getPaginationParams(req);
@@ -2239,7 +2239,7 @@ app.get('/api/questions', authenticate, questionLimiter as any, async (req: any,
         if (req.query.type) where.type = req.query.type;
         if (req.query.difficulty) where.difficulty = req.query.difficulty;
 
-        // ─── Redis Cache: skip cache for text searches (always unique)
+        // â”€â”€â”€ Redis Cache: skip cache for text searches (always unique)
         const schoolKey = req.user?.schoolId || 'global';
         const useCache = !q; // Don't cache free-text searches
         const cacheKey = `questions:${schoolKey}:p${page}:ps${pageSize}:sub=${req.query.subject || ''}:cls=${req.query.classLevel || ''}:typ=${req.query.type || ''}:dif=${req.query.difficulty || ''}:med=${req.query.medium || ''}`;
@@ -2719,9 +2719,73 @@ cron.schedule('0 * * * *', async () => {
     }
 });
 
-app.listen(PORT, async () => {
-  console.log(`🚀 PakParcha AI — API Server running on port ${PORT}`);
-  console.log(`   📦 DB connection pool size: ${POOL_SIZE}`);
-  console.log(`   🔒 Rate limiting: enabled (global 500/15min, auth 20/15min, AI 30/10min)`);
-  console.log(`   🗄️  Redis cache: ${process.env.REDIS_URL ? 'enabled' : 'disabled (set REDIS_URL to enable)'}`);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAIRING SCHEME ROUTES
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GET /api/schemes
+app.get('/api/schemes', authenticate, async (req: any, res: any) => {
+  try {
+    const { syllabusId, classId, subjectId, includeGlobal } = req.query as any;
+    const showGlobal = includeGlobal !== 'false';
+    const orClauses: any[] = [];
+    if (showGlobal) orClauses.push({ isGlobal: true });
+    if (req.user.role === 'SUPER_ADMIN') orClauses.push({});
+    else if (req.user.schoolId) orClauses.push({ schoolId: req.user.schoolId });
+    const where: any = orClauses.length > 0 ? { OR: orClauses } : {};
+    if (syllabusId) where.syllabusId = syllabusId;
+    if (classId) where.classId = classId;
+    if (subjectId) where.subjectId = subjectId;
+    const schemes = await (prisma as any).pairingScheme.findMany({ where, orderBy: [{ isGlobal: 'desc' }, { updatedAt: 'desc' }] });
+    res.json(schemes);
+  } catch (e: any) { res.status(500).json({ error: e.message || 'Failed to fetch schemes' }); }
 });
+
+// POST /api/schemes
+app.post('/api/schemes', authenticate, async (req: any, res: any) => {
+  try {
+    const { name, syllabusId, classId, subjectId, totalMarks, durationMin, structure, isGlobal } = req.body;
+    if (!name || !syllabusId || !classId || !subjectId || !structure) return res.status(400).json({ error: 'name, syllabusId, classId, subjectId, structure are required' });
+    const globalFlag = req.user.role === 'SUPER_ADMIN' ? Boolean(isGlobal) : false;
+    const scheme = await (prisma as any).pairingScheme.create({
+      data: { name, syllabusId, classId, subjectId, totalMarks: Number(totalMarks)||0, durationMin: Number(durationMin)||180, structure, isGlobal: globalFlag, createdBy: req.user.id, schoolId: globalFlag ? null : (req.user.schoolId || null) }
+    });
+    await trackActivity(req, 'PAPER', `Created pairing scheme: ${name}`, scheme.id);
+    res.json(scheme);
+  } catch (e: any) { res.status(500).json({ error: e.message || 'Failed to create scheme' }); }
+});
+
+// PUT /api/schemes/:id
+app.put('/api/schemes/:id', authenticate, async (req: any, res: any) => {
+  try {
+    const existing = await (prisma as any).pairingScheme.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: 'Scheme not found' });
+    if (existing.isGlobal && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Only Super Admin can edit global board schemes' });
+    if (!existing.isGlobal && existing.schoolId && existing.schoolId !== req.user.schoolId && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'You can only edit your own schemes' });
+    const { name, totalMarks, durationMin, structure, isGlobal } = req.body;
+    const globalFlag = req.user.role === 'SUPER_ADMIN' ? Boolean(isGlobal) : existing.isGlobal;
+    const updated = await (prisma as any).pairingScheme.update({ where: { id: req.params.id }, data: { ...(name && { name }), ...(totalMarks !== undefined && { totalMarks: Number(totalMarks) }), ...(durationMin !== undefined && { durationMin: Number(durationMin) }), ...(structure && { structure }), isGlobal: globalFlag, schoolId: globalFlag ? null : existing.schoolId } });
+    res.json(updated);
+  } catch (e: any) { res.status(500).json({ error: e.message || 'Failed to update scheme' }); }
+});
+
+// DELETE /api/schemes/:id
+app.delete('/api/schemes/:id', authenticate, async (req: any, res: any) => {
+  try {
+    const existing = await (prisma as any).pairingScheme.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: 'Scheme not found' });
+    if (existing.isGlobal && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Only Super Admin can delete global schemes' });
+    if (!existing.isGlobal && existing.schoolId !== req.user.schoolId && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'You can only delete your own schemes' });
+    await (prisma as any).pairingScheme.delete({ where: { id: req.params.id } });
+    await trackActivity(req, 'PAPER', `Deleted pairing scheme: ${existing.name}`, req.params.id);
+    res.json({ success: true });
+  } catch (e: any) { res.status(500).json({ error: e.message || 'Failed to delete scheme' }); }
+});
+app.listen(PORT, async () => {
+  console.log(`ðŸš€ PakParcha AI â€” API Server running on port ${PORT}`);
+  console.log(`   ðŸ“¦ DB connection pool size: ${POOL_SIZE}`);
+  console.log(`   ðŸ”’ Rate limiting: enabled (global 500/15min, auth 20/15min, AI 30/10min)`);
+  console.log(`   ðŸ—„ï¸  Redis cache: ${process.env.REDIS_URL ? 'enabled' : 'disabled (set REDIS_URL to enable)'}`);
+});
+

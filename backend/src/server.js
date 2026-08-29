@@ -1,4 +1,4 @@
-"use strict";
+﻿"use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -2142,6 +2142,66 @@ node_cron_1.default.schedule('0 * * * *', async () => {
         console.error('[CRON] Failed to cleanup exam submissions', e);
     }
 });
-app.listen(PORT, async () => {
-    console.log(`🚀 API Server running on port ${PORT}`);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAIRING SCHEME ROUTES
+// ─────────────────────────────────────────────────────────────────────────────
+
+app.get('/api/schemes', authenticate, async (req, res) => {
+  try {
+    const { syllabusId, classId, subjectId, includeGlobal } = req.query;
+    const showGlobal = includeGlobal !== 'false';
+    const orClauses = [];
+    if (showGlobal) orClauses.push({ isGlobal: true });
+    if (req.user.role === 'SUPER_ADMIN') orClauses.push({});
+    else if (req.user.schoolId) orClauses.push({ schoolId: req.user.schoolId });
+    const where = orClauses.length > 0 ? { OR: orClauses } : {};
+    if (syllabusId) where.syllabusId = syllabusId;
+    if (classId) where.classId = classId;
+    if (subjectId) where.subjectId = subjectId;
+    const schemes = await prisma.pairingScheme.findMany({ where, orderBy: [{ isGlobal: 'desc' }, { updatedAt: 'desc' }] });
+    res.json(schemes);
+  } catch (e) { res.status(500).json({ error: e.message || 'Failed to fetch schemes' }); }
 });
+
+app.post('/api/schemes', authenticate, async (req, res) => {
+  try {
+    const { name, syllabusId, classId, subjectId, totalMarks, durationMin, structure, isGlobal } = req.body;
+    if (!name || !syllabusId || !classId || !subjectId || !structure) return res.status(400).json({ error: 'name, syllabusId, classId, subjectId, structure are required' });
+    const globalFlag = req.user.role === 'SUPER_ADMIN' ? Boolean(isGlobal) : false;
+    const scheme = await prisma.pairingScheme.create({
+      data: { name, syllabusId, classId, subjectId, totalMarks: Number(totalMarks)||0, durationMin: Number(durationMin)||180, structure, isGlobal: globalFlag, createdBy: req.user.id, schoolId: globalFlag ? null : (req.user.schoolId || null) }
+    });
+    await trackActivity(req, 'PAPER', `Created pairing scheme: ${name}`, scheme.id);
+    res.json(scheme);
+  } catch (e) { res.status(500).json({ error: e.message || 'Failed to create scheme' }); }
+});
+
+app.put('/api/schemes/:id', authenticate, async (req, res) => {
+  try {
+    const existing = await prisma.pairingScheme.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: 'Scheme not found' });
+    if (existing.isGlobal && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Only Super Admin can edit global board schemes' });
+    if (!existing.isGlobal && existing.schoolId && existing.schoolId !== req.user.schoolId && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'You can only edit your own schemes' });
+    const { name, totalMarks, durationMin, structure, isGlobal } = req.body;
+    const globalFlag = req.user.role === 'SUPER_ADMIN' ? Boolean(isGlobal) : existing.isGlobal;
+    const updated = await prisma.pairingScheme.update({ where: { id: req.params.id }, data: { ...(name && { name }), ...(totalMarks !== undefined && { totalMarks: Number(totalMarks) }), ...(durationMin !== undefined && { durationMin: Number(durationMin) }), ...(structure && { structure }), isGlobal: globalFlag, schoolId: globalFlag ? null : existing.schoolId } });
+    res.json(updated);
+  } catch (e) { res.status(500).json({ error: e.message || 'Failed to update scheme' }); }
+});
+
+app.delete('/api/schemes/:id', authenticate, async (req, res) => {
+  try {
+    const existing = await prisma.pairingScheme.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: 'Scheme not found' });
+    if (existing.isGlobal && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Only Super Admin can delete global schemes' });
+    if (!existing.isGlobal && existing.schoolId !== req.user.schoolId && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'You can only delete your own schemes' });
+    await prisma.pairingScheme.delete({ where: { id: req.params.id } });
+    await trackActivity(req, 'PAPER', `Deleted pairing scheme: ${existing.name}`, req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message || 'Failed to delete scheme' }); }
+});
+app.listen(PORT, async () => {
+    console.log(`ðŸš€ API Server running on port ${PORT}`);
+});
+

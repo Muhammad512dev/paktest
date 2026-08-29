@@ -5,7 +5,8 @@
   "type": "commonjs",
   "scripts": {
     "dev": "ts-node-dev --respawn src/server.ts",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
+    "postinstall": "prisma generate",
     "start": "node dist/server.js",
     "seed": "ts-node prisma/seed.ts"
   },

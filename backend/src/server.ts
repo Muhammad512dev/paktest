@@ -2709,18 +2709,28 @@ cron.schedule('0 * * * *', async () => {
 app.get('/api/schemes', authenticate, async (req: any, res: any) => {
   try {
     const { syllabusId, classId, subjectId, includeGlobal } = req.query as any;
-    const showGlobal = includeGlobal !== 'false';
-    const orClauses: any[] = [];
-    if (showGlobal) orClauses.push({ isGlobal: true });
-    if (req.user.role === 'SUPER_ADMIN') orClauses.push({});
-    else if (req.user.schoolId) orClauses.push({ schoolId: req.user.schoolId });
-    const where: any = orClauses.length > 0 ? { OR: orClauses } : {};
+    const where: any = {};
     if (syllabusId) where.syllabusId = syllabusId;
     if (classId) where.classId = classId;
     if (subjectId) where.subjectId = subjectId;
-    const schemes = await (prisma as any).pairingScheme.findMany({ where, orderBy: [{ isGlobal: 'desc' }, { updatedAt: 'desc' }] });
+
+    if (req.user.role !== 'SUPER_ADMIN') {
+      const showGlobal = includeGlobal !== 'false';
+      const orClauses: any[] = [];
+      if (showGlobal) orClauses.push({ isGlobal: true });
+      if (req.user.schoolId) orClauses.push({ schoolId: req.user.schoolId });
+      if (orClauses.length > 0) where.OR = orClauses;
+    }
+
+    const schemes = await (prisma as any).pairingScheme.findMany({
+      where,
+      orderBy: [{ isGlobal: 'desc' }, { updatedAt: 'desc' }]
+    });
     res.json(schemes);
-  } catch (e: any) { res.status(500).json({ error: e.message || 'Failed to fetch schemes' }); }
+  } catch (e: any) {
+    console.error('Error fetching schemes:', e);
+    res.status(500).json({ error: e.message || 'Failed to fetch schemes' });
+  }
 });
 
 // POST /api/schemes

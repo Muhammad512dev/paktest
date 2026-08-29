@@ -275,7 +275,6 @@ const App: React.FC = () => {
       switch (activeView) {
         case 'dashboard': return <TeacherDashboard onNavigate={setActiveView} user={user} />;
         case 'generate': return <GeneratePaper onBack={() => { setActiveView('dashboard'); setIsFullScreen(false); }} user={user} onEditorEnter={() => setIsFullScreen(true)} onEditorExit={() => setIsFullScreen(false)} />;
-        case 'schemes': return <SchemeManager user={user} />;
         case 'grading': return <ExamGrading user={user} />;
         case 'results': return <ResultCenter user={user} />;
         case 'saved': return <SavedPapers user={user} />;
@@ -301,7 +300,6 @@ const App: React.FC = () => {
     switch (activeView) {
       case 'dashboard': return <SchoolAdminDashboard onNavigate={setActiveView} user={user} />;
       case 'generate': return <GeneratePaper onBack={() => { setActiveView('dashboard'); setIsFullScreen(false); }} user={user} onEditorEnter={() => setIsFullScreen(true)} onEditorExit={() => setIsFullScreen(false)} />;
-      case 'schemes': return <SchemeManager user={user} />;
       case 'saved': return <SavedPapers user={user} />;
       case 'staff': return <StaffManager user={user} />;
       case 'students': return <StudentManager user={user} />;

@@ -650,100 +650,130 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
              <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">AI Paper Architect</h2>
              <p className="text-xs sm:text-sm text-gray-500 font-medium">Upload your source material and let Gemini construct the exam.</p>
           </div>
-       </div>
+    <div className="p-4 sm:p-6 md:p-12 max-w-7xl">
+       <button onClick={() => { onEditorExit?.(); setState({ ...state, step: 'SYLLABUS' }); }} className="text-slate-400 hover:text-white flex items-center gap-2 mb-8 font-bold text-sm uppercase tracking-widest transition-colors"><ArrowLeft size={18} /> Exit Manual/Doc Setup</button>
+       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Column - Configurations */}
+          <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 text-white shadow-2xl relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -z-0 pointer-events-none"></div>
+             
+             <div>
+                <h3 className="text-xl font-black tracking-tight text-white mb-1 flex items-center gap-2"><Briefcase size={20} className="text-indigo-400"/> Academic Profile</h3>
+                <p className="text-xs text-slate-400">Specify curriculum parameters for your paper structure</p>
+             </div>
 
-       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 items-start">
-          
-          {/* COLUMN 1: UPLOAD & CONTEXT */}
-          <div className="space-y-6">
-             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2"><FileCode size={18} className="text-indigo-600"/> 1. Exam Context</h3>
-                <div className="space-y-4">
+             <div className="space-y-4">
+                <div>
+                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Examination Board</label>
+                   <select 
+                      value={state.selectedSyllabus || ''} 
+                      onChange={e => setState(p => ({ ...p, selectedSyllabus: e.target.value, selectedClass: '', selectedSubject: '' }))}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 text-sm font-bold text-white outline-none focus:border-indigo-500 transition-colors"
+                   >
+                      <option value="">Select Board</option>
+                      {syllabuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                   </select>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Examination Board</label>
-                      <select 
-                         value={state.selectedSyllabus || ''} 
-                         onChange={e => setState({...state, selectedSyllabus: e.target.value, selectedClass: '', selectedSubject: ''})}
-                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-sm"
-                      >
-                         <option value="">Select Board...</option>
-                         {syllabuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                      </select>
-                   </div>
-                   <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Grade Level</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Grade</label>
                       <select 
                          value={state.selectedClass || ''} 
-                         onChange={e => setState({...state, selectedClass: e.target.value, selectedSubject: ''})}
-                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-sm"
+                         onChange={e => setState(p => ({ ...p, selectedClass: e.target.value, selectedSubject: '' }))}
                          disabled={!state.selectedSyllabus}
+                         className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 text-sm font-bold text-white outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
                       >
-                         <option value="">Select Grade...</option>
+                         <option value="">Select Grade</option>
                          {aiFilteredClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                    </div>
+
                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Subject</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Subject</label>
                       <select 
                          value={state.selectedSubject || ''} 
-                         onChange={e => setState({...state, selectedSubject: e.target.value})}
-                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-sm"
+                         onChange={e => setState(p => ({ ...p, selectedSubject: e.target.value }))}
                          disabled={!state.selectedClass}
+                         className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 text-sm font-bold text-white outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
                       >
-                         <option value="">Select Subject...</option>
+                         <option value="">Select Subject</option>
                          {aiFilteredSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
                    </div>
                 </div>
-             </div>
 
-             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2"><Upload size={18} className="text-indigo-600"/> 2. Source Material</h3>
-                <div 
-                   onClick={() => fileInputRef.current?.click()}
-                   className={`min-h-[140px] border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center p-6 cursor-pointer transition-all ${uploadedFile ? 'border-emerald-400 bg-emerald-50/30' : 'border-slate-300 hover:border-indigo-400 hover:bg-slate-50'}`}
-                >
-                   {uploadedFile ? (
-                      <>
-                         <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mb-3"><Check size={24}/></div>
-                         <p className="text-sm font-bold text-emerald-800 line-clamp-1">{uploadedFile.name}</p>
-                         <p className="text-[10px] text-emerald-600 mt-1 uppercase font-bold">Ready to Process</p>
-                      </>
-                   ) : (
-                      <>
-                         <CloudLightning size={32} className="text-slate-300 mb-3"/>
-                         <p className="text-sm font-bold text-slate-500">Click to Upload Document</p>
-                         <p className="text-[10px] text-slate-400 mt-1">PDF, JPG, PNG supported</p>
-                      </>
-                   )}
-                   <input type="file" ref={fileInputRef} className="hidden" accept=".pdf,image/*" onChange={handleFileChange} />
+                <div className="pt-4 border-t border-slate-800">
+                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Document Source (PDF/Doc/Image)</label>
+                   
+                   <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${
+                         uploadedFile ? 'border-emerald-500/50 bg-emerald-500/5 text-emerald-400' : 'border-slate-700 hover:border-indigo-500 bg-slate-800/50 text-slate-400'
+                      }`}
+                   >
+                      <input 
+                         type="file" 
+                         ref={fileInputRef} 
+                         onChange={handleFileChange} 
+                         accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" 
+                         className="hidden" 
+                      />
+                      {uploadedFile ? (
+                         <>
+                            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                               <FileUp size={24}/>
+                            </div>
+                            <div>
+                               <p className="font-bold text-sm text-white truncate max-w-[200px] sm:max-w-xs">{uploadedFile.name}</p>
+                               <p className="text-[10px] text-emerald-400 mt-0.5">{(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB • Ready for processing</p>
+                            </div>
+                         </>
+                      ) : (
+                         <>
+                            <div className="w-12 h-12 rounded-xl bg-slate-700/50 text-slate-400 flex items-center justify-center">
+                               <Upload size={24}/>
+                            </div>
+                            <div>
+                               <p className="font-bold text-sm text-white">Click to upload document</p>
+                               <p className="text-[10px] text-slate-500 mt-1">Supports PDF, PNG, JPG, DOCX (Max 25MB)</p>
+                            </div>
+                         </>
+                      )}
+                   </div>
                 </div>
              </div>
           </div>
 
-          {/* COLUMN 2 & 3: SECTION CONFIG */}
-          <div className="lg:col-span-2 bg-slate-900 rounded-3xl p-6 sm:p-8 text-white flex flex-col shadow-2xl relative">
-             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-             
-             <div className="flex flex-wrap justify-between items-center gap-4 mb-6 relative z-10">
-                <h3 className="font-bold text-lg sm:text-xl flex items-center gap-2"><Settings2 size={20} className="text-indigo-400"/> Initializing Sections</h3>
-                <button onClick={addAiSection} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2">
-                   <Plus size={14}/> Add Custom Section
+          {/* Right Column - Structure Builder */}
+          <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 text-white shadow-2xl space-y-6 relative overflow-hidden">
+             <div className="flex justify-between items-center">
+                <div>
+                   <h3 className="text-xl font-black tracking-tight text-white mb-1 flex items-center gap-2"><Layout size={20} className="text-indigo-400"/> Paper Output Architecture</h3>
+                   <p className="text-xs text-slate-400">Define the exact breakdown of questions to extract</p>
+                </div>
+                <button 
+                   onClick={addAiSection}
+                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-lg shadow-indigo-600/30"
+                >
+                   <Plus size={14}/> Add Section
                 </button>
              </div>
 
-             <div className="space-y-3 relative z-10 max-h-[420px] overflow-y-auto custom-scrollbar pr-1">
-                {aiSections.map((sec, idx) => (
-                   <div key={sec.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col md:flex-row items-center gap-4 animate-in slide-in-from-right-4 duration-300">
-                      <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">{idx + 1}</div>
-                      
+             <div className="space-y-4 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar">
+                {aiSections.map((sec, index) => (
+                   <div key={sec.id} className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between transition-all">
+                      <div className="w-8 h-8 rounded-lg bg-slate-700 text-slate-300 flex items-center justify-center font-black text-xs shrink-0">
+                         {index + 1}
+                      </div>
+
                       <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
                          <div>
                             <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Question Type</label>
                             <select 
                                value={sec.type} 
                                onChange={e => updateAiSection(sec.id, 'type', e.target.value)}
-                               className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-sm font-medium outline-none focus:border-indigo-500"
+                               className="w-full bg-slate-800 border border-slate-600 rounded-lg py-2 px-3 text-sm font-medium outline-none focus:border-indigo-500"
                             >
                                {questionTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                             </select>
@@ -756,7 +786,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                   min="1"
                                   value={sec.count} 
                                   onChange={e => updateAiSection(sec.id, 'count', parseInt(e.target.value)||0)}
-                                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-sm font-medium outline-none focus:border-indigo-500"
+                                  className="w-full bg-slate-800 border border-slate-600 rounded-lg py-2 px-3 text-sm font-medium outline-none focus:border-indigo-500"
                                />
                                <span className="absolute right-3 top-2 text-xs text-slate-500 font-bold">Qs</span>
                             </div>
@@ -769,7 +799,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                   min="1"
                                   value={sec.marks} 
                                   onChange={e => updateAiSection(sec.id, 'marks', parseInt(e.target.value)||0)}
-                                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-sm font-medium outline-none focus:border-indigo-500"
+                                  className="w-full bg-slate-800 border border-slate-600 rounded-lg py-2 px-3 text-sm font-medium outline-none focus:border-indigo-500"
                                />
                                <span className="absolute right-3 top-2 text-xs text-slate-500 font-bold">Pts</span>
                             </div>
@@ -845,7 +875,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
        <h2 className="text-3xl font-black text-gray-900 mb-12 tracking-tight">Step 3: Select Subject</h2>
        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
           {filteredSubjects.map(s => (
-             <div key={s.id} onClick={() => setState({ ...state, selectedSubject: s.id, step: 'SCHEME' })} className="group p-6 bg-white border border-gray-100 rounded-[2rem] shadow-sm hover:shadow-2xl transition-all cursor-pointer">
+             <div key={s.id} onClick={() => setState({ ...state, selectedSubject: s.id, step: 'CHAPTERS' })} className="group p-6 bg-white border border-gray-100 rounded-[2rem] shadow-sm hover:shadow-2xl transition-all cursor-pointer">
                 <div className="flex justify-between items-start mb-6">
                    <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center overflow-hidden border border-emerald-100 shadow-inner group-hover:scale-110 transition-transform">
                       {s.logo ? <img src={s.logo} className="w-full h-full object-cover" /> : <Library size={28}/>}
@@ -864,27 +894,17 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
     </div>
   );
 
-  // ─── STEP 4: SCHEME SELECTION ─────────────────────────────────────────────
-  if (state.step === 'SCHEME') {
-    const handleApplyScheme = (scheme: PairingScheme) => {
-      const struct: PaperStructure = {};
-      const requiredChapters = new Set<string>();
+  if (state.step === 'CHAPTERS') {
+    const boardScheme = relevantSchemes.find(s => s.isGlobal) || relevantSchemes[0];
 
-      (scheme.structure as SchemeSectionDef[]).forEach((secDef, idx) => {
+    const handleFullPaperWithScheme = () => {
+      const allChNames = relevantChapters.map(c => c.name);
+      const allTopNames = relevantChapters.flatMap(c => getSubtopicsForChapter(c.name));
+
+      const struct: PaperStructure = {};
+      (boardScheme.structure as SchemeSectionDef[]).forEach((secDef, idx) => {
         const secId = `sec_scheme_${Date.now()}_${idx}`;
         const isObjective = ['MCQ', 'Match Columns', 'Fill in the Blanks', 'True/False', 'Spelling Check'].includes(secDef.type);
-        
-        // Collect referenced chapters
-        if (secDef.hasParts && secDef.parts) {
-          secDef.parts.forEach(p => {
-            if (p.chapter) requiredChapters.add(p.chapter);
-            if (p.chapters) p.chapters.forEach(ch => requiredChapters.add(ch));
-          });
-        }
-        if (secDef.chapterDistribution) {
-          secDef.chapterDistribution.forEach(r => r.chapters.forEach(ch => requiredChapters.add(ch)));
-        }
-
         struct[secId] = {
           id: secId,
           title: secDef.title || `Q.${idx + 1} ${secDef.type}`,
@@ -906,166 +926,61 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
         };
       });
 
-      // If scheme specified chapters, use them; otherwise use all chapters for this subject
-      const finalChapters = requiredChapters.size > 0 
-        ? Array.from(requiredChapters) 
-        : relevantChapters.map(c => c.name);
-
       setState(prev => ({
         ...prev,
+        selectedChapters: allChNames,
+        selectedTopics: allTopNames,
         paperStructure: struct,
-        selectedChapters: finalChapters,
         step: 'SETUP'
       }));
     };
 
     return (
       <div className="p-4 md:p-12 max-w-7xl">
-        <button onClick={() => setState({...state, step: 'SUBJECT'})} className="text-gray-400 hover:text-gray-900 flex items-center gap-2 mb-8 font-bold text-sm uppercase tracking-widest transition-colors"><ArrowLeft size={18} /> Back</button>
-        <StepIndicator />
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
-          <div>
-            <h2 className="text-3xl font-black text-gray-900 tracking-tight">Step 4: Select Exam Scheme</h2>
-            <p className="text-gray-500 mt-2 text-sm">Choose an official Board scheme, custom template, or create manually</p>
-          </div>
-          <button onClick={() => setState({ ...state, step: 'CHAPTERS' })}
-            className="px-6 py-3 bg-white border-2 border-indigo-200 text-indigo-600 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-indigo-50 transition-all shadow-sm">
-            <Edit3 size={16}/> Skip & Select Chapters Manually
-          </button>
-        </div>
-
-        <div className="space-y-10">
-          {/* Official Board Schemes */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                <Tag size={12}/> Official Board Schemes
-              </span>
+         <button onClick={() => setState({...state, step: 'SUBJECT'})} className="text-gray-400 hover:text-gray-900 flex items-center gap-2 mb-8 font-bold text-sm uppercase tracking-widest transition-colors"><ArrowLeft size={18} /> Back</button>
+         <StepIndicator />
+         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+            <div>
+               <h2 className="text-3xl font-black text-gray-900 tracking-tight">Step 4: Select Chapters & Topics</h2>
+               <p className="text-gray-500 text-xs mt-1">Select individual chapters/topics or generate a Full Book Paper</p>
             </div>
-            {globalSchemes.length === 0 ? (
-              <div className="p-6 bg-amber-50/50 rounded-2xl border border-amber-100 text-amber-800 text-xs font-bold">
-                No official Board schemes configured for this subject yet. You can create one in Pairing Schemes or proceed manually.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {globalSchemes.map(sch => (
-                  <div key={sch.id} onClick={() => handleApplyScheme(sch)}
-                    className="group bg-white p-6 rounded-3xl border-2 border-amber-100 hover:border-amber-400 shadow-sm hover:shadow-xl transition-all cursor-pointer flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start mb-3">
-                        <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 rounded-lg text-[9px] font-black uppercase tracking-widest">Board Scheme</span>
-                        <div className="w-8 h-8 rounded-full bg-amber-50 group-hover:bg-amber-500 group-hover:text-white text-amber-600 flex items-center justify-center transition-all">
-                          <ChevronRight size={16}/>
-                        </div>
-                      </div>
-                      <h4 className="font-black text-gray-900 text-lg group-hover:text-amber-700 transition-colors leading-tight mb-2">{sch.name}</h4>
-                      <div className="space-y-1.5 mb-4">
-                        {(sch.structure as SchemeSectionDef[]).map((sec, i) => (
-                          <div key={i} className="text-xs text-gray-500 flex items-center justify-between">
-                            <span className="font-semibold">{sec.title} ({sec.type})</span>
-                            <span className="font-bold text-gray-700">
-                              {sec.hasParts ? `${(sec.parts||[]).length} parts` : `${sec.selectCount}/${sec.totalCount} Qs`}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="pt-4 border-t border-gray-100 flex items-center justify-between text-xs font-bold text-gray-600">
-                      <span>Total: {sch.totalMarks} Marks</span>
-                      <span>{sch.durationMin} Min</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Custom School / Teacher Schemes */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                <Layers size={12}/> Custom Schemes
-              </span>
+            <div className="flex flex-wrap items-center gap-2">
+               <button onClick={() => setState(prev => ({...prev, selectedChapters: [], selectedTopics: []}))} className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-black text-gray-400 uppercase tracking-widest hover:bg-gray-50 transition-all">Clear Selection</button>
+               <button onClick={handleSelectAllChapters} className="px-5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-black text-gray-700 uppercase tracking-widest hover:bg-gray-100 transition-all">Select All Topics (Normal)</button>
+               {boardScheme && (
+                  <button onClick={handleFullPaperWithScheme} className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200">
+                     <Sparkles size={14}/> Full Book Paper (with Board Scheme)
+                  </button>
+               )}
             </div>
-            {customSchemes.length === 0 ? (
-              <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100 text-gray-400 text-xs font-bold">
-                No custom templates for this subject.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {customSchemes.map(sch => (
-                  <div key={sch.id} onClick={() => handleApplyScheme(sch)}
-                    className="group bg-white p-6 rounded-3xl border-2 border-indigo-100 hover:border-indigo-500 shadow-sm hover:shadow-xl transition-all cursor-pointer flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start mb-3">
-                        <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 rounded-lg text-[9px] font-black uppercase tracking-widest">Custom Template</span>
-                        <div className="w-8 h-8 rounded-full bg-indigo-50 group-hover:bg-indigo-600 group-hover:text-white text-indigo-600 flex items-center justify-center transition-all">
-                          <ChevronRight size={16}/>
-                        </div>
-                      </div>
-                      <h4 className="font-black text-gray-900 text-lg group-hover:text-indigo-600 transition-colors leading-tight mb-2">{sch.name}</h4>
-                      <div className="space-y-1.5 mb-4">
-                        {(sch.structure as SchemeSectionDef[]).map((sec, i) => (
-                          <div key={i} className="text-xs text-gray-500 flex items-center justify-between">
-                            <span className="font-semibold">{sec.title} ({sec.type})</span>
-                            <span className="font-bold text-gray-700">
-                              {sec.hasParts ? `${(sec.parts||[]).length} parts` : `${sec.selectCount}/${sec.totalCount} Qs`}
-                            </span>
-                          </div>
+         </div>
+
+         <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-xl overflow-hidden mb-10 divide-y divide-gray-50">
+            {relevantChapters.map((c, idx) => (
+               <div key={idx} className={`p-6 md:p-8 flex items-start gap-6 transition-all ${state.selectedChapters.includes(c.name) ? 'bg-indigo-50/20' : 'hover:bg-gray-50/50'}`}>
+                  <div onClick={() => handleChapterToggle(c.name)} className={`mt-1 w-7 h-7 rounded-lg border-2 flex items-center justify-center shrink-0 cursor-pointer transition-all ${state.selectedChapters.includes(c.name) ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200' : 'border-gray-200 bg-white'}`}>{state.selectedChapters.includes(c.name) && <Check size={16} strokeWidth={3} />}</div>
+                  <div className="flex-1">
+                     <span onClick={() => handleChapterToggle(c.name)} className="font-black block text-lg text-gray-900 cursor-pointer">{c.name}</span>
+                     <div className="flex flex-wrap gap-2 mt-4">
+                        {getSubtopicsForChapter(c.name).map((sub, i) => (
+                           <span key={i} onClick={() => {
+                              const isSelected = state.selectedTopics.includes(sub);
+                              setState(prev => {
+                                 const newTopics = isSelected ? prev.selectedTopics.filter(t=>t!==sub) : [...prev.selectedTopics, sub];
+                                 const newChapters = !isSelected && !prev.selectedChapters.includes(c.name) ? [...prev.selectedChapters, c.name] : prev.selectedChapters;
+                                 return { ...prev, selectedTopics: newTopics, selectedChapters: newChapters };
+                              });
+                           }} className={`text-[10px] px-4 py-2 rounded-xl border-2 cursor-pointer transition-all font-black uppercase tracking-widest ${state.selectedTopics.includes(sub) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-400 border-gray-100 hover:border-indigo-200'}`}>{sub}</span>
                         ))}
-                      </div>
-                    </div>
-                    <div className="pt-4 border-t border-gray-100 flex items-center justify-between text-xs font-bold text-gray-600">
-                      <span>Total: {sch.totalMarks} Marks</span>
-                      <span>{sch.durationMin} Min</span>
-                    </div>
+                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+               </div>
+            ))}
+         </div>
+         <div className="flex justify-start"><button onClick={initStructure} disabled={state.selectedChapters.length === 0} className="px-12 py-4 bg-indigo-600 text-white font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-indigo-700 disabled:opacity-50 shadow-2xl shadow-indigo-200 text-sm transition-all transform hover:scale-105 active:scale-95">Continue to Setup</button></div>
       </div>
     );
   }
-
-  if (state.step === 'CHAPTERS') return (
-    <div className="p-4 md:p-12 max-w-7xl">
-       <button onClick={() => setState({...state, step: 'SCHEME'})} className="text-gray-400 hover:text-gray-900 flex items-center gap-2 mb-8 font-bold text-sm uppercase tracking-widest transition-colors"><ArrowLeft size={18} /> Back</button>
-       <StepIndicator />
-       <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-          <h2 className="text-3xl font-black text-gray-900 tracking-tight">Step 4: Select Chapters & Topics</h2>
-          <div className="flex gap-2">
-             <button onClick={() => setState(prev => ({...prev, selectedChapters: [], selectedTopics: []}))} className="px-5 py-2 bg-white border border-gray-200 rounded-xl text-xs font-black text-gray-400 uppercase tracking-widest hover:bg-gray-50 transition-all">Clear Selection</button>
-             <button onClick={handleSelectAllChapters} className="px-5 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-xs font-black text-indigo-600 uppercase tracking-widest hover:bg-indigo-100 transition-all">Select All Content</button>
-          </div>
-       </div>
-
-       <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-xl overflow-hidden mb-10 divide-y divide-gray-50">
-          {relevantChapters.map((c, idx) => (
-             <div key={idx} className={`p-6 md:p-8 flex items-start gap-6 transition-all ${state.selectedChapters.includes(c.name) ? 'bg-indigo-50/20' : 'hover:bg-gray-50/50'}`}>
-                <div onClick={() => handleChapterToggle(c.name)} className={`mt-1 w-7 h-7 rounded-lg border-2 flex items-center justify-center shrink-0 cursor-pointer transition-all ${state.selectedChapters.includes(c.name) ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200' : 'border-gray-200 bg-white'}`}>{state.selectedChapters.includes(c.name) && <Check size={16} strokeWidth={3} />}</div>
-                <div className="flex-1">
-                   <span onClick={() => handleChapterToggle(c.name)} className="font-black block text-lg text-gray-900 cursor-pointer">{c.name}</span>
-                   <div className="flex flex-wrap gap-2 mt-4">
-                      {getSubtopicsForChapter(c.name).map((sub, i) => (
-                         <span key={i} onClick={() => {
-                            const isSelected = state.selectedTopics.includes(sub);
-                            setState(prev => {
-                               const newTopics = isSelected ? prev.selectedTopics.filter(t=>t!==sub) : [...prev.selectedTopics, sub];
-                               const newChapters = !isSelected && !prev.selectedChapters.includes(c.name) ? [...prev.selectedChapters, c.name] : prev.selectedChapters;
-                               return { ...prev, selectedTopics: newTopics, selectedChapters: newChapters };
-                            });
-                         }} className={`text-[10px] px-4 py-2 rounded-xl border-2 cursor-pointer transition-all font-black uppercase tracking-widest ${state.selectedTopics.includes(sub) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-400 border-gray-100 hover:border-indigo-200'}`}>{sub}</span>
-                      ))}
-                   </div>
-                </div>
-             </div>
-          ))}
-       </div>
-       <div className="flex justify-start"><button onClick={initStructure} disabled={state.selectedChapters.length === 0} className="px-12 py-4 bg-indigo-600 text-white font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-indigo-700 disabled:opacity-50 shadow-2xl shadow-indigo-200 text-sm transition-all transform hover:scale-105 active:scale-95">Continue to Setup</button></div>
-    </div>
-  );
 
   if (state.step === 'SETUP') return (
     <div className="p-4 md:p-12 max-w-7xl relative">

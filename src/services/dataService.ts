@@ -809,14 +809,21 @@ export const getSchemes = async (params?: {
   subjectId?: string;
   includeGlobal?: boolean;
 }): Promise<PairingScheme[]> => {
-  const sp = new URLSearchParams();
-  if (params?.syllabusId) sp.set('syllabusId', params.syllabusId);
-  if (params?.classId) sp.set('classId', params.classId);
-  if (params?.subjectId) sp.set('subjectId', params.subjectId);
-  if (params?.includeGlobal !== undefined) sp.set('includeGlobal', String(params.includeGlobal));
-  const qs = sp.toString();
-  const res = await fetch(`${API_URL}/api/schemes${qs ? `?${qs}` : ''}`, { headers: getHeaders() });
-  return handleResponse<PairingScheme[]>(res);
+  try {
+    const sp = new URLSearchParams();
+    if (params?.syllabusId) sp.set('syllabusId', params.syllabusId);
+    if (params?.classId) sp.set('classId', params.classId);
+    if (params?.subjectId) sp.set('subjectId', params.subjectId);
+    if (params?.includeGlobal !== undefined) sp.set('includeGlobal', String(params.includeGlobal));
+    const qs = sp.toString();
+    const res = await fetch(`${API_URL}/api/schemes${qs ? `?${qs}` : ''}`, { headers: getHeaders() });
+    if (res.status === 404 || !res.ok) return [];
+    const data = await handleResponse<PairingScheme[]>(res);
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.warn('Could not load pairing schemes (offline or starting up):', e);
+    return [];
+  }
 };
 
 export const createScheme = async (data: Omit<PairingScheme, 'id' | 'createdAt' | 'updatedAt'>): Promise<PairingScheme> => {

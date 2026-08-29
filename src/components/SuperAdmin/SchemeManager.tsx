@@ -60,13 +60,24 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const [syls, cls, subs, chs, scs] = await Promise.all([
-        getSyllabuses(), getClasses(), getSubjects(), getChapters(),
-        getSchemes({ includeGlobal: true })
-      ]);
-      setSyllabuses(syls); setClasses(cls); setSubjects(subs);
-      setChapters(chs); setSchemes(scs);
-      setLoading(false);
+      try {
+        const results = await Promise.allSettled([
+          getSyllabuses().catch(() => []),
+          getClasses().catch(() => []),
+          getSubjects().catch(() => []),
+          getChapters().catch(() => []),
+          getSchemes({ includeGlobal: true }).catch(() => [])
+        ]);
+        setSyllabuses(results[0].status === 'fulfilled' ? (results[0].value || []) : []);
+        setClasses(results[1].status === 'fulfilled' ? (results[1].value || []) : []);
+        setSubjects(results[2].status === 'fulfilled' ? (results[2].value || []) : []);
+        setChapters(results[3].status === 'fulfilled' ? (results[3].value || []) : []);
+        setSchemes(results[4].status === 'fulfilled' ? (results[4].value || []) : []);
+      } catch (e) {
+        console.error('Failed to load schemes/curriculum:', e);
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, []);

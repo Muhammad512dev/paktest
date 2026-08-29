@@ -16,7 +16,7 @@ import rateLimit from 'express-rate-limit';
 // blocks bots and DDoS attempts
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500,
+  max: 3000,
   standardHeaders: true,   // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false,
   message: {
@@ -25,8 +25,8 @@ export const globalLimiter = rateLimit({
     retryAfter: '15 minutes',
   },
   skip: (req) => {
-    // Skip rate limiting for health checks and static files
-    return req.path === '/health' || req.path === '/';
+    // Skip rate limiting for health checks and preflight OPTIONS
+    return req.method === 'OPTIONS' || req.path === '/health' || req.path === '/';
   },
 });
 

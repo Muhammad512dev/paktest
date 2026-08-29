@@ -1,4 +1,4 @@
-﻿// ... existing imports
+// ... existing imports
 import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
@@ -40,6 +40,9 @@ const prisma = new PrismaClient({
 });
 
 const app = express();
+// Enable trust proxy for cloud deployment (Render, Vercel, Nginx reverse proxy)
+app.set('trust proxy', 1);
+
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -85,38 +88,16 @@ const upload = multer({
 
 // --- MIDDLEWARE ---
 
-// â”€â”€â”€ Rate Limiting (must be FIRST middleware, before routes) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Apply global limiter to all /api/* endpoints
-app.use('/api', globalLimiter as any);
-// Apply strict auth limiter only to login/register routes
-app.use('/api/auth', authLimiter as any);
-// Apply AI limiter to all AI generation endpoints
-app.use('/api/ai', aiLimiter as any);
-
+// 1. CORS Middleware MUST BE FIRST so error responses (429, 500, etc.) include CORS headers
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, server-to-server)
-    if (!origin) return callback(null, true);
-
-    const configuredOrigin = process.env.CORS_ORIGIN;
-    if (configuredOrigin && (configuredOrigin === '*' || configuredOrigin === origin)) {
-      return callback(null, true);
-    }
-
-    // Allow local dev origins and all Vercel deployment URLs (*.vercel.app)
-    if (
-      origin.startsWith('http://localhost:') ||
-      origin.endsWith('.vercel.app') ||
-      origin === 'https://paktest.vercel.app'
-    ) {
-      return callback(null, true);
-    }
-
-    // Fallback: allow the requesting origin
-    return callback(null, true);
-  },
+  origin: true, // Reflect request origin to allow all web and preview deployments
   credentials: true
 }));
+
+// 2. Rate Limiting
+app.use('/api', globalLimiter as any);
+app.use('/api/auth', authLimiter as any);
+app.use('/api/ai', aiLimiter as any);
 // Add compression for response optimization
 app.use(compression() as any);
 // Fixed: Cast express.json to any to resolve middleware type mismatch with app.use overloads in TypeScript

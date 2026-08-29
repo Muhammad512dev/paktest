@@ -67,21 +67,30 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
   /* Refactored data loading to handle async responses correctly and support Super Admin */
   useEffect(() => {
     const loadAllData = async () => {
-      const [syls, clss, subs, chs, tops, types, qs, scs] = await Promise.all([
-        getSyllabuses(),
-        getClasses(),
-        getSubjects(),
-        getChapters(),
-        getTopics(),
-        getQuestionTypes(),
-        getQuestions({ pageSize: 1000, maxPages: 50 }), // Pre-load questions for Auto-Gen (up to ~50k)
-        getSchemes({ includeGlobal: true })
+      const results = await Promise.allSettled([
+        getSyllabuses().catch(() => []),
+        getClasses().catch(() => []),
+        getSubjects().catch(() => []),
+        getChapters().catch(() => []),
+        getTopics().catch(() => []),
+        getQuestionTypes().catch(() => []),
+        getQuestions({ pageSize: 1000, maxPages: 50 }).catch(() => []),
+        getSchemes({ includeGlobal: true }).catch(() => [])
       ]);
-      
+
+      const syls = results[0].status === 'fulfilled' ? (results[0].value || []) : [];
+      const clss = results[1].status === 'fulfilled' ? (results[1].value || []) : [];
+      const subs = results[2].status === 'fulfilled' ? (results[2].value || []) : [];
+      const chs = results[3].status === 'fulfilled' ? (results[3].value || []) : [];
+      const tops = results[4].status === 'fulfilled' ? (results[4].value || []) : [];
+      const types = results[5].status === 'fulfilled' ? (results[5].value || []) : [];
+      const qs = results[6].status === 'fulfilled' ? (results[6].value || []) : [];
+      const scs = results[7].status === 'fulfilled' ? (results[7].value || []) : [];
+
       // Ensure repository questions are unique by ID to prevent duplication during shuffling
-      const uniqueQs = Array.from(new Map(qs.map(q => [q.id, q])).values());
+      const uniqueQs = Array.from(new Map((qs as any[]).map(q => [q.id, q])).values());
       setRepoQuestions(uniqueQs);
-      setAllSchemes(scs);
+      setAllSchemes(scs as any[]);
 
       let brandingData: School | null = null;
 
@@ -117,13 +126,12 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
           }
       }
 
-      // Use syllabuses directly as the backend already isolates them based on permissions
-      setSyllabuses(syls);
-      setClasses(clss);
-      setSubjects(subs);
-      setAllChapters(chs);
-      setAllTopics(tops);
-      setQuestionTypes([...types]); // Using fetched types which includes customs
+      setSyllabuses(syls as any[]);
+      setClasses(clss as any[]);
+      setSubjects(subs as any[]);
+      setAllChapters(chs as any[]);
+      setAllTopics(tops as any[]);
+      setQuestionTypes([...(types as any[])]);
       setSchoolData(brandingData);
     };
     loadAllData();

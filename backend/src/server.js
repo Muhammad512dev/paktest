@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -56,6 +56,7 @@ dotenv_1.default.config();
 const { PrismaClient } = Prisma;
 const prisma = new PrismaClient();
 const app = (0, express_1.default)();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -96,7 +97,7 @@ const upload = (0, multer_1.default)({
 });
 // --- MIDDLEWARE ---
 app.use((0, cors_1.default)({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: true,
     credentials: true
 }));
 // Add compression for response optimization

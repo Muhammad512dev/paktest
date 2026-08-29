@@ -2103,10 +2103,6 @@ app.put('/api/settings', authenticate, async (req, res) => {
     await trackActivity(req, 'SYSTEM', 'Updated Global Configuration');
     res.json(settings);
 });
-// 404 Handler
-app.use((req, res) => {
-    res.status(404).json({ error: `Not Found: ${req.method} ${req.url}` });
-});
 // --- CRON JOBS (Automated Cleanups) ---
 // Job 1: Delete all saved drafts on the 1st of every month at midnight
 node_cron_1.default.schedule('0 0 1 * *', async () => {
@@ -2151,18 +2147,25 @@ node_cron_1.default.schedule('0 * * * *', async () => {
 app.get('/api/schemes', authenticate, async (req, res) => {
   try {
     const { syllabusId, classId, subjectId, includeGlobal } = req.query;
-    const showGlobal = includeGlobal !== 'false';
-    const orClauses = [];
-    if (showGlobal) orClauses.push({ isGlobal: true });
-    if (req.user.role === 'SUPER_ADMIN') orClauses.push({});
-    else if (req.user.schoolId) orClauses.push({ schoolId: req.user.schoolId });
-    const where = orClauses.length > 0 ? { OR: orClauses } : {};
+    const where = {};
     if (syllabusId) where.syllabusId = syllabusId;
     if (classId) where.classId = classId;
     if (subjectId) where.subjectId = subjectId;
+
+    if (req.user.role !== 'SUPER_ADMIN') {
+      const showGlobal = includeGlobal !== 'false';
+      const orClauses = [];
+      if (showGlobal) orClauses.push({ isGlobal: true });
+      if (req.user.schoolId) orClauses.push({ schoolId: req.user.schoolId });
+      if (orClauses.length > 0) where.OR = orClauses;
+    }
+
     const schemes = await prisma.pairingScheme.findMany({ where, orderBy: [{ isGlobal: 'desc' }, { updatedAt: 'desc' }] });
     res.json(schemes);
-  } catch (e) { res.status(500).json({ error: e.message || 'Failed to fetch schemes' }); }
+  } catch (e) {
+    console.error('Error fetching schemes:', e);
+    res.status(500).json({ error: e.message || 'Failed to fetch schemes' });
+  }
 });
 
 app.post('/api/schemes', authenticate, async (req, res) => {
@@ -2202,6 +2205,12 @@ app.delete('/api/schemes/:id', authenticate, async (req, res) => {
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message || 'Failed to delete scheme' }); }
 });
+
+// 404 Handler
+app.use((req, res) => {
+    res.status(404).json({ error: `Not Found: ${req.method} ${req.url}` });
+});
+
 app.listen(PORT, async () => {
     console.log(`ðŸš€ API Server running on port ${PORT}`);
 });

@@ -2657,11 +2657,6 @@ app.put('/api/settings', authenticate, async (req: any, res: any) => {
     res.json(settings);
 });
 
-// 404 Handler
-app.use((req, res) => {
-  res.status(404).json({ error: `Not Found: ${req.method} ${req.url}` });
-});
-
 // --- CRON JOBS (Automated Cleanups) ---
 // Job 1: Delete all saved drafts on the 1st of every month at midnight
 cron.schedule('0 0 1 * *', async () => {
@@ -2773,6 +2768,12 @@ app.delete('/api/schemes/:id', authenticate, async (req: any, res: any) => {
     res.json({ success: true });
   } catch (e: any) { res.status(500).json({ error: e.message || 'Failed to delete scheme' }); }
 });
+
+// 404 Handler (MUST BE AFTER ALL ROUTES)
+app.use((req, res) => {
+  res.status(404).json({ error: `Not Found: ${req.method} ${req.url}` });
+});
+
 app.listen(PORT, async () => {
   console.log(`ðŸš€ PakParcha AI â€” API Server running on port ${PORT}`);
   console.log(`   ðŸ“¦ DB connection pool size: ${POOL_SIZE}`);

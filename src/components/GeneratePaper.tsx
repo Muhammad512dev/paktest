@@ -636,20 +636,8 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
     </div>
   );
 
-  // --- NEW AI AGENT STEP ---
-  // --- NEW AI AGENT STEP ---
+  // --- AI AGENT STEP ---
   if (state.step === 'AI_AGENT') return (
-    <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full pb-16">
-       <button onClick={() => setState({...state, step: 'SYLLABUS'})} className="text-gray-400 hover:text-gray-900 flex items-center gap-2 mb-6 font-bold text-sm uppercase tracking-widest transition-colors"><ArrowLeft size={18} /> Back to Selection</button>
-       
-       <div className="flex items-center gap-4 mb-8">
-          <div className="w-12 h-12 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shrink-0">
-             <Wand2 size={24} />
-          </div>
-          <div>
-             <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">AI Paper Architect</h2>
-             <p className="text-xs sm:text-sm text-gray-500 font-medium">Upload your source material and let Gemini construct the exam.</p>
-          </div>
     <div className="p-4 sm:p-6 md:p-12 max-w-7xl">
        <button onClick={() => { onEditorExit?.(); setState({ ...state, step: 'SYLLABUS' }); }} className="text-slate-400 hover:text-white flex items-center gap-2 mb-8 font-bold text-sm uppercase tracking-widest transition-colors"><ArrowLeft size={18} /> Exit Manual/Doc Setup</button>
        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

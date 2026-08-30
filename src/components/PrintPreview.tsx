@@ -254,6 +254,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [questionGap, setQuestionGap] = useState<number>(12); 
   const [bilingualInline, setBilingualInline] = useState(true);
   const [boardExamFormat, setBoardExamFormat] = useState(false);
+  const [printViewMode, setPrintViewMode] = useState<'both' | 'objective' | 'subjective'>('both');
   const [languageMode, setLanguageMode] = useState<'English' | 'Urdu' | 'Bilingual'>(() => {
     const mediums = Object.values(paper.structure || {}).map((s: any) => s.languageMedium).filter(Boolean) as Array<'English' | 'Urdu' | 'Bilingual'>;
     if (mediums.length === 0) return 'Bilingual';
@@ -374,15 +375,43 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
       });
   }, [paper.structure, removedSections]);
 
-  const objectiveSections = useMemo(() => sectionsList.filter(s => s.category === 'Objective'), [sectionsList]);
-  const subjectiveSections = useMemo(() => sectionsList.filter(s => s.category !== 'Objective'), [sectionsList]);
+  const objectiveSections = useMemo(() => {
+    if (printViewMode === 'subjective') return [];
+    return sectionsList.filter(s => s.category === 'Objective');
+  }, [sectionsList, printViewMode]);
+
+  const subjectiveSections = useMemo(() => {
+    if (printViewMode === 'objective') return [];
+    return sectionsList.filter(s => s.category !== 'Objective');
+  }, [sectionsList, printViewMode]);
+
+  const subjectiveShortSections = useMemo(() => {
+    return subjectiveSections.filter(s => !s.hasParts);
+  }, [subjectiveSections]);
+
+  const subjectiveLongSections = useMemo(() => {
+    return subjectiveSections.filter(s => s.hasParts);
+  }, [subjectiveSections]);
 
   const mcqsCount = questions.filter(q => isMCQType(q.type)).length;
   
+  const visibleSectionsSet = useMemo(() => {
+    const set = new Set<string>();
+    if (printViewMode !== 'subjective') {
+      sectionsList.filter(s => s.category === 'Objective').forEach(s => set.add(s.id));
+    }
+    if (printViewMode !== 'objective') {
+      sectionsList.filter(s => s.category !== 'Objective').forEach(s => set.add(s.id));
+    }
+    return set;
+  }, [sectionsList, printViewMode]);
+
   // Calculate dynamic total marks based on visible questions
   const calculatedTotalMarks = useMemo(() => {
-    return questions.reduce((sum, q) => sum + (q.marks || 0), 0);
-  }, [questions]);
+    return questions
+      .filter(q => q.sectionId && visibleSectionsSet.has(q.sectionId))
+      .reduce((sum, q) => sum + (q.marks || 0), 0);
+  }, [questions, visibleSectionsSet]);
 
   const pageStyles = {
     'A4': { width: '210mm', minHeight: '297mm' },
@@ -422,6 +451,167 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
     const currentIdx = types.indexOf(watermark);
     const nextIdx = (currentIdx + 1) % types.length;
     setWatermark(types[nextIdx]);
+  };
+
+  const renderBoardLayout = () => {
+    const showObj = printViewMode === 'both' || printViewMode === 'objective';
+    const showSub = printViewMode === 'both' || printViewMode === 'subjective';
+
+    const renderBoardHeader = (type: 'objective' | 'subjective') => {
+      const isObj = type === 'objective';
+      const subNameEn = paper.subject.toUpperCase();
+      const getUrduSubject = (sub: string) => {
+        const s = sub.toLowerCase();
+        if (s.includes('math')) return 'ریاضی (سائنس)';
+        if (s.includes('chem')) return 'کیمسٹری';
+        if (s.includes('phys')) return 'فزکس';
+        if (s.includes('bio')) return 'بائیولوجی';
+        if (s.includes('comp')) return 'کمپیوٹر سائنس';
+        if (s.includes('urdu')) return 'اردو';
+        if (s.includes('isl')) return 'اسلامیات';
+        if (s.includes('eng')) return 'انگریزی';
+        return sub;
+      };
+      const subNameUr = getUrduSubject(paper.subject);
+      
+      const timeAllowedEn = isObj ? '20 Minutes' : '2.10 hours';
+      const timeAllowedUr = isObj ? '20 منٹ' : '2.10 گھنٹے';
+      
+      // Calculate dynamic marks based on sections
+      const marksVal = isObj 
+        ? objectiveSections.reduce((sum, s) => sum + (s.selectCount * s.marksPerQuestion), 0)
+        : subjectiveSections.reduce((sum, s) => sum + (s.hasParts ? (s.parts || []).reduce((acc, p) => acc + p.marks, 0) : (s.selectCount * s.marksPerQuestion)), 0);
+
+      const marksEn = marksVal > 0 ? String(marksVal) : (isObj ? '15' : '60');
+      const marksUr = marksVal > 0 ? String(marksVal) : (isObj ? '15' : '60');
+      
+      const paperTitleEn = isObj ? 'Q.Paper: 1 (Objective Type)' : 'Paper: 1 (Essay Type)';
+      const paperTitleUr = isObj ? 'سوالیہ پرچہ : 1 (معروضی طرز)' : 'پرچہ : 1 (انشائیہ طرز)';
+      
+      return (
+        <div className="w-full border-b-2 border-black pb-4 mb-4 font-bold text-black text-sm relative group break-inside-avoid animate-fade-in">
+          {/* Roll Number Row */}
+          <div className="flex justify-between items-center mb-3">
+            <div className="flex items-baseline gap-1 text-[11px]">
+              <span>(تعلیمی سیشن 2020-2022 تا 2023-2025)</span>
+            </div>
+            <div className="flex items-baseline gap-1 flex-row-reverse text-[11px]">
+              <span>رول نمبر</span>
+              <span className="border-b border-dotted border-black flex-1 min-w-[150px] h-4"></span>
+              <span>(امیدوار خود پُر کرے)</span>
+            </div>
+          </div>
+          
+          {/* Main Details Grid */}
+          <div className="grid grid-cols-3 gap-y-2 border-t border-b border-black py-2">
+            {/* Left Side: English Info */}
+            <div className="flex flex-col gap-1 text-[11px] text-left">
+              <div className="font-black" contentEditable suppressContentEditableWarning>{subNameEn}</div>
+              <div contentEditable suppressContentEditableWarning>{paperTitleEn}</div>
+              <div>Time Allowed: <span contentEditable suppressContentEditableWarning>{timeAllowedEn}</span></div>
+              <div>Maximum Marks: <span contentEditable suppressContentEditableWarning>{marksEn}</span></div>
+            </div>
+            
+            {/* Middle Side: Group Info */}
+            <div className="flex flex-col items-center justify-center text-center text-[11px]">
+              <div className="font-black border border-black px-2 py-0.5 rounded" contentEditable suppressContentEditableWarning>024-1st Annual - ({paper.classLevel || '9th Class'})</div>
+              <div className="mt-1" contentEditable suppressContentEditableWarning>(پہلا گروپ)</div>
+            </div>
+            
+            {/* Right Side: Urdu Info */}
+            <div className="flex flex-col gap-1 text-[11px] text-right font-urdu items-end" dir="rtl">
+              <div className="font-black" contentEditable suppressContentEditableWarning>{subNameUr}</div>
+              <div contentEditable suppressContentEditableWarning>{paperTitleUr}</div>
+              <div>وقت: <span contentEditable suppressContentEditableWarning>{timeAllowedUr}</span></div>
+              <div>کل نمبر: <span contentEditable suppressContentEditableWarning>{marksUr}</span></div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* OBJECTIVE PORTION */}
+        {showObj && objectiveSections.length > 0 && (
+          <div className="objective-portion-wrapper">
+            {renderBoardHeader('objective')}
+            <div className="space-y-6">
+              {objectiveSections.map((sec, idx) => {
+                const secQuestions = questions.filter(q => (q as any).sectionId === sec.id);
+                if (secQuestions.length === 0) return null;
+                return renderBoardExamSection(sec, secQuestions, idx + 1);
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* PAGE BREAK (only if printing both parts) */}
+        {printViewMode === 'both' && objectiveSections.length > 0 && subjectiveSections.length > 0 && (
+          <div className="page-break break-before-page" style={{ pageBreakBefore: 'always', contentVisibility: 'auto' }} />
+        )}
+
+        {/* SUBJECTIVE PORTION */}
+        {showSub && subjectiveSections.length > 0 && (
+          <div className="subjective-portion-wrapper">
+            {renderBoardHeader('subjective')}
+            
+            {/* PART I: Short Questions */}
+            {subjectiveShortSections.length > 0 && (
+              <div className="subjective-part-1 mb-8">
+                {showPartHeadings && (
+                  <div className="text-center mb-4 pb-1 border-b-2 border-black flex justify-between items-center px-2">
+                    <span className="font-black uppercase tracking-widest" style={{ fontSize: `${sectionHeaderSize}px` }} contentEditable suppressContentEditableWarning>PART I</span>
+                    <span dir="rtl" className="font-urdu font-black" style={{ fontSize: `${urduFontSize}px` }} contentEditable suppressContentEditableWarning>حصہ اول</span>
+                  </div>
+                )}
+                
+                <div className="space-y-6">
+                  {subjectiveShortSections.map((sec, idx) => {
+                    const secQuestions = questions.filter(q => (q as any).sectionId === sec.id);
+                    if (secQuestions.length === 0) return null;
+                    // Question numbering starts at 2 for Short Questions in Subjective Part I (after MCQ Q1)
+                    return renderBoardExamSection(sec, secQuestions, idx + 2);
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* PART II: Long Questions */}
+            {subjectiveLongSections.length > 0 && (
+              <div className="subjective-part-2">
+                {showPartHeadings && (
+                  <div className="text-center mb-2 pb-1 border-b-2 border-black flex justify-between items-center px-2">
+                    <span className="font-black uppercase tracking-widest" style={{ fontSize: `${sectionHeaderSize}px` }} contentEditable suppressContentEditableWarning>PART II</span>
+                    <span dir="rtl" className="font-urdu font-black" style={{ fontSize: `${urduFontSize}px` }} contentEditable suppressContentEditableWarning>حصہ دوم</span>
+                  </div>
+                )}
+
+                {/* Attempt note */}
+                <div className="text-center my-4 py-2 border border-black rounded-lg bg-gray-50/50 break-inside-avoid">
+                  <div className="font-black text-xs uppercase" style={{ fontSize: `${englishFontSize}px` }} contentEditable suppressContentEditableWarning>
+                    Note: Attempt THREE questions in all. But question No.9 is Compulsory.
+                  </div>
+                  <div dir="rtl" className="font-urdu font-black text-sm mt-1" style={{ fontSize: `${urduFontSize}px` }} contentEditable suppressContentEditableWarning>
+                    نوٹ: کل تین سوالات کے جوابات لکھئے۔ لیکن سوال نمبر 9 لازمی ہے۔
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  {subjectiveLongSections.map((sec, idx) => {
+                    const secQuestions = questions.filter(q => (q as any).sectionId === sec.id);
+                    if (secQuestions.length === 0) return null;
+                    // Question numbering starts after short questions (typically Q5 to Q9)
+                    const qNum = subjectiveShortSections.length + 2 + idx;
+                    return renderBoardExamSection(sec, secQuestions, qNum);
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -591,6 +781,12 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                  <option value="Bilingual">Bilingual</option>
                  <option value="English">English</option>
                  <option value="Urdu">Urdu</option>
+              </select>
+              <div className="w-px h-5 bg-slate-700"></div>
+              <select value={printViewMode} onChange={e => setPrintViewMode(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-28">
+                 <option value="both">Full Paper</option>
+                 <option value="objective">Objective Only</option>
+                 <option value="subjective">Essay Type Only</option>
               </select>
               <div className="w-px h-5 bg-slate-700"></div>
               <button

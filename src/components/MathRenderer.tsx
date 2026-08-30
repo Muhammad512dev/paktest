@@ -74,7 +74,7 @@ const MathRenderer: React.FC<MathRendererProps> = ({
       strict: false,
       trust: true,
       output: 'html',
-    });
+    } as any);
   }, [text, inline]);
 
   if (inline) {

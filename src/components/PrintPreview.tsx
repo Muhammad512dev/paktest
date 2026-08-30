@@ -234,6 +234,12 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   // Layout & Density
   const [layoutMode, setLayoutMode] = useState<PaperLayoutMode>(paper.layoutMode);
   const [isGridView, setIsGridView] = useState(false); 
+  const [tableDensity, setTableDensity] = useState(8); 
+  
+  // Watermark State
+  const [watermark, setWatermark] = useState<WatermarkType>(paper.watermark);
+  const [watermarkOpacity, setWatermarkOpacity] = useState(0.1); 
+  const [watermarkSize, setWatermarkSize] = useState(100); // 100%
 
   const [pageSize, setPageSize] = useState<'A4' | 'Legal' | 'Letter'>('A4');
   const [pagePadding, setPagePadding] = useState(10); // in mm
@@ -243,7 +249,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [studentInfoStyle, setStudentInfoStyle] = useState<'Standard' | 'Grid'>('Standard');
 
   // MCQ Grid Controls
-  const [mcqColumns, setMcqColumns] = useState<number>(2); 
+  const [mcqColumns, setMcqColumns] = useState<number>(4); 
   const [verticalSpacing, setVerticalSpacing] = useState<number>(2); 
   const [questionGap, setQuestionGap] = useState<number>(12); 
   const [bilingualInline, setBilingualInline] = useState(true);

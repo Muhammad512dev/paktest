@@ -253,6 +253,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [verticalSpacing, setVerticalSpacing] = useState<number>(2); 
   const [questionGap, setQuestionGap] = useState<number>(12); 
   const [bilingualInline, setBilingualInline] = useState(true);
+  const [boardExamFormat, setBoardExamFormat] = useState(false);
   const [languageMode, setLanguageMode] = useState<'English' | 'Urdu' | 'Bilingual'>(() => {
     const mediums = Object.values(paper.structure || {}).map((s: any) => s.languageMedium).filter(Boolean) as Array<'English' | 'Urdu' | 'Bilingual'>;
     if (mediums.length === 0) return 'Bilingual';
@@ -684,6 +685,14 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               >
                  <Layers size={16} /> Split
               </button>
+              {/* Board Exam Format Toggle */}
+              <button
+                onClick={() => setBoardExamFormat(p => !p)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${boardExamFormat ? 'bg-amber-600/30 border-amber-500/50 text-amber-300' : 'bg-transparent border-slate-700 text-slate-400 hover:text-amber-300'}`}
+                title="Pakistani Board Exam Format (Bilingual side-by-side rows)"
+              >
+                 <FileText size={16} /> Board Format
+              </button>
            </div>
         </div>
       </header>
@@ -885,16 +894,30 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                {objectiveSections.length > 0 && (
                   <div className="mb-8">
                      {showPartHeadings && (
-                         <div className="text-center mb-6 pb-2 border-b-2 border-black">
-                            <h2 className="text-lg font-black uppercase tracking-widest">Part I: Objective</h2>
+                         <div className="text-center mb-3 pb-1 border-b-2 border-black">
+                            {boardExamFormat ? (
+                              <div className="flex justify-between items-center px-2">
+                                <span className="font-black uppercase tracking-widest" style={{ fontSize: `${sectionHeaderSize}px` }}>Part I: Objective</span>
+                                <span dir="rtl" className="font-urdu font-black" style={{ fontSize: `${urduFontSize}px` }}>حصہ اول – معروضی</span>
+                              </div>
+                            ) : (
+                              <h2 className="text-lg font-black uppercase tracking-widest">Part I: Objective</h2>
+                            )}
                          </div>
                      )}
-                     <div className={`flex-1 ${layoutMode === 'DoubleColumn' && !isGridView ? 'columns-2 gap-8' : 'space-y-6'}`}>
-                        {objectiveSections.map((sec) => {
-                           const secQuestions = questions.filter(q => q.sectionId === sec.id);
-                           if (secQuestions.length === 0) return null;
-                           return renderSection(sec, secQuestions);
-                        })}
+                     <div className={`flex-1 ${!boardExamFormat && layoutMode === 'DoubleColumn' && !isGridView ? 'columns-2 gap-8' : 'space-y-1'}`}>
+                        {(() => {
+                           let qNum = 1;
+                           return objectiveSections.map((sec) => {
+                              const secQuestions = questions.filter(q => (q as any).sectionId === sec.id);
+                              if (secQuestions.length === 0) return null;
+                              const result = boardExamFormat
+                                ? renderBoardExamSection(sec, secQuestions, qNum)
+                                : renderSection(sec, secQuestions);
+                              qNum++;
+                              return result;
+                           });
+                        })()}
                      </div>
                   </div>
                )}
@@ -906,16 +929,30 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     style={separateSubjective ? { pageBreakBefore: 'always' } : {}}
                   >
                      {showPartHeadings && (
-                         <div className="text-center mb-6 pb-2 border-b-2 border-black">
-                            <h2 className="text-lg font-black uppercase tracking-widest">Part II: Subjective</h2>
+                         <div className="text-center mb-3 pb-1 border-b-2 border-black">
+                            {boardExamFormat ? (
+                              <div className="flex justify-between items-center px-2">
+                                <span className="font-black uppercase tracking-widest" style={{ fontSize: `${sectionHeaderSize}px` }}>Part II: Subjective</span>
+                                <span dir="rtl" className="font-urdu font-black" style={{ fontSize: `${urduFontSize}px` }}>حصہ دوم – انشائی</span>
+                              </div>
+                            ) : (
+                              <h2 className="text-lg font-black uppercase tracking-widest">Part II: Subjective</h2>
+                            )}
                          </div>
                      )}
-                     <div className={`flex-1 ${layoutMode === 'DoubleColumn' && !isGridView ? 'columns-2 gap-8' : 'space-y-6'}`}>
-                        {subjectiveSections.map((sec) => {
-                           const secQuestions = questions.filter(q => q.sectionId === sec.id);
-                           if (secQuestions.length === 0) return null;
-                           return renderSection(sec, secQuestions);
-                        })}
+                     <div className={`flex-1 ${!boardExamFormat && layoutMode === 'DoubleColumn' && !isGridView ? 'columns-2 gap-8' : 'space-y-1'}`}>
+                        {(() => {
+                           let qNum = objectiveSections.length + 1;
+                           return subjectiveSections.map((sec) => {
+                              const secQuestions = questions.filter(q => (q as any).sectionId === sec.id);
+                              if (secQuestions.length === 0) return null;
+                              const result = boardExamFormat
+                                ? renderBoardExamSection(sec, secQuestions, qNum)
+                                : renderSection(sec, secQuestions);
+                              qNum++;
+                              return result;
+                           });
+                        })()}
                      </div>
                   </div>
                )}
@@ -983,6 +1020,141 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
       </main>
     </div>
   );
+
+  /* ─────────────────────────────────────────────────────────
+     BOARD EXAM FORMAT — Pakistani official bilingual layout
+     Section heading: marks | Q.N  English instruction .... Urdu instruction
+     Sub-questions : (i) English text ............ Urdu text   (i)
+  ───────────────────────────────────────────────────────── */
+  function renderBoardExamSection(sec: PaperSectionConfig, secQuestions: Question[], qNum: number) {
+    const romanNums = ['i','ii','iii','iv','v','vi','vii','viii','ix','x','xi','xii','xiii','xiv','xv'];
+    const sectionMarks = sec.marksPerQuestion > 0 ? sec.marksPerQuestion * sec.selectCount : 0;
+    const engInstruction = sec.instruction || getDefaultSectionInstruction(sec.questionType, sec.selectCount, sec.totalCount);
+    const urInstruction = sec.instructionUrdu || getDefaultSectionInstructionUrdu(sec.questionType, sec.selectCount, sec.totalCount);
+
+    return (
+      <section key={sec.id} className="relative print:break-inside-auto mb-2" style={{ marginBottom: `${questionGap}px` }}>
+        {showPartHeadings && (
+          /* ── Section heading bar ── */
+          <table className="w-full border-collapse mb-1" style={{ fontSize: `${englishFontSize}px` }}>
+            <tbody>
+              <tr className="border-t border-b border-black">
+                {/* Marks column */}
+                <td className="border-r border-black text-center font-black align-middle py-0.5 pr-2 pl-1" style={{ width: '28px', fontSize: `${sectionHeaderSize}px` }}>
+                  {sectionMarks > 0 ? sectionMarks : ''}
+                </td>
+                {/* Q number + English instruction */}
+                <td className="py-0.5 pl-2 align-top">
+                  <span className="font-black mr-1" style={{ fontSize: `${sectionHeaderSize}px` }}>{qNum}.</span>
+                  <span className="font-bold italic" style={{ fontSize: `${englishFontSize}px` }}>
+                    {(languageMode === 'Bilingual' || languageMode === 'English') ? engInstruction : ''}
+                  </span>
+                </td>
+                {/* Urdu instruction (right side) */}
+                {(languageMode === 'Bilingual' || languageMode === 'Urdu') && (
+                  <td dir="rtl" className="py-0.5 pr-2 text-right align-top font-urdu font-bold" style={{ fontSize: `${urduFontSize}px`, minWidth: '160px' }}>
+                    {urInstruction}
+                  </td>
+                )}
+              </tr>
+            </tbody>
+          </table>
+        )}
+
+        {/* ── Sub-questions ── */}
+        <table className="w-full border-collapse" style={{ fontSize: `${englishFontSize}px` }}>
+          <tbody>
+            {secQuestions.map((q, idx) => {
+              const subNum = sec.subQuestionNumbering === 'Roman'
+                ? `(${romanNums[idx] || idx + 1})`
+                : `(${idx + 1})`;
+              const showEn = (languageMode === 'Bilingual' || languageMode === 'English') && q.text && (q.medium !== 'Urdu' || languageMode === 'English');
+              const showUr = (languageMode === 'Bilingual' || languageMode === 'Urdu') && q.textUrdu;
+
+              return (
+                <tr key={q.id} className="break-inside-avoid relative group/q align-top">
+                  {/* Marks left column (per question) */}
+                  {sec.marksPerQuestion > 0 && (
+                    <td className="text-center font-black border-r border-black pr-1 pl-0.5 align-top" style={{ width: '28px', fontSize: `${englishFontSize - 1}px`, paddingTop: '3px' }}>
+                      {sec.marksPerQuestion}
+                    </td>
+                  )}
+
+                  {/* Sub-number + English text */}
+                  <td className="pl-1 pr-1 align-top" style={{ paddingTop: '3px' }}>
+                    <span className="font-black mr-1" style={{ fontSize: `${englishFontSize}px` }}>{subNum}</span>
+                    {showEn && (
+                      isManualEdit
+                        ? <span contentEditable suppressContentEditableWarning className="outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-0.5">{q.text}</span>
+                        : <MathRenderer text={q.text} inline className="leading-snug" />
+                    )}
+                    {/* Image (below English text) */}
+                    {q.imageUrl && (
+                      <div className="my-1 flex justify-center">
+                        <ResizableImage src={q.imageUrl} alt="Diagram" initialDims={{ w: (q as any).imageWidth, h: (q as any).imageHeight, x: (q as any).imageX || 0, y: (q as any).imageY || 0 }} isEditing={isManualEdit} onUpdate={d => updateQuestionImageDims(q.id, d)} />
+                      </div>
+                    )}
+                    {/* MCQ options below English question */}
+                    {isMCQType(q.type) && (languageMode === 'Bilingual' || languageMode === 'English') && (
+                      <div className="grid gap-1 mt-1" style={{ gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))` }}>
+                        {getMcqOptions(q).map((_, i) => {
+                          const opt = q.options?.[i] || '';
+                          const isCorrect = showAnswersInline && opt === q.correctAnswer;
+                          return (
+                            <div key={i} className="flex gap-1 items-start min-w-0">
+                              <span style={{ fontSize: `${optionLabelSize}px` }} className={`font-black shrink-0 ${isCorrect ? 'text-green-700' : 'text-slate-500'}`}>({String.fromCharCode(65+i)})</span>
+                              <MathRenderer text={opt} className={`font-medium whitespace-normal break-words ${isCorrect ? 'font-bold text-green-700' : ''}`} inline />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Urdu text column */}
+                  {showUr && (
+                    <td dir="rtl" className="text-right pl-1 pr-1 font-urdu align-top" style={{ fontSize: `${urduFontSize}px`, paddingTop: '3px', minWidth: '120px' }}>
+                      {isManualEdit
+                        ? <span contentEditable suppressContentEditableWarning className="outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-0.5">{q.textUrdu}</span>
+                        : <MathRenderer text={q.textUrdu!} inline />}
+                      {/* MCQ Urdu options */}
+                      {isMCQType(q.type) && (languageMode === 'Bilingual' || languageMode === 'Urdu') && (
+                        <div dir="rtl" className="grid gap-1 mt-1" style={{ gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))` }}>
+                          {getMcqOptions(q).map((_, i) => {
+                            const optUrdu = q.optionsUrdu?.[i] || '';
+                            const isCorrect = showAnswersInline && optUrdu === q.correctAnswerUrdu && optUrdu !== '';
+                            return (
+                              <div key={i} className="flex gap-1 items-start min-w-0 flex-row-reverse">
+                                <span style={{ fontSize: `${optionLabelSize}px` }} className={`font-black shrink-0 ${isCorrect ? 'text-green-700' : 'text-slate-500'}`}>({String.fromCharCode(65+i)})</span>
+                                <MathRenderer text={optUrdu} className={`font-medium whitespace-normal break-words ${isCorrect ? 'font-bold text-green-700' : ''}`} inline />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </td>
+                  )}
+
+                  {/* Sub-number repeat on far right (Urdu side only paper style) */}
+                  {(languageMode === 'Bilingual' || languageMode === 'Urdu') && (
+                    <td className="text-right font-black pr-0.5 align-top" style={{ width: '24px', fontSize: `${englishFontSize}px`, paddingTop: '3px' }}>
+                      {subNum}
+                    </td>
+                  )}
+
+                  {isManualEdit && (
+                    <td className="print:hidden align-top" style={{ width: '28px' }}>
+                      <button onClick={() => removeQuestion(q.id)} className="p-1 text-red-400 hover:text-red-600"><Trash2 size={12}/></button>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </section>
+    );
+  }
 
   function renderSection(sec: PaperSectionConfig, secQuestions: Question[]) {
       return (

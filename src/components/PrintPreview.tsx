@@ -577,7 +577,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
         {showObj && objectiveSections.length > 0 && (
           <div className="objective-portion-wrapper">
             {renderBoardHeader('objective')}
-            <div className="space-y-6">
+          <div className={`${layoutMode === 'DoubleColumn' ? 'columns-2 gap-8' : 'space-y-4'}`}>
               {objectiveSections.map((sec, idx) => {
                 const secQuestions = questions.filter(q => (q as any).sectionId === sec.id);
                 if (secQuestions.length === 0) return null;
@@ -607,7 +607,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                   </div>
                 )}
                 
-                <div className="space-y-6">
+                <div className={`${layoutMode === 'DoubleColumn' ? 'columns-2 gap-8' : 'space-y-4'}`}>
                   {subjectiveShortSections.map((sec, idx) => {
                     const secQuestions = questions.filter(q => (q as any).sectionId === sec.id);
                     if (secQuestions.length === 0) return null;
@@ -628,23 +628,37 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                   </div>
                 )}
 
-                {/* Attempt note */}
-                <div className="text-center my-4 py-2 border border-black rounded-lg bg-gray-50/50 break-inside-avoid">
-                  <div className="font-black text-xs uppercase" style={{ fontSize: `${englishFontSize}px` }} contentEditable suppressContentEditableWarning>
-                    Note: Attempt THREE questions in all. But question No.9 is Compulsory.
+                {/* Detailed answers instruction – once for all long questions */}
+                <div className="flex justify-between items-center my-3 py-2 px-3 border border-black rounded break-inside-avoid">
+                  <div className="font-bold italic text-left" style={{ fontSize: `${englishFontSize}px` }} contentEditable suppressContentEditableWarning>
+                    Write detailed answers of the following questions. Attempt {subjectiveLongSections.length > 1 ? 'THREE' : 'ALL'} questions in all.
+                    {subjectiveLongSections.some(s => s.title.includes('9') || s.title.toLowerCase().includes('theorem')) ? ' But Q.9 is Compulsory.' : ''}
                   </div>
-                  <div dir="rtl" className="font-urdu font-black text-sm mt-1" style={{ fontSize: `${urduFontSize}px` }} contentEditable suppressContentEditableWarning>
-                    نوٹ: کل تین سوالات کے جوابات لکھئے۔ لیکن سوال نمبر 9 لازمی ہے۔
+                  <div dir="rtl" className="font-urdu font-bold text-right ml-4" style={{ fontSize: `${urduFontSize}px` }} contentEditable suppressContentEditableWarning>
+                    درج ذیل تمام سوالات کے تفصیلی جوابات دیں۔
+                    {subjectiveLongSections.some(s => s.title.includes('9') || s.title.toLowerCase().includes('theorem'))
+                      ? ' نوٹ: کل تین سوالات کے جوابات لکھئے۔ لیکن سوال نمبر 9 لازمی ہے۔' : ''}
                   </div>
                 </div>
 
-                <div className="space-y-6">
+                <div className={`${layoutMode === 'DoubleColumn' ? 'columns-2 gap-8' : 'space-y-4'}`}>
                   {subjectiveLongSections.map((sec, idx) => {
                     const secQuestions = questions.filter(q => (q as any).sectionId === sec.id);
                     if (secQuestions.length === 0) return null;
-                    // Question numbering starts after short questions (typically Q5 to Q9)
                     const qNum = subjectiveShortSections.length + 2 + idx;
-                    return renderBoardExamSection(sec, secQuestions, qNum);
+                    const isCompulsory = sec.title.includes('9') || sec.title.toLowerCase().includes('theorem');
+                    return (
+                      <div key={sec.id} className={`break-inside-avoid ${isCompulsory ? 'border-l-2 border-black pl-2' : ''}`}>
+                        {/* Compulsory badge before Q9 */}
+                        {isCompulsory && (
+                          <div className="flex justify-between items-center mb-1 bg-black text-white px-2 py-0.5 rounded break-inside-avoid">
+                            <span className="font-black text-white uppercase tracking-widest text-[9px]">COMPULSORY — Q.{qNum}</span>
+                            <span dir="rtl" className="font-urdu font-black text-white text-[9px]">لازمی — سوال نمبر {qNum}</span>
+                          </div>
+                        )}
+                        {renderBoardExamSection(sec, secQuestions, qNum)}
+                      </div>
+                    );
                   })}
                 </div>
               </div>

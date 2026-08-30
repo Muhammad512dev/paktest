@@ -280,21 +280,35 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Marks/Q</label>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Marks / Q</label>
                         <input type="number" min={1} value={sec.marksPerQuestion} onChange={e => updateSection(idx, { marksPerQuestion: Number(e.target.value) })}
                           className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
                       </div>
                       <div>
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Total Qs</label>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                          Given Qs (Total)
+                          <span className="ml-1 text-gray-300 font-normal normal-case" title="Total questions shown to students">ℹ</span>
+                        </label>
                         <input type="number" min={1} value={sec.totalCount} onChange={e => updateSection(idx, { totalCount: Number(e.target.value) })}
                           className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
                       </div>
                       <div>
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Attempt Qs</label>
-                        <input type="number" min={1} value={sec.selectCount} onChange={e => updateSection(idx, { selectCount: Number(e.target.value) })}
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                          Attempt Qs
+                          <span className="ml-1 text-gray-300 font-normal normal-case" title="How many questions students must attempt">ℹ</span>
+                        </label>
+                        <input type="number" min={1} max={sec.totalCount} value={sec.selectCount} onChange={e => updateSection(idx, { selectCount: Number(e.target.value) })}
                           className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
                       </div>
                     </div>
+
+                    {/* Attempt/Total summary note */}
+                    {sec.totalCount !== sec.selectCount && (
+                      <div className="flex items-center gap-2 px-4 py-2 bg-sky-50 border border-sky-100 rounded-xl text-xs font-bold text-sky-700">
+                        <span>📝</span>
+                        <span>{sec.totalCount} questions will be generated → students attempt any {sec.selectCount}</span>
+                      </div>
+                    )}
 
                     <div className="flex items-center gap-4 p-4 bg-violet-50 border border-violet-100 rounded-2xl">
                       <Layers size={18} className="text-violet-600 shrink-0"/>

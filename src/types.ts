@@ -186,6 +186,33 @@ export const getDefaultSectionInstruction = (type: string, selectCount: number, 
   }
 };
 
+export const getDefaultSectionInstructionUrdu = (type: string, selectCount: number, totalCount: number): string => {
+  const isAll = selectCount >= totalCount;
+  const normType = String(type || '').trim().toLowerCase();
+
+  if (normType.includes('mcq') || normType.includes('multiple choice')) {
+    return 'درست آپشن کا انتخاب کریں۔';
+  } else if (normType.includes('short')) {
+    return isAll
+      ? 'تمام سوالات کے مختصر جوابات لکھیں۔'
+      : `کوئی بھی ${selectCount} سوالات کے مختصر جوابات لکھیں (کل ${totalCount} میں سے)۔`;
+  } else if (normType.includes('long') || normType.includes('essay') || normType.includes('subjective')) {
+    return isAll
+      ? 'درج ذیل تمام سوالات کے تفصیلی جوابات دیں۔'
+      : `کوئی بھی ${selectCount} سوالات کے تفصیلی جوابات دیں (کل ${totalCount} میں سے)۔`;
+  } else if (normType.includes('blank')) {
+    return 'خالی جگہوں کو مناسب الفاظ سے پُر کریں۔';
+  } else if (normType.includes('true') || normType.includes('false')) {
+    return 'درج ذیل بیانات کو درست یا غلط لکھیں۔';
+  } else if (normType.includes('match') || normType.includes('column')) {
+    return 'کالم الف کو کالم ب سے ملائیں۔';
+  } else {
+    return isAll
+      ? `درج ذیل تمام سوالات حل کریں۔`
+      : `کوئی بھی ${selectCount} سوالات حل کریں (کل ${totalCount} میں سے)۔`;
+  }
+};
+
 export type PaperStructure = Record<string, PaperSectionConfig>;
 
 export interface ExamPaper {

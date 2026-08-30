@@ -9,7 +9,7 @@ import {
   Droplets, Image as ImageIcon, Eye, EyeOff, Palette, Layers, FileInput,
   CreditCard, UserSquare2, Move, GripHorizontal, GripVertical, Scaling
 } from 'lucide-react';
-import { ExamPaper, Question, PaperSectionConfig, WatermarkType, PaperLayoutMode, getDefaultSectionInstruction } from '../types';
+import { ExamPaper, Question, PaperSectionConfig, WatermarkType, PaperLayoutMode, getDefaultSectionInstruction, getDefaultSectionInstructionUrdu } from '../types';
 import MathRenderer from './MathRenderer';
 
 interface PrintPreviewProps {
@@ -989,20 +989,46 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
         <section key={sec.id} className="relative print:break-inside-auto mb-4" style={{ marginBottom: `${questionGap}px` }}>
            {showPartHeadings && (
               <>
-               <div className="flex justify-between items-baseline border-b border-black mb-2 pb-1 relative group break-inside-avoid">
+               {/* ── Section title bar ── */}
+               <div className="flex justify-between items-stretch border-b-2 border-black mb-2 pb-1 relative group break-inside-avoid">
                   {isManualEdit && <button onClick={() => removeSection(sec.id)} className="absolute -left-8 top-1 p-1 bg-red-500 text-white rounded-md z-20 shadow-lg print:hidden opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all"><Trash2 size={12}/></button>}
+
+                  {/* Left: Q title */}
                   <h3 style={{ fontSize: `${sectionHeaderSize}px`, fontWeight: 900 }} contentEditable={isManualEdit} suppressContentEditableWarning={true} className="uppercase tracking-tighter outline-none">
                      {sec.title}
                   </h3>
-                  <div className="flex gap-4 items-baseline shrink-0">
-                     <span className="text-[10px] font-black text-indigo-600 uppercase italic">Attempt {sec.selectCount}</span>
+
+                  {/* Right: Attempt count + marks */}
+                  <div className="flex flex-col items-end justify-center gap-0.5 shrink-0 pl-4">
+                     {/* Attempt counts */}
+                     {sec.totalCount > 0 && sec.selectCount !== sec.totalCount && (
+                       <span className="text-[9px] font-black text-black uppercase tracking-tight leading-none">
+                         Attempt {sec.selectCount} out of {sec.totalCount}
+                       </span>
+                     )}
+                     {/* Marks badge */}
+                     {sec.marksPerQuestion > 0 && (
+                       <span className="text-[9px] font-black text-black uppercase tracking-tight leading-none">
+                         {sec.marksPerQuestion} × {sec.selectCount} = {sec.marksPerQuestion * sec.selectCount} Marks
+                       </span>
+                     )}
                   </div>
                </div>
 
-               <div className="mb-3 break-inside-avoid">
-                  <p style={{ fontSize: `${englishFontSize}px` }} contentEditable={isManualEdit} suppressContentEditableWarning={true} className="font-bold text-black italic outline-none">
-                     {sec.instruction || getDefaultSectionInstruction(sec.questionType, sec.selectCount, sec.totalCount)}
-                  </p>
+               {/* ── Instructions line(s) ── */}
+               <div className="mb-3 break-inside-avoid space-y-0.5">
+                  {/* English instruction */}
+                  {(languageMode === 'Bilingual' || languageMode === 'English') && (
+                    <p style={{ fontSize: `${englishFontSize}px` }} contentEditable={isManualEdit} suppressContentEditableWarning={true} className="font-bold text-black italic outline-none">
+                       {sec.instruction || getDefaultSectionInstruction(sec.questionType, sec.selectCount, sec.totalCount)}
+                    </p>
+                  )}
+                  {/* Urdu instruction */}
+                  {(languageMode === 'Bilingual' || languageMode === 'Urdu') && (
+                    <p dir="rtl" style={{ fontSize: `${urduFontSize}px` }} contentEditable={isManualEdit} suppressContentEditableWarning={true} className="font-urdu text-right font-bold text-black outline-none leading-[1.8]">
+                       {sec.instructionUrdu || getDefaultSectionInstructionUrdu(sec.questionType, sec.selectCount, sec.totalCount)}
+                    </p>
+                  )}
                </div>
               </>
            )}

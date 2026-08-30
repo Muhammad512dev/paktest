@@ -438,6 +438,25 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                 return true;
             };
 
+            const isChapterMatch = (questionChapter?: string, targetChapters: string[] = []): boolean => {
+                if (!questionChapter) return false;
+                if (targetChapters.length === 0) return true;
+                const qCh = questionChapter.trim().toLowerCase();
+                const qNumMatch = qCh.match(/\b\d+\b/);
+                const qNum = qNumMatch ? qNumMatch[0] : null;
+
+                return targetChapters.some(tc => {
+                    const t = tc.trim().toLowerCase();
+                    if (qCh === t) return true;
+                    if (qCh.includes(t) || t.includes(qCh)) return true;
+                    if (qNum) {
+                        const tNumMatch = t.match(/\b\d+\b/);
+                        if (tNumMatch && tNumMatch[0] === qNum) return true;
+                    }
+                    return false;
+                });
+            };
+
             (Object.values(state.paperStructure) as PaperSectionConfig[]).forEach(sec => {
                 // Scheme Handling 1: Long Answer with sub-parts (a), (b), (c)...
                 if (sec.hasParts && sec.parts && sec.parts.length > 0) {
@@ -447,7 +466,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                             q.type === sec.questionType &&
                             q.subject === subjectName &&
                             (q.classLevel === className || !q.classLevel) &&
-                            (targetChapters.length === 0 || targetChapters.some(tc => q.chapter?.toLowerCase() === tc.toLowerCase())) &&
+                            (targetChapters.length === 0 || isChapterMatch(q.chapter, targetChapters)) &&
                             matchesSectionMedium(q, sec.languageMedium)
                         );
                         const poolToUse = partPool.length > 0 ? partPool : repoQuestions.filter(q => q.type === sec.questionType && q.subject === subjectName);
@@ -473,7 +492,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                             q.type === sec.questionType &&
                             q.subject === subjectName &&
                             (q.classLevel === className || !q.classLevel) &&
-                            rule.chapters.some(rc => q.chapter?.toLowerCase() === rc.toLowerCase()) &&
+                            isChapterMatch(q.chapter, rule.chapters) &&
                             matchesSectionMedium(q, sec.languageMedium)
                         );
                         const shuffled = [...rulePool].sort(() => 0.5 - Math.random());

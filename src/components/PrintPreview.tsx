@@ -215,16 +215,17 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   // Typography State
   const [lineHeight, setLineHeight] = useState(1.5);
   const [urduFontSize, setUrduFontSize] = useState(14);
-  const [englishFontSize, setEnglishFontSize] = useState(12);
+  const [englishFontSize, setEnglishFontSize] = useState(14);
   const [schoolNameSize, setSchoolNameSize] = useState(28); 
   const [sectionHeaderSize, setSectionHeaderSize] = useState(16); 
   const [fontColor, setFontColor] = useState('#000000');
   const [fontWeight, setFontWeight] = useState<'400' | '700'>('400');
   
   // Text Size Selection Mode
-  const [textSizeMode, setTextSizeMode] = useState<'English' | 'Urdu' | 'Header' | 'OptionLabel' | 'OptionText'>('English');
-  const [optionLabelSize, setOptionLabelSize] = useState(11);
-  const [optionTextSize, setOptionTextSize] = useState(12);
+  const [textSizeMode, setTextSizeMode] = useState<'English' | 'Urdu' | 'Header' | 'OptionLabel' | 'OptionEn' | 'OptionUr'>('English');
+  const [optionLabelSize, setOptionLabelSize] = useState(9);
+  const [optionTextSize, setOptionTextSize] = useState(9);
+  const [optionUrduSize, setOptionUrduSize] = useState(6);
 
   // Expanded Font Families
   const [englishFont, setEnglishFont] = useState("'Inter', sans-serif");
@@ -233,12 +234,6 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   // Layout & Density
   const [layoutMode, setLayoutMode] = useState<PaperLayoutMode>(paper.layoutMode);
   const [isGridView, setIsGridView] = useState(false); 
-  const [tableDensity, setTableDensity] = useState(8); 
-  
-  // Watermark State
-  const [watermark, setWatermark] = useState<WatermarkType>(paper.watermark);
-  const [watermarkOpacity, setWatermarkOpacity] = useState(0.1); 
-  const [watermarkSize, setWatermarkSize] = useState(100); // 100%
 
   const [pageSize, setPageSize] = useState<'A4' | 'Legal' | 'Letter'>('A4');
   const [pagePadding, setPagePadding] = useState(10); // in mm
@@ -334,9 +329,11 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
     } else if (textSizeMode === 'Header') {
         setSchoolNameSize(prev => Math.max(16, Math.min(64, prev + delta)));
     } else if (textSizeMode === 'OptionLabel') {
-        setOptionLabelSize(prev => Math.max(8, Math.min(20, prev + delta)));
-    } else if (textSizeMode === 'OptionText') {
-        setOptionTextSize(prev => Math.max(9, Math.min(20, prev + delta)));
+        setOptionLabelSize(prev => Math.max(6, Math.min(20, prev + delta)));
+    } else if (textSizeMode === 'OptionEn') {
+        setOptionTextSize(prev => Math.max(6, Math.min(20, prev + delta)));
+    } else if (textSizeMode === 'OptionUr') {
+        setOptionUrduSize(prev => Math.max(5, Math.min(24, prev + delta)));
     }
   };
 
@@ -344,19 +341,21 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const setFontSizeDirectly = (val: number) => {
     if (isNaN(val) || val < 1) return;
     if (textSizeMode === 'English') setEnglishFontSize(Math.max(8, Math.min(32, val)));
-    else if (textSizeMode === 'Urdu') setUrduFontSize(Math.max(12, Math.min(48, val)));
+    else if (textSizeMode === 'Urdu') setUrduFontSize(Math.max(8, Math.min(48, val)));
     else if (textSizeMode === 'Header') setSchoolNameSize(Math.max(16, Math.min(64, val)));
-    else if (textSizeMode === 'OptionLabel') setOptionLabelSize(Math.max(8, Math.min(20, val)));
-    else if (textSizeMode === 'OptionText') setOptionTextSize(Math.max(9, Math.min(20, val)));
+    else if (textSizeMode === 'OptionLabel') setOptionLabelSize(Math.max(6, Math.min(20, val)));
+    else if (textSizeMode === 'OptionEn') setOptionTextSize(Math.max(6, Math.min(20, val)));
+    else if (textSizeMode === 'OptionUr') setOptionUrduSize(Math.max(5, Math.min(24, val)));
   };
 
   const activeFontSizeDisplay = useMemo(() => {
       if (textSizeMode === 'English') return englishFontSize;
       if (textSizeMode === 'Urdu') return urduFontSize;
       if (textSizeMode === 'OptionLabel') return optionLabelSize;
-      if (textSizeMode === 'OptionText') return optionTextSize;
+      if (textSizeMode === 'OptionEn') return optionTextSize;
+      if (textSizeMode === 'OptionUr') return optionUrduSize;
       return schoolNameSize;
-  }, [textSizeMode, englishFontSize, urduFontSize, optionLabelSize, optionTextSize, schoolNameSize]);
+  }, [textSizeMode, englishFontSize, urduFontSize, optionLabelSize, optionTextSize, optionUrduSize, schoolNameSize]);
 
   const sectionsList = useMemo(() => {
     return (Object.values(paper.structure || {}) as PaperSectionConfig[])
@@ -611,11 +610,12 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                  onChange={e => setTextSizeMode(e.target.value as any)} 
                  className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-24 sm:w-28"
               >
-                 <option value="English">English</option>
-                 <option value="Urdu">Urdu</option>
-                 <option value="Header">Header</option>
+                 <option value="English">Q (English)</option>
+                 <option value="Urdu">Q (Urdu)</option>
+                 <option value="OptionEn">Opt (EN)</option>
+                 <option value="OptionUr">Opt (UR)</option>
                  <option value="OptionLabel">A/B/C</option>
-                 <option value="OptionText">Options</option>
+                 <option value="Header">Header</option>
               </select>
               <div className="w-px h-5 bg-slate-700"></div>
               <div className="flex items-center gap-1">
@@ -1070,7 +1070,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                                                <MathRenderer text={opt} className={`font-medium whitespace-normal break-words ${isCorrect ? 'font-bold underline text-green-700 decoration-green-500' : ''}`} inline />
                                              )}
                                              {(languageMode === 'Bilingual' || languageMode === 'Urdu') && optUrdu && (
-                                               <div dir="rtl" style={{ fontSize: `${Math.max(optionTextSize + 6, 14)}px` }} className={`font-urdu text-right whitespace-normal break-words ${isCorrect ? 'font-bold text-green-700' : ''}`}>
+                                               <div dir="rtl" style={{ fontSize: `${optionUrduSize}px` }} className={`font-urdu text-right whitespace-normal break-words ${isCorrect ? 'font-bold text-green-700' : ''}`}>
                                                  {isManualEdit ? <span contentEditable suppressContentEditableWarning={true} className="outline-none">{optUrdu}</span> : <MathRenderer text={optUrdu} inline />}
                                                </div>
                                              )}
@@ -1182,7 +1182,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                                                     <MathRenderer text={opt} className={`font-medium whitespace-normal break-words ${isCorrect ? 'text-green-900 font-bold' : 'text-slate-800'}`} />
                                                  )}
                                                  {(languageMode === 'Bilingual' || languageMode === 'Urdu') && optUrdu && (
-                                                    <div dir="rtl" style={{ fontSize: `${Math.max(optionTextSize + 6, 14)}px` }} className={`font-urdu text-right whitespace-normal break-words ${isCorrect ? 'text-green-900 font-bold' : 'text-black'} ${bilingualInline ? 'leading-none' : 'mt-0.5'}`}>
+                                                    <div dir="rtl" style={{ fontSize: `${optionUrduSize}px` }} className={`font-urdu text-right whitespace-normal break-words ${isCorrect ? 'text-green-900 font-bold' : 'text-black'} ${bilingualInline ? 'leading-none' : 'mt-0.5'}`}>
                                                       {isManualEdit ? 
                                                           <span contentEditable suppressContentEditableWarning={true} className="outline-none">{optUrdu}</span> :
                                                           <MathRenderer text={optUrdu} />

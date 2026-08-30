@@ -132,12 +132,27 @@ select option:checked {
 .font-urdu {
   font-family: 'Noto Nastaliq Urdu', serif;
   line-height: 2.2 !important;
+  unicode-bidi: plaintext;
 }
 .font-urdu-sans {
   font-family: 'Noto Sans Arabic', sans-serif;
+  unicode-bidi: plaintext;
 }
 .font-urdu-stylized {
   font-family: 'Reem Kufi', sans-serif;
+  unicode-bidi: plaintext;
+}
+
+/* BiDi formula & equation isolation for Urdu & Math */
+.katex,
+.katex-display,
+.katex-html,
+.ltr-isolate,
+bdi[dir="ltr"],
+span[dir="ltr"] {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  text-align: left !important;
 }
 
 /* Multi-page Print Logic */

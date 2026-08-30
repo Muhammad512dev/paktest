@@ -50,6 +50,13 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
   const [isSearching, setIsSearching] = useState(false);
   const [isManualEditMode, setIsManualEditMode] = useState(false);
 
+  // Typography & Layout Controls (Defaults: Question EN 14px, Question UR 14px, Option EN 9px, Option UR 6px, MCQ Cols 4)
+  const [questionFontEn, setQuestionFontEn] = useState<number>(14);
+  const [questionFontUr, setQuestionFontUr] = useState<number>(14);
+  const [optionFontEn, setOptionFontEn] = useState<number>(9);
+  const [optionFontUr, setOptionFontUr] = useState<number>(6);
+  const [mcqColumns, setMcqColumns] = useState<number>(4);
+
   // Repository Data States
   const [repoQuestions, setRepoQuestions] = useState<Question[]>([]);
   const [allChapters, setAllChapters] = useState<any[]>([]);
@@ -971,6 +978,67 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                 </div>
             </div>
 
+            {/* TYPOGRAPHY & FONT SETTINGS */}
+            <div className="space-y-3 pt-6 border-t border-slate-800">
+                <div className="flex justify-between items-center">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Tag size={14}/> Typography & Layout</p>
+                    <button onClick={() => { setQuestionFontEn(14); setQuestionFontUr(14); setOptionFontEn(9); setOptionFontUr(6); setMcqColumns(4); }} className="text-[9px] font-bold text-indigo-400 hover:underline">Reset</button>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-slate-800/60 p-2 rounded-lg border border-slate-700">
+                        <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Q (English)</span>
+                        <div className="flex items-center justify-between">
+                            <button onClick={() => setQuestionFontEn(p => Math.max(8, p - 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">-</button>
+                            <span className="text-xs font-black text-white">{questionFontEn}px</span>
+                            <button onClick={() => setQuestionFontEn(p => Math.min(32, p + 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">+</button>
+                        </div>
+                    </div>
+
+                    <div className="bg-slate-800/60 p-2 rounded-lg border border-slate-700">
+                        <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Q (Urdu)</span>
+                        <div className="flex items-center justify-between">
+                            <button onClick={() => setQuestionFontUr(p => Math.max(8, p - 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">-</button>
+                            <span className="text-xs font-black text-white">{questionFontUr}px</span>
+                            <button onClick={() => setQuestionFontUr(p => Math.min(36, p + 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">+</button>
+                        </div>
+                    </div>
+
+                    <div className="bg-slate-800/60 p-2 rounded-lg border border-slate-700">
+                        <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Opt (English)</span>
+                        <div className="flex items-center justify-between">
+                            <button onClick={() => setOptionFontEn(p => Math.max(6, p - 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">-</button>
+                            <span className="text-xs font-black text-white">{optionFontEn}px</span>
+                            <button onClick={() => setOptionFontEn(p => Math.min(24, p + 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">+</button>
+                        </div>
+                    </div>
+
+                    <div className="bg-slate-800/60 p-2 rounded-lg border border-slate-700">
+                        <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Opt (Urdu)</span>
+                        <div className="flex items-center justify-between">
+                            <button onClick={() => setOptionFontUr(p => Math.max(5, p - 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">-</button>
+                            <span className="text-xs font-black text-white">{optionFontUr}px</span>
+                            <button onClick={() => setOptionFontUr(p => Math.min(24, p + 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-1.5 pt-1">
+                    <span className="text-[8px] font-bold text-slate-400 uppercase block">MCQ Options Columns</span>
+                    <div className="flex gap-1 bg-slate-800 rounded-lg p-1 border border-slate-700">
+                        {[1, 2, 3, 4].map(cols => (
+                            <button 
+                                key={cols} 
+                                onClick={() => setMcqColumns(cols)} 
+                                className={`flex-1 py-1 text-[9px] font-black rounded transition-all ${mcqColumns === cols ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                            >
+                                {cols} Col{cols > 1 ? 's' : ''}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
             <div className="space-y-3 pt-6 border-t border-slate-800">
                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><ListFilter size={14}/> Paper Navigator</p>
                <div className="space-y-1">
@@ -1107,14 +1175,14 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                                    <div className="flex-1 space-y-1">
                                                       <div className="flex justify-between items-start gap-4">
                                                          {(extractionLanguage === 'Bilingual' || extractionLanguage === 'English') && q.text && (
-                                                            <div className="text-sm font-semibold text-slate-800 leading-relaxed">
+                                                            <div style={{ fontSize: `${questionFontEn}px` }} className="font-semibold text-slate-800 leading-relaxed">
                                                                <MathRenderer text={q.text} inline />
                                                             </div>
                                                          )}
                                                          <span className="text-[10px] font-black text-slate-400 pt-0.5 whitespace-nowrap">[{q.marks}]</span>
                                                       </div>
                                                       {(extractionLanguage === 'Bilingual' || extractionLanguage === 'Urdu') && q.textUrdu && (
-                                                         <div className="text-right font-urdu text-lg text-slate-700 leading-relaxed" dir="rtl">
+                                                         <div dir="rtl" style={{ fontSize: `${questionFontUr}px` }} className="text-right font-urdu text-slate-700 leading-relaxed">
                                                             <MathRenderer text={q.textUrdu} />
                                                          </div>
                                                       )}
@@ -1125,14 +1193,14 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                                          </div>
                                                       )}
                                                       {normalizeType(q.type) === 'mcq' && ((q.options && q.options.length > 0) || (q.optionsUrdu && q.optionsUrdu.length > 0)) && (
-                                                          <div className={`grid ${sec.questionsPerLine ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-4'} gap-3 mt-2`}>
+                                                          <div className="grid gap-3 mt-2" style={{ gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))` }}>
                                                              {((q.options && q.options.length > 0) ? q.options : (q.optionsUrdu || [])).map((opt: string, i: number) => (
-                                                                <div key={i} className="flex gap-2 items-baseline text-xs text-slate-600">
-                                                                   <span className="font-bold text-slate-400">({String.fromCharCode(65+i)})</span>
-                                                                   <div className="flex flex-col">
-                                                                      <span><MathRenderer text={opt} inline /></span>
+                                                                <div key={i} className="flex gap-2 items-baseline text-slate-600 min-w-0">
+                                                                   <span style={{ fontSize: `${optionFontEn}px` }} className="font-bold text-slate-400">({String.fromCharCode(65+i)})</span>
+                                                                   <div className="flex flex-col min-w-0">
+                                                                      <span style={{ fontSize: `${optionFontEn}px` }}><MathRenderer text={opt} inline /></span>
                                                                       {q.optionsUrdu && q.optionsUrdu[i] && (
-                                                                         <span className="text-right font-urdu text-sm mt-0.5" dir="rtl"><MathRenderer text={q.optionsUrdu[i]} /></span>
+                                                                         <span dir="rtl" style={{ fontSize: `${optionFontUr}px` }} className="text-right font-urdu mt-0.5"><MathRenderer text={q.optionsUrdu[i]} /></span>
                                                                       )}
                                                                    </div>
                                                                 </div>
@@ -1220,18 +1288,18 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                                    </div>
                                                 )}
                                                 <div className="flex gap-3 items-start">
-                                                   <span className="font-bold text-sm min-w-[20px] pt-0.5">{idx + 1}.</span>
+                                                   <span style={{ fontSize: `${questionFontEn}px` }} className="font-bold min-w-[20px] pt-0.5">{idx + 1}.</span>
                                                    <div className="flex-1 space-y-2">
                                                       <div className="flex justify-between items-start gap-4">
                                                          {(extractionLanguage === 'Bilingual' || extractionLanguage === 'English') && q.text && (
-                                                            <div className="text-sm font-semibold text-slate-800 leading-relaxed">
+                                                            <div style={{ fontSize: `${questionFontEn}px` }} className="font-semibold text-slate-800 leading-relaxed">
                                                                <MathRenderer text={q.text} inline />
                                                             </div>
                                                          )}
                                                          <span className="text-[10px] font-black text-slate-400 pt-0.5 whitespace-nowrap">[{q.marks}]</span>
                                                       </div>
                                                       {(extractionLanguage === 'Bilingual' || extractionLanguage === 'Urdu') && q.textUrdu && (
-                                                         <div className="text-right font-urdu text-lg text-slate-700 leading-relaxed" dir="rtl">
+                                                          <div dir="rtl" style={{ fontSize: `${questionFontUr}px` }} className="text-right font-urdu text-slate-700 leading-relaxed">
                                                             <MathRenderer text={q.textUrdu} />
                                                          </div>
                                                       )}

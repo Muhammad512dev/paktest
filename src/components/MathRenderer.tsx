@@ -41,11 +41,18 @@ const MathRenderer: React.FC<MathRendererProps> = ({
       if (/^(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\])$/s.test(part)) {
         return part;
       }
-      // Process markdown bold (**text**), italic (*text*), size tags, alignment tags, bullet points, and newlines
-      return part
+      
+      let p = part
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
+        .replace(/>/g, '&gt;');
+
+      // Auto-wrap Latin/chemical/formula sequences inside text so RTL doesn't reverse C3 -> 3C or H2O2 -> 2H2O
+      // Matches tokens with Latin letters and numbers/symbols (e.g. C3, H2O2, CO2, 2H2O, CaCO3, NaCl, etc.)
+      p = p.replace(/\b([A-Za-z][A-Za-z0-9_+\-/*=^().]*|[0-9]+[A-Za-z][A-Za-z0-9_+\-/*=^().]*)\b/g, '<bdi dir="ltr" class="ltr-isolate" style="unicode-bidi: isolate; display: inline-block;">$1</bdi>');
+
+      // Process markdown bold (**text**), italic (*text*), size tags, alignment tags, bullet points, and newlines
+      return p
         .replace(/\[align=(left|center|right)\](.*?)\[\/align\]/gs, '<div style="text-align: $1">$2</div>')
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
@@ -64,6 +71,7 @@ const MathRenderer: React.FC<MathRendererProps> = ({
         { left: '\\[', right: '\\]', display: true },
       ],
       throwOnError: false,
+      strict: false,
       trust: true,
       output: 'html',
     });

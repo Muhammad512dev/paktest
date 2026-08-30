@@ -406,12 +406,53 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
     return set;
   }, [sectionsList, printViewMode]);
 
-  // Calculate dynamic total marks based on visible questions
+  // Calculate dynamic total marks based on visible questions / sections that the student attempts
   const calculatedTotalMarks = useMemo(() => {
-    return questions
-      .filter(q => q.sectionId && visibleSectionsSet.has(q.sectionId))
-      .reduce((sum, q) => sum + (q.marks || 0), 0);
-  }, [questions, visibleSectionsSet]);
+    let total = 0;
+    
+    // 1. Objective attempt marks
+    if (printViewMode !== 'subjective') {
+      objectiveSections.forEach(sec => {
+        total += (sec.selectCount * sec.marksPerQuestion);
+      });
+    }
+    
+    // 2. Subjective Short attempt marks
+    if (printViewMode !== 'objective') {
+      subjectiveShortSections.forEach(sec => {
+        total += (sec.selectCount * sec.marksPerQuestion);
+      });
+    }
+
+    // 3. Subjective Long attempt marks
+    if (printViewMode !== 'objective' && subjectiveLongSections.length > 0) {
+      // Typically: Q9 is compulsory, choose any 2 others out of the remaining ones.
+      const compulsorySec = subjectiveLongSections.find(s => s.title.includes('9') || s.title.toLowerCase().includes('theorem'));
+      const otherSecs = subjectiveLongSections.filter(s => s !== compulsorySec);
+      
+      if (compulsorySec) {
+        const cMarks = compulsorySec.parts && compulsorySec.parts.length > 0
+          ? compulsorySec.parts.reduce((a, p) => a + p.marks, 0)
+          : (compulsorySec.selectCount * compulsorySec.marksPerQuestion);
+        total += cMarks;
+      }
+      
+      const otherMarks = otherSecs.map(s => {
+        return s.parts && s.parts.length > 0
+          ? s.parts.reduce((a, p) => a + p.marks, 0)
+          : (s.selectCount * s.marksPerQuestion);
+      }).sort((a, b) => b - a);
+      
+      const selectOtherCount = compulsorySec ? 2 : 3;
+      for (let i = 0; i < Math.min(selectOtherCount, otherMarks.length); i++) {
+        total += otherMarks[i];
+      }
+    }
+    
+    // If calculated total is 0, fallback to paper.totalMarks
+    if (total === 0) return paper.totalMarks || 75;
+    return total;
+  }, [objectiveSections, subjectiveShortSections, subjectiveLongSections, printViewMode, paper.totalMarks]);
 
   const pageStyles = {
     'A4': { width: '210mm', minHeight: '297mm' },
@@ -1224,18 +1265,45 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   ───────────────────────────────────────────────────────── */
   function renderBoardExamSection(sec: PaperSectionConfig, secQuestions: Question[], qNum: number) {
     const romanNums = ['i','ii','iii','iv','v','vi','vii','viii','ix','x','xi','xii','xiii','xiv','xv'];
-    const sectionMarks = sec.marksPerQuestion > 0 ? sec.marksPerQuestion * sec.selectCount : 0;
+    
+    // Calculate total marks for this section/question
+    const sectionMarks = sec.hasParts 
+      ? (sec.parts || []).reduce((a, p) => a + p.marks, 0)
+      : (sec.marksPerQuestion * sec.selectCount);
+
     const engInstruction = sec.instruction || getDefaultSectionInstruction(sec.questionType, sec.selectCount, sec.totalCount);
     const urInstruction = sec.instructionUrdu || getDefaultSectionInstructionUrdu(sec.questionType, sec.selectCount, sec.totalCount);
 
+    // Q9 (Theorems) detection
+    const isQ9 = qNum === 9 || sec.title.includes('9') || sec.title.toLowerCase().includes('theorem');
+
+    // Helper functions for bilingual part extraction
+    const cleanPartText = (text: string | undefined) => {
+      if (!text) return '';
+      return text.replace(/^\s*\([a-z]\)\s*|^\s*\([\u0600-\u06FF]\)\s*/i, '').trim();
+    };
+
+    const getPartLabelEn = (qId: string, idx: number) => {
+      const match = qId.match(/_part_([a-z])_/i);
+      return match ? match[1].toLowerCase() : (idx === 0 ? 'a' : 'b');
+    };
+
+    const getPartLabelUr = (labelEn: string) => {
+      const mapping: Record<string, string> = { a: 'الف', b: 'ب', c: 'ج', d: 'د', e: 'ہ' };
+      return mapping[labelEn] || 'الف';
+    };
+
+    // If it's a long question (hasParts), we do NOT render the standard section heading bar!
+    const shouldRenderHeading = showPartHeadings && !sec.hasParts;
+
     return (
       <section key={sec.id} className="relative print:break-inside-auto mb-2" style={{ marginBottom: `${questionGap}px` }}>
-        {showPartHeadings && (
-          /* ── Section heading bar ── */
+        {shouldRenderHeading && (
+          /* ── Section heading bar (only for short questions / objective) ── */
           <table className="w-full border-collapse mb-1" style={{ fontSize: `${englishFontSize}px` }}>
             <tbody>
               <tr className="border-t border-b border-black">
-                {/* Marks column */}
+                {/* Marks column on left */}
                 <td className="border-r border-black text-center font-black align-middle py-0.5 pr-2 pl-1" style={{ width: '28px', fontSize: `${sectionHeaderSize}px` }}>
                   {sectionMarks > 0 ? sectionMarks : ''}
                 </td>
@@ -1252,98 +1320,160 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     {urInstruction}
                   </td>
                 )}
+                {/* Repeat Marks column on far right if Urdu is showing */}
+                {(languageMode === 'Bilingual' || languageMode === 'Urdu') && (
+                  <td className="border-l border-black text-center font-black align-middle py-0.5 pl-2 pr-1" style={{ width: '28px', fontSize: `${sectionHeaderSize}px` }}>
+                    {sectionMarks > 0 ? sectionMarks : ''}
+                  </td>
+                )}
               </tr>
             </tbody>
           </table>
         )}
 
-        {/* ── Sub-questions ── */}
+        {/* ── Sub-questions / Parts list ── */}
         <table className="w-full border-collapse" style={{ fontSize: `${englishFontSize}px` }}>
           <tbody>
             {secQuestions.map((q, idx) => {
-              const subNum = sec.subQuestionNumbering === 'Roman'
-                ? `(${romanNums[idx] || idx + 1})`
-                : `(${idx + 1})`;
               const showEn = (languageMode === 'Bilingual' || languageMode === 'English') && q.text && (q.medium !== 'Urdu' || languageMode === 'English');
               const showUr = (languageMode === 'Bilingual' || languageMode === 'Urdu') && q.textUrdu;
 
+              // Compute labels depending on whether the section uses parts (a/b) or sub-questions (i/ii/iii)
+              let subNumEn = '';
+              let subNumUr = '';
+
+              if (isQ9) {
+                // Theorem choice has no (a)/(b) labels
+                if (idx === 0) {
+                  subNumEn = `${qNum}. `;
+                  subNumUr = ` ${qNum}`;
+                } else {
+                  subNumEn = '';
+                  subNumUr = '';
+                }
+              } else if (sec.hasParts) {
+                const labelEn = getPartLabelEn(q.id, idx);
+                const labelUr = getPartLabelUr(labelEn);
+                // The first part prepends the question number (e.g. "5. (a)" / "(الف) 5")
+                if (idx === 0) {
+                  subNumEn = `${qNum}. (${labelEn}) `;
+                  subNumUr = ` (${labelUr}) ${qNum}`;
+                } else {
+                  subNumEn = `(${labelEn}) `;
+                  subNumUr = ` (${labelUr})`;
+                }
+              } else {
+                const subNum = sec.subQuestionNumbering === 'Roman'
+                  ? `(${romanNums[idx] || idx + 1})`
+                  : `(${idx + 1})`;
+                subNumEn = `${subNum} `;
+                subNumUr = ` ${subNum}`;
+              }
+
+              // Strip labels from question texts to avoid double-labeling
+              const cleanedTextEn = sec.hasParts ? cleanPartText(q.text) : q.text;
+              const cleanedTextUr = sec.hasParts ? cleanPartText(q.textUrdu) : q.textUrdu;
+
               return (
-                <tr key={q.id} className="break-inside-avoid relative group/q align-top">
-                  {/* Marks left column (per question) */}
-                  {sec.marksPerQuestion > 0 && (
-                    <td className="text-center font-black border-r border-black pr-1 pl-0.5 align-top" style={{ width: '28px', fontSize: `${englishFontSize - 1}px`, paddingTop: '3px' }}>
-                      {sec.marksPerQuestion}
-                    </td>
+                <React.Fragment key={q.id}>
+                  {/* For Q9, separate the two questions with an "OR / یا" divider */}
+                  {isQ9 && idx === 1 && (
+                    <tr className="break-inside-avoid">
+                      {/* Left space for marks */}
+                      {q.marks > 0 && <td className="border-r border-black" style={{ width: '28px' }}></td>}
+                      <td colSpan={showUr ? 3 : 2} className="text-center py-2 font-black text-sm uppercase tracking-widest">
+                        <div className="flex justify-center items-center gap-10">
+                          <span className="font-bold border border-black px-2 py-0.5 rounded">OR</span>
+                          <span className="font-urdu font-black border border-black px-2 py-0.5 rounded" dir="rtl">یا</span>
+                        </div>
+                      </td>
+                    </tr>
                   )}
 
-                  {/* Sub-number + English text */}
-                  <td className="pl-1 pr-1 align-top" style={{ paddingTop: '3px' }}>
-                    <span className="font-black mr-1" style={{ fontSize: `${englishFontSize}px` }}>{subNum}</span>
-                    {showEn && (
-                      isManualEdit
-                        ? <span contentEditable suppressContentEditableWarning className="outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-0.5">{q.text}</span>
-                        : <MathRenderer text={q.text} inline className="leading-snug" />
+                  <tr className="break-inside-avoid relative group/q align-top">
+                    {/* Marks left column (per question / part) */}
+                    {q.marks > 0 && (
+                      <td className="text-center font-black border-r border-black pr-1 pl-0.5 align-top" style={{ width: '28px', fontSize: `${englishFontSize - 1}px`, paddingTop: '3px' }}>
+                        {q.marks}
+                      </td>
                     )}
-                    {/* Image (below English text) */}
-                    {q.imageUrl && (
-                      <div className="my-1 flex justify-center">
-                        <ResizableImage src={q.imageUrl} alt="Diagram" initialDims={{ w: (q as any).imageWidth, h: (q as any).imageHeight, x: (q as any).imageX || 0, y: (q as any).imageY || 0 }} isEditing={isManualEdit} onUpdate={d => updateQuestionImageDims(q.id, d)} />
-                      </div>
-                    )}
-                    {/* MCQ options below English question */}
-                    {isMCQType(q.type) && (languageMode === 'Bilingual' || languageMode === 'English') && (
-                      <div className="grid gap-1 mt-1" style={{ gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))` }}>
-                        {getMcqOptions(q).map((_, i) => {
-                          const opt = q.options?.[i] || '';
-                          const isCorrect = showAnswersInline && opt === q.correctAnswer;
-                          return (
-                            <div key={i} className="flex gap-1 items-start min-w-0">
-                              <span style={{ fontSize: `${optionLabelSize}px` }} className={`font-black shrink-0 ${isCorrect ? 'text-green-700' : 'text-slate-500'}`}>({String.fromCharCode(65+i)})</span>
-                              <MathRenderer text={opt} className={`font-medium whitespace-normal break-words ${isCorrect ? 'font-bold text-green-700' : ''}`} inline />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </td>
 
-                  {/* Urdu text column */}
-                  {showUr && (
-                    <td dir="rtl" className="text-right pl-1 pr-1 font-urdu align-top" style={{ fontSize: `${urduFontSize}px`, paddingTop: '3px', minWidth: '120px' }}>
-                      {isManualEdit
-                        ? <span contentEditable suppressContentEditableWarning className="outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-0.5">{q.textUrdu}</span>
-                        : <MathRenderer text={q.textUrdu!} inline />}
-                      {/* MCQ Urdu options */}
-                      {isMCQType(q.type) && (languageMode === 'Bilingual' || languageMode === 'Urdu') && (
-                        <div dir="rtl" className="grid gap-1 mt-1" style={{ gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))` }}>
+                    {/* Sub-number / part label + English text */}
+                    <td className="pl-1 pr-1 align-top" style={{ paddingTop: '3px' }}>
+                      {subNumEn && <span className="font-black mr-1" style={{ fontSize: `${englishFontSize}px` }}>{subNumEn}</span>}
+                      {showEn && (
+                        isManualEdit
+                          ? <span contentEditable suppressContentEditableWarning className="outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-0.5">{cleanedTextEn}</span>
+                          : <MathRenderer text={cleanedTextEn} inline className="leading-snug font-bold" />
+                      )}
+                      {/* Image (below English text) */}
+                      {q.imageUrl && (
+                        <div className="my-1 flex justify-center">
+                          <ResizableImage src={q.imageUrl} alt="Diagram" initialDims={{ w: (q as any).imageWidth, h: (q as any).imageHeight, x: (q as any).imageX || 0, y: (q as any).imageY || 0 }} isEditing={isManualEdit} onUpdate={d => updateQuestionImageDims(q.id, d)} />
+                        </div>
+                      )}
+                      {/* MCQ options below English question */}
+                      {isMCQType(q.type) && (languageMode === 'Bilingual' || languageMode === 'English') && (
+                        <div className="grid gap-1 mt-1" style={{ gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))` }}>
                           {getMcqOptions(q).map((_, i) => {
-                            const optUrdu = q.optionsUrdu?.[i] || '';
-                            const isCorrect = showAnswersInline && optUrdu === q.correctAnswerUrdu && optUrdu !== '';
+                            const opt = q.options?.[i] || '';
+                            const isCorrect = showAnswersInline && opt === q.correctAnswer;
                             return (
-                              <div key={i} className="flex gap-1 items-start min-w-0 flex-row-reverse">
+                              <div key={i} className="flex gap-1 items-start min-w-0">
                                 <span style={{ fontSize: `${optionLabelSize}px` }} className={`font-black shrink-0 ${isCorrect ? 'text-green-700' : 'text-slate-500'}`}>({String.fromCharCode(65+i)})</span>
-                                <MathRenderer text={optUrdu} className={`font-medium whitespace-normal break-words ${isCorrect ? 'font-bold text-green-700' : ''}`} inline />
+                                <MathRenderer text={opt} className={`font-medium whitespace-normal break-words ${isCorrect ? 'font-bold text-green-700' : ''}`} inline />
                               </div>
                             );
                           })}
                         </div>
                       )}
                     </td>
-                  )}
 
-                  {/* Sub-number repeat on far right (Urdu side only paper style) */}
-                  {(languageMode === 'Bilingual' || languageMode === 'Urdu') && (
-                    <td className="text-right font-black pr-0.5 align-top" style={{ width: '24px', fontSize: `${englishFontSize}px`, paddingTop: '3px' }}>
-                      {subNum}
-                    </td>
-                  )}
+                    {/* Urdu text column */}
+                    {showUr && (
+                      <td dir="rtl" className="text-right pl-1 pr-1 font-urdu align-top font-bold" style={{ fontSize: `${urduFontSize}px`, paddingTop: '3px', minWidth: '120px' }}>
+                        {isManualEdit
+                          ? <span contentEditable suppressContentEditableWarning className="outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-0.5">{cleanedTextUr}</span>
+                          : <MathRenderer text={cleanedTextUr!} inline />}
+                        {/* MCQ Urdu options */}
+                        {isMCQType(q.type) && (languageMode === 'Bilingual' || languageMode === 'Urdu') && (
+                          <div dir="rtl" className="grid gap-1 mt-1" style={{ gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))` }}>
+                            {getMcqOptions(q).map((_, i) => {
+                              const optUrdu = q.optionsUrdu?.[i] || '';
+                              const isCorrect = showAnswersInline && optUrdu === q.correctAnswerUrdu && optUrdu !== '';
+                              return (
+                                <div key={i} className="flex gap-1 items-start min-w-0 flex-row-reverse">
+                                  <span style={{ fontSize: `${optionLabelSize}px` }} className={`font-black shrink-0 ${isCorrect ? 'text-green-700' : 'text-slate-500'}`}>({String.fromCharCode(65+i)})</span>
+                                  <MathRenderer text={optUrdu} className={`font-medium whitespace-normal break-words ${isCorrect ? 'font-bold text-green-700' : ''}`} inline />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </td>
+                    )}
 
-                  {isManualEdit && (
-                    <td className="print:hidden align-top" style={{ width: '28px' }}>
-                      <button onClick={() => removeQuestion(q.id)} className="p-1 text-red-400 hover:text-red-600"><Trash2 size={12}/></button>
-                    </td>
-                  )}
-                </tr>
+                    {/* Sub-number repeat on far right (Urdu side only paper style) */}
+                    {(languageMode === 'Bilingual' || languageMode === 'Urdu') && (
+                      <td className="text-right font-black pr-0.5 align-top" style={{ width: '24px', fontSize: `${englishFontSize}px`, paddingTop: '3px' }}>
+                        {subNumUr}
+                      </td>
+                    )}
+
+                    {/* Urdu marks column (per question / part) */}
+                    {(languageMode === 'Bilingual' || languageMode === 'Urdu') && q.marks > 0 && (
+                      <td className="text-center font-black border-l border-black pl-1 pr-0.5 align-top" style={{ width: '28px', fontSize: `${englishFontSize - 1}px`, paddingTop: '3px' }}>
+                        {q.marks}
+                      </td>
+                    )}
+
+                    {isManualEdit && (
+                      <td className="print:hidden align-top" style={{ width: '28px' }}>
+                        <button onClick={() => removeQuestion(q.id)} className="p-1 text-red-400 hover:text-red-600"><Trash2 size={12}/></button>
+                      </td>
+                    )}
+                  </tr>
+                </React.Fragment>
               );
             })}
           </tbody>

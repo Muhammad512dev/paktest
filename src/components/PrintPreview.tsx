@@ -1188,7 +1188,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                         if (secQuestions.length === 0) return null;
                         const result = boardExamFormat
                           ? renderBoardExamSection(sec, secQuestions, qNum)
-                          : renderSection(sec, secQuestions);
+                          : renderSection(sec, secQuestions, qNum);
                         qNum++;
                         return result;
                       });
@@ -1558,12 +1558,17 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
         {showPartHeadings && (
           <>
             {/* ── Section title bar ── */}
-            <div className="flex justify-between items-stretch border-b-2 border-black mb-2 pb-1 relative group break-inside-avoid">
+            <div className="flex justify-between items-start gap-4 border-b-2 border-black mb-2 pb-1 relative group break-inside-avoid">
               {isManualEdit && <button onClick={() => removeSection(sec.id)} className="absolute -left-8 top-1 p-1 bg-red-500 text-white rounded-md z-20 shadow-lg print:hidden opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all"><Trash2 size={12} /></button>}
 
-              {/* Left: Q title */}
-              <h3 style={{ fontSize: `${sectionHeaderSize}px`, fontWeight: 900 }} contentEditable={isManualEdit} suppressContentEditableWarning={true} className="uppercase tracking-tighter outline-none">
-                {questionNumber ? `Q.${questionNumber} ${sec.title.replace(/^\s*Q\.?\s*\d+\s*/i, '')}` : sec.title}
+              {/* Question number and English statement share one heading line. */}
+              <h3 style={{ fontSize: `${sectionHeaderSize}px`, fontWeight: 900 }} className="flex min-w-0 items-baseline gap-2 outline-none">
+                <span className="shrink-0 uppercase tracking-tighter">{questionNumber ? `Q-${questionNumber}` : sec.title.replace(/^\s*Q\s*[.\-]?\s*\d+\s*/i, '')}</span>
+                {(languageMode === 'Bilingual' || languageMode === 'English') && (
+                  <span contentEditable={isManualEdit} suppressContentEditableWarning={true} className="font-bold italic normal-case tracking-normal whitespace-pre-line">
+                    {sec.instruction || getDefaultSectionInstruction(sec.questionType, sec.selectCount, sec.totalCount)}
+                  </span>
+                )}
               </h3>
 
               {/* Right: Attempt count + marks */}
@@ -1583,15 +1588,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               </div>
             </div>
 
-            {/* ── Instructions line(s) ── */}
+            {/* Urdu statement remains on its RTL line below the bilingual heading. */}
             <div className="mb-3 break-inside-avoid space-y-0.5">
-              {/* English instruction */}
-              {(languageMode === 'Bilingual' || languageMode === 'English') && (
-                <p style={{ fontSize: `${englishFontSize}px` }} contentEditable={isManualEdit} suppressContentEditableWarning={true} className="font-bold text-black italic outline-none whitespace-pre-line">
-                  {sec.instruction || getDefaultSectionInstruction(sec.questionType, sec.selectCount, sec.totalCount)}
-                </p>
-              )}
-              {/* Urdu instruction */}
               {(languageMode === 'Bilingual' || languageMode === 'Urdu') && (
                 <p dir="rtl" style={{ fontSize: `${urduFontSize}px` }} contentEditable={isManualEdit} suppressContentEditableWarning={true} className="font-urdu text-right font-bold text-black outline-none leading-[1.8] whitespace-pre-line">
                   {sec.instructionUrdu || getDefaultSectionInstructionUrdu(sec.questionType, sec.selectCount, sec.totalCount)}

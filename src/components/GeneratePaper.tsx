@@ -250,8 +250,10 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
          if (!updates.instruction) {
             finalUpdates.instruction = getDefaultSectionInstruction(type, sel, tot);
          }
-         const isObjective = ['MCQ', 'Match Columns', 'Fill in the Blanks', 'True/False', 'Spelling Check'].includes(type);
-         finalUpdates.category = isObjective ? 'Objective' : 'Subjective';
+         if (updates.category === undefined) {
+            const isObjective = ['MCQ', 'Match Columns', 'Fill in the Blanks', 'True/False', 'Spelling Check'].includes(type);
+            finalUpdates.category = isObjective ? 'Objective' : 'Subjective';
+         }
       }
 
       setState(prev => ({
@@ -1032,39 +1034,42 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                   </div>
                </div>
 
-               <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                  <div className="flex justify-between items-center mb-6">
+               <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-gray-100 shadow-sm min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-5 sm:mb-6">
                      <h4 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2"><CheckCircle2 size={18} /> Initializing Sections</h4>
                      <button
                         onClick={addNewSection}
-                        className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all flex items-center gap-2"
+                        className="w-full sm:w-auto justify-center px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all flex items-center gap-2"
                      >
                         <Plus size={14} /> Add Custom Section
                      </button>
                   </div>
-                  <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-4 max-h-[55vh] lg:max-h-[440px] overflow-y-scroll overscroll-contain pr-2 custom-scrollbar">
                      {(Object.values(state.paperStructure) as PaperSectionConfig[]).map((sec, idx) => (
-                        <div key={sec.id} className="bg-gray-50 rounded-3xl p-5 border-2 border-transparent hover:border-indigo-100 transition-all group relative">
-                           <div className="flex items-center justify-between mb-4">
+                        <div key={sec.id} className="bg-gray-50 rounded-2xl sm:rounded-3xl p-4 sm:p-5 border-2 border-transparent hover:border-indigo-100 transition-all group relative min-w-0">
+                           <div className="flex items-center justify-between gap-2 mb-4">
                               <div className="flex items-center gap-3">
                                  <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xs font-black shadow-lg shadow-indigo-100">{idx + 1}</div>
                                  <span className="font-black text-sm text-gray-800">{sec.title}</span>
                               </div>
-                              <div className="flex gap-2">
-                                 <button onClick={() => setEditingSection(sec)} className="p-2 bg-white text-gray-400 hover:text-indigo-600 rounded-xl shadow-sm border border-gray-100 opacity-0 group-hover:opacity-100 transition-all"><Settings2 size={16} /></button>
-                                 <button onClick={() => removeSection(sec.id)} className="p-2 bg-white text-gray-400 hover:text-red-500 rounded-xl shadow-sm border border-gray-100 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>
+                              <div className="flex gap-2 shrink-0">
+                                 <button onClick={() => setEditingSection(sec)} className="p-2 bg-white text-gray-400 hover:text-indigo-600 rounded-xl shadow-sm border border-gray-100 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all"><Settings2 size={16} /></button>
+                                 <button onClick={() => removeSection(sec.id)} className="p-2 bg-white text-gray-400 hover:text-red-500 rounded-xl shadow-sm border border-gray-100 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>
                               </div>
                            </div>
-                           <div className="ml-12 mb-3">
-                              <input
-                                 type="text"
+                           <div className="sm:ml-12 mb-3">
+                              <textarea
                                  value={sec.instruction || getDefaultSectionInstruction(sec.questionType, sec.selectCount, sec.totalCount)}
                                  onChange={e => updateSection(sec.id, { instruction: e.target.value })}
-                                 placeholder="Section instruction statement..."
-                                 className="w-full text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:border-indigo-500"
+                                 placeholder="Question heading / statement..."
+                                 rows={2}
+                                 className="w-full resize-y text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500"
                               />
                            </div>
-                           <div className="flex flex-wrap gap-3 ml-12">
+                           <div className="flex flex-wrap gap-3 sm:ml-12">
+                              <div className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border ${sec.category === 'Objective' ? 'text-blue-600 border-blue-200' : 'text-purple-600 border-purple-200'}`}>
+                                 <Layers size={12} /> {sec.category} Part
+                              </div>
                               <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-500 uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-slate-200">
                                  <Library size={12} className="text-indigo-500" /> {sec.questionType}
                               </div>
@@ -1187,13 +1192,13 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
 
          {/* SECTION PROPERTY EDITOR MODAL */}
          {editingSection && (
-            <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
-               <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-                  <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+               <div className="bg-white rounded-2xl sm:rounded-[2.5rem] shadow-2xl w-full max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+                  <div className="px-5 sm:px-8 py-4 sm:py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
                      <h3 className="font-bold text-lg text-gray-900">Configure Section</h3>
                      <button onClick={() => setEditingSection(null)} className="p-2 hover:bg-gray-200 rounded-full transition-colors"><X size={20} /></button>
                   </div>
-                  <div className="p-8 space-y-6">
+                  <div className="p-5 sm:p-8 space-y-5 sm:space-y-6 overflow-y-auto overscroll-contain custom-scrollbar min-h-0">
                      <div>
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Section Heading</label>
                         <input
@@ -1202,6 +1207,17 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                            onChange={e => setEditingSection({ ...editingSection, title: e.target.value })}
                            className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"
                         />
+                     </div>
+                     <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Paper Part</label>
+                        <select
+                           value={editingSection.category}
+                           onChange={e => setEditingSection({ ...editingSection, category: e.target.value as 'Objective' | 'Subjective' })}
+                           className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                           <option value="Objective">Objective Part</option>
+                           <option value="Subjective">Subjective Part</option>
+                        </select>
                      </div>
                      <div>
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Question Type</label>
@@ -1230,7 +1246,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                         </select>
                      </div>
                      <div>
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">English Statement</label>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">English Question Heading / Statement</label>
                         <textarea
                            value={editingSection.instruction || ''}
                            onChange={e => setEditingSection({ ...editingSection, instruction: e.target.value })}
@@ -1239,7 +1255,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                         />
                      </div>
                      <div>
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Urdu Statement</label>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Urdu Question Heading / Statement</label>
                         <textarea
                            dir="rtl"
                            value={editingSection.instructionUrdu || ''}
@@ -1276,7 +1292,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                         </p>
                      </div>
                   </div>
-                  <div className="p-6 border-t border-gray-100 bg-gray-50 flex gap-3">
+                  <div className="p-4 sm:p-6 border-t border-gray-100 bg-gray-50 flex gap-3 shrink-0">
                      <button onClick={() => setEditingSection(null)} className="flex-1 py-3 text-sm font-bold text-gray-400 hover:bg-gray-200 rounded-xl transition-all">Cancel</button>
                      <button
                         onClick={() => {

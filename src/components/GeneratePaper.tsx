@@ -915,7 +915,8 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
         struct[secId] = {
           id: secId,
           title: secDef.title || `Q.${idx + 1} ${secDef.type}`,
-          instruction: getDefaultSectionInstruction(secDef.type, secDef.selectCount, secDef.totalCount),
+          instruction: secDef.instruction || getDefaultSectionInstruction(secDef.type, secDef.selectCount, secDef.totalCount),
+          instructionUrdu: secDef.instructionUrdu,
           questionType: secDef.type,
           marksPerQuestion: secDef.marksPerQuestion,
           totalCount: secDef.totalCount,
@@ -929,7 +930,8 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
           subQuestionNumbering: secDef.type === 'MCQ' ? 'Numeric' : 'Roman',
           hasParts: secDef.hasParts,
           parts: secDef.parts,
-          chapterDistribution: secDef.chapterDistribution
+          chapterDistribution: secDef.chapterDistribution,
+          isCompulsory: secDef.isCompulsory
         };
       });
 

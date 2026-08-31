@@ -157,6 +157,7 @@ export interface PaperSectionConfig {
   hasParts?: boolean;
   parts?: SchemePart[];
   chapterDistribution?: SchemeChapterRule[];
+  isCompulsory?: boolean;
 }
 
 export const getDefaultSectionInstruction = (type: string, selectCount: number, totalCount: number): string => {
@@ -341,12 +342,15 @@ export interface SchemeSectionDef {
   id: string;
   type: string;                 // 'MCQ', 'Short Answer', 'Long Answer'
   title: string;                // e.g. 'Q-1 Objective', 'Q-5'
+  instruction?: string;         // Optional printed instruction
   totalCount: number;           // Total questions provided
   selectCount: number;          // Questions student must attempt
   marksPerQuestion: number;
   hasParts: boolean;            // If true, uses `parts` field
   parts?: SchemePart[];         // For Long Answer with (a)(b)(c) breakdown
   chapterDistribution?: SchemeChapterRule[];  // For MCQ / Short Answer
+  isCompulsory?: boolean;       // If true, printed as compulsory and counted as required
+  instructionUrdu?: string;     // Optional Urdu instruction for board templates
 }
 
 /** Full pairing scheme record */

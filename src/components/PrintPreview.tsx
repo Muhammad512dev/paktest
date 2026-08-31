@@ -262,6 +262,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
     const allSame = mediums.every(m => m === first);
     return allSame ? first : 'Bilingual';
   });
+  const showEnglish = languageMode === 'Bilingual' || languageMode === 'English';
+  const showUrdu = languageMode === 'Bilingual' || languageMode === 'Urdu';
 
   // Printing Options
   const [printSyllabus, setPrintSyllabus] = useState(false);
@@ -544,14 +546,14 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
           </div>
           
           {/* Main Details Grid */}
-          <div className="grid grid-cols-3 gap-y-2 border-t border-b border-black py-2">
+          <div className={`${languageMode === 'Bilingual' ? 'grid grid-cols-3' : 'grid grid-cols-2'} gap-y-2 border-t border-b border-black py-2`}>
             {/* Left Side: English Info */}
-            <div className="flex flex-col gap-1 text-[11px] text-left">
+            {showEnglish && <div className="flex flex-col gap-1 text-[11px] text-left">
               <div className="font-black" contentEditable suppressContentEditableWarning>{subNameEn}</div>
               <div contentEditable suppressContentEditableWarning>{paperTitleEn}</div>
               <div>Time Allowed: <span contentEditable suppressContentEditableWarning>{timeAllowedEn}</span></div>
               <div>Maximum Marks: <span contentEditable suppressContentEditableWarning>{marksEn}</span></div>
-            </div>
+            </div>}
             
             {/* Middle Side: Group Info */}
             <div className="flex flex-col items-center justify-center text-center text-[11px]">
@@ -560,12 +562,12 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             </div>
             
             {/* Right Side: Urdu Info */}
-            <div className="flex flex-col gap-1 text-[11px] text-right font-urdu items-end" dir="rtl">
+            {showUrdu && <div className="flex flex-col gap-1 text-[11px] text-right font-urdu items-end" dir="rtl">
               <div className="font-black" contentEditable suppressContentEditableWarning>{subNameUr}</div>
               <div contentEditable suppressContentEditableWarning>{paperTitleUr}</div>
               <div>وقت: <span contentEditable suppressContentEditableWarning>{timeAllowedUr}</span></div>
               <div>کل نمبر: <span contentEditable suppressContentEditableWarning>{marksUr}</span></div>
-            </div>
+            </div>}
           </div>
         </div>
       );
@@ -577,7 +579,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
         {showObj && objectiveSections.length > 0 && (
           <div className="objective-portion-wrapper">
             {renderBoardHeader('objective')}
-          <div className={`${layoutMode === 'DoubleColumn' ? 'columns-2 gap-8' : 'space-y-4'}`}>
+          <div className="space-y-4">
               {objectiveSections.map((sec, idx) => {
                 const secQuestions = questions.filter(q => (q as any).sectionId === sec.id);
                 if (secQuestions.length === 0) return null;
@@ -646,7 +648,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     const secQuestions = questions.filter(q => (q as any).sectionId === sec.id);
                     if (secQuestions.length === 0) return null;
                     const qNum = subjectiveShortSections.length + 2 + idx;
-                    const isCompulsory = sec.title.includes('9') || sec.title.toLowerCase().includes('theorem');
+                    const isCompulsory = !!sec.isCompulsory || sec.title.includes('9') || sec.title.toLowerCase().includes('theorem');
                     return (
                       <div key={sec.id} className={`break-inside-avoid ${isCompulsory ? 'border-l-2 border-black pl-2' : ''}`}>
                         {/* Compulsory badge before Q9 */}
@@ -1349,8 +1351,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
         <table className="w-full border-collapse" style={{ fontSize: `${englishFontSize}px` }}>
           <tbody>
             {secQuestions.map((q, idx) => {
-              const showEn = (languageMode === 'Bilingual' || languageMode === 'English') && q.text && (q.medium !== 'Urdu' || languageMode === 'English');
-              const showUr = (languageMode === 'Bilingual' || languageMode === 'Urdu') && q.textUrdu;
+              const showEn = showEnglish && q.text && (q.medium !== 'Urdu' || languageMode === 'English');
+              const showUr = showUrdu && q.textUrdu;
 
               // Compute labels depending on whether the section uses parts (a/b) or sub-questions (i/ii/iii)
               let subNumEn = '';
@@ -1414,7 +1416,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
 
                     {/* Sub-number / part label + English text */}
                     <td className="pl-1 pr-1 align-top" style={{ paddingTop: '3px' }}>
-                      {subNumEn && <span className="font-black mr-1" style={{ fontSize: `${englishFontSize}px` }}>{subNumEn}</span>}
+                      {showEnglish && subNumEn && <span className="font-black mr-1" style={{ fontSize: `${englishFontSize}px` }}>{subNumEn}</span>}
                       {showEn && (
                         isManualEdit
                           ? <span contentEditable suppressContentEditableWarning className="outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-0.5">{cleanedTextEn}</span>
@@ -1428,7 +1430,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       )}
                       {/* MCQ options below English question */}
                       {isMCQType(q.type) && (languageMode === 'Bilingual' || languageMode === 'English') && (
-                        <div className="grid gap-1 mt-1" style={{ gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))` }}>
+                          <div className="grid gap-1 mt-1" style={{ gridTemplateColumns: 'repeat(1, minmax(0, 1fr))' }}>
                           {getMcqOptions(q).map((_, i) => {
                             const opt = q.options?.[i] || '';
                             const isCorrect = showAnswersInline && opt === q.correctAnswer;
@@ -1451,7 +1453,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                           : <MathRenderer text={cleanedTextUr!} inline />}
                         {/* MCQ Urdu options */}
                         {isMCQType(q.type) && (languageMode === 'Bilingual' || languageMode === 'Urdu') && (
-                          <div dir="rtl" className="grid gap-1 mt-1" style={{ gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))` }}>
+                          <div dir="rtl" className="grid gap-1 mt-1" style={{ gridTemplateColumns: 'repeat(1, minmax(0, 1fr))' }}>
                             {getMcqOptions(q).map((_, i) => {
                               const optUrdu = q.optionsUrdu?.[i] || '';
                               const isCorrect = showAnswersInline && optUrdu === q.correctAnswerUrdu && optUrdu !== '';
@@ -1468,14 +1470,14 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     )}
 
                     {/* Sub-number repeat on far right (Urdu side only paper style) */}
-                    {(languageMode === 'Bilingual' || languageMode === 'Urdu') && (
+                    {showUrdu && (
                       <td className="text-right font-black pr-0.5 align-top" style={{ width: '24px', fontSize: `${englishFontSize}px`, paddingTop: '3px' }}>
                         {subNumUr}
                       </td>
                     )}
 
                     {/* Urdu marks column (per question / part) */}
-                    {(languageMode === 'Bilingual' || languageMode === 'Urdu') && q.marks > 0 && (
+                    {showUrdu && q.marks > 0 && (
                       <td className="text-center font-black border-l border-black pl-1 pr-0.5 align-top" style={{ width: '28px', fontSize: `${englishFontSize - 1}px`, paddingTop: '3px' }}>
                         {q.marks}
                       </td>

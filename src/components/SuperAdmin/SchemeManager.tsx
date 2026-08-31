@@ -21,7 +21,9 @@ const emptySection = (idx: number): SchemeSectionDef => ({
   marksPerQuestion: 1,
   hasParts: false,
   parts: [],
-  chapterDistribution: []
+  chapterDistribution: [],
+  isCompulsory: false,
+  instructionUrdu: ''
 });
 
 const emptyPart = (label: string): SchemePart => ({
@@ -161,6 +163,18 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
     return acc + sec.selectCount * sec.marksPerQuestion;
   }, 0), [editingScheme?.structure]);
 
+  const makeLongParts = (idx: number, enabled: boolean) => {
+    const sec = editingScheme?.structure?.[idx];
+    if (!sec) return;
+    const total = Math.max(1, Number(sec.totalCount) || 1);
+    updateSection(idx, {
+      hasParts: enabled,
+      parts: enabled
+        ? Array.from({ length: total }, (_, i) => emptyPart(PART_LABELS[i] || String.fromCharCode(97 + i)))
+        : []
+    });
+  };
+
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"/></div>;
 
   if (editingScheme) return (
@@ -274,7 +288,7 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Question Type</label>
-                        <select value={sec.type} onChange={e => updateSection(idx, { type: e.target.value, hasParts: false, parts: [], chapterDistribution: [] })}
+                        <select value={sec.type} onChange={e => updateSection(idx, { type: e.target.value, hasParts: false, parts: [], chapterDistribution: [], isCompulsory: false })}
                           className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-indigo-500">
                           {QUESTION_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
@@ -289,7 +303,13 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
                           Given Qs (Total)
                           <span className="ml-1 text-gray-300 font-normal normal-case" title="Total questions shown to students">ℹ</span>
                         </label>
-                        <input type="number" min={1} value={sec.totalCount} onChange={e => updateSection(idx, { totalCount: Number(e.target.value) })}
+                        <input type="number" min={1} value={sec.totalCount} onChange={e => {
+                          const totalCount = Number(e.target.value);
+                          updateSection(idx, {
+                            totalCount,
+                            parts: sec.hasParts ? Array.from({ length: Math.max(1, totalCount || 1) }, (_, i) => (sec.parts || [])[i] || emptyPart(PART_LABELS[i] || String.fromCharCode(97 + i))) : sec.parts
+                          });
+                        }}
                           className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
                       </div>
                       <div>
@@ -310,17 +330,48 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
                       </div>
                     )}
 
-                    <div className="flex items-center gap-4 p-4 bg-violet-50 border border-violet-100 rounded-2xl">
-                      <Layers size={18} className="text-violet-600 shrink-0"/>
-                      <div className="flex-1">
-                        <p className="font-bold text-sm text-violet-900">Long Question Parts (a), (b), (c)...</p>
-                        <p className="text-xs text-violet-600">Define sub-parts with individual chapter sources and marks</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">English Statement</label>
+                        <input value={sec.instruction || ''} onChange={e => updateSection(idx, { instruction: e.target.value })}
+                          placeholder="Write detailed answers. Attempt any 3 out of 5."
+                          className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-indigo-500"/>
                       </div>
-                      <button onClick={() => updateSection(idx, { hasParts: !sec.hasParts, parts: !sec.hasParts ? [emptyPart('a'), emptyPart('b')] : [] })}
-                        className={`w-12 h-6 rounded-full relative transition-colors shrink-0 ${sec.hasParts ? 'bg-violet-600' : 'bg-gray-200'}`}>
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${sec.hasParts ? 'right-1' : 'left-1'}`}/>
-                      </button>
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Urdu Statement</label>
+                        <input dir="rtl" value={sec.instructionUrdu || ''} onChange={e => updateSection(idx, { instructionUrdu: e.target.value })}
+                          placeholder="تفصیلی جوابات لکھیں۔"
+                          className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-urdu font-bold text-xs text-right outline-none focus:ring-2 focus:ring-indigo-500"/>
+                      </div>
                     </div>
+
+                    {sec.type === 'Long Answer' && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-4 p-4 bg-rose-50 border border-rose-100 rounded-2xl">
+                          <CheckCircle2 size={18} className="text-rose-600 shrink-0"/>
+                          <div className="flex-1">
+                            <p className="font-bold text-sm text-rose-900">Compulsory Long Question</p>
+                            <p className="text-xs text-rose-600">Prints a compulsory label before this subjective part-two question</p>
+                          </div>
+                          <button onClick={() => updateSection(idx, { isCompulsory: !sec.isCompulsory, selectCount: !sec.isCompulsory ? sec.totalCount : sec.selectCount })}
+                            className={`w-12 h-6 rounded-full relative transition-colors shrink-0 ${sec.isCompulsory ? 'bg-rose-600' : 'bg-gray-200'}`}>
+                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${sec.isCompulsory ? 'right-1' : 'left-1'}`}/>
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-4 p-4 bg-violet-50 border border-violet-100 rounded-2xl">
+                          <Layers size={18} className="text-violet-600 shrink-0"/>
+                          <div className="flex-1">
+                            <p className="font-bold text-sm text-violet-900">Make Sub-Part Questions</p>
+                            <p className="text-xs text-violet-600">Creates one part for each generated long question, such as (a) to (e) for 5 longs</p>
+                          </div>
+                          <button onClick={() => makeLongParts(idx, !sec.hasParts)}
+                            className={`w-12 h-6 rounded-full relative transition-colors shrink-0 ${sec.hasParts ? 'bg-violet-600' : 'bg-gray-200'}`}>
+                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${sec.hasParts ? 'right-1' : 'left-1'}`}/>
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {sec.hasParts && (
                       <div className="space-y-3">

@@ -163,16 +163,16 @@ export interface PaperSectionConfig {
 export const getDefaultSectionInstruction = (type: string, selectCount: number, totalCount: number): string => {
   const isAll = selectCount >= totalCount;
   const normType = String(type || '').trim().toLowerCase();
-  
+
   if (normType.includes('mcq') || normType.includes('multiple choice')) {
     return 'Choose the correct option.';
   } else if (normType.includes('short')) {
-    return isAll 
-      ? 'Write short answers to all questions.' 
+    return isAll
+      ? 'Write short answers to all questions.'
       : `Write short answers to any ${selectCount} out of ${totalCount} questions.`;
   } else if (normType.includes('long') || normType.includes('essay') || normType.includes('subjective')) {
-    return isAll 
-      ? 'Answer all of the following questions in detail.' 
+    return isAll
+      ? 'Answer all of the following questions in detail.'
       : `Answer any ${selectCount} out of ${totalCount} questions in detail.`;
   } else if (normType.includes('blank')) {
     return 'Fill in the blanks with appropriate words.';
@@ -181,8 +181,8 @@ export const getDefaultSectionInstruction = (type: string, selectCount: number, 
   } else if (normType.includes('match') || normType.includes('column')) {
     return 'Match the items in Column A with Column B.';
   } else {
-    return isAll 
-      ? `Answer all of the following ${type} questions.` 
+    return isAll
+      ? `Answer all of the following ${type} questions.`
       : `Attempt any ${selectCount} out of ${totalCount} questions.`;
   }
 };
@@ -228,6 +228,8 @@ export interface ExamPaper {
   structure: PaperStructure;
   watermark: WatermarkType;
   layoutMode: PaperLayoutMode;
+  /** Whether marks are printed beside each question. Defaults to true for legacy papers. */
+  showQuestionMarks?: boolean;
   createdAt: string;
   createdBy: string;
   status: 'Draft' | 'Finalized';

@@ -393,12 +393,17 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
     return sectionsList.filter(s => s.category !== 'Objective');
   }, [sectionsList, printViewMode]);
 
+  const isLongQuestionSection = (section: PaperSectionConfig) => {
+    const normalizedType = String(section.questionType || '').toLowerCase();
+    return Boolean(section.hasParts) || normalizedType.includes('long') || normalizedType.includes('essay');
+  };
+
   const subjectiveShortSections = useMemo(() => {
-    return subjectiveSections.filter(s => !s.hasParts);
+    return subjectiveSections.filter(s => !isLongQuestionSection(s));
   }, [subjectiveSections]);
 
   const subjectiveLongSections = useMemo(() => {
-    return subjectiveSections.filter(s => s.hasParts);
+    return subjectiveSections.filter(s => isLongQuestionSection(s));
   }, [subjectiveSections]);
 
   const mcqsCount = questions.filter(q => isMCQType(q.type)).length;
@@ -1202,25 +1207,63 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     <div className="text-center mb-3 pb-1 border-b-2 border-black">
                       {boardExamFormat ? (
                         <div className="flex justify-between items-center px-2">
-                          <span className="font-black uppercase tracking-widest" style={{ fontSize: `${sectionHeaderSize}px` }}>Part II: Subjective</span>
-                          <span dir="rtl" className="font-urdu font-black" style={{ fontSize: `${urduFontSize}px` }}>حصہ دوم – انشائی</span>
+                          <span className="font-black uppercase tracking-widest" style={{ fontSize: `${sectionHeaderSize}px` }}>Subjective</span>
+                          <span dir="rtl" className="font-urdu font-black" style={{ fontSize: `${urduFontSize}px` }}>انشائی حصہ</span>
                         </div>
                       ) : (
-                        <h2 className="text-lg font-black uppercase tracking-widest">Part II: Subjective</h2>
+                        <h2 className="text-lg font-black uppercase tracking-widest">Subjective</h2>
                       )}
                     </div>
                   )}
                   <div className={`flex-1 ${layoutMode === 'DoubleColumn' && !isGridView ? 'columns-2 gap-8' : 'space-y-1'}`}>
                     {(() => {
-                      let qNum = objectiveSections.length + 1;
+                      let qNum = objectiveSections.filter(sec => questions.some(q => (q as any).sectionId === sec.id)).length + 1;
+                      let longHeadingRendered = false;
+
                       return subjectiveSections.map((sec) => {
                         const secQuestions = questions.filter(q => (q as any).sectionId === sec.id);
                         if (secQuestions.length === 0) return null;
-                        const result = boardExamFormat
-                          ? renderBoardExamSection(sec, secQuestions, qNum)
-                          : renderSection(sec, secQuestions);
-                        qNum++;
-                        return result;
+
+                        const currentQuestionNumber = qNum++;
+                        const isLongSection = isLongQuestionSection(sec);
+                        const showLongHeading = isLongSection && !longHeadingRendered;
+                        if (showLongHeading) longHeadingRendered = true;
+
+                        return (
+                          <React.Fragment key={sec.id}>
+                            {showLongHeading && showPartHeadings && (
+                              <div className="my-4 break-inside-avoid border-y-2 border-black py-2">
+                                <div className="flex items-center justify-between gap-4">
+                                  {showEnglish && (
+                                    <h2 className="font-black uppercase tracking-widest whitespace-pre-line" style={{ fontSize: `${sectionHeaderSize}px` }}>
+                                      {paper.longQuestionHeading || 'Subjective Part II'}
+                                    </h2>
+                                  )}
+                                  {showUrdu && (
+                                    <h2 dir="rtl" className="font-urdu font-black text-right whitespace-pre-line" style={{ fontSize: `${urduFontSize}px` }}>
+                                      {paper.longQuestionHeadingUrdu || 'حصہ دوم – تفصیلی سوالات'}
+                                    </h2>
+                                  )}
+                                </div>
+                                <div className="mt-1 flex items-start justify-between gap-4">
+                                  {showEnglish && (
+                                    <p className="font-bold italic whitespace-pre-line" style={{ fontSize: `${englishFontSize}px` }}>
+                                      {paper.longQuestionInstruction || 'Write detailed answers to the following questions.'}
+                                    </p>
+                                  )}
+                                  {showUrdu && (
+                                    <p dir="rtl" className="font-urdu font-bold text-right whitespace-pre-line" style={{ fontSize: `${urduFontSize}px` }}>
+                                      {paper.longQuestionInstructionUrdu || 'درج ذیل سوالات کے تفصیلی جوابات لکھیں۔'}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                            {boardExamFormat
+                              ? renderBoardExamSection(sec, secQuestions, currentQuestionNumber)
+                              : renderSection(sec, secQuestions, currentQuestionNumber)}
+                          </React.Fragment>
+                        );
                       });
                     })()}
                   </div>
@@ -1509,7 +1552,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
     );
   }
 
-  function renderSection(sec: PaperSectionConfig, secQuestions: Question[]) {
+  function renderSection(sec: PaperSectionConfig, secQuestions: Question[], questionNumber?: number) {
     return (
       <section key={sec.id} className="relative print:break-inside-auto mb-4" style={{ marginBottom: `${questionGap}px` }}>
         {showPartHeadings && (
@@ -1520,7 +1563,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
 
               {/* Left: Q title */}
               <h3 style={{ fontSize: `${sectionHeaderSize}px`, fontWeight: 900 }} contentEditable={isManualEdit} suppressContentEditableWarning={true} className="uppercase tracking-tighter outline-none">
-                {sec.title}
+                {questionNumber ? `Q.${questionNumber} ${sec.title.replace(/^\s*Q\.?\s*\d+\s*/i, '')}` : sec.title}
               </h3>
 
               {/* Right: Attempt count + marks */}

@@ -230,6 +230,12 @@ export interface ExamPaper {
   layoutMode: PaperLayoutMode;
   /** Whether marks are printed beside each question. Defaults to true for legacy papers. */
   showQuestionMarks?: boolean;
+  /** Heading inserted immediately before the long/detailed-answer portion. */
+  longQuestionHeading?: string;
+  longQuestionHeadingUrdu?: string;
+  /** Instruction inserted below the long-question heading. */
+  longQuestionInstruction?: string;
+  longQuestionInstructionUrdu?: string;
   createdAt: string;
   createdBy: string;
   status: 'Draft' | 'Finalized';

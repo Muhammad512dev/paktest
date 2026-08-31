@@ -33,7 +33,11 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
    const [currentPaper, setCurrentPaper] = useState<ExamPaper>({
       ...paper,
       questions: paper.questions || [],
-      showQuestionMarks: paper.showQuestionMarks ?? true
+      showQuestionMarks: paper.showQuestionMarks ?? true,
+      longQuestionHeading: paper.longQuestionHeading ?? 'Subjective Part II',
+      longQuestionHeadingUrdu: paper.longQuestionHeadingUrdu ?? 'حصہ دوم – تفصیلی سوالات',
+      longQuestionInstruction: paper.longQuestionInstruction ?? 'Write detailed answers to the following questions.',
+      longQuestionInstructionUrdu: paper.longQuestionInstructionUrdu ?? 'درج ذیل سوالات کے تفصیلی جوابات لکھیں۔'
    });
    const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
    const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
@@ -960,6 +964,36 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                      <span className="text-[10px] font-bold uppercase">Marks on Every Question</span>
                      {(currentPaper.showQuestionMarks ?? true) ? <Eye size={14} /> : <EyeOff size={14} />}
                   </button>
+
+                  <div className="space-y-2 rounded-lg border border-slate-700 bg-slate-800/50 p-3">
+                     <p className="text-[9px] font-bold text-slate-400 uppercase">Long Question Heading</p>
+                     <input
+                        value={currentPaper.longQuestionHeading ?? ''}
+                        onChange={e => setCurrentPaper(prev => ({ ...prev, longQuestionHeading: e.target.value }))}
+                        placeholder="Subjective Part II"
+                        className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1.5 text-[10px] font-bold text-white outline-none focus:border-indigo-500"
+                     />
+                     <input
+                        dir="rtl"
+                        value={currentPaper.longQuestionHeadingUrdu ?? ''}
+                        onChange={e => setCurrentPaper(prev => ({ ...prev, longQuestionHeadingUrdu: e.target.value }))}
+                        placeholder="حصہ دوم – تفصیلی سوالات"
+                        className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1.5 text-right text-[10px] font-urdu font-bold text-white outline-none focus:border-indigo-500"
+                     />
+                     <textarea
+                        value={currentPaper.longQuestionInstruction ?? ''}
+                        onChange={e => setCurrentPaper(prev => ({ ...prev, longQuestionInstruction: e.target.value }))}
+                        placeholder="Write detailed answers to the following questions."
+                        className="min-h-[58px] w-full resize-none rounded-md border border-slate-600 bg-slate-900 px-2 py-1.5 text-[10px] font-semibold text-white outline-none focus:border-indigo-500"
+                     />
+                     <textarea
+                        dir="rtl"
+                        value={currentPaper.longQuestionInstructionUrdu ?? ''}
+                        onChange={e => setCurrentPaper(prev => ({ ...prev, longQuestionInstructionUrdu: e.target.value }))}
+                        placeholder="درج ذیل سوالات کے تفصیلی جوابات لکھیں۔"
+                        className="min-h-[58px] w-full resize-none rounded-md border border-slate-600 bg-slate-900 px-2 py-1.5 text-right text-[10px] font-urdu font-semibold text-white outline-none focus:border-indigo-500"
+                     />
+                  </div>
 
                   <div className="space-y-2">
                      <p className="text-[9px] font-bold text-slate-500 uppercase flex items-center gap-1.5"><Key size={12} /> Answer Display Mode</p>

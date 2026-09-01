@@ -320,9 +320,11 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
             ...prev.structure,
             [activeSectionId]: sectionConfig
          },
-         // Optionally update marks of existing questions in this section
+         // Part-based sections retain each part's configured marks.
          questions: prev.questions.map(q =>
-            q.sectionId === activeSectionId ? { ...q, marks: sectionConfig.marksPerQuestion } : q
+            q.sectionId === activeSectionId && !sectionConfig.hasParts
+               ? { ...q, marks: sectionConfig.marksPerQuestion }
+               : q
          )
       }));
       setIsConfigModalOpen(false);

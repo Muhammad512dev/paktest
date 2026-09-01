@@ -31,12 +31,12 @@ const { PrismaClient } = Prisma as any;
 // but Prisma's built-in pool works well for a single-server deployment.
 const POOL_SIZE = parseInt(process.env.DATABASE_POOL_SIZE || '20', 10);
 const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL + (process.env.DATABASE_URL?.includes('?') ? '&' : '?') + `connection_limit=${POOL_SIZE}&pool_timeout=20`,
+    datasources: {
+        db: {
+            url: process.env.DATABASE_URL + (process.env.DATABASE_URL?.includes('?') ? '&' : '?') + `connection_limit=${POOL_SIZE}&pool_timeout=20`,
+        },
     },
-  },
-  log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
+    log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
 });
 
 const app = express();
@@ -46,8 +46,8 @@ app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
-  console.error('FATAL: JWT_SECRET environment variable is not set.');
-  process.exit(1);
+    console.error('FATAL: JWT_SECRET environment variable is not set.');
+    process.exit(1);
 }
 
 // ... (Configuration and Middleware remain unchanged) ...
@@ -55,43 +55,43 @@ if (!JWT_SECRET) {
 // Ensure uploads directory exists
 const uploadDir = path.join((process as any).cwd(), 'uploads');
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+    fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 // Configure Multer Storage
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    // Sanitize filename and prepend timestamp
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, uniqueSuffix + ext);
-  }
+    destination: (req, file, cb) => {
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        // Sanitize filename and prepend timestamp
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        cb(null, uniqueSuffix + ext);
+    }
 });
 
 const ALLOWED_FILE_TYPES = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx', '.xls', '.xlsx'];
 
 const upload = multer({
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (ALLOWED_FILE_TYPES.includes(ext)) {
-      cb(null, true);
-    } else {
-      cb(new Error(`File type ${ext} is not allowed`));
+    storage: storage,
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (ALLOWED_FILE_TYPES.includes(ext)) {
+            cb(null, true);
+        } else {
+            cb(new Error(`File type ${ext} is not allowed`));
+        }
     }
-  }
 });
 
 // --- MIDDLEWARE ---
 
 // 1. CORS Middleware MUST BE FIRST so error responses (429, 500, etc.) include CORS headers
 app.use(cors({
-  origin: true, // Reflect request origin to allow all web and preview deployments
-  credentials: true
+    origin: true, // Reflect request origin to allow all web and preview deployments
+    credentials: true
 }));
 
 // 2. Rate Limiting
@@ -106,8 +106,8 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }) as any);
 
 // Request Logger Middleware (Debug 404s)
 app.use(((req: any, res: any, next: any) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  next();
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
 }) as any);
 
 // Serve Uploads Static Folder
@@ -117,23 +117,23 @@ app.use('/uploads', express.static(uploadDir) as any);
 // Auth Middleware
 // Fixed: Use any for req and res to avoid property existence errors in the auth middleware
 const authenticate = (req: any, res: any, next: any) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(' ')[1];
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
-  try {
-    const user = jwt.verify(token, JWT_SECRET) as any;
-    req.user = user;
-    next();
-  } catch (e) {
-    return res.status(403).json({ error: 'Invalid token' });
-  }
+    try {
+        const user = jwt.verify(token, JWT_SECRET) as any;
+        req.user = user;
+        next();
+    } catch (e) {
+        return res.status(403).json({ error: 'Invalid token' });
+    }
 };
 
 const getGeminiKeys = (): string[] => {
-  const raw = process.env.GEMINI_API_KEY || '';
-  return raw.split(',').map(k => k.trim()).filter(Boolean);
+    const raw = process.env.GEMINI_API_KEY || '';
+    return raw.split(',').map(k => k.trim()).filter(Boolean);
 };
 
 const GEMINI_MODELS = ['gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3-flash-preview'];
@@ -141,163 +141,163 @@ const GEMINI_MODELS = ['gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const cleanGeminiJSON = (text: string): any => {
-  let cleaned = text.trim();
-  // Strip markdown code fences (multi-line aware)
-  cleaned = cleaned.replace(/^```(?:json)?\s*/im, '').replace(/\s*```\s*$/m, '').trim();
-  // Fix trailing commas before } or ]
-  cleaned = cleaned.replace(/,\s*([}\]])/g, '$1');
-  
-  if (!cleaned || cleaned === '') return {};
-  
-  // First try parsing as-is
-  try {
-    return JSON.parse(cleaned);
-  } catch (_) {}
-  
-  // Fix unescaped newlines/tabs inside JSON string values
-  // Replace raw newlines inside strings with escaped versions
-  cleaned = cleaned
-    .replace(/\r\n/g, '\\n')
-    .replace(/\r/g, '\\n')
-    .replace(/\n/g, '\\n')
-    .replace(/\t/g, '\\t');
-  
-  try {
-    return JSON.parse(cleaned);
-  } catch (_) {}
-  
-  // Try to extract the first valid JSON object/array
-  const match = text.match(/[\[{][\s\S]*[\]}]/);
-  if (match) {
-    let extracted = match[0]
-      .replace(/,\s*([}\]])/g, '$1')
-      .replace(/\r\n/g, '\\n')
-      .replace(/\r/g, '\\n')  
-      .replace(/\n/g, '\\n')
-      .replace(/\t/g, '\\t');
+    let cleaned = text.trim();
+    // Strip markdown code fences (multi-line aware)
+    cleaned = cleaned.replace(/^```(?:json)?\s*/im, '').replace(/\s*```\s*$/m, '').trim();
+    // Fix trailing commas before } or ]
+    cleaned = cleaned.replace(/,\s*([}\]])/g, '$1');
+
+    if (!cleaned || cleaned === '') return {};
+
+    // First try parsing as-is
     try {
-      return JSON.parse(extracted);
-    } catch (_) {}
-  }
-  
-  // Last resort: try to manually fix common issues
-  // Remove any thoughtSignature or other non-JSON fields that Gemini 3.x adds
-  const jsonMatch = text.match(/\{[\s\S]*"questions"\s*:\s*\[[\s\S]*\][\s\S]*\}/);
-  if (jsonMatch) {
-    let lastResort = jsonMatch[0]
-      .replace(/,\s*([}\]])/g, '$1')
-      .replace(/\r?\n/g, '\\n')
-      .replace(/\t/g, '\\t');
+        return JSON.parse(cleaned);
+    } catch (_) { }
+
+    // Fix unescaped newlines/tabs inside JSON string values
+    // Replace raw newlines inside strings with escaped versions
+    cleaned = cleaned
+        .replace(/\r\n/g, '\\n')
+        .replace(/\r/g, '\\n')
+        .replace(/\n/g, '\\n')
+        .replace(/\t/g, '\\t');
+
     try {
-      return JSON.parse(lastResort);
-    } catch (_) {}
-  }
-  
-  console.error('cleanGeminiJSON: All parsing attempts failed. Raw text (first 500 chars):', text.substring(0, 500));
-  throw new Error('Failed to parse Gemini response as JSON');
+        return JSON.parse(cleaned);
+    } catch (_) { }
+
+    // Try to extract the first valid JSON object/array
+    const match = text.match(/[\[{][\s\S]*[\]}]/);
+    if (match) {
+        let extracted = match[0]
+            .replace(/,\s*([}\]])/g, '$1')
+            .replace(/\r\n/g, '\\n')
+            .replace(/\r/g, '\\n')
+            .replace(/\n/g, '\\n')
+            .replace(/\t/g, '\\t');
+        try {
+            return JSON.parse(extracted);
+        } catch (_) { }
+    }
+
+    // Last resort: try to manually fix common issues
+    // Remove any thoughtSignature or other non-JSON fields that Gemini 3.x adds
+    const jsonMatch = text.match(/\{[\s\S]*"questions"\s*:\s*\[[\s\S]*\][\s\S]*\}/);
+    if (jsonMatch) {
+        let lastResort = jsonMatch[0]
+            .replace(/,\s*([}\]])/g, '$1')
+            .replace(/\r?\n/g, '\\n')
+            .replace(/\t/g, '\\t');
+        try {
+            return JSON.parse(lastResort);
+        } catch (_) { }
+    }
+
+    console.error('cleanGeminiJSON: All parsing attempts failed. Raw text (first 500 chars):', text.substring(0, 500));
+    throw new Error('Failed to parse Gemini response as JSON');
 };
 
 const runGemini = async (model: string, parts: any[], json = true) => {
-  const keys = getGeminiKeys();
-  if (keys.length === 0) throw new Error('Gemini AI is not configured on the server. Set GEMINI_API_KEY.');
-  
-  // Build list of models to try: env override first, then requested, then fallbacks
-  const envModel = process.env.GEMINI_MODEL;
-  const modelsToTry = envModel 
-    ? [envModel] 
-    : [model, ...GEMINI_MODELS.filter(m => m !== model)];
-  
-  let lastError: Error | null = null;
-  const maxRetries = 2;
-  
-  for (const currentModel of modelsToTry) {
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        try {
-          if (attempt > 0) {
-            console.log(`Retry ${attempt}/${maxRetries} for model ${currentModel}...`);
-            await delay(3000 * attempt); // 3s, 6s backoff
-          }
-          
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${encodeURIComponent(key)}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts }], generationConfig: json ? { responseMimeType: 'application/json', temperature: 0.6 } : { temperature: 0.3 } })
-          });
-          const payload: any = await response.json();
-          
-          if (!response.ok) {
-            const errMsg = payload?.error?.message || `API request failed with status ${response.status}`;
-            // Retryable errors: rate limit, overloaded, high demand
-            if ((response.status === 429 || response.status === 503 || errMsg.includes('high demand') || errMsg.includes('overloaded')) && attempt < maxRetries) {
-              console.warn(`Model ${currentModel} temporarily unavailable (${response.status}), retrying...`);
-              continue;
+    const keys = getGeminiKeys();
+    if (keys.length === 0) throw new Error('Gemini AI is not configured on the server. Set GEMINI_API_KEY.');
+
+    // Build list of models to try: env override first, then requested, then fallbacks
+    const envModel = process.env.GEMINI_MODEL;
+    const modelsToTry = envModel
+        ? [envModel]
+        : [model, ...GEMINI_MODELS.filter(m => m !== model)];
+
+    let lastError: Error | null = null;
+    const maxRetries = 2;
+
+    for (const currentModel of modelsToTry) {
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    if (attempt > 0) {
+                        console.log(`Retry ${attempt}/${maxRetries} for model ${currentModel}...`);
+                        await delay(3000 * attempt); // 3s, 6s backoff
+                    }
+
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${encodeURIComponent(key)}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts }], generationConfig: json ? { responseMimeType: 'application/json', temperature: 0.6 } : { temperature: 0.3 } })
+                    });
+                    const payload: any = await response.json();
+
+                    if (!response.ok) {
+                        const errMsg = payload?.error?.message || `API request failed with status ${response.status}`;
+                        // Retryable errors: rate limit, overloaded, high demand
+                        if ((response.status === 429 || response.status === 503 || errMsg.includes('high demand') || errMsg.includes('overloaded')) && attempt < maxRetries) {
+                            console.warn(`Model ${currentModel} temporarily unavailable (${response.status}), retrying...`);
+                            continue;
+                        }
+                        throw new Error(errMsg);
+                    }
+
+                    const text = payload?.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('') || '';
+                    if (!json) return text.trim();
+                    return cleanGeminiJSON(text);
+
+                } catch (e: any) {
+                    console.warn(`Gemini [${currentModel}] key ${i + 1}/${keys.length} attempt ${attempt + 1}: ${e.message}`);
+                    lastError = e;
+                    // If it's a retryable error and we have retries left, continue the retry loop
+                    if ((e.message?.includes('high demand') || e.message?.includes('overloaded') || e.message?.includes('429') || e.message?.includes('503')) && attempt < maxRetries) {
+                        continue;
+                    }
+                    break; // Non-retryable error, move to next key/model
+                }
             }
-            throw new Error(errMsg);
-          }
-          
-          const text = payload?.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('') || '';
-          if (!json) return text.trim();
-          return cleanGeminiJSON(text);
-          
-        } catch (e: any) {
-          console.warn(`Gemini [${currentModel}] key ${i + 1}/${keys.length} attempt ${attempt + 1}: ${e.message}`);
-          lastError = e;
-          // If it's a retryable error and we have retries left, continue the retry loop
-          if ((e.message?.includes('high demand') || e.message?.includes('overloaded') || e.message?.includes('429') || e.message?.includes('503')) && attempt < maxRetries) {
-            continue;
-          }
-          break; // Non-retryable error, move to next key/model
         }
-      }
     }
-  }
-  throw new Error(`All Gemini API keys failed. Last error: ${lastError?.message}`);
+    throw new Error(`All Gemini API keys failed. Last error: ${lastError?.message}`);
 };
 
 const requireStaffAI = (req: any, res: any, next: any) => {
-  if (req.user?.role === 'STUDENT') return res.status(403).json({ error: 'Student accounts cannot use staff AI tools.' });
-  next();
+    if (req.user?.role === 'STUDENT') return res.status(403).json({ error: 'Student accounts cannot use staff AI tools.' });
+    next();
 };
 
 // AI Health Check â€” returns key status and a test ping to Gemini
 app.get('/api/health/ai', async (req: any, res: any) => {
-  const keys = getGeminiKeys();
-  if (keys.length === 0) {
-    return res.json({ status: 'error', connected: false, message: 'GEMINI_API_KEY is not set in environment variables.' });
-  }
-  try {
-    const result: any = await runGemini('gemini-3.5-flash', [{ text: 'Reply with exactly: {"ok":true}' }]);
-    if (result?.ok === true) {
-      return res.json({ status: 'ok', connected: true, message: `Gemini AI is connected and responding correctly (active keys: ${keys.length}).` });
+    const keys = getGeminiKeys();
+    if (keys.length === 0) {
+        return res.json({ status: 'error', connected: false, message: 'GEMINI_API_KEY is not set in environment variables.' });
     }
-    return res.json({ status: 'ok', connected: true, message: 'Gemini AI is reachable (response parsed).' });
-  } catch (e: any) {
-    return res.json({ status: 'error', connected: false, message: e.message || 'Gemini AI key test failed.' });
-  }
+    try {
+        const result: any = await runGemini('gemini-3.5-flash', [{ text: 'Reply with exactly: {"ok":true}' }]);
+        if (result?.ok === true) {
+            return res.json({ status: 'ok', connected: true, message: `Gemini AI is connected and responding correctly (active keys: ${keys.length}).` });
+        }
+        return res.json({ status: 'ok', connected: true, message: 'Gemini AI is reachable (response parsed).' });
+    } catch (e: any) {
+        return res.json({ status: 'error', connected: false, message: e.message || 'Gemini AI key test failed.' });
+    }
 });
 
 app.post('/api/ai/questions', authenticate, requireStaffAI, async (req: any, res: any) => {
-  try {
-    const { subject, topic, count, type, difficulty, classLevel, bilingual } = req.body;
-    const typeGuide = type === 'MCQ' ? 'For MCQ, include exactly 4 options and the correctAnswer.' : type === 'Match Columns' ? 'For Match Columns, include matchingPairs with left/right values.' : '';
-    const prompt = `Generate ${count} academic questions. Subject: ${subject}. Topic: ${topic}. Level: ${classLevel}. Difficulty: ${difficulty}. Type: ${type}. ${bilingual ? 'Include high-quality Urdu translations in textUrdu and optionsUrdu.' : ''} ${typeGuide}
+    try {
+        const { subject, topic, count, type, difficulty, classLevel, bilingual } = req.body;
+        const typeGuide = type === 'MCQ' ? 'For MCQ, include exactly 4 options and the correctAnswer.' : type === 'Match Columns' ? 'For Match Columns, include matchingPairs with left/right values.' : '';
+        const prompt = `Generate ${count} academic questions. Subject: ${subject}. Topic: ${topic}. Level: ${classLevel}. Difficulty: ${difficulty}. Type: ${type}. ${bilingual ? 'Include high-quality Urdu translations in textUrdu and optionsUrdu.' : ''} ${typeGuide}
 IMPORTANT FORMULA GUIDELINES:
 - For mathematical formulas/equations, use LaTeX enclosed in single dollar signs (inline: $x^2 + y^2 = z^2$) or double dollar signs (block: $$\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$).
 - For chemistry equations and formulas, use mhchem LaTeX syntax: $\\ce{2H2 + O2 -> 2H2O}$, $\\ce{H2SO4}$, $\\ce{Fe^3+ + e- -> Fe^2+}$.
 
 Return JSON only: {"questions":[{"text":"","textUrdu":"","type":"","options":[],"optionsUrdu":[],"matchingPairs":[],"correctAnswer":"","marks":1,"difficulty":"","topic":""}]}.`;
-    const result: any = await runGemini('gemini-3.5-flash', [{ text: prompt }]);
-    res.json({ questions: (result.questions || []).map((q: any) => ({ id: `ai_${Date.now()}_${Math.random().toString(36).slice(2)}`, subject, topic, classLevel, ...q })) });
-  } catch (error: any) { res.status(500).json({ error: error.message || 'AI generation failed' }); }
+        const result: any = await runGemini('gemini-3.5-flash', [{ text: prompt }]);
+        res.json({ questions: (result.questions || []).map((q: any) => ({ id: `ai_${Date.now()}_${Math.random().toString(36).slice(2)}`, subject, topic, classLevel, ...q })) });
+    } catch (error: any) { res.status(500).json({ error: error.message || 'AI generation failed' }); }
 });
 
 app.post('/api/ai/document', authenticate, requireStaffAI, async (req: any, res: any) => {
-  try {
-    const { base64Data, mimeType, sections, subject, bilingual } = req.body;
-    const requirement = (sections || []).map((s: any) => `${s.count} ${s.type} question(s), ${s.marks} marks each`).join('; ');
-    const prompt = `You are an exam paper generator. You MUST read and analyze the uploaded document carefully.
+    try {
+        const { base64Data, mimeType, sections, subject, bilingual } = req.body;
+        const requirement = (sections || []).map((s: any) => `${s.count} ${s.type} question(s), ${s.marks} marks each`).join('; ');
+        const prompt = `You are an exam paper generator. You MUST read and analyze the uploaded document carefully.
 
 CRITICAL INSTRUCTIONS:
 1. READ the entire uploaded document thoroughly first.
@@ -313,58 +313,58 @@ ${bilingual ? 'Include high-quality Urdu translations for each question in textU
 
 Return ONLY valid JSON in this exact format:
 {"questions":[{"text":"question text from document","textUrdu":"","type":"MCQ or Short Answer etc","options":["A","B","C","D"],"optionsUrdu":[],"matchingPairs":[],"correctAnswer":"correct answer from document","marks":1,"difficulty":"Medium","topic":"topic from document"}]}`;
-    const result: any = await runGemini('gemini-3.5-flash', [{ inlineData: { mimeType, data: base64Data } }, { text: prompt }]);
-    res.json({ questions: (result.questions || []).map((q: any) => ({ id: `ai_${Date.now()}_${Math.random().toString(36).slice(2)}`, subject, ...q })) });
-  } catch (error: any) { res.status(500).json({ error: error.message || 'Document AI generation failed' }); }
+        const result: any = await runGemini('gemini-3.5-flash', [{ inlineData: { mimeType, data: base64Data } }, { text: prompt }]);
+        res.json({ questions: (result.questions || []).map((q: any) => ({ id: `ai_${Date.now()}_${Math.random().toString(36).slice(2)}`, subject, ...q })) });
+    } catch (error: any) { res.status(500).json({ error: error.message || 'Document AI generation failed' }); }
 });
 
 app.post('/api/ai/translate', authenticate, requireStaffAI, async (req: any, res: any) => {
-  try { res.json({ text: await runGemini('gemini-3.5-flash', [{ text: `Translate into high-quality Urdu (Nastaliq style). Preserve any LaTeX math ($...$) or chemistry ($\\ce{...}$) formulas unchanged. Return only the translation: ${req.body.text}` }], false) }); }
-  catch (error: any) { res.status(500).json({ error: error.message || 'Translation failed' }); }
+    try { res.json({ text: await runGemini('gemini-3.5-flash', [{ text: `Translate into high-quality Urdu (Nastaliq style). Preserve any LaTeX math ($...$) or chemistry ($\\ce{...}$) formulas unchanged. Return only the translation: ${req.body.text}` }], false) }); }
+    catch (error: any) { res.status(500).json({ error: error.message || 'Translation failed' }); }
 });
 
 app.post('/api/ai/topics', authenticate, requireStaffAI, async (req: any, res: any) => {
-  try { const result: any = await runGemini('gemini-3.5-flash', [{ text: `List 5 curriculum topics for ${req.body.classLevel} ${req.body.subject}. Return JSON only: {"topics":[""]}.` }]); res.json({ topics: result.topics || [] }); }
-  catch (error: any) { res.status(500).json({ error: error.message || 'Topic generation failed' }); }
+    try { const result: any = await runGemini('gemini-3.5-flash', [{ text: `List 5 curriculum topics for ${req.body.classLevel} ${req.body.subject}. Return JSON only: {"topics":[""]}.` }]); res.json({ topics: result.topics || [] }); }
+    catch (error: any) { res.status(500).json({ error: error.message || 'Topic generation failed' }); }
 });
 
 app.post('/api/ai/analyze-book', authenticate, requireStaffAI, async (req: any, res: any) => {
-  try {
-    const { base64Data, mimeType, mode, config } = req.body;
-    const prompt = mode === 'QUESTIONS' ? `Generate ${config?.count || 10} exam questions for ${config?.classLevel || ''} ${config?.subject || ''}. Format math using LaTeX ($...$) and chemistry using mhchem ($\\ce{...}$). Return JSON.` : 'Extract the curriculum structure from this textbook. Return JSON.';
-    res.json(await runGemini('gemini-3.5-flash', [{ inlineData: { mimeType, data: base64Data } }, { text: prompt }]));
-  } catch (error: any) { res.status(500).json({ error: error.message || 'Book analysis failed' }); }
+    try {
+        const { base64Data, mimeType, mode, config } = req.body;
+        const prompt = mode === 'QUESTIONS' ? `Generate ${config?.count || 10} exam questions for ${config?.classLevel || ''} ${config?.subject || ''}. Format math using LaTeX ($...$) and chemistry using mhchem ($\\ce{...}$). Return JSON.` : 'Extract the curriculum structure from this textbook. Return JSON.';
+        res.json(await runGemini('gemini-3.5-flash', [{ inlineData: { mimeType, data: base64Data } }, { text: prompt }]));
+    } catch (error: any) { res.status(500).json({ error: error.message || 'Book analysis failed' }); }
 });
 
 const schoolHasOnlineTest = async (schoolId: string): Promise<boolean> => {
-  if (!schoolId) return false;
-  const school = await prisma.school.findUnique({ where: { id: schoolId }, select: { subscriptionPlan: true } });
-  if (!school?.subscriptionPlan) return false;
-  const plan = await prisma.subscriptionPlan.findFirst({ where: { name: school.subscriptionPlan }, select: { features: true } });
-  const features = plan?.features || [];
-  return Array.isArray(features) && features.some((f: any) => {
-    const s = String(f || '').toLowerCase();
-    return s.includes('online') && (s.includes('test') || s.includes('exam'));
-  });
+    if (!schoolId) return false;
+    const school = await prisma.school.findUnique({ where: { id: schoolId }, select: { subscriptionPlan: true } });
+    if (!school?.subscriptionPlan) return false;
+    const plan = await prisma.subscriptionPlan.findFirst({ where: { name: school.subscriptionPlan }, select: { features: true } });
+    const features = plan?.features || [];
+    return Array.isArray(features) && features.some((f: any) => {
+        const s = String(f || '').toLowerCase();
+        return s.includes('online') && (s.includes('test') || s.includes('exam'));
+    });
 };
 
 const requireOnlineTestFeature = async (req: any, res: any, next: any) => {
-  // Super Admin is not school-scoped
-  if (req.user?.role === 'SUPER_ADMIN') return next();
+    // Super Admin is not school-scoped
+    if (req.user?.role === 'SUPER_ADMIN') return next();
 
-  const schoolId = req.user?.schoolId;
-  if (!schoolId) return res.status(400).json({ error: 'No school context' });
+    const schoolId = req.user?.schoolId;
+    if (!schoolId) return res.status(400).json({ error: 'No school context' });
 
-  try {
-    const enabled = await schoolHasOnlineTest(schoolId);
-    if (!enabled) {
-      return res.status(403).json({ error: 'Online Test feature is not enabled for your school package. Please upgrade to continue.' });
+    try {
+        const enabled = await schoolHasOnlineTest(schoolId);
+        if (!enabled) {
+            return res.status(403).json({ error: 'Online Test feature is not enabled for your school package. Please upgrade to continue.' });
+        }
+        next();
+    } catch (e) {
+        console.error('OnlineTest feature check failed', e);
+        return res.status(500).json({ error: 'Failed to validate package features' });
     }
-    next();
-  } catch (e) {
-    console.error('OnlineTest feature check failed', e);
-    return res.status(500).json({ error: 'Failed to validate package features' });
-  }
 };
 
 // --- HELPER: Exclude Password ---
@@ -484,23 +484,23 @@ const validateQuestion = (question: any): { valid: boolean; errors: string[] } =
 
 // --- HELPER: Audit Logger ---
 const trackActivity = async (req: any, type: string, action: string, details?: string) => {
-  if (!req.user) return;
-  try {
-    if (prisma.activityLog) {
-        await prisma.activityLog.create({
-        data: {
-            userId: req.user.id,
-            userName: req.user.name,
-            schoolId: req.user.schoolId,
-            type,
-            action,
-            details
+    if (!req.user) return;
+    try {
+        if (prisma.activityLog) {
+            await prisma.activityLog.create({
+                data: {
+                    userId: req.user.id,
+                    userName: req.user.name,
+                    schoolId: req.user.schoolId,
+                    type,
+                    action,
+                    details
+                }
+            });
         }
-        });
+    } catch (e) {
+        console.error("Log failed", e);
     }
-  } catch (e) {
-    console.error("Log failed", e);
-  }
 };
 
 // --- IN-MEMORY TRANSACTIONS STORE (Fallback) ---
@@ -515,287 +515,287 @@ app.use('/api/student', studentRoutes as any);
 
 // 1. File Upload Route (Placed early to avoid conflicts)
 app.post('/api/upload', authenticate as any, upload.single('file') as any, async (req: any, res: any) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
-  }
-  try {
-    const storageProvider = (process.env.STORAGE_PROVIDER || 'local').toLowerCase();
-    const objectKey = `${req.user.id}/${req.file.filename}`;
-
-    if (storageProvider === 'r2') {
-      const endpoint = process.env.R2_ENDPOINT?.replace(/\/$/, '');
-      const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-      const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-      const bucket = process.env.R2_BUCKET || 'examforge-uploads';
-      const publicUrl = process.env.R2_PUBLIC_URL?.replace(/\/$/, '');
-      if (!endpoint || !accessKeyId || !secretAccessKey || !publicUrl) {
-        throw new Error('Cloudflare R2 is not configured. Set R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and R2_PUBLIC_URL.');
-      }
-
-      const client = new S3Client({
-        region: 'auto',
-        endpoint,
-        credentials: { accessKeyId, secretAccessKey },
-      });
-      const fileBody = await fs.promises.readFile(req.file.path);
-      await client.send(new PutObjectCommand({
-        Bucket: bucket,
-        Key: objectKey,
-        Body: fileBody,
-        ContentType: req.file.mimetype,
-      }));
-      await fs.promises.unlink(req.file.path).catch(() => undefined);
-      return res.json({ url: `${publicUrl}/${objectKey}`, filename: req.file.filename });
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
     }
+    try {
+        const storageProvider = (process.env.STORAGE_PROVIDER || 'local').toLowerCase();
+        const objectKey = `${req.user.id}/${req.file.filename}`;
 
-    if (storageProvider === 'supabase') {
-      const baseUrl = process.env.SUPABASE_URL?.replace(/\/$/, '');
-      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'examforge-uploads';
-      if (!baseUrl || !serviceKey) throw new Error('Supabase storage is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
-      const fileBody = await fs.promises.readFile(req.file.path);
-      const storageResponse = await fetch(`${baseUrl}/storage/v1/object/${bucket}/${objectKey}`, {
-        method: 'POST', headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey, 'Content-Type': req.file.mimetype, 'x-upsert': 'true' }, body: fileBody
-      });
-      await fs.promises.unlink(req.file.path).catch(() => undefined);
-      if (!storageResponse.ok) throw new Error((await storageResponse.text()) || 'Supabase storage upload failed');
-      return res.json({ url: `${baseUrl}/storage/v1/object/public/${bucket}/${objectKey}`, filename: req.file.filename });
+        if (storageProvider === 'r2') {
+            const endpoint = process.env.R2_ENDPOINT?.replace(/\/$/, '');
+            const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+            const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+            const bucket = process.env.R2_BUCKET || 'examforge-uploads';
+            const publicUrl = process.env.R2_PUBLIC_URL?.replace(/\/$/, '');
+            if (!endpoint || !accessKeyId || !secretAccessKey || !publicUrl) {
+                throw new Error('Cloudflare R2 is not configured. Set R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and R2_PUBLIC_URL.');
+            }
+
+            const client = new S3Client({
+                region: 'auto',
+                endpoint,
+                credentials: { accessKeyId, secretAccessKey },
+            });
+            const fileBody = await fs.promises.readFile(req.file.path);
+            await client.send(new PutObjectCommand({
+                Bucket: bucket,
+                Key: objectKey,
+                Body: fileBody,
+                ContentType: req.file.mimetype,
+            }));
+            await fs.promises.unlink(req.file.path).catch(() => undefined);
+            return res.json({ url: `${publicUrl}/${objectKey}`, filename: req.file.filename });
+        }
+
+        if (storageProvider === 'supabase') {
+            const baseUrl = process.env.SUPABASE_URL?.replace(/\/$/, '');
+            const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+            const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'examforge-uploads';
+            if (!baseUrl || !serviceKey) throw new Error('Supabase storage is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
+            const fileBody = await fs.promises.readFile(req.file.path);
+            const storageResponse = await fetch(`${baseUrl}/storage/v1/object/${bucket}/${objectKey}`, {
+                method: 'POST', headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey, 'Content-Type': req.file.mimetype, 'x-upsert': 'true' }, body: fileBody
+            });
+            await fs.promises.unlink(req.file.path).catch(() => undefined);
+            if (!storageResponse.ok) throw new Error((await storageResponse.text()) || 'Supabase storage upload failed');
+            return res.json({ url: `${baseUrl}/storage/v1/object/public/${bucket}/${objectKey}`, filename: req.file.filename });
+        }
+        const publicBase = process.env.PUBLIC_API_URL?.replace(/\/$/, '') || '';
+        return res.json({ url: `${publicBase}/uploads/${req.file.filename}`, filename: req.file.filename });
+    } catch (error: any) {
+        await fs.promises.unlink(req.file.path).catch(() => undefined);
+        return res.status(500).json({ error: error.message || 'File upload failed' });
     }
-    const publicBase = process.env.PUBLIC_API_URL?.replace(/\/$/, '') || '';
-    return res.json({ url: `${publicBase}/uploads/${req.file.filename}`, filename: req.file.filename });
-  } catch (error: any) {
-    await fs.promises.unlink(req.file.path).catch(() => undefined);
-    return res.status(500).json({ error: error.message || 'File upload failed' });
-  }
 });
 
 // 2. Auth Routes
 app.post('/api/auth/login', async (req: any, res: any) => {
-  const { email, password } = req.body;
-  
-  try {
-    // Auto-seed if database is empty (Fail-safe for first run)
-    const userCount = await prisma.user.count();
-    if (userCount === 0) {
-        const hashedPassword = await bcrypt.hash('password', 10);
-        
-        // Create School
-        const school = await prisma.school.create({
-            data: {
-                name: 'Beacon High International',
-                contactEmail: 'info@beaconhigh.edu',
-                address: '123 Education St, New York, NY',
-                principalName: 'Dr. Robert Smith',
-                contactPhone: '555-0123',
-                subscriptionPlan: 'Enterprise',
-                status: 'Active',
-                validTill: new Date('2025-12-31'),
-                subscriptionStartDate: new Date('2024-01-01'),
-                branding: {
-                    themeColor: '#4f46e5',
-                    secondaryColor: '#4338ca',
-                    lightColor: '#eef2ff',
-                    appFont: "'Inter', sans-serif",
-                    paperEnglishFont: "'Inter', sans-serif",
-                    paperUrduFont: "'Noto Nastaliq Urdu', serif"
-                },
-                stats: { papersCount: 0, teachersCount: 1, studentCount: 0, dailyAiCount: 0, lastAiDate: new Date().toISOString().split('T')[0] }
-            }
+    const { email, password } = req.body;
+
+    try {
+        // Auto-seed if database is empty (Fail-safe for first run)
+        const userCount = await prisma.user.count();
+        if (userCount === 0) {
+            const hashedPassword = await bcrypt.hash('password', 10);
+
+            // Create School
+            const school = await prisma.school.create({
+                data: {
+                    name: 'Beacon High International',
+                    contactEmail: 'info@beaconhigh.edu',
+                    address: '123 Education St, New York, NY',
+                    principalName: 'Dr. Robert Smith',
+                    contactPhone: '555-0123',
+                    subscriptionPlan: 'Enterprise',
+                    status: 'Active',
+                    validTill: new Date('2025-12-31'),
+                    subscriptionStartDate: new Date('2024-01-01'),
+                    branding: {
+                        themeColor: '#4f46e5',
+                        secondaryColor: '#4338ca',
+                        lightColor: '#eef2ff',
+                        appFont: "'Inter', sans-serif",
+                        paperEnglishFont: "'Inter', sans-serif",
+                        paperUrduFont: "'Noto Nastaliq Urdu', serif"
+                    },
+                    stats: { papersCount: 0, teachersCount: 1, studentCount: 0, dailyAiCount: 0, lastAiDate: new Date().toISOString().split('T')[0] }
+                }
+            });
+
+            // Create Super Admin
+            await prisma.user.create({
+                data: {
+                    email: 'admin@examforge.com',
+                    name: 'Platform Administrator',
+                    password: hashedPassword,
+                    role: 'SUPER_ADMIN',
+                    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150'
+                }
+            });
+
+            // Create School Admin
+            await prisma.user.create({
+                data: {
+                    email: 'principal@beaconhigh.edu',
+                    name: 'Dr. Robert Smith',
+                    password: hashedPassword,
+                    role: 'SCHOOL_ADMIN',
+                    schoolId: school.id,
+                    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150'
+                }
+            });
+
+            console.log("Database auto-seeded on login attempt.");
+        }
+
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) return res.status(401).json({ error: 'User not found' });
+
+        const isValid = await bcrypt.compare(password, user.password);
+        if (!isValid) return res.status(401).json({ error: 'Invalid password' });
+
+        // Update last login
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { lastLogin: new Date() }
         });
 
-        // Create Super Admin
-        await prisma.user.create({
-            data: {
-                email: 'admin@examforge.com',
-                name: 'Platform Administrator',
-                password: hashedPassword,
-                role: 'SUPER_ADMIN',
-                avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150'
-            }
-        });
+        const token = jwt.sign(
+            {
+                id: user.id,
+                role: user.role,
+                schoolId: user.schoolId,
+                name: user.name,
+                assignedSyllabuses: user.assignedSyllabuses || [],
+                assignedClasses: user.assignedClasses || [],
+                assignedSubjects: user.assignedSubjects || []
+            },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
 
-        // Create School Admin
-        await prisma.user.create({
-            data: {
-                email: 'principal@beaconhigh.edu',
-                name: 'Dr. Robert Smith',
-                password: hashedPassword,
-                role: 'SCHOOL_ADMIN',
-                schoolId: school.id,
-                avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150'
-            }
+        // Return user WITHOUT password
+        res.json({
+            token,
+            user: excludePassword(user)
         });
-        
-        console.log("Database auto-seeded on login attempt.");
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Internal server error' });
     }
-
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.status(401).json({ error: 'User not found' });
-
-    const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) return res.status(401).json({ error: 'Invalid password' });
-    
-    // Update last login
-    await prisma.user.update({
-        where: { id: user.id },
-        data: { lastLogin: new Date() }
-    });
-
-    const token = jwt.sign(
-      { 
-        id: user.id, 
-        role: user.role, 
-        schoolId: user.schoolId, 
-        name: user.name,
-        assignedSyllabuses: user.assignedSyllabuses || [],
-        assignedClasses: user.assignedClasses || [],
-        assignedSubjects: user.assignedSubjects || []
-      }, 
-      JWT_SECRET, 
-      { expiresIn: '24h' }
-    );
-    
-    // Return user WITHOUT password
-    res.json({ 
-        token, 
-        user: excludePassword(user)
-    });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Internal server error' });
-  }
 });
 
 app.get('/api/auth/me', authenticate, async (req: any, res: any) => {
-  try {
-    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json(excludePassword(user));
-  } catch (e) {
-    res.status(500).json({ error: 'Internal server error' });
-  }
+    try {
+        const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json(excludePassword(user));
+    } catch (e) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 // Public Plans Endpoint
 app.get('/api/public/plans', async (req: any, res: any) => {
-  try {
-    const plans = await prisma.subscriptionPlan.findMany({ orderBy: { price: 'asc' } });
-    if (!plans || plans.length === 0) {
-      return res.json([
-        { id: 'starter', name: 'Starter', price: 0, currencySymbol: '$', features: ['50 Papers / Month', 'Basic AI Generation', '2 Staff Accounts', 'Standard Support'], limits: { papers: 50 } },
-        { id: 'enterprise', name: 'Enterprise', price: 199, currencySymbol: '$', features: ['Unlimited Papers', 'Fine-tuned AI Models', 'Unlimited Staff', '24/7 Dedicated Support'], limits: { papers: 99999 } }
-      ]);
+    try {
+        const plans = await prisma.subscriptionPlan.findMany({ orderBy: { price: 'asc' } });
+        if (!plans || plans.length === 0) {
+            return res.json([
+                { id: 'starter', name: 'Starter', price: 0, currencySymbol: '$', features: ['50 Papers / Month', 'Basic AI Generation', '2 Staff Accounts', 'Standard Support'], limits: { papers: 50 } },
+                { id: 'enterprise', name: 'Enterprise', price: 199, currencySymbol: '$', features: ['Unlimited Papers', 'Fine-tuned AI Models', 'Unlimited Staff', '24/7 Dedicated Support'], limits: { papers: 99999 } }
+            ]);
+        }
+        res.json(plans);
+    } catch (e) {
+        res.json([
+            { id: 'starter', name: 'Starter', price: 0, currencySymbol: '$', features: ['50 Papers / Month', 'Basic AI Generation'], limits: { papers: 50 } },
+            { id: 'enterprise', name: 'Enterprise', price: 199, currencySymbol: '$', features: ['Unlimited Papers', 'Fine-tuned AI Models'], limits: { papers: 99999 } }
+        ]);
     }
-    res.json(plans);
-  } catch (e) {
-    res.json([
-      { id: 'starter', name: 'Starter', price: 0, currencySymbol: '$', features: ['50 Papers / Month', 'Basic AI Generation'], limits: { papers: 50 } },
-      { id: 'enterprise', name: 'Enterprise', price: 199, currencySymbol: '$', features: ['Unlimited Papers', 'Fine-tuned AI Models'], limits: { papers: 99999 } }
-    ]);
-  }
 });
 
 // Public School Registration Endpoint
 app.post('/api/auth/register-school', async (req: any, res: any) => {
-  const { name, principalName, contactEmail, contactPhone, address, adminPassword, subscriptionPlan } = req.body;
-  if (!name || !contactEmail || !adminPassword) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
-
-  try {
-    const existingUser = await prisma.user.findUnique({ where: { email: contactEmail } });
-    if (existingUser) {
-      return res.status(400).json({ error: 'Email is already registered.' });
+    const { name, principalName, contactEmail, contactPhone, address, adminPassword, subscriptionPlan } = req.body;
+    if (!name || !contactEmail || !adminPassword) {
+        return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const selectedPlanName = subscriptionPlan || 'Starter';
-    const planRecord = await prisma.subscriptionPlan.findFirst({
-      where: { name: { equals: selectedPlanName, mode: 'insensitive' } }
-    }).catch(() => null);
+    try {
+        const existingUser = await prisma.user.findUnique({ where: { email: contactEmail } });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Email is already registered.' });
+        }
 
-    const isFree = planRecord ? planRecord.price === 0 : (selectedPlanName.toLowerCase().includes('starter') || selectedPlanName.toLowerCase().includes('trial'));
-    const planName = planRecord ? planRecord.name : selectedPlanName;
-    const initialStatus = isFree ? 'Trial' : 'Suspended';
-    const validTillDays = isFree ? 14 : 365;
+        const selectedPlanName = subscriptionPlan || 'Starter';
+        const planRecord = await prisma.subscriptionPlan.findFirst({
+            where: { name: { equals: selectedPlanName, mode: 'insensitive' } }
+        }).catch(() => null);
 
-    // For Trial: auto-assign ALL syllabuses/boards so school has full access
-    let assignedSyllabuses: string[] = [];
-    if (isFree) {
-      try {
-        const allSyllabuses = await prisma.syllabus.findMany({ select: { id: true } });
-        assignedSyllabuses = allSyllabuses.map((s: any) => s.id);
-      } catch (e) {
-        // Non-critical: proceed with empty list if syllabuses table not ready
-      }
-    }
+        const isFree = planRecord ? planRecord.price === 0 : (selectedPlanName.toLowerCase().includes('starter') || selectedPlanName.toLowerCase().includes('trial'));
+        const planName = planRecord ? planRecord.name : selectedPlanName;
+        const initialStatus = isFree ? 'Trial' : 'Suspended';
+        const validTillDays = isFree ? 14 : 365;
 
-    const school = await prisma.school.create({
-      data: {
-        name,
-        principalName: principalName || name,
-        contactEmail,
-        contactPhone: contactPhone || '',
-        address: address || '',
-        subscriptionPlan: planName,
-        status: initialStatus as any,
-        validTill: new Date(Date.now() + validTillDays * 24 * 60 * 60 * 1000),
-        subscriptionStartDate: new Date(),
-        discount: 0,
-        totalPaid: 0,
-        assignedSyllabuses,
-        stats: { papersCount: 0, teachersCount: 1, studentCount: 0, dailyAiCount: 0, lastAiDate: new Date().toISOString().split('T')[0] }
-      }
-    });
+        // For Trial: auto-assign ALL syllabuses/boards so school has full access
+        let assignedSyllabuses: string[] = [];
+        if (isFree) {
+            try {
+                const allSyllabuses = await prisma.syllabus.findMany({ select: { id: true } });
+                assignedSyllabuses = allSyllabuses.map((s: any) => s.id);
+            } catch (e) {
+                // Non-critical: proceed with empty list if syllabuses table not ready
+            }
+        }
 
-    const hashedPassword = await bcrypt.hash(adminPassword, 10);
-    const user = await prisma.user.create({
-      data: {
-        name: principalName || name,
-        email: contactEmail,
-        password: hashedPassword,
-        role: 'SCHOOL_ADMIN',
-        schoolId: school.id,
-        assignedSyllabuses,
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(principalName || name)}`
-      }
-    });
-
-    if (isFree) {
-      const token = jwt.sign(
-        { id: user.id, role: user.role, schoolId: user.schoolId, name: user.name },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-      return res.json({
-        success: true,
-        isTrial: true,
-        token,
-        user: excludePassword(user)
-      });
-    } else {
-      if (prisma.notification) {
-        await prisma.notification.create({
-          data: {
-            title: `New ${planName} Plan Request`,
-            message: `Institution "${school.name}" (${school.contactEmail}) registered for the ${planName} plan. Approval required to activate access and generate invoice. [schoolId:${school.id}]`,
-            type: 'WARNING',
-            targetSchoolId: 'ALL',
-            createdBy: 'System'
-          }
+        const school = await prisma.school.create({
+            data: {
+                name,
+                principalName: principalName || name,
+                contactEmail,
+                contactPhone: contactPhone || '',
+                address: address || '',
+                subscriptionPlan: planName,
+                status: initialStatus as any,
+                validTill: new Date(Date.now() + validTillDays * 24 * 60 * 60 * 1000),
+                subscriptionStartDate: new Date(),
+                discount: 0,
+                totalPaid: 0,
+                assignedSyllabuses,
+                stats: { papersCount: 0, teachersCount: 1, studentCount: 0, dailyAiCount: 0, lastAiDate: new Date().toISOString().split('T')[0] }
+            }
         });
-      }
 
-      return res.json({
-        success: true,
-        isTrial: false,
-        pending: true,
-        message: `Registration successful! Your ${planName} subscription request has been submitted for Super Admin approval. You will receive access once approved.`
-      });
+        const hashedPassword = await bcrypt.hash(adminPassword, 10);
+        const user = await prisma.user.create({
+            data: {
+                name: principalName || name,
+                email: contactEmail,
+                password: hashedPassword,
+                role: 'SCHOOL_ADMIN',
+                schoolId: school.id,
+                assignedSyllabuses,
+                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(principalName || name)}`
+            }
+        });
+
+        if (isFree) {
+            const token = jwt.sign(
+                { id: user.id, role: user.role, schoolId: user.schoolId, name: user.name },
+                JWT_SECRET,
+                { expiresIn: '24h' }
+            );
+            return res.json({
+                success: true,
+                isTrial: true,
+                token,
+                user: excludePassword(user)
+            });
+        } else {
+            if (prisma.notification) {
+                await prisma.notification.create({
+                    data: {
+                        title: `New ${planName} Plan Request`,
+                        message: `Institution "${school.name}" (${school.contactEmail}) registered for the ${planName} plan. Approval required to activate access and generate invoice. [schoolId:${school.id}]`,
+                        type: 'WARNING',
+                        targetSchoolId: 'ALL',
+                        createdBy: 'System'
+                    }
+                });
+            }
+
+            return res.json({
+                success: true,
+                isTrial: false,
+                pending: true,
+                message: `Registration successful! Your ${planName} subscription request has been submitted for Super Admin approval. You will receive access once approved.`
+            });
+        }
+    } catch (error: any) {
+        console.error("School registration failed", error);
+        res.status(500).json({ error: error.message || 'Registration failed' });
     }
-  } catch (error: any) {
-    console.error("School registration failed", error);
-    res.status(500).json({ error: error.message || 'Registration failed' });
-  }
 });
 
 // AI Usage Tracking Endpoint
@@ -815,7 +815,7 @@ app.post('/api/schools/track-ai-usage', authenticate, async (req: any, res: any)
         // Get Plan
         const plan = await prisma.subscriptionPlan.findFirst({ where: { name: school.subscriptionPlan } });
         // Use default fallback if plan not found in DB
-        const planLimits = plan?.limits || { aiRequestsPerDay: 5 }; 
+        const planLimits = plan?.limits || { aiRequestsPerDay: 5 };
 
         // Trial Logic: Override limit to 1
         const dailyLimit = school.status === 'Trial' ? 1 : (planLimits.aiRequestsPerDay || 5);
@@ -830,8 +830,8 @@ app.post('/api/schools/track-ai-usage', authenticate, async (req: any, res: any)
         }
 
         if (currentCount >= dailyLimit) {
-            return res.status(403).json({ 
-                error: `Daily AI limit reached (${dailyLimit}/${dailyLimit}). Upgrade plan for more.` 
+            return res.status(403).json({
+                error: `Daily AI limit reached (${dailyLimit}/${dailyLimit}). Upgrade plan for more.`
             });
         }
 
@@ -857,330 +857,330 @@ app.post('/api/schools/track-ai-usage', authenticate, async (req: any, res: any)
 
 // 3. Public Routes
 app.get('/api/public/stats', async (req: any, res: any) => {
-  try {
-    const papers = await prisma.examPaper.count();
-    const schools = await prisma.school.count();
-    const questions = await prisma.question.count();
-    res.json({ papers, schools, questions });
-  } catch (e) {
-    res.status(500).json({ error: "Failed to fetch stats" });
-  }
+    try {
+        const papers = await prisma.examPaper.count();
+        const schools = await prisma.school.count();
+        const questions = await prisma.question.count();
+        res.json({ papers, schools, questions });
+    } catch (e) {
+        res.status(500).json({ error: "Failed to fetch stats" });
+    }
 });
 
 app.get('/api/public/settings', async (req: any, res: any) => {
-  try {
-    const settings = await prisma.systemSetting.findFirst({ where: { id: 'global' } });
-    if (!settings) {
-       // Return defaults if DB is empty
-       return res.json({
-         platformName: 'ExamForge AI',
-         platformEmail: 'support@examforge.com',
-         platformAddress: '123 Education St, Tech City',
-         currencySymbol: '$',
-         branding: { themeColor: '#4f46e5' }
-       });
+    try {
+        const settings = await prisma.systemSetting.findFirst({ where: { id: 'global' } });
+        if (!settings) {
+            // Return defaults if DB is empty
+            return res.json({
+                platformName: 'ExamForge AI',
+                platformEmail: 'support@examforge.com',
+                platformAddress: '123 Education St, Tech City',
+                currencySymbol: '$',
+                branding: { themeColor: '#4f46e5' }
+            });
+        }
+        res.json(settings);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: "Failed to fetch settings" });
     }
-    res.json(settings);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Failed to fetch settings" });
-  }
 });
 
 app.get('/api/public/curriculum', async (req: any, res: any) => {
-  try {
-    const syllabuses = await prisma.syllabus.findMany();
-    const classes = await prisma.classLevel.findMany();
-    const subjects = await prisma.subject.findMany();
-    const sources = await prisma.source.findMany();
-    const allChapters = await prisma.chapter.findMany();
-    
-    res.json({
-        syllabuses,
-        classes,
-        subjects,
-        chapters: allChapters,
-        sources
-    });
-  } catch (e) {
-    res.status(500).json({ error: "Failed to fetch curriculum" });
-  }
+    try {
+        const syllabuses = await prisma.syllabus.findMany();
+        const classes = await prisma.classLevel.findMany();
+        const subjects = await prisma.subject.findMany();
+        const sources = await prisma.source.findMany();
+        const allChapters = await prisma.chapter.findMany();
+
+        res.json({
+            syllabuses,
+            classes,
+            subjects,
+            chapters: allChapters,
+            sources
+        });
+    } catch (e) {
+        res.status(500).json({ error: "Failed to fetch curriculum" });
+    }
 });
 
 app.post('/api/public/quiz/generate', async (req: any, res: any) => {
-  const { board, grade, subject, chapter, sources, count, medium } = req.body;
-  try {
-    const where: any = { type: 'MCQ' }; 
-    
-    if (subject) where.subject = subject;
-    if (grade) where.classLevel = grade;
-    if (chapter) where.chapter = chapter;
-    
-    if (sources && sources.length > 0 && !sources.includes('All')) {
-        where.source = { in: sources };
-    }
+    const { board, grade, subject, chapter, sources, count, medium } = req.body;
+    try {
+        const where: any = { type: 'MCQ' };
 
-    if (medium === 'Urdu') {
-        where.textUrdu = { not: '' };
-    } else if (medium === 'English') {
-        where.text = { not: '' };
-    } else if (medium === 'Bilingual') {
-        where.text = { not: '' };
-        where.textUrdu = { not: '' };
-    }
-    
-    const questions = await prisma.question.findMany({ where, take: 100 });
-    
-    if (questions.length === 0) return res.json([]);
+        if (subject) where.subject = subject;
+        if (grade) where.classLevel = grade;
+        if (chapter) where.chapter = chapter;
 
-    const shuffled = questions.sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, parseInt(count) || 10);
-    
-    res.json(selected);
-  } catch (e) {
-    console.error("Quiz gen error:", e);
-    res.status(500).json({ error: "Failed to generate quiz" });
-  }
+        if (sources && sources.length > 0 && !sources.includes('All')) {
+            where.source = { in: sources };
+        }
+
+        if (medium === 'Urdu') {
+            where.textUrdu = { not: '' };
+        } else if (medium === 'English') {
+            where.text = { not: '' };
+        } else if (medium === 'Bilingual') {
+            where.text = { not: '' };
+            where.textUrdu = { not: '' };
+        }
+
+        const questions = await prisma.question.findMany({ where, take: 100 });
+
+        if (questions.length === 0) return res.json([]);
+
+        const shuffled = questions.sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, parseInt(count) || 10);
+
+        res.json(selected);
+    } catch (e) {
+        console.error("Quiz gen error:", e);
+        res.status(500).json({ error: "Failed to generate quiz" });
+    }
 });
 
 app.get('/api/public/plans', async (req: any, res: any) => {
-  try {
-    let plans = await prisma.subscriptionPlan.findMany({ orderBy: { price: 'asc' } });
-    
-    if (plans.length === 0) {
-        const defaultPlans = [
-            {
-                id: 'starter',
-                name: 'Starter',
-                price: 0,
-                currencySymbol: '$',
-                features: ['50 Papers / Month', 'Basic AI Generation', '2 Staff Accounts', 'Standard Support'],
-                limits: { papers: 50, staff: 2, storageGB: 1, aiRequestsPerDay: 5 }
-            },
-            {
-                id: 'pro',
-                name: 'Professional',
-                price: 49,
-                currencySymbol: '$',
-                features: ['Unlimited Papers', 'Advanced AI Models', '10 Staff Accounts', 'Priority Support'],
-                limits: { papers: 9999, staff: 10, storageGB: 10, aiRequestsPerDay: 50 }
-            },
-            {
-                id: 'enterprise',
-                name: 'Enterprise',
-                price: 199,
-                currencySymbol: '$',
-                features: ['Unlimited Everything', 'Fine-tuned AI Models', 'Unlimited Staff', '24/7 Dedicated Support'],
-                limits: { papers: 99999, staff: 999, storageGB: 100, aiRequestsPerDay: 500 }
+    try {
+        let plans = await prisma.subscriptionPlan.findMany({ orderBy: { price: 'asc' } });
+
+        if (plans.length === 0) {
+            const defaultPlans = [
+                {
+                    id: 'starter',
+                    name: 'Starter',
+                    price: 0,
+                    currencySymbol: '$',
+                    features: ['50 Papers / Month', 'Basic AI Generation', '2 Staff Accounts', 'Standard Support'],
+                    limits: { papers: 50, staff: 2, storageGB: 1, aiRequestsPerDay: 5 }
+                },
+                {
+                    id: 'pro',
+                    name: 'Professional',
+                    price: 49,
+                    currencySymbol: '$',
+                    features: ['Unlimited Papers', 'Advanced AI Models', '10 Staff Accounts', 'Priority Support'],
+                    limits: { papers: 9999, staff: 10, storageGB: 10, aiRequestsPerDay: 50 }
+                },
+                {
+                    id: 'enterprise',
+                    name: 'Enterprise',
+                    price: 199,
+                    currencySymbol: '$',
+                    features: ['Unlimited Everything', 'Fine-tuned AI Models', 'Unlimited Staff', '24/7 Dedicated Support'],
+                    limits: { papers: 99999, staff: 999, storageGB: 100, aiRequestsPerDay: 500 }
+                }
+            ];
+
+            try {
+                // Attempt to seed default plans
+                for (const p of defaultPlans) {
+                    await prisma.subscriptionPlan.create({ data: p });
+                }
+                plans = defaultPlans;
+            } catch (seedErr) {
+                console.error("Auto-seeding plans failed:", seedErr);
+                // Even if write fails, return defaults for this request
+                plans = defaultPlans;
             }
-        ];
-        
-        try {
-            // Attempt to seed default plans
-            for (const p of defaultPlans) {
-                await prisma.subscriptionPlan.create({ data: p });
-            }
-            plans = defaultPlans;
-        } catch (seedErr) {
-            console.error("Auto-seeding plans failed:", seedErr);
-            // Even if write fails, return defaults for this request
-            plans = defaultPlans;
         }
+
+        res.json(plans);
+    } catch (e) {
+        console.error("Error fetching plans:", e);
+        res.status(500).json({ error: "Failed to fetch plans" });
     }
-    
-    res.json(plans);
-  } catch (e) {
-    console.error("Error fetching plans:", e);
-    res.status(500).json({ error: "Failed to fetch plans" });
-  }
 });
 
 // ... (Rest of the server file remains unchanged: Content Routes, School Routes, etc.)
 
 // 4. Content Routes
 app.get('/api/blogs', async (req: any, res: any) => {
-  try {
-    const blogs = await prisma.blogPost.findMany({ orderBy: { date: 'desc' } });
-    res.json(blogs);
-  } catch(e) { res.json([]) }
+    try {
+        const blogs = await prisma.blogPost.findMany({ orderBy: { date: 'desc' } });
+        res.json(blogs);
+    } catch (e) { res.json([]) }
 });
 app.post('/api/blogs', authenticate, async (req: any, res: any) => {
-  if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
-  const blog = await prisma.blogPost.create({ data: req.body });
-  res.json(blog);
+    if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+    const blog = await prisma.blogPost.create({ data: req.body });
+    res.json(blog);
 });
 app.delete('/api/blogs/:id', authenticate, async (req: any, res: any) => {
-  if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
-  await prisma.blogPost.delete({ where: { id: req.params.id } });
-  res.json({ success: true });
+    if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+    await prisma.blogPost.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
 });
 
 app.get('/api/notes', async (req: any, res: any) => {
-  try {
-    const search = String(req.query.search || '').trim();
-    const subject = String(req.query.subject || '').trim();
-    const grade = String(req.query.grade || '').trim();
-    const board = String(req.query.board || '').trim();
-    const noteType = String(req.query.noteType || '').trim();
+    try {
+        const search = String(req.query.search || '').trim();
+        const subject = String(req.query.subject || '').trim();
+        const grade = String(req.query.grade || '').trim();
+        const board = String(req.query.board || '').trim();
+        const noteType = String(req.query.noteType || '').trim();
 
-    const where: any = {};
-    if (subject) where.subject = { contains: subject, mode: 'insensitive' };
-    if (grade) where.grade = { equals: grade, mode: 'insensitive' };
-    if (board) where.board = { equals: board, mode: 'insensitive' };
-    if (noteType) where.noteType = { equals: noteType, mode: 'insensitive' };
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { subject: { contains: search, mode: 'insensitive' } },
-        { author: { contains: search, mode: 'insensitive' } },
-        { book: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
-      ];
+        const where: any = {};
+        if (subject) where.subject = { contains: subject, mode: 'insensitive' };
+        if (grade) where.grade = { equals: grade, mode: 'insensitive' };
+        if (board) where.board = { equals: board, mode: 'insensitive' };
+        if (noteType) where.noteType = { equals: noteType, mode: 'insensitive' };
+        if (search) {
+            where.OR = [
+                { title: { contains: search, mode: 'insensitive' } },
+                { subject: { contains: search, mode: 'insensitive' } },
+                { author: { contains: search, mode: 'insensitive' } },
+                { book: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } }
+            ];
+        }
+
+        const notes = await prisma.studyNote.findMany({ where, orderBy: { createdAt: 'desc' } });
+        res.json(notes);
+    } catch (e) {
+        res.json([]);
     }
-
-    const notes = await prisma.studyNote.findMany({ where, orderBy: { createdAt: 'desc' } });
-    res.json(notes);
-  } catch (e) {
-    res.json([]);
-  }
 });
 app.post('/api/notes', authenticate, async (req: any, res: any) => {
-  if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
-  const note = await prisma.studyNote.create({ data: req.body });
-  res.json(note);
+    if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+    const note = await prisma.studyNote.create({ data: req.body });
+    res.json(note);
 });
 app.delete('/api/notes/:id', authenticate, async (req: any, res: any) => {
-  if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
-  await prisma.studyNote.delete({ where: { id: req.params.id } });
-  res.json({ success: true });
+    if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+    await prisma.studyNote.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
 });
 
 app.get('/api/past-papers', async (req: any, res: any) => {
-  try {
-    if (req.query.filters === 'true') {
-      const [boards, levels, subjects, years] = await Promise.all([
-        prisma.pastPaper.groupBy({ by: ['board'], orderBy: { board: 'asc' } }),
-        prisma.pastPaper.groupBy({ by: ['level'], orderBy: { level: 'asc' } }),
-        prisma.pastPaper.groupBy({ by: ['subject'], where: { subject: { not: null } }, orderBy: { subject: 'asc' } }),
-        prisma.pastPaper.groupBy({ by: ['year'], orderBy: { year: 'desc' } })
-      ]);
-      return res.json({
-        boards: boards.map((item: any) => item.board),
-        levels: levels.map((item: any) => item.level),
-        subjects: subjects.map((item: any) => item.subject),
-        years: years.map((item: any) => String(item.year))
-      });
+    try {
+        if (req.query.filters === 'true') {
+            const [boards, levels, subjects, years] = await Promise.all([
+                prisma.pastPaper.groupBy({ by: ['board'], orderBy: { board: 'asc' } }),
+                prisma.pastPaper.groupBy({ by: ['level'], orderBy: { level: 'asc' } }),
+                prisma.pastPaper.groupBy({ by: ['subject'], where: { subject: { not: null } }, orderBy: { subject: 'asc' } }),
+                prisma.pastPaper.groupBy({ by: ['year'], orderBy: { year: 'desc' } })
+            ]);
+            return res.json({
+                boards: boards.map((item: any) => item.board),
+                levels: levels.map((item: any) => item.level),
+                subjects: subjects.map((item: any) => item.subject),
+                years: years.map((item: any) => String(item.year))
+            });
+        }
+
+        const { skip, pageSize, page } = getPaginationParams(req);
+        const search = String(req.query.search || '').trim();
+        const board = String(req.query.board || '').trim();
+        const level = String(req.query.level || '').trim();
+        const subject = String(req.query.subject || '').trim();
+        const year = Number(req.query.year);
+        const where: any = {};
+
+        if (board) where.board = { equals: board, mode: 'insensitive' };
+        if (level) where.level = { equals: level, mode: 'insensitive' };
+        if (subject) where.subject = { equals: subject, mode: 'insensitive' };
+        if (Number.isInteger(year) && year > 0) where.year = year;
+        if (search) {
+            where.OR = [
+                { title: { contains: search, mode: 'insensitive' } },
+                { board: { contains: search, mode: 'insensitive' } },
+                { level: { contains: search, mode: 'insensitive' } },
+                { subject: { contains: search, mode: 'insensitive' } },
+                ...(Number.isInteger(Number(search)) ? [{ year: Number(search) }] : [])
+            ];
+        }
+
+        const [papers, total] = await Promise.all([
+            prisma.pastPaper.findMany({ where, orderBy: [{ year: 'desc' }, { createdAt: 'desc' }], skip, take: pageSize }),
+            prisma.pastPaper.count({ where })
+        ]);
+        res.json({ data: papers, pagination: { page, pageSize, total, pages: Math.ceil(total / pageSize) } });
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to fetch past papers' });
     }
-
-    const { skip, pageSize, page } = getPaginationParams(req);
-    const search = String(req.query.search || '').trim();
-    const board = String(req.query.board || '').trim();
-    const level = String(req.query.level || '').trim();
-    const subject = String(req.query.subject || '').trim();
-    const year = Number(req.query.year);
-    const where: any = {};
-
-    if (board) where.board = { equals: board, mode: 'insensitive' };
-    if (level) where.level = { equals: level, mode: 'insensitive' };
-    if (subject) where.subject = { equals: subject, mode: 'insensitive' };
-    if (Number.isInteger(year) && year > 0) where.year = year;
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { board: { contains: search, mode: 'insensitive' } },
-        { level: { contains: search, mode: 'insensitive' } },
-        { subject: { contains: search, mode: 'insensitive' } },
-        ...(Number.isInteger(Number(search)) ? [{ year: Number(search) }] : [])
-      ];
-    }
-
-    const [papers, total] = await Promise.all([
-      prisma.pastPaper.findMany({ where, orderBy: [{ year: 'desc' }, { createdAt: 'desc' }], skip, take: pageSize }),
-      prisma.pastPaper.count({ where })
-    ]);
-    res.json({ data: papers, pagination: { page, pageSize, total, pages: Math.ceil(total / pageSize) } });
-  } catch (e) {
-    res.status(500).json({ error: 'Failed to fetch past papers' });
-  }
 });
 app.post('/api/past-papers', authenticate, async (req: any, res: any) => {
-  if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
-  const paper = await prisma.pastPaper.create({ data: req.body });
-  res.json(paper);
+    if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+    const paper = await prisma.pastPaper.create({ data: req.body });
+    res.json(paper);
 });
 app.delete('/api/past-papers/:id', authenticate, async (req: any, res: any) => {
-  if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
-  await prisma.pastPaper.delete({ where: { id: req.params.id } });
-  res.json({ success: true });
+    if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+    await prisma.pastPaper.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
 });
 
 app.post('/api/contact', async (req: any, res: any) => {
-  try {
-    const { firstName, lastName, email, message } = req.body;
-    if (prisma.contactQuery) {
-        const query = await prisma.contactQuery.create({ data: { firstName, lastName, email, message } });
-        res.json(query);
-    } else {
-        res.json({ success: true });
+    try {
+        const { firstName, lastName, email, message } = req.body;
+        if (prisma.contactQuery) {
+            const query = await prisma.contactQuery.create({ data: { firstName, lastName, email, message } });
+            res.json(query);
+        } else {
+            res.json({ success: true });
+        }
+    } catch (e) {
+        res.status(500).json({ error: "Failed to submit query" });
     }
-  } catch (e) {
-    res.status(500).json({ error: "Failed to submit query" });
-  }
 });
 
 app.get('/api/contact', authenticate, async (req: any, res: any) => {
-  if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
-  try {
-    res.json(await prisma.contactQuery.findMany({ orderBy: { createdAt: 'desc' } }));
-  } catch (e) {
-    res.status(500).json({ error: "Failed to fetch queries" });
-  }
+    if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+    try {
+        res.json(await prisma.contactQuery.findMany({ orderBy: { createdAt: 'desc' } }));
+    } catch (e) {
+        res.status(500).json({ error: "Failed to fetch queries" });
+    }
 });
 
 // 5. School & User Management Routes
 app.get('/api/schools', authenticate, async (req: any, res: any) => {
-  if (req.user?.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
-  
-  try {
-    const { skip, pageSize, page } = getPaginationParams(req);
-    
-    const [schools, total] = await Promise.all([
-        prisma.school.findMany({
-            orderBy: { createdAt: 'desc' },
-            include: {
-                _count: {
-                    select: { papers: true, users: true }
-                }
-            },
-            skip,
-            take: pageSize
-        }),
-        prisma.school.count()
-    ]);
-    
-    const mapped = schools.map((s: any) => ({
-        ...s,
-        stats: {
-            papersCount: s._count?.papers || 0,
-            teachersCount: s._count?.users || 0,
-            studentCount: 0,
-            dailyAiCount: s.stats?.dailyAiCount || 0,
-            lastAiDate: s.stats?.lastAiDate || ''
-        }
-    }));
-    
-    res.json({
-        data: mapped,
-        pagination: {
-            page,
-            pageSize,
-            total,
-            pages: Math.ceil(total / pageSize)
-        }
-    });
-  } catch (e) {
-    res.status(500).json({ error: 'Failed to fetch schools' });
-  }
+    if (req.user?.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+
+    try {
+        const { skip, pageSize, page } = getPaginationParams(req);
+
+        const [schools, total] = await Promise.all([
+            prisma.school.findMany({
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    _count: {
+                        select: { papers: true, users: true }
+                    }
+                },
+                skip,
+                take: pageSize
+            }),
+            prisma.school.count()
+        ]);
+
+        const mapped = schools.map((s: any) => ({
+            ...s,
+            stats: {
+                papersCount: s._count?.papers || 0,
+                teachersCount: s._count?.users || 0,
+                studentCount: 0,
+                dailyAiCount: s.stats?.dailyAiCount || 0,
+                lastAiDate: s.stats?.lastAiDate || ''
+            }
+        }));
+
+        res.json({
+            data: mapped,
+            pagination: {
+                page,
+                pageSize,
+                total,
+                pages: Math.ceil(total / pageSize)
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to fetch schools' });
+    }
 });
 
 app.get('/api/schools/:id', authenticate, async (req: any, res: any) => {
@@ -1192,9 +1192,9 @@ app.get('/api/schools/:id', authenticate, async (req: any, res: any) => {
         where: { id: req.params.id },
         include: { _count: { select: { papers: true, users: true } } }
     });
-    
+
     if (!school) return res.status(404).json({ error: "School not found" });
-    
+
     res.json({
         ...school,
         stats: {
@@ -1213,14 +1213,14 @@ app.get('/api/teacher/stats', authenticate, async (req: any, res: any) => {
     const submissionWhere: any = {
         paper: { schoolId: req.user.schoolId }
     };
-    
+
     let paperFilter: any = {};
-    
+
     // 1. Class Isolation
     if (req.user.assignedClasses?.length > 0) {
         // Filter students by class IDs
         submissionWhere.student = { classId: { in: req.user.assignedClasses } };
-        
+
         // Filter papers by class names (for papers created for these classes)
         const classNames = await prisma.classLevel.findMany({
             where: { id: { in: req.user.assignedClasses } },
@@ -1229,7 +1229,7 @@ app.get('/api/teacher/stats', authenticate, async (req: any, res: any) => {
         const names = classNames.map((c: any) => c.name);
         paperFilter.classLevel = { in: names };
     }
-    
+
     // 2. Subject Isolation
     if (req.user.assignedSubjects?.length > 0) {
         const subjects = await prisma.subject.findMany({
@@ -1252,16 +1252,16 @@ app.get('/api/teacher/stats', authenticate, async (req: any, res: any) => {
             select: { totalScore: true, paper: { select: { totalMarks: true } } }
         }),
         prisma.examPaper.count({
-            where: { 
+            where: {
                 schoolId: req.user.schoolId,
                 ...paperFilter
             }
         }),
-        prisma.student.count({ 
-            where: { 
-                schoolId: req.user.schoolId, 
-                classId: req.user.assignedClasses?.length > 0 ? { in: req.user.assignedClasses } : undefined 
-            } 
+        prisma.student.count({
+            where: {
+                schoolId: req.user.schoolId,
+                classId: req.user.assignedClasses?.length > 0 ? { in: req.user.assignedClasses } : undefined
+            }
         })
     ]);
 
@@ -1280,9 +1280,9 @@ app.get('/api/teacher/stats', authenticate, async (req: any, res: any) => {
 
 app.post('/api/schools', authenticate, async (req: any, res: any) => {
     if (req.user?.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
-    
+
     const { stats, id, adminPassword, _count, users, papers, activityLogs, ...data } = req.body;
-    
+
     try {
         const school = await prisma.school.create({
             data: {
@@ -1310,17 +1310,17 @@ app.post('/api/schools', authenticate, async (req: any, res: any) => {
 
         await trackActivity(req, 'SCHOOL', `Onboarded ${school.name}`);
         res.json(school);
-    } catch(e) {
+    } catch (e) {
         console.error(e);
         res.status(500).json({ error: "Creation failed" });
     }
 });
 
 app.put('/api/schools/:id', authenticate, async (req: any, res: any) => {
-    if (req.user.role !== 'SUPER_ADMIN' && req.user.schoolId !== req.params.id) return res.status(403).json({error: 'Forbidden'});
+    if (req.user.role !== 'SUPER_ADMIN' && req.user.schoolId !== req.params.id) return res.status(403).json({ error: 'Forbidden' });
 
     const { stats, _count, users, papers, activityLogs, id, ...data } = req.body;
-    
+
     if (data.validTill) data.validTill = new Date(data.validTill);
     if (data.subscriptionStartDate) data.subscriptionStartDate = new Date(data.subscriptionStartDate);
 
@@ -1414,7 +1414,7 @@ app.post('/api/schools/:id/approve', authenticate, async (req: any, res: any) =>
 // Users
 app.get('/api/users', authenticate, async (req: any, res: any) => {
     if (req.user?.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
-    
+
     try {
         const { skip, pageSize, page } = getPaginationParams(req);
         const [users, total] = await Promise.all([
@@ -1433,7 +1433,7 @@ app.get('/api/users', authenticate, async (req: any, res: any) => {
             }),
             prisma.user.count()
         ]);
-        
+
         res.json({
             data: users,
             pagination: {
@@ -1450,10 +1450,10 @@ app.get('/api/users', authenticate, async (req: any, res: any) => {
 
 app.post('/api/users', authenticate, async (req: any, res: any) => {
     const { name, email, password, role, schoolId, assignedSyllabuses, assignedClasses, assignedSubjects, avatar } = req.body;
-    
-    if (!password) return res.status(400).json({error: "Password required"});
+
+    if (!password) return res.status(400).json({ error: "Password required" });
     const hash = await bcrypt.hash(password, 10);
-    
+
     try {
         const payload: any = {
             name,
@@ -1475,7 +1475,7 @@ app.post('/api/users', authenticate, async (req: any, res: any) => {
 
         const user = await prisma.user.create({ data: payload });
         res.json(excludePassword(user));
-    } catch(e: any) {
+    } catch (e: any) {
         console.error("User creation failed:", e.message);
         res.status(500).json({ error: "User creation failed." });
     }
@@ -1492,11 +1492,11 @@ app.put('/api/users/:id', authenticate, async (req: any, res: any) => {
     }
 
     const { password, school, papers, activityLogs, id, subjects, assignedClasses, assignedSubjects, ...data } = req.body;
-    
+
     if (subjects) data.assignedSyllabuses = subjects;
     if (assignedClasses) data.assignedClasses = assignedClasses;
     if (assignedSubjects) data.assignedSubjects = assignedSubjects;
-    
+
     if (password && password.length > 0) {
         data.password = await bcrypt.hash(password, 10);
     }
@@ -1543,7 +1543,7 @@ app.get('/api/students', authenticate, requireOnlineTestFeature as any, async (r
     try {
         const { skip, pageSize, page } = getPaginationParams(req);
         const where: any = { schoolId: req.user.schoolId };
-        
+
         // Add filter support
         if (req.query.classId) {
             where.classId = req.query.classId;
@@ -1557,7 +1557,7 @@ app.get('/api/students', authenticate, requireOnlineTestFeature as any, async (r
                 { rollNo: { contains: q, mode: 'insensitive' } }
             ];
         }
-        
+
         const [students, total] = await Promise.all([
             prisma.student.findMany({
                 where,
@@ -1568,7 +1568,7 @@ app.get('/api/students', authenticate, requireOnlineTestFeature as any, async (r
             }),
             prisma.student.count({ where })
         ]);
-        
+
         res.json({
             data: students,
             pagination: {
@@ -1578,8 +1578,8 @@ app.get('/api/students', authenticate, requireOnlineTestFeature as any, async (r
                 pages: Math.ceil(total / pageSize)
             }
         });
-    } catch (e) { 
-        res.status(500).json({ error: 'Failed to fetch students' }); 
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to fetch students' });
     }
 });
 
@@ -1599,7 +1599,7 @@ app.post('/api/students/bulk', authenticate, requireOnlineTestFeature as any, as
     if (req.user.role !== 'SCHOOL_ADMIN' && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
     const { students } = req.body;
     if (!Array.isArray(students)) return res.status(400).json({ error: "Invalid data format" });
-    
+
     try {
         const hash = await bcrypt.hash('student123', 10);
         const created = await Promise.all(students.map(s => {
@@ -1619,7 +1619,7 @@ app.post('/api/students/bulk', authenticate, requireOnlineTestFeature as any, as
 app.put('/api/students/:id', authenticate, requireOnlineTestFeature as any, async (req: any, res: any) => {
     if (req.user.role !== 'SCHOOL_ADMIN' && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
     const { password, classLevel, id, ...data } = req.body;
-    
+
     if (password && password.length > 0) {
         data.password = await bcrypt.hash(password, 10);
     }
@@ -1649,7 +1649,7 @@ app.get('/api/teacher/submissions', authenticate, requireOnlineTestFeature as an
     try {
         const { skip, pageSize, page } = getPaginationParams(req);
         const where: any = { paper: { schoolId: req.user.schoolId } };
-        
+
         // Data Isolation for Teachers
         if (req.user.role === 'TEACHER') {
             // 1. Filter by assigned subjects (resolve IDs to names for ExamPaper match)
@@ -1668,7 +1668,7 @@ app.get('/api/teacher/submissions', authenticate, requireOnlineTestFeature as an
             if (req.user.assignedClasses?.length > 0) {
                 // IDs for student filtering
                 where.student = { classId: { in: req.user.assignedClasses } };
-                
+
                 // Names for paper filtering
                 const classLevels = await prisma.classLevel.findMany({
                     where: { id: { in: req.user.assignedClasses } },
@@ -1681,11 +1681,11 @@ app.get('/api/teacher/submissions', authenticate, requireOnlineTestFeature as an
 
         // --- NEW FILTERS ---
         const { classId, startDate, endDate, isGraded, paperId, studentId, q } = req.query;
-        
+
         if (classId) {
             where.student = { ...(where.student || {}), classId };
         }
-        
+
         if (paperId) {
             where.paperId = paperId;
         }
@@ -1701,7 +1701,7 @@ app.get('/api/teacher/submissions', authenticate, requireOnlineTestFeature as an
                 { paper: { title: { contains: q.trim(), mode: 'insensitive' } } }
             ];
         }
-        
+
         if (isGraded !== undefined) {
             where.isGraded = isGraded === 'true';
         }
@@ -1715,7 +1715,7 @@ app.get('/api/teacher/submissions', authenticate, requireOnlineTestFeature as an
         const [submissions, total] = await Promise.all([
             prisma.examSubmission.findMany({
                 where,
-                include: { 
+                include: {
                     student: { select: { name: true, rollNo: true } },
                     paper: true
                 },
@@ -1738,7 +1738,7 @@ app.get('/api/teacher/submissions', authenticate, requireOnlineTestFeature as an
                 isGraded: s.isGraded || !hasSubjective
             };
         });
-        
+
         res.json({
             data: processed,
             pagination: {
@@ -1748,9 +1748,9 @@ app.get('/api/teacher/submissions', authenticate, requireOnlineTestFeature as an
                 pages: Math.ceil(total / pageSize)
             }
         });
-    } catch (e) { 
+    } catch (e) {
         console.error(e);
-        res.status(500).json({ error: 'Failed to fetch submissions' }); 
+        res.status(500).json({ error: 'Failed to fetch submissions' });
     }
 });
 
@@ -1764,7 +1764,7 @@ app.post('/api/teacher/grade', authenticate, async (req: any, res: any) => {
         const submittedAt = new Date(submission.submittedAt);
         const daysSinceSubmission = (Date.now() - submittedAt.getTime()) / 86400000;
         if (daysSinceSubmission > 30) {
-            return res.status(403).json({ 
+            return res.status(403).json({
                 error: 'Grading window expired',
                 message: 'This submission cannot be graded. The 30-day grading window has passed.'
             });
@@ -1792,8 +1792,8 @@ app.post('/api/teacher/grade', authenticate, async (req: any, res: any) => {
 
         const updated = await prisma.examSubmission.update({
             where: { id: submissionId },
-            data: { 
-                answers, 
+            data: {
+                answers,
                 totalScore: newTotal,
                 isGraded: true,
                 gradedBy: req.user.id,
@@ -1838,8 +1838,8 @@ app.post('/api/teacher/grade-all', authenticate, async (req: any, res: any) => {
 
         const updated = await prisma.examSubmission.update({
             where: { id: submissionId },
-            data: { 
-                answers, 
+            data: {
+                answers,
                 totalScore: newTotal,
                 isGraded: true,
                 gradedBy: req.user.id,
@@ -1872,12 +1872,12 @@ setInterval(run72HourGradedCleanup, 6 * 60 * 60 * 1000);
 app.post('/api/system/cleanup', authenticate, async (req: any, res: any) => {
     if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
     const seventyTwoHoursAgo = new Date(Date.now() - 72 * 60 * 60 * 1000);
-    
+
     try {
         const deleted = await prisma.examSubmission.deleteMany({
-            where: { 
+            where: {
                 isGraded: false,
-                submittedAt: { lt: seventyTwoHoursAgo } 
+                submittedAt: { lt: seventyTwoHoursAgo }
             }
         });
         res.json({ success: true, count: deleted.count });
@@ -1887,24 +1887,24 @@ app.post('/api/system/cleanup', authenticate, async (req: any, res: any) => {
 
 app.post('/api/staff', authenticate, async (req: any, res: any) => {
     if (!req.user?.schoolId) return res.status(400).json({ error: "No school context" });
-    
-    const { password, subjects, status, lastActive, assignedClasses, assignedSubjects, ...data } = req.body; 
+
+    const { password, subjects, status, lastActive, assignedClasses, assignedSubjects, ...data } = req.body;
     const hash = await bcrypt.hash(password || 'password', 10);
-    
+
     let assignedRole = 'TEACHER';
     const incomingRole = (data.role || '').toUpperCase();
     if (incomingRole === 'ADMIN' || incomingRole === 'SCHOOL_ADMIN') {
         assignedRole = 'SCHOOL_ADMIN';
     }
-    
+
     data.role = assignedRole;
 
     try {
         const staff = await prisma.user.create({
-            data: { 
-                ...data, 
-                schoolId: req.user.schoolId, 
-                password: hash, 
+            data: {
+                ...data,
+                schoolId: req.user.schoolId,
+                password: hash,
                 role: assignedRole,
                 assignedSyllabuses: subjects || [],
                 assignedClasses: assignedClasses || [],
@@ -1912,11 +1912,11 @@ app.post('/api/staff', authenticate, async (req: any, res: any) => {
             }
         });
         await trackActivity(req, 'USER', `Added staff member: ${staff.name}`);
-        
+
         const responseData: any = excludePassword(staff);
         responseData.subjects = staff.assignedSyllabuses || [];
         res.json(responseData);
-    } catch(e: any) {
+    } catch (e: any) {
         res.status(500).json({ error: "Failed to create staff member." });
     }
 });
@@ -1926,7 +1926,7 @@ app.put('/api/staff/:id', authenticate, async (req: any, res: any) => {
     if (!staff) return res.status(404).json({ error: "Staff not found" });
 
     const { password, school, papers, activityLogs, id, subjects, status, lastActive, assignedClasses, assignedSubjects, ...data } = req.body;
-    
+
     if (password && password.length > 0) {
         data.password = await bcrypt.hash(password, 10);
     }
@@ -1939,11 +1939,11 @@ app.put('/api/staff/:id', authenticate, async (req: any, res: any) => {
             data.role = 'TEACHER';
         }
     }
-    
+
     if (subjects) {
         data.assignedSyllabuses = subjects;
     }
-    
+
     if (assignedClasses) {
         data.assignedClasses = assignedClasses;
     }
@@ -1975,13 +1975,13 @@ const registerCurriculumRoutes = (modelName: string, model: any) => {
     if (!model) return;
 
     app.get(`/api/curriculum/${modelName}`, authenticate, async (req: any, res: any) => {
-        try { 
+        try {
             let where: any = {};
-            
+
             // --- DATA ISOLATION ---
             if (req.user.role !== 'SUPER_ADMIN') {
                 let allowedSyllabuses: string[] = req.user.assignedSyllabuses || [];
-                
+
                 if (req.user.schoolId) {
                     const school = await prisma.school.findUnique({ where: { id: req.user.schoolId } });
                     if (school) {
@@ -2031,14 +2031,14 @@ const registerCurriculumRoutes = (modelName: string, model: any) => {
                 }
             }
 
-            res.json(await model.findMany({ where })); 
-        } catch(e) { res.status(500).json([]); }
+            res.json(await model.findMany({ where }));
+        } catch (e) { res.status(500).json([]); }
     });
 
     app.post(`/api/curriculum/${modelName}`, authenticate, async (req: any, res: any) => {
         if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Only Super Admin can modify curriculum' });
         const { id, ...data } = req.body;
-        try { res.json(await model.create({ data })); } catch(e) { res.status(500).json({}); }
+        try { res.json(await model.create({ data })); } catch (e) { res.status(500).json({}); }
     });
 
     app.put(`/api/curriculum/${modelName}/:id`, authenticate, async (req: any, res: any) => {
@@ -2058,7 +2058,7 @@ const registerCurriculumRoutes = (modelName: string, model: any) => {
             if (typeof req.body?.subjectId === 'string') data.subjectId = req.body.subjectId;
         }
         if (modelName === 'topics' && typeof req.body?.chapterId === 'string') data.chapterId = req.body.chapterId;
-        try { res.json(await model.update({ where: { id: req.params.id }, data })); } catch(e) { res.status(500).json({ error: 'Unable to update curriculum item' }); }
+        try { res.json(await model.update({ where: { id: req.params.id }, data })); } catch (e) { res.status(500).json({ error: 'Unable to update curriculum item' }); }
     });
 
     app.delete(`/api/curriculum/${modelName}/:id`, authenticate, async (req: any, res: any) => {
@@ -2134,7 +2134,7 @@ const registerCurriculumRoutes = (modelName: string, model: any) => {
                 await model.delete({ where: { id } });
             }
             res.json({ success: true });
-        } catch(e: any) {
+        } catch (e: any) {
             console.error(`Cascade delete failed for ${modelName}/${id}:`, e?.message);
             res.status(500).json({ error: `Failed to delete ${modelName}: ${e?.message || 'unknown error'}` });
         }
@@ -2168,24 +2168,24 @@ app.post('/api/curriculum/sync', authenticate, async (req: any, res: any) => {
             update: {},
             create: { name: board, description: `${board} Board` }
         });
-        
+
         const cls = await prisma.classLevel.findFirst({ where: { name: grade, syllabusId: syl.id } })
             || await prisma.classLevel.create({ data: { name: grade, syllabusId: syl.id } });
-            
+
         const sub = await prisma.subject.findFirst({ where: { name: subject, classId: cls.id } })
             || await prisma.subject.create({ data: { name: subject, classId: cls.id, syllabusId: syl.id } });
-            
+
         const chap = await prisma.chapter.findFirst({ where: { name: chapter, subjectId: sub.id } })
             || await prisma.chapter.create({ data: { name: chapter, subjectId: sub.id, classId: cls.id, syllabusId: syl.id } });
-            
+
         let top = null;
         if (topic) {
             top = await prisma.topic.findFirst({ where: { name: topic, chapterId: chap.id } })
                 || await prisma.topic.create({ data: { name: topic, chapterId: chap.id } });
         }
-            
+
         res.json({ success: true, path: { syllabus: syl, class: cls, subject: sub, chapter: chap, topic: top } });
-    } catch(e) {
+    } catch (e) {
         console.error(e);
         res.status(500).json({ error: "Sync failed" });
     }
@@ -2197,9 +2197,9 @@ app.get('/api/questions', authenticate, questionLimiter as any, async (req: any,
         const { skip, pageSize, page } = getPaginationParams(req);
         const where: any = {};
         if (req.user?.role !== 'SUPER_ADMIN') {
-            where.OR = [ { schoolId: null }, { schoolId: req.user?.schoolId } ];
+            where.OR = [{ schoolId: null }, { schoolId: req.user?.schoolId }];
         }
-        
+
         const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
         if (q) {
             where.OR = [
@@ -2230,8 +2230,8 @@ app.get('/api/questions', authenticate, questionLimiter as any, async (req: any,
             useCache ? 600 : 0, // 10 min TTL for filtered queries, 0 for searches (bypasses cache)
             async () => {
                 const [questions, total] = await Promise.all([
-                    prisma.question.findMany({ 
-                        where, 
+                    prisma.question.findMany({
+                        where,
                         orderBy: { createdAt: 'desc' },
                         skip,
                         take: pageSize
@@ -2249,7 +2249,7 @@ app.get('/api/questions', authenticate, questionLimiter as any, async (req: any,
                 };
             }
         );
-        
+
         res.json(result);
     } catch (e) {
         console.error(e);
@@ -2282,11 +2282,11 @@ app.post('/api/questions', authenticate, async (req: any, res: any) => {
 app.post('/api/questions/bulk', authenticate, async (req: any, res: any) => {
     const { questions } = req.body;
     const schoolId = req.user?.role === 'SUPER_ADMIN' ? null : req.user?.schoolId;
-    
+
     if (!Array.isArray(questions)) {
         return res.status(400).json({ error: 'Questions must be an array' });
     }
-    
+
     try {
         const results = {
             imported: 0,
@@ -2294,13 +2294,13 @@ app.post('/api/questions/bulk', authenticate, async (req: any, res: any) => {
             failed: 0,
             errors: [] as any[]
         };
-        
+
         const validQuestions = [];
-        
+
         for (let i = 0; i < questions.length; i++) {
             const q = sanitizeQuestionInput(questions[i], schoolId);
             const validation = validateQuestion(q);
-            
+
             if (!validation.valid) {
                 results.skipped++;
                 results.errors.push({
@@ -2310,10 +2310,10 @@ app.post('/api/questions/bulk', authenticate, async (req: any, res: any) => {
                 });
                 continue;
             }
-            
+
             validQuestions.push(q);
         }
-        
+
         // Batch insert valid questions in chunks of 500
         const chunkSize = 500;
         for (let i = 0; i < validQuestions.length; i += chunkSize) {
@@ -2332,14 +2332,14 @@ app.post('/api/questions/bulk', authenticate, async (req: any, res: any) => {
                 });
             }
         }
-        
+
         // Bust cache after bulk import
         await cacheDelPattern(`questions:${schoolId || 'global'}:*`);
         await cacheDelPattern('questions:global:*');
         await trackActivity(req, 'CURRICULUM', `Bulk imported ${results.imported}/${questions.length} questions`);
-        
-        res.json({ 
-            success: true, 
+
+        res.json({
+            success: true,
             ...results,
             message: `Imported ${results.imported} questions, skipped ${results.skipped}, failed ${results.failed}`
         });
@@ -2350,17 +2350,17 @@ app.post('/api/questions/bulk', authenticate, async (req: any, res: any) => {
 });
 
 app.put('/api/questions/:id', authenticate, async (req: any, res: any) => {
-  const { id, ...data } = req.body;
-  try {
-      const updated = await prisma.question.update({ where: { id: req.params.id }, data });
-      // Bust caches for both school-specific and global questions
-      const schoolId = req.user?.schoolId || 'global';
-      await cacheDelPattern(`questions:${schoolId}:*`);
-      await cacheDelPattern('questions:global:*');
-      res.json(updated);
-  } catch (e) {
-      res.status(500).json({ error: "Update failed" });
-  }
+    const { id, ...data } = req.body;
+    try {
+        const updated = await prisma.question.update({ where: { id: req.params.id }, data });
+        // Bust caches for both school-specific and global questions
+        const schoolId = req.user?.schoolId || 'global';
+        await cacheDelPattern(`questions:${schoolId}:*`);
+        await cacheDelPattern('questions:global:*');
+        res.json(updated);
+    } catch (e) {
+        res.status(500).json({ error: "Update failed" });
+    }
 });
 
 app.delete('/api/questions/:id', authenticate, async (req: any, res: any) => {
@@ -2378,10 +2378,10 @@ app.get('/api/papers', authenticate, async (req: any, res: any) => {
         const { skip, pageSize, page } = getPaginationParams(req);
         const where: any = { status: { not: 'Archived' } };
         if (req.user?.role !== 'SUPER_ADMIN') where.schoolId = req.user?.schoolId;
-        
+
         const [papers, total] = await Promise.all([
-            prisma.examPaper.findMany({ 
-                where, 
+            prisma.examPaper.findMany({
+                where,
                 orderBy: { createdAt: 'desc' },
                 skip,
                 take: pageSize,
@@ -2401,7 +2401,7 @@ app.get('/api/papers', authenticate, async (req: any, res: any) => {
             }),
             prisma.examPaper.count({ where })
         ]);
-        
+
         // The repository and result screens use the SavedPaper shape.  Prisma
         // stores the creation timestamp as createdAt, so expose a stable date
         // string instead of leaving the client to render an undefined value.
@@ -2429,7 +2429,7 @@ app.get('/api/papers', authenticate, async (req: any, res: any) => {
 app.get('/api/papers/:id', authenticate, async (req: any, res: any) => {
     try {
         const paper = await prisma.examPaper.findFirst({
-            where: { 
+            where: {
                 id: req.params.id,
                 ...(req.user.role !== 'SUPER_ADMIN' ? { schoolId: req.user.schoolId } : {})
             }
@@ -2444,7 +2444,7 @@ app.get('/api/papers/:id', authenticate, async (req: any, res: any) => {
 app.post('/api/papers', authenticate, async (req: any, res: any) => {
     const targetSchoolId = req.user.role === 'SUPER_ADMIN' ? req.body.schoolId : req.user.schoolId;
     if (!targetSchoolId) return res.status(400).json({ error: "School ID required" });
-    
+
     const { id, selectedChapters, selectedTopics, dateCreated, author, ...data } = req.body;
     if (data.examDate) data.examDate = new Date(data.examDate);
 
@@ -2455,7 +2455,7 @@ app.post('/api/papers', authenticate, async (req: any, res: any) => {
             return res.status(403).json({ error: 'Online Test feature is not enabled for this school package. Please upgrade to create online exams.' });
         }
     }
-    
+
     try {
         const paper = await prisma.examPaper.create({
             data: {
@@ -2592,9 +2592,9 @@ app.post('/api/notifications', authenticate, async (req: any, res: any) => {
     const { id, ...data } = req.body;
     res.json(await prisma.notification.create({ data: { ...data, createdBy: req.user?.name } }));
 });
-app.delete('/api/notifications/:id', authenticate, async (req: any, res: any) => { 
-    await prisma.notification.delete({ where: { id: req.params.id } }); 
-    res.json({ success: true }); 
+app.delete('/api/notifications/:id', authenticate, async (req: any, res: any) => {
+    await prisma.notification.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
 });
 
 app.get('/api/logs', authenticate, async (req: any, res: any) => {
@@ -2602,11 +2602,11 @@ app.get('/api/logs', authenticate, async (req: any, res: any) => {
         const { skip, pageSize, page } = getPaginationParams(req);
         const where: any = {};
         if (req.user?.role !== 'SUPER_ADMIN') where.schoolId = req.user?.schoolId;
-        
+
         const [logs, total] = await Promise.all([
-            prisma.activityLog.findMany({ 
-                where, 
-                orderBy: { timestamp: 'desc' }, 
+            prisma.activityLog.findMany({
+                where,
+                orderBy: { timestamp: 'desc' },
                 skip,
                 take: pageSize,
                 select: {
@@ -2619,7 +2619,7 @@ app.get('/api/logs', authenticate, async (req: any, res: any) => {
             }),
             prisma.activityLog.count({ where })
         ]);
-        
+
         res.json({
             data: logs,
             pagination: {
@@ -2663,7 +2663,7 @@ cron.schedule('0 0 1 * *', async () => {
     try {
         const deleted = await prisma.examDraft.deleteMany({});
         console.log(`[CRON] Monthly cleanup executed. Deleted ${deleted.count} old ExamDraft records.`);
-    } catch(e) {
+    } catch (e) {
         console.error('[CRON] Failed to delete exam drafts', e);
     }
 });
@@ -2673,7 +2673,7 @@ cron.schedule('0 0 1 * *', async () => {
 cron.schedule('0 * * * *', async () => {
     try {
         const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
-        
+
         // Find submissions graded more than 48 hours ago that still have answers
         const submissions = await prisma.examSubmission.findMany({
             where: {
@@ -2690,7 +2690,7 @@ cron.schedule('0 * * * *', async () => {
             });
             console.log(`[CRON] 48h cleanup executed. Cleared answers JSON payload from ${result.count} old graded ExamSubmission records.`);
         }
-    } catch(e) {
+    } catch (e) {
         console.error('[CRON] Failed to cleanup exam submissions', e);
     }
 });
@@ -2702,82 +2702,83 @@ cron.schedule('0 * * * *', async () => {
 
 // GET /api/schemes
 app.get('/api/schemes', authenticate, async (req: any, res: any) => {
-  try {
-    const { syllabusId, classId, subjectId, includeGlobal } = req.query as any;
-    const where: any = {};
-    if (syllabusId) where.syllabusId = syllabusId;
-    if (classId) where.classId = classId;
-    if (subjectId) where.subjectId = subjectId;
+    try {
+        const { syllabusId, classId, subjectId, includeGlobal } = req.query as any;
+        const where: any = {};
+        if (syllabusId) where.syllabusId = syllabusId;
+        if (classId) where.classId = classId;
+        if (subjectId) where.subjectId = subjectId;
 
-    if (req.user.role !== 'SUPER_ADMIN') {
-      const showGlobal = includeGlobal !== 'false';
-      const orClauses: any[] = [];
-      if (showGlobal) orClauses.push({ isGlobal: true });
-      if (req.user.schoolId) orClauses.push({ schoolId: req.user.schoolId });
-      if (orClauses.length > 0) where.OR = orClauses;
+        if (req.user.role !== 'SUPER_ADMIN') {
+            const showGlobal = includeGlobal !== 'false';
+            const orClauses: any[] = [];
+            if (showGlobal) orClauses.push({ isGlobal: true });
+            if (req.user.schoolId) orClauses.push({ schoolId: req.user.schoolId });
+            if (orClauses.length > 0) where.OR = orClauses;
+        }
+
+        const schemes = await (prisma as any).pairingScheme.findMany({
+            where,
+            orderBy: [{ isGlobal: 'desc' }, { updatedAt: 'desc' }]
+        });
+        res.json(schemes);
+    } catch (e: any) {
+        console.error('Error fetching schemes:', e);
+        res.status(500).json({ error: e.message || 'Failed to fetch schemes' });
     }
-
-    const schemes = await (prisma as any).pairingScheme.findMany({
-      where,
-      orderBy: [{ isGlobal: 'desc' }, { updatedAt: 'desc' }]
-    });
-    res.json(schemes);
-  } catch (e: any) {
-    console.error('Error fetching schemes:', e);
-    res.status(500).json({ error: e.message || 'Failed to fetch schemes' });
-  }
 });
 
 // POST /api/schemes
 app.post('/api/schemes', authenticate, async (req: any, res: any) => {
-  try {
-    const { name, syllabusId, classId, subjectId, totalMarks, durationMin, structure, isGlobal } = req.body;
-    if (!name || !syllabusId || !classId || !subjectId || !structure) return res.status(400).json({ error: 'name, syllabusId, classId, subjectId, structure are required' });
-    const globalFlag = req.user.role === 'SUPER_ADMIN' ? Boolean(isGlobal) : false;
-    const scheme = await (prisma as any).pairingScheme.create({
-      data: { name, syllabusId, classId, subjectId, totalMarks: Number(totalMarks)||0, durationMin: Number(durationMin)||180, structure, isGlobal: globalFlag, createdBy: req.user.id, schoolId: globalFlag ? null : (req.user.schoolId || null) }
-    });
-    await trackActivity(req, 'PAPER', `Created pairing scheme: ${name}`, scheme.id);
-    res.json(scheme);
-  } catch (e: any) { res.status(500).json({ error: e.message || 'Failed to create scheme' }); }
+    try {
+        const { name, syllabusId, classId, subjectId, schemeVersion, totalMarks, durationMin, attemptLongQuestions, compulsoryQuestionNumber, structure, isGlobal } = req.body;
+        if (!name || !syllabusId || !classId || !subjectId || !structure) return res.status(400).json({ error: 'name, syllabusId, classId, subjectId, structure are required' });
+        const normalizedVersion = schemeVersion === 'NEW' ? 'NEW' : 'OLD';
+        const globalFlag = req.user.role === 'SUPER_ADMIN' ? Boolean(isGlobal) : false;
+        const scheme = await (prisma as any).pairingScheme.create({
+            data: { name, syllabusId, classId, subjectId, schemeVersion: normalizedVersion, totalMarks: Number(totalMarks) || 0, durationMin: Number(durationMin) || 180, attemptLongQuestions: attemptLongQuestions == null ? null : Number(attemptLongQuestions), compulsoryQuestionNumber: compulsoryQuestionNumber == null ? null : Number(compulsoryQuestionNumber), structure, isGlobal: globalFlag, createdBy: req.user.id, schoolId: globalFlag ? null : (req.user.schoolId || null) }
+        });
+        await trackActivity(req, 'PAPER', `Created pairing scheme: ${name}`, scheme.id);
+        res.json(scheme);
+    } catch (e: any) { res.status(500).json({ error: e.message || 'Failed to create scheme' }); }
 });
 
 // PUT /api/schemes/:id
 app.put('/api/schemes/:id', authenticate, async (req: any, res: any) => {
-  try {
-    const existing = await (prisma as any).pairingScheme.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: 'Scheme not found' });
-    if (existing.isGlobal && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Only Super Admin can edit global board schemes' });
-    if (!existing.isGlobal && existing.schoolId && existing.schoolId !== req.user.schoolId && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'You can only edit your own schemes' });
-    const { name, totalMarks, durationMin, structure, isGlobal } = req.body;
-    const globalFlag = req.user.role === 'SUPER_ADMIN' ? Boolean(isGlobal) : existing.isGlobal;
-    const updated = await (prisma as any).pairingScheme.update({ where: { id: req.params.id }, data: { ...(name && { name }), ...(totalMarks !== undefined && { totalMarks: Number(totalMarks) }), ...(durationMin !== undefined && { durationMin: Number(durationMin) }), ...(structure && { structure }), isGlobal: globalFlag, schoolId: globalFlag ? null : existing.schoolId } });
-    res.json(updated);
-  } catch (e: any) { res.status(500).json({ error: e.message || 'Failed to update scheme' }); }
+    try {
+        const existing = await (prisma as any).pairingScheme.findUnique({ where: { id: req.params.id } });
+        if (!existing) return res.status(404).json({ error: 'Scheme not found' });
+        if (existing.isGlobal && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Only Super Admin can edit global board schemes' });
+        if (!existing.isGlobal && existing.schoolId && existing.schoolId !== req.user.schoolId && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'You can only edit your own schemes' });
+        const { name, schemeVersion, totalMarks, durationMin, attemptLongQuestions, compulsoryQuestionNumber, structure, isGlobal } = req.body;
+        const globalFlag = req.user.role === 'SUPER_ADMIN' ? Boolean(isGlobal) : existing.isGlobal;
+        const updated = await (prisma as any).pairingScheme.update({ where: { id: req.params.id }, data: { ...(name && { name }), ...(schemeVersion !== undefined && { schemeVersion: schemeVersion === 'NEW' ? 'NEW' : 'OLD' }), ...(totalMarks !== undefined && { totalMarks: Number(totalMarks) }), ...(durationMin !== undefined && { durationMin: Number(durationMin) }), ...(attemptLongQuestions !== undefined && { attemptLongQuestions: attemptLongQuestions == null ? null : Number(attemptLongQuestions) }), ...(compulsoryQuestionNumber !== undefined && { compulsoryQuestionNumber: compulsoryQuestionNumber == null ? null : Number(compulsoryQuestionNumber) }), ...(structure && { structure }), isGlobal: globalFlag, schoolId: globalFlag ? null : existing.schoolId } });
+        res.json(updated);
+    } catch (e: any) { res.status(500).json({ error: e.message || 'Failed to update scheme' }); }
 });
 
 // DELETE /api/schemes/:id
 app.delete('/api/schemes/:id', authenticate, async (req: any, res: any) => {
-  try {
-    const existing = await (prisma as any).pairingScheme.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: 'Scheme not found' });
-    if (existing.isGlobal && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Only Super Admin can delete global schemes' });
-    if (!existing.isGlobal && existing.schoolId !== req.user.schoolId && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'You can only delete your own schemes' });
-    await (prisma as any).pairingScheme.delete({ where: { id: req.params.id } });
-    await trackActivity(req, 'PAPER', `Deleted pairing scheme: ${existing.name}`, req.params.id);
-    res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message || 'Failed to delete scheme' }); }
+    try {
+        const existing = await (prisma as any).pairingScheme.findUnique({ where: { id: req.params.id } });
+        if (!existing) return res.status(404).json({ error: 'Scheme not found' });
+        if (existing.isGlobal && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Only Super Admin can delete global schemes' });
+        if (!existing.isGlobal && existing.schoolId !== req.user.schoolId && req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'You can only delete your own schemes' });
+        await (prisma as any).pairingScheme.delete({ where: { id: req.params.id } });
+        await trackActivity(req, 'PAPER', `Deleted pairing scheme: ${existing.name}`, req.params.id);
+        res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message || 'Failed to delete scheme' }); }
 });
 
 // 404 Handler (MUST BE AFTER ALL ROUTES)
 app.use((req, res) => {
-  res.status(404).json({ error: `Not Found: ${req.method} ${req.url}` });
+    res.status(404).json({ error: `Not Found: ${req.method} ${req.url}` });
 });
 
 app.listen(PORT, async () => {
-  console.log(`ðŸš€ PakParcha AI â€” API Server running on port ${PORT}`);
-  console.log(`   ðŸ“¦ DB connection pool size: ${POOL_SIZE}`);
-  console.log(`   ðŸ”’ Rate limiting: enabled (global 500/15min, auth 20/15min, AI 30/10min)`);
-  console.log(`   ðŸ—„ï¸  Redis cache: ${process.env.REDIS_URL ? 'enabled' : 'disabled (set REDIS_URL to enable)'}`);
+    console.log(`ðŸš€ PakParcha AI â€” API Server running on port ${PORT}`);
+    console.log(`   ðŸ“¦ DB connection pool size: ${POOL_SIZE}`);
+    console.log(`   ðŸ”’ Rate limiting: enabled (global 500/15min, auth 20/15min, AI 30/10min)`);
+    console.log(`   ðŸ—„ï¸  Redis cache: ${process.env.REDIS_URL ? 'enabled' : 'disabled (set REDIS_URL to enable)'}`);
 });
 

@@ -364,21 +364,25 @@ model ExamDraft {
 }
 
 model PairingScheme {
-  id          String   @id @default(uuid())
-  name        String
-  syllabusId  String
-  classId     String
-  subjectId   String
-  totalMarks  Int      @default(0)
-  durationMin Int      @default(180)
-  structure   Json     // Array of SchemeSectionDef (see types.ts)
-  isGlobal    Boolean  @default(false) // true = Super Admin / Board scheme visible to all schools
-  createdBy   String   // userId of creator
-  schoolId    String?  // null = global board scheme; set = school/teacher private scheme
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                        String   @id @default(uuid())
+  name                      String
+  syllabusId                String
+  classId                   String
+  subjectId                 String
+  schemeVersion             String   @default("OLD")
+  totalMarks                Int      @default(0)
+  durationMin               Int      @default(180)
+  attemptLongQuestions      Int?
+  compulsoryQuestionNumber Int?
+  structure                 Json     // Array of SchemeSectionDef (see types.ts)
+  isGlobal                  Boolean  @default(false) // true = Super Admin / Board scheme visible to all schools
+  createdBy                 String   // userId of creator
+  schoolId                  String?  // null = global board scheme; set = school/teacher private scheme
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 
   @@index([syllabusId, classId, subjectId])
+  @@index([syllabusId, classId, subjectId, schemeVersion])
   @@index([schoolId])
   @@index([isGlobal])
 }

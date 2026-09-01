@@ -19,12 +19,21 @@ const emptySection = (idx: number): SchemeSectionDef => ({
   totalCount: 10,
   selectCount: 10,
   marksPerQuestion: 1,
+  sectionRole: 'OBJECTIVE',
+  questionNumber: idx + 1,
   hasParts: false,
+  hasInternalChoice: false,
   parts: [],
   chapterDistribution: [],
   isCompulsory: false,
   instructionUrdu: ''
 });
+
+const roleForType = (type: string): SchemeSectionDef['sectionRole'] => {
+  if (type === 'Long Answer') return 'LONG_QUESTION';
+  if (type === 'Short Answer') return 'SHORT_GROUP';
+  return 'OBJECTIVE';
+};
 
 const emptyPart = (label: string): SchemePart => ({
   label,
@@ -101,13 +110,24 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
   const startNew = () => {
     setEditingScheme({
       name: '', syllabusId: filterSyllabus || '', classId: filterClass || '',
-      subjectId: filterSubject || '', totalMarks: 75, durationMin: 150,
-      structure: [emptySection(0)], isGlobal: isSuperAdmin, createdBy: user.id,
+      subjectId: filterSubject || '', schemeVersion: 'NEW', totalMarks: 75, durationMin: 150,
+      attemptLongQuestions: 3, structure: [emptySection(0)], isGlobal: isSuperAdmin, createdBy: user.id,
     });
     setExpandedSection(null);
   };
 
-  const startEdit = (scheme: PairingScheme) => { setEditingScheme(JSON.parse(JSON.stringify(scheme))); setExpandedSection(null); };
+  const startEdit = (scheme: PairingScheme) => {
+    const copy = JSON.parse(JSON.stringify(scheme));
+    copy.schemeVersion = copy.schemeVersion || 'OLD';
+    copy.structure = (copy.structure || []).map((section: SchemeSectionDef, index: number) => ({
+      ...section,
+      sectionRole: section.sectionRole || roleForType(section.type),
+      questionNumber: section.questionNumber || index + 1,
+      hasInternalChoice: Boolean(section.hasInternalChoice)
+    }));
+    setEditingScheme(copy);
+    setExpandedSection(null);
+  };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this pairing scheme?')) return;
@@ -121,7 +141,7 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
     }
     setIsSaving(true);
     try {
-      const payload = { name: editingScheme.name!, syllabusId: editingScheme.syllabusId!, classId: editingScheme.classId!, subjectId: editingScheme.subjectId!, totalMarks: editingScheme.totalMarks || 0, durationMin: editingScheme.durationMin || 180, structure: editingScheme.structure || [], isGlobal: editingScheme.isGlobal || false, createdBy: user.id };
+      const payload = { name: editingScheme.name!, syllabusId: editingScheme.syllabusId!, classId: editingScheme.classId!, subjectId: editingScheme.subjectId!, schemeVersion: editingScheme.schemeVersion || 'OLD', totalMarks: editingScheme.totalMarks || 0, durationMin: editingScheme.durationMin || 180, attemptLongQuestions: editingScheme.attemptLongQuestions, compulsoryQuestionNumber: editingScheme.compulsoryQuestionNumber, structure: editingScheme.structure || [], isGlobal: editingScheme.isGlobal || false, createdBy: user.id };
       let saved: PairingScheme;
       if (editingScheme.id) { saved = await updateScheme(editingScheme.id, payload); setSchemes(prev => prev.map(s => s.id === saved.id ? saved : s)); }
       else { saved = await createScheme(payload); setSchemes(prev => [saved, ...prev]); }
@@ -169,13 +189,14 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
     const total = Math.max(1, Number(sec.totalCount) || 1);
     updateSection(idx, {
       hasParts: enabled,
+      hasInternalChoice: enabled ? false : sec.hasInternalChoice,
       parts: enabled
         ? Array.from({ length: total }, (_, i) => emptyPart(PART_LABELS[i] || String.fromCharCode(97 + i)))
         : []
     });
   };
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"/></div>;
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" /></div>;
 
   if (editingScheme) return (
     <div className="fixed inset-0 z-50 bg-gray-50 overflow-y-auto">
@@ -188,18 +209,18 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
           <div className="flex gap-3">
             <button onClick={() => setEditingScheme(null)} className="px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-all">Cancel</button>
             <button onClick={handleSave} disabled={isSaving} className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-indigo-200 transition-all">
-              <Save size={16}/>{isSaving ? 'Saving...' : 'Save Scheme'}
+              <Save size={16} />{isSaving ? 'Saving...' : 'Save Scheme'}
             </button>
           </div>
         </div>
 
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 mb-6">
-          <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] mb-6 flex items-center gap-2"><Settings2 size={16}/> Scheme Info</h3>
+          <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] mb-6 flex items-center gap-2"><Settings2 size={16} /> Scheme Info</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
               <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Scheme Name</label>
               <input value={editingScheme.name || ''} onChange={e => setEditingScheme(p => ({ ...p, name: e.target.value }))}
-                placeholder="e.g. Math 10th Punjab Board 2025" className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
+                placeholder="e.g. Math 10th Punjab Board 2025" className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
             <div>
               <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Board / Syllabus</label>
@@ -225,28 +246,51 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
                 {subjects.filter(s => s.classId === editingScheme.classId).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
+            <div>
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Scheme Version</label>
+              <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-xl">
+                {(['OLD', 'NEW'] as const).map(version => (
+                  <button key={version} type="button" onClick={() => setEditingScheme(p => ({ ...p, schemeVersion: version }))}
+                    className={`h-10 rounded-lg text-xs font-black transition-all ${(editingScheme.schemeVersion || 'OLD') === version ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:bg-white'}`}>
+                    {version === 'OLD' ? 'Old Scheme' : 'New Scheme'}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Total Marks</label>
                 <input type="number" value={editingScheme.totalMarks || ''} onChange={e => setEditingScheme(p => ({ ...p, totalMarks: Number(e.target.value) }))}
-                  className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
+                  className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
               <div>
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Duration (min)</label>
                 <input type="number" value={editingScheme.durationMin || ''} onChange={e => setEditingScheme(p => ({ ...p, durationMin: Number(e.target.value) }))}
-                  className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
+                  className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+            </div>
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-violet-50 border border-violet-100 rounded-2xl">
+              <div>
+                <label className="block text-[10px] font-black text-violet-500 uppercase tracking-widest mb-2">Long Questions to Attempt</label>
+                <input type="number" min={1} value={editingScheme.attemptLongQuestions || ''} onChange={e => setEditingScheme(p => ({ ...p, attemptLongQuestions: Number(e.target.value) }))}
+                  className="w-full h-10 px-3 bg-white border border-violet-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-violet-500" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-violet-500 uppercase tracking-widest mb-2">Compulsory Question Number</label>
+                <input type="number" min={1} value={editingScheme.compulsoryQuestionNumber || ''} onChange={e => setEditingScheme(p => ({ ...p, compulsoryQuestionNumber: e.target.value ? Number(e.target.value) : undefined }))}
+                  className="w-full h-10 px-3 bg-white border border-violet-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-violet-500" />
               </div>
             </div>
             {isSuperAdmin && (
               <div className="md:col-span-2 flex items-center gap-4 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
-                <Globe size={20} className="text-amber-600 shrink-0"/>
+                <Globe size={20} className="text-amber-600 shrink-0" />
                 <div className="flex-1">
                   <p className="font-bold text-sm text-amber-900">Global Board Scheme</p>
                   <p className="text-xs text-amber-700">Visible to all schools as an official board template</p>
                 </div>
                 <button onClick={() => setEditingScheme(p => ({ ...p, isGlobal: !p?.isGlobal }))}
                   className={`w-12 h-6 rounded-full relative transition-colors shrink-0 ${editingScheme.isGlobal ? 'bg-amber-500' : 'bg-gray-200'}`}>
-                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${editingScheme.isGlobal ? 'right-1' : 'left-1'}`}/>
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${editingScheme.isGlobal ? 'right-1' : 'left-1'}`} />
                 </button>
               </div>
             )}
@@ -270,16 +314,16 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
                   <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-sm shrink-0">{idx + 1}</div>
                   <div className="flex-1">
                     <input value={sec.title} onChange={e => { e.stopPropagation(); updateSection(idx, { title: e.target.value }); }} onClick={e => e.stopPropagation()}
-                      className="font-black text-gray-900 bg-transparent outline-none border-b border-transparent focus:border-indigo-300 text-sm"/>
+                      className="font-black text-gray-900 bg-transparent outline-none border-b border-transparent focus:border-indigo-300 text-sm" />
                     <div className="flex flex-wrap gap-2 mt-1">
                       <span className="text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded">{sec.type}</span>
-                      {sec.hasParts ? <span className="text-[10px] font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded">{(sec.parts||[]).length} Parts • {sectionMarks} marks</span>
+                      {sec.hasParts ? <span className="text-[10px] font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded">{(sec.parts || []).length} Parts • {sectionMarks} marks</span>
                         : <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Attempt {sec.selectCount}/{sec.totalCount} • {sectionMarks} marks</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={e => { e.stopPropagation(); removeSection(idx); }} className="p-2 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
-                    {isExpanded ? <ChevronUp size={18} className="text-gray-400"/> : <ChevronDown size={18} className="text-gray-400"/>}
+                    <button onClick={e => { e.stopPropagation(); removeSection(idx); }} className="p-2 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                    {isExpanded ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
                   </div>
                 </div>
 
@@ -288,7 +332,7 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Question Type</label>
-                        <select value={sec.type} onChange={e => updateSection(idx, { type: e.target.value, hasParts: false, parts: [], chapterDistribution: [], isCompulsory: false })}
+                        <select value={sec.type} onChange={e => updateSection(idx, { type: e.target.value, sectionRole: roleForType(e.target.value), hasParts: false, hasInternalChoice: false, parts: [], chapterDistribution: [], isCompulsory: false })}
                           className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-indigo-500">
                           {QUESTION_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
@@ -296,7 +340,7 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
                       <div>
                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Marks / Q</label>
                         <input type="number" min={1} value={sec.marksPerQuestion} onChange={e => updateSection(idx, { marksPerQuestion: Number(e.target.value) })}
-                          className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
+                          className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
                       </div>
                       <div>
                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
@@ -310,7 +354,7 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
                             parts: sec.hasParts ? Array.from({ length: Math.max(1, totalCount || 1) }, (_, i) => (sec.parts || [])[i] || emptyPart(PART_LABELS[i] || String.fromCharCode(97 + i))) : sec.parts
                           });
                         }}
-                          className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
+                          className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
                       </div>
                       <div>
                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
@@ -318,7 +362,24 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
                           <span className="ml-1 text-gray-300 font-normal normal-case" title="How many questions students must attempt">ℹ</span>
                         </label>
                         <input type="number" min={1} max={sec.totalCount} value={sec.selectCount} onChange={e => updateSection(idx, { selectCount: Number(e.target.value) })}
-                          className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
+                          className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Section Hierarchy</label>
+                        <select value={sec.sectionRole || roleForType(sec.type)} onChange={e => updateSection(idx, { sectionRole: e.target.value as SchemeSectionDef['sectionRole'] })}
+                          className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-indigo-500">
+                          <option value="OBJECTIVE">Objective Section</option>
+                          <option value="SHORT_GROUP">Subjective Part I — Short Group</option>
+                          <option value="LONG_QUESTION">Subjective Part II — Long Question</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Printed Question Number</label>
+                        <input type="number" min={1} value={sec.questionNumber || idx + 1} onChange={e => updateSection(idx, { questionNumber: Number(e.target.value) })}
+                          className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
                       </div>
                     </div>
 
@@ -335,41 +396,55 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">English Statement</label>
                         <input value={sec.instruction || ''} onChange={e => updateSection(idx, { instruction: e.target.value })}
                           placeholder="Write detailed answers. Attempt any 3 out of 5."
-                          className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-indigo-500"/>
+                          className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
                       </div>
                       <div>
                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Urdu Statement</label>
                         <input dir="rtl" value={sec.instructionUrdu || ''} onChange={e => updateSection(idx, { instructionUrdu: e.target.value })}
                           placeholder="تفصیلی جوابات لکھیں۔"
-                          className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-urdu font-bold text-xs text-right outline-none focus:ring-2 focus:ring-indigo-500"/>
+                          className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl font-urdu font-bold text-xs text-right outline-none focus:ring-2 focus:ring-indigo-500" />
                       </div>
                     </div>
 
                     {sec.type === 'Long Answer' && (
                       <div className="space-y-3">
                         <div className="flex items-center gap-4 p-4 bg-rose-50 border border-rose-100 rounded-2xl">
-                          <CheckCircle2 size={18} className="text-rose-600 shrink-0"/>
+                          <CheckCircle2 size={18} className="text-rose-600 shrink-0" />
                           <div className="flex-1">
                             <p className="font-bold text-sm text-rose-900">Compulsory Long Question</p>
                             <p className="text-xs text-rose-600">Prints a compulsory label before this subjective part-two question</p>
                           </div>
                           <button onClick={() => updateSection(idx, { isCompulsory: !sec.isCompulsory, selectCount: !sec.isCompulsory ? sec.totalCount : sec.selectCount })}
                             className={`w-12 h-6 rounded-full relative transition-colors shrink-0 ${sec.isCompulsory ? 'bg-rose-600' : 'bg-gray-200'}`}>
-                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${sec.isCompulsory ? 'right-1' : 'left-1'}`}/>
+                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${sec.isCompulsory ? 'right-1' : 'left-1'}`} />
                           </button>
                         </div>
 
                         <div className="flex items-center gap-4 p-4 bg-violet-50 border border-violet-100 rounded-2xl">
-                          <Layers size={18} className="text-violet-600 shrink-0"/>
+                          <Layers size={18} className="text-violet-600 shrink-0" />
                           <div className="flex-1">
                             <p className="font-bold text-sm text-violet-900">Make Sub-Part Questions</p>
                             <p className="text-xs text-violet-600">Creates one part for each generated long question, such as (a) to (e) for 5 longs</p>
                           </div>
                           <button onClick={() => makeLongParts(idx, !sec.hasParts)}
                             className={`w-12 h-6 rounded-full relative transition-colors shrink-0 ${sec.hasParts ? 'bg-violet-600' : 'bg-gray-200'}`}>
-                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${sec.hasParts ? 'right-1' : 'left-1'}`}/>
+                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${sec.hasParts ? 'right-1' : 'left-1'}`} />
                           </button>
                         </div>
+
+                        {!sec.hasParts && (
+                          <div className="flex items-center gap-4 p-4 bg-sky-50 border border-sky-100 rounded-2xl">
+                            <Copy size={18} className="text-sky-600 shrink-0" />
+                            <div className="flex-1">
+                              <p className="font-bold text-sm text-sky-900">Enable Internal Choice (OR / یا)</p>
+                              <p className="text-xs text-sky-600">Generates a second alternative with the same marks for this long question</p>
+                            </div>
+                            <button type="button" onClick={() => updateSection(idx, { hasInternalChoice: !sec.hasInternalChoice })}
+                              className={`w-12 h-6 rounded-full relative transition-colors shrink-0 ${sec.hasInternalChoice ? 'bg-sky-600' : 'bg-gray-200'}`}>
+                              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${sec.hasInternalChoice ? 'right-1' : 'left-1'}`} />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -377,7 +452,7 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">Parts</h4>
-                          <button onClick={() => addPart(idx)} className="px-3 py-1.5 bg-violet-50 text-violet-700 rounded-lg text-xs font-black hover:bg-violet-100 flex items-center gap-1"><Plus size={12}/>Add Part</button>
+                          <button onClick={() => addPart(idx)} className="px-3 py-1.5 bg-violet-50 text-violet-700 rounded-lg text-xs font-black hover:bg-violet-100 flex items-center gap-1"><Plus size={12} />Add Part</button>
                         </div>
                         {(sec.parts || []).map((part, pIdx) => (
                           <div key={pIdx} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
@@ -395,15 +470,15 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
                             <div>
                               <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Marks</label>
                               <input type="number" min={1} value={part.marks} onChange={e => updatePart(idx, pIdx, { marks: Number(e.target.value) })}
-                                className="w-full h-9 px-2 bg-white border border-gray-200 rounded-lg font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
+                                className="w-full h-9 px-2 bg-white border border-gray-200 rounded-lg font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
                             </div>
                             <div className="flex items-end gap-2">
                               <div className="flex-1">
                                 <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Instruction</label>
                                 <input value={part.instruction || ''} onChange={e => updatePart(idx, pIdx, { instruction: e.target.value })}
-                                  placeholder="Optional..." className="w-full h-9 px-2 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500"/>
+                                  placeholder="Optional..." className="w-full h-9 px-2 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
                               </div>
-                              <button onClick={() => removePart(idx, pIdx)} className="h-9 px-2 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14}/></button>
+                              <button onClick={() => removePart(idx, pIdx)} className="h-9 px-2 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                             </div>
                           </div>
                         ))}
@@ -414,7 +489,7 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">Chapter Distribution Rules</h4>
-                          <button onClick={() => addChapterRule(idx)} className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-black hover:bg-indigo-100 flex items-center gap-1"><Plus size={12}/>Add Rule</button>
+                          <button onClick={() => addChapterRule(idx)} className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-black hover:bg-indigo-100 flex items-center gap-1"><Plus size={12} />Add Rule</button>
                         </div>
                         {(sec.chapterDistribution || []).length === 0 && <p className="text-xs text-gray-400 italic">No rules — questions pulled randomly from all chapters.</p>}
                         {(sec.chapterDistribution || []).map((rule, rIdx) => (
@@ -436,9 +511,9 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
                             <div className="shrink-0">
                               <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Count</label>
                               <input type="number" min={1} value={rule.count} onChange={e => updateChapterRule(idx, rIdx, { count: Number(e.target.value) })}
-                                className="w-16 h-8 px-2 text-center bg-white border border-gray-200 rounded-lg font-bold text-sm outline-none"/>
+                                className="w-16 h-8 px-2 text-center bg-white border border-gray-200 rounded-lg font-bold text-sm outline-none" />
                             </div>
-                            <button type="button" onClick={() => removeChapterRule(idx, rIdx)} className="mt-4 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14}/></button>
+                            <button type="button" onClick={() => removeChapterRule(idx, rIdx)} className="mt-4 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                           </div>
                         ))}
                       </div>
@@ -449,7 +524,7 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
             );
           })}
           <button onClick={addSection} className="w-full py-4 border-2 border-dashed border-gray-200 rounded-3xl text-sm font-bold text-gray-400 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2">
-            <Plus size={18}/> Add Section
+            <Plus size={18} /> Add Section
           </button>
         </div>
       </div>
@@ -464,7 +539,7 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
           <p className="text-gray-500 mt-1 text-sm">Board-level and personal question distribution templates</p>
         </div>
         <button onClick={startNew} className="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all">
-          <Plus size={18}/> New Scheme
+          <Plus size={18} /> New Scheme
         </button>
       </div>
 
@@ -488,7 +563,7 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
 
       {visibleSchemes.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-3xl border border-gray-100">
-          <BookOpen size={40} className="mx-auto text-gray-200 mb-4"/>
+          <BookOpen size={40} className="mx-auto text-gray-200 mb-4" />
           <p className="font-bold text-gray-400 uppercase tracking-widest text-sm">No schemes found</p>
           <p className="text-xs text-gray-400 mt-1">Create your first pairing scheme to get started</p>
         </div>
@@ -505,25 +580,28 @@ export default function SchemeManager({ user }: SchemeManagerProps) {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       {scheme.isGlobal
-                        ? <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[9px] font-black uppercase tracking-widest"><Globe size={10}/> Board</span>
-                        : <span className="flex items-center gap-1 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[9px] font-black uppercase tracking-widest"><School size={10}/> Custom</span>}
+                        ? <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[9px] font-black uppercase tracking-widest"><Globe size={10} /> Board</span>
+                        : <span className="flex items-center gap-1 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[9px] font-black uppercase tracking-widest"><School size={10} /> Custom</span>}
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${(scheme.schemeVersion || 'OLD') === 'NEW' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                        {(scheme.schemeVersion || 'OLD')} Scheme
+                      </span>
                     </div>
                     <h3 className="font-black text-gray-900 text-lg leading-tight">{scheme.name}</h3>
                     <p className="text-xs text-gray-400 mt-1 flex items-center gap-2">
                       <span>{sub?.name || '—'}</span><span>•</span>
-                      <span className="flex items-center gap-1"><GraduationCap size={11}/>{cls?.name || '—'}</span>
+                      <span className="flex items-center gap-1"><GraduationCap size={11} />{cls?.name || '—'}</span>
                       <span>•</span><span>{subj?.name || '—'}</span>
                     </p>
                   </div>
                 </div>
                 <div className="flex gap-3 text-xs font-bold text-gray-500 mb-5">
-                  <span className="flex items-center gap-1"><Hash size={11}/>{scheme.totalMarks} marks</span>
+                  <span className="flex items-center gap-1"><Hash size={11} />{scheme.totalMarks} marks</span>
                   <span>•</span><span>{scheme.durationMin} min</span>
-                  <span>•</span><span className="flex items-center gap-1"><Layers size={11}/>{(scheme.structure as SchemeSectionDef[]).length} sections</span>
+                  <span>•</span><span className="flex items-center gap-1"><Layers size={11} />{(scheme.structure as SchemeSectionDef[]).length} sections</span>
                 </div>
                 <div className="flex gap-2">
-                  {canEdit && <button onClick={() => startEdit(scheme)} className="flex-1 py-2.5 bg-gray-50 hover:bg-indigo-50 text-gray-600 hover:text-indigo-600 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5"><Edit3 size={13}/> Edit</button>}
-                  {canEdit && <button onClick={() => handleDelete(scheme.id)} className="py-2.5 px-4 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-xl text-xs font-black transition-all"><Trash2 size={13}/></button>}
+                  {canEdit && <button onClick={() => startEdit(scheme)} className="flex-1 py-2.5 bg-gray-50 hover:bg-indigo-50 text-gray-600 hover:text-indigo-600 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5"><Edit3 size={13} /> Edit</button>}
+                  {canEdit && <button onClick={() => handleDelete(scheme.id)} className="py-2.5 px-4 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-xl text-xs font-black transition-all"><Trash2 size={13} /></button>}
                   {!canEdit && <span className="flex-1 py-2.5 text-center text-xs font-bold text-gray-300">Read Only</span>}
                 </div>
               </div>

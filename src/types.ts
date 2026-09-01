@@ -98,6 +98,12 @@ export interface Question {
   text: string;
   textUrdu?: string;
   type: string;
+  /** Links questions that are alternatives separated by OR / یا. */
+  internalChoiceGroupId?: string;
+  /** Marks the second (alternative) item in an internal-choice pair. */
+  isInternalChoiceAlternative?: boolean;
+  /** Part label supplied by a pairing scheme, e.g. a, b, c. */
+  schemePartLabel?: string;
   subject: string;
   classLevel: string;
   topic: string;
@@ -137,6 +143,8 @@ export interface PaperHeaderConfig {
 export type NumberingStyle = 'Numeric' | 'Alpha' | 'Roman' | 'AlphaUppercase' | 'RomanUppercase';
 export type WatermarkType = 'None' | 'Monogram' | 'Confidential' | 'Draft';
 export type PaperLayoutMode = 'Standard' | 'DoubleColumn';
+export type SchemeVersion = 'OLD' | 'NEW';
+export type SchemeSectionRole = 'OBJECTIVE' | 'SHORT_GROUP' | 'LONG_QUESTION';
 
 export interface PaperSectionConfig {
   id: string;
@@ -154,8 +162,14 @@ export interface PaperSectionConfig {
   sourceFilter: string[];
   category: 'Objective' | 'Subjective';
   subQuestionNumbering: NumberingStyle;
+  /** Explicit hierarchy role. Legacy papers fall back to category/question type. */
+  sectionRole?: SchemeSectionRole;
+  /** Printed question number/label, independent of title parsing. */
+  questionNumber?: number;
   hasParts?: boolean;
   parts?: SchemePart[];
+  /** For a non-part long question, generate and print an OR alternative. */
+  hasInternalChoice?: boolean;
   chapterDistribution?: SchemeChapterRule[];
   isCompulsory?: boolean;
 }
@@ -228,6 +242,11 @@ export interface ExamPaper {
   structure: PaperStructure;
   watermark: WatermarkType;
   layoutMode: PaperLayoutMode;
+  /** Pairing-scheme metadata retained for editing and deterministic rendering. */
+  selectedSchemeId?: string;
+  schemeVersion?: SchemeVersion;
+  attemptLongQuestions?: number;
+  compulsoryQuestionNumber?: number;
   /** Whether marks are printed beside each question. Defaults to true for legacy papers. */
   showQuestionMarks?: boolean;
   /** Heading inserted immediately before the long/detailed-answer portion. */
@@ -354,8 +373,14 @@ export interface SchemeSectionDef {
   totalCount: number;           // Total questions provided
   selectCount: number;          // Questions student must attempt
   marksPerQuestion: number;
+  /** Explicit hierarchy role; optional so stored legacy schemes remain valid. */
+  sectionRole?: SchemeSectionRole;
+  /** Printed question number, independent of a title such as Q-9. */
+  questionNumber?: number;
   hasParts: boolean;            // If true, uses `parts` field
   parts?: SchemePart[];         // For Long Answer with (a)(b)(c) breakdown
+  /** Valid for non-part long questions and produces an OR / یا alternative. */
+  hasInternalChoice?: boolean;
   chapterDistribution?: SchemeChapterRule[];  // For MCQ / Short Answer
   isCompulsory?: boolean;       // If true, printed as compulsory and counted as required
   instructionUrdu?: string;     // Optional Urdu instruction for board templates
@@ -368,8 +393,14 @@ export interface PairingScheme {
   syllabusId: string;
   classId: string;
   subjectId: string;
+  /** Optional for compatibility: legacy records are treated as OLD. */
+  schemeVersion?: SchemeVersion;
   totalMarks: number;
   durationMin: number;
+  /** Overall long-question attempt rule shared by Part II. */
+  attemptLongQuestions?: number;
+  /** Explicit compulsory number used in bilingual Part II instructions. */
+  compulsoryQuestionNumber?: number;
   structure: SchemeSectionDef[];
   isGlobal: boolean;            // true = Board / Super Admin scheme
   createdBy: string;
@@ -384,6 +415,8 @@ export interface WizardState {
   selectedSyllabus?: string;
   selectedClass?: string;
   selectedSubject?: string;
+  selectedSchemeVersion?: SchemeVersion;
+  selectedSchemeId?: string;
   selectedChapters: string[];
   selectedTopics: string[];
   selectedQuestions: Question[];

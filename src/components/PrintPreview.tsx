@@ -394,6 +394,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   }, [sectionsList, printViewMode]);
 
   const isLongQuestionSection = (section: PaperSectionConfig) => {
+    if (section.sectionRole) return section.sectionRole === 'LONG_QUESTION';
     const normalizedType = String(section.questionType || '').toLowerCase();
     return Boolean(section.hasParts) || normalizedType.includes('long') || normalizedType.includes('essay');
   };
@@ -437,29 +438,18 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
       });
     }
 
-    // 3. Subjective Long attempt marks
+    // 3. Subjective Long attempt marks (configuration-driven, no Q9/title assumptions)
     if (printViewMode !== 'objective' && subjectiveLongSections.length > 0) {
-      // Typically: Q9 is compulsory, choose any 2 others out of the remaining ones.
-      const compulsorySec = subjectiveLongSections.find(s => s.title.includes('9') || s.title.toLowerCase().includes('theorem'));
-      const otherSecs = subjectiveLongSections.filter(s => s !== compulsorySec);
+      const compulsorySections = subjectiveLongSections.filter(s => s.isCompulsory);
+      const optionalSections = subjectiveLongSections.filter(s => !s.isCompulsory);
+      const sectionMarks = (s: PaperSectionConfig) => s.parts && s.parts.length > 0
+        ? s.parts.reduce((a, p) => a + p.marks, 0)
+        : s.marksPerQuestion;
 
-      if (compulsorySec) {
-        const cMarks = compulsorySec.parts && compulsorySec.parts.length > 0
-          ? compulsorySec.parts.reduce((a, p) => a + p.marks, 0)
-          : (compulsorySec.selectCount * compulsorySec.marksPerQuestion);
-        total += cMarks;
-      }
-
-      const otherMarks = otherSecs.map(s => {
-        return s.parts && s.parts.length > 0
-          ? s.parts.reduce((a, p) => a + p.marks, 0)
-          : (s.selectCount * s.marksPerQuestion);
-      }).sort((a, b) => b - a);
-
-      const selectOtherCount = compulsorySec ? 2 : 3;
-      for (let i = 0; i < Math.min(selectOtherCount, otherMarks.length); i++) {
-        total += otherMarks[i];
-      }
+      compulsorySections.forEach(s => { total += sectionMarks(s); });
+      const configuredAttempts = paper.attemptLongQuestions ?? subjectiveLongSections.reduce((max, s) => Math.max(max, s.selectCount || 0), 0);
+      const optionalAttemptCount = Math.max(0, configuredAttempts - compulsorySections.length);
+      optionalSections.map(sectionMarks).sort((a, b) => b - a).slice(0, optionalAttemptCount).forEach(marks => { total += marks; });
     }
 
     // If calculated total is 0, fallback to paper.totalMarks
@@ -644,13 +634,10 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                 {/* Detailed answers instruction – once for all long questions */}
                 <div className="flex justify-between items-center my-3 py-2 px-3 border border-black rounded break-inside-avoid">
                   <div className="font-bold italic text-left" style={{ fontSize: `${englishFontSize}px` }} contentEditable suppressContentEditableWarning>
-                    Write detailed answers of the following questions. Attempt {subjectiveLongSections.length > 1 ? 'THREE' : 'ALL'} questions in all.
-                    {subjectiveLongSections.some(s => s.title.includes('9') || s.title.toLowerCase().includes('theorem')) ? ' But Q.9 is Compulsory.' : ''}
+                    {paper.longQuestionInstruction || `Attempt ${paper.attemptLongQuestions || subjectiveLongSections.length} questions in all.${paper.compulsoryQuestionNumber ? ` Question No. ${paper.compulsoryQuestionNumber} is Compulsory.` : ''}`}
                   </div>
                   <div dir="rtl" className="font-urdu font-bold text-right ml-4" style={{ fontSize: `${urduFontSize}px` }} contentEditable suppressContentEditableWarning>
-                    درج ذیل تمام سوالات کے تفصیلی جوابات دیں۔
-                    {subjectiveLongSections.some(s => s.title.includes('9') || s.title.toLowerCase().includes('theorem'))
-                      ? ' نوٹ: کل تین سوالات کے جوابات لکھئے۔ لیکن سوال نمبر 9 لازمی ہے۔' : ''}
+                    {paper.longQuestionInstructionUrdu || `کل ${paper.attemptLongQuestions || subjectiveLongSections.length} سوالات حل کریں۔${paper.compulsoryQuestionNumber ? ` سوال نمبر ${paper.compulsoryQuestionNumber} لازمی ہے۔` : ''}`}
                   </div>
                 </div>
 
@@ -658,15 +645,15 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                   {subjectiveLongSections.map((sec, idx) => {
                     const secQuestions = questions.filter(q => (q as any).sectionId === sec.id);
                     if (secQuestions.length === 0) return null;
-                    const qNum = subjectiveShortSections.length + 2 + idx;
-                    const isCompulsory = !!sec.isCompulsory || sec.title.includes('9') || sec.title.toLowerCase().includes('theorem');
+                    const qNum = sec.questionNumber || subjectiveShortSections.length + 2 + idx;
+                    const isCompulsory = !!sec.isCompulsory;
                     return (
                       <div key={sec.id} className={`break-inside-avoid ${isCompulsory ? 'border-l-2 border-black pl-2' : ''}`}>
                         {/* Compulsory badge before Q9 */}
                         {isCompulsory && (
                           <div className="flex justify-between items-center mb-1 bg-black text-white px-2 py-0.5 rounded break-inside-avoid">
-                            <span className="font-black text-white uppercase tracking-widest text-[9px]">COMPULSORY — Q.{qNum}</span>
-                            <span dir="rtl" className="font-urdu font-black text-white text-[9px]">لازمی — سوال نمبر {qNum}</span>
+                            <span className="font-black text-white uppercase tracking-widest text-[9px]">[COMPULSORY / لازمی] — Q.{qNum}</span>
+                            <span dir="rtl" className="font-urdu font-black text-white text-[9px]">[لازمی / COMPULSORY] — سوال نمبر {qNum}</span>
                           </div>
                         )}
                         {renderBoardExamSection(sec, secQuestions, qNum)}
@@ -1354,8 +1341,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
     const engInstruction = sec.instruction || getDefaultSectionInstruction(sec.questionType, sec.selectCount, sec.totalCount);
     const urInstruction = sec.instructionUrdu || getDefaultSectionInstructionUrdu(sec.questionType, sec.selectCount, sec.totalCount);
 
-    // Q9 (Theorems) detection
-    const isQ9 = qNum === 9 || sec.title.includes('9') || sec.title.toLowerCase().includes('theorem');
+    // Internal-choice behavior comes from scheme configuration, not a Q9/title heuristic.
+    const hasInternalChoice = Boolean(sec.hasInternalChoice);
 
     // Helper functions for bilingual part extraction
     const cleanPartText = (text: string | undefined) => {
@@ -1419,14 +1406,11 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               let subNumEn = '';
               let subNumUr = '';
 
-              if (isQ9) {
-                // Theorem choice has no (a)/(b) labels
-                if (idx === 0) {
+              if (hasInternalChoice) {
+                // Alternatives share one parent question number and have no sub-labels.
+                if (!q.isInternalChoiceAlternative) {
                   subNumEn = `${qNum}. `;
                   subNumUr = ` ${qNum}`;
-                } else {
-                  subNumEn = '';
-                  subNumUr = '';
                 }
               } else if (sec.hasParts) {
                 const labelEn = getPartLabelEn(q.id, idx);
@@ -1453,8 +1437,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
 
               return (
                 <React.Fragment key={q.id}>
-                  {/* For Q9, separate the two questions with an "OR / یا" divider */}
-                  {isQ9 && idx === 1 && (
+                  {/* Scheme-configured alternative questions are separated with OR / یا. */}
+                  {hasInternalChoice && q.isInternalChoiceAlternative && (
                     <tr className="break-inside-avoid">
                       {/* Left space for marks */}
                       {showQuestionMarks && q.marks > 0 && <td className="border-r border-black" style={{ width: '28px' }}></td>}

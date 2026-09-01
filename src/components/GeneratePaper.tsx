@@ -6,7 +6,7 @@ import {
    Layers, FileText, CheckCircle2, ChevronDown, MonitorPlay, Layout, Library, Settings2,
    Hash, Info, Edit3, Tag, RefreshCw, Zap, Upload, FileUp, Briefcase, Wand2, FileCode, Paperclip, Database, Shuffle
 } from 'lucide-react';
-import { WizardState, Question, Difficulty, PaperStructure, PaperSectionConfig, User, WatermarkType, PaperLayoutMode, School, UserRole, QuestionType, getDefaultSectionInstruction, PairingScheme, SchemeSectionDef } from '../types';
+import { WizardState, Question, Difficulty, PaperStructure, PaperSectionConfig, User, WatermarkType, PaperLayoutMode, School, UserRole, QuestionType, getDefaultSectionInstruction, getDefaultSectionInstructionUrdu, PairingScheme, SchemeSectionDef, SchemeVersion } from '../types';
 import {
    getSyllabuses, getClasses, getSubjects, getChapters, getTopics, getQuestions, getQuestionTypes, getSchoolById, getSystemConfig, checkAndTrackAiUsage, getSchemes
 } from '../services/dataService';
@@ -54,6 +54,8 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
       selectedSyllabus: '',
       selectedClass: '',
       selectedSubject: '',
+      selectedSchemeVersion: 'NEW',
+      selectedSchemeId: '',
       selectedChapters: [],
       selectedTopics: [],
       selectedQuestions: [],
@@ -142,10 +144,12 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
    const filteredSubjects = useMemo(() => subjects.filter(s => s.classId === state.selectedClass), [subjects, state.selectedClass]);
    const relevantChapters = useMemo(() => allChapters.filter(c => c.subjectId === state.selectedSubject), [allChapters, state.selectedSubject]);
 
-   // Pairing Schemes filtered by selected Subject
+   // Pairing schemes are filtered by subject and Old/New version. Missing version means legacy OLD.
    const relevantSchemes = useMemo(() => allSchemes.filter(s => s.subjectId === state.selectedSubject), [allSchemes, state.selectedSubject]);
-   const globalSchemes = useMemo(() => relevantSchemes.filter(s => s.isGlobal), [relevantSchemes]);
-   const customSchemes = useMemo(() => relevantSchemes.filter(s => !s.isGlobal), [relevantSchemes]);
+   const versionedSchemes = useMemo(() => relevantSchemes.filter(s => (s.schemeVersion || 'OLD') === (state.selectedSchemeVersion || 'NEW')), [relevantSchemes, state.selectedSchemeVersion]);
+   const globalSchemes = useMemo(() => versionedSchemes.filter(s => s.isGlobal), [versionedSchemes]);
+   const customSchemes = useMemo(() => versionedSchemes.filter(s => !s.isGlobal), [versionedSchemes]);
+   const selectedScheme = useMemo(() => relevantSchemes.find(s => s.id === state.selectedSchemeId), [relevantSchemes, state.selectedSchemeId]);
 
    // Filtering Logic for AI Agent (Independent Selection)
    const aiFilteredClasses = useMemo(() => classes.filter(c => !state.selectedSyllabus || c.syllabusId === state.selectedSyllabus), [classes, state.selectedSyllabus]);
@@ -554,6 +558,58 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                      });
                   });
                }
+
+               // Enforce the configured count even when a narrow chapter rule returned too few rows.
+               // Reusing a repository item with a unique generated ID is preferable to silently producing
+               // fewer questions than the selected pairing scheme requires.
+               if (!sec.hasParts) {
+                  const eligiblePool = repoQuestions.filter(q =>
+                     q.type === sec.questionType &&
+                     q.subject === subjectName &&
+                     (q.classLevel === className || !q.classLevel) &&
+                     matchesSectionMedium(q, sec.languageMedium)
+                  );
+                  const sectionItems = generatedQuestions.filter(q => q.sectionId === sec.id);
+                  const requiredMainCount = Math.max(0, sec.totalCount);
+                  for (let i = sectionItems.length; i < requiredMainCount && eligiblePool.length > 0; i += 1) {
+                     const source = eligiblePool[i % eligiblePool.length];
+                     generatedQuestions.push({
+                        ...source,
+                        id: `${source.id}_exact_${sec.id}_${i}_${Math.random().toString(36).substr(2, 6)}`,
+                        sectionId: sec.id,
+                        marks: sec.marksPerQuestion
+                     });
+                  }
+
+                  if (sec.hasInternalChoice && sec.sectionRole === 'LONG_QUESTION' && eligiblePool.length > 0) {
+                     const main = generatedQuestions.find(q => q.sectionId === sec.id);
+                     if (main) {
+                        const choiceGroupId = `choice_${sec.id}`;
+                        main.internalChoiceGroupId = choiceGroupId;
+                        const unused = eligiblePool.find(q => q.id !== main.id && !main.id.startsWith(`${q.id}_`)) || eligiblePool[0];
+                        generatedQuestions.push({
+                           ...unused,
+                           id: `${unused.id}_alternative_${sec.id}_${Math.random().toString(36).substr(2, 6)}`,
+                           sectionId: sec.id,
+                           marks: sec.marksPerQuestion,
+                           internalChoiceGroupId: choiceGroupId,
+                           isInternalChoiceAlternative: true
+                        });
+                     }
+                  }
+               }
+            });
+
+            // Objective scheme sections always print exactly four choices (A-D).
+            generatedQuestions = generatedQuestions.map(q => {
+               const sec = state.paperStructure[q.sectionId || ''];
+               const isMcq = sec?.questionType?.toLowerCase().includes('mcq') || q.type?.toLowerCase().includes('mcq');
+               if (!isMcq) return q;
+               const options = [...(q.options || [])].slice(0, 4);
+               const optionsUrdu = [...(q.optionsUrdu || [])].slice(0, 4);
+               while (options.length < 4) options.push('________________');
+               while (optionsUrdu.length < 4) optionsUrdu.push('________________');
+               return { ...q, options, optionsUrdu };
             });
             structure = state.paperStructure;
          }
@@ -882,7 +938,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
          <h2 className="text-3xl font-black text-gray-900 mb-12 tracking-tight">Step 3: Select Subject</h2>
          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
             {filteredSubjects.map(s => (
-               <div key={s.id} onClick={() => setState({ ...state, selectedSubject: s.id, step: 'CHAPTERS' })} className="group p-6 bg-white border border-gray-100 rounded-[2rem] shadow-sm hover:shadow-2xl transition-all cursor-pointer">
+               <div key={s.id} onClick={() => setState({ ...state, selectedSubject: s.id, selectedSchemeId: '', step: 'SCHEME' })} className="group p-6 bg-white border border-gray-100 rounded-[2rem] shadow-sm hover:shadow-2xl transition-all cursor-pointer">
                   <div className="flex justify-between items-start mb-6">
                      <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center overflow-hidden border border-emerald-100 shadow-inner group-hover:scale-110 transition-transform">
                         {s.logo ? <img src={s.logo} className="w-full h-full object-cover" /> : <Library size={28} />}
@@ -901,22 +957,80 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
       </div>
    );
 
+   if (state.step === 'SCHEME') return (
+      <div className="p-4 md:p-12 max-w-7xl">
+         <button onClick={() => setState({ ...state, step: 'SUBJECT' })} className="text-gray-400 hover:text-gray-900 flex items-center gap-2 mb-8 font-bold text-sm uppercase tracking-widest transition-colors"><ArrowLeft size={18} /> Back</button>
+         <StepIndicator />
+         <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 mb-8">
+            <div>
+               <h2 className="text-3xl font-black text-gray-900 tracking-tight">Step 4: Select Pairing Scheme</h2>
+               <p className="text-gray-500 text-sm mt-2">Old/New is an additional filter. Board and custom scheme choices remain available.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 p-1.5 bg-gray-100 rounded-2xl min-w-[260px]">
+               {(['OLD', 'NEW'] as SchemeVersion[]).map(version => (
+                  <button key={version} type="button" onClick={() => setState(prev => ({ ...prev, selectedSchemeVersion: version, selectedSchemeId: '' }))}
+                     className={`h-11 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${(state.selectedSchemeVersion || 'NEW') === version ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-gray-500 hover:bg-white'}`}>
+                     {version === 'OLD' ? 'Old Scheme' : 'New Scheme'}
+                  </button>
+               ))}
+            </div>
+         </div>
+
+         {versionedSchemes.length === 0 ? (
+            <div className="p-10 bg-amber-50 border border-amber-200 rounded-3xl text-center">
+               <Info className="mx-auto text-amber-500 mb-3" />
+               <p className="font-black text-amber-900">No {(state.selectedSchemeVersion || 'NEW').toLowerCase()} pairing scheme is available for this subject.</p>
+               <button onClick={() => setState(prev => ({ ...prev, selectedSchemeId: '', step: 'CHAPTERS' }))} className="mt-5 px-6 py-3 bg-white border border-amber-300 rounded-xl text-xs font-black text-amber-800 uppercase tracking-widest">Continue Without Scheme</button>
+            </div>
+         ) : (
+            <div className="space-y-8">
+               {[{ label: 'Official Board Schemes', items: globalSchemes }, { label: 'School / Custom Schemes', items: customSchemes }].map(group => group.items.length > 0 && (
+                  <section key={group.label}>
+                     <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-4">{group.label}</h3>
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {group.items.map(scheme => (
+                           <button key={scheme.id} type="button" onClick={() => setState(prev => ({ ...prev, selectedSchemeId: scheme.id, step: 'CHAPTERS' }))}
+                              className="text-left p-6 bg-white border-2 border-gray-100 rounded-3xl hover:border-indigo-500 hover:shadow-xl transition-all">
+                              <div className="flex items-center justify-between gap-2 mb-3">
+                                 <span className={`text-[9px] px-2 py-1 rounded-full font-black uppercase ${scheme.isGlobal ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>{scheme.isGlobal ? 'Board' : 'Custom'}</span>
+                                 <span className="text-[9px] px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 font-black uppercase">{scheme.schemeVersion || 'OLD'}</span>
+                              </div>
+                              <h4 className="font-black text-gray-900">{scheme.name}</h4>
+                              <p className="mt-3 text-xs font-bold text-gray-400">{scheme.totalMarks} marks • {scheme.durationMin} min • {scheme.structure.length} sections</p>
+                           </button>
+                        ))}
+                     </div>
+                  </section>
+               ))}
+            </div>
+         )}
+      </div>
+   );
+
    if (state.step === 'CHAPTERS') {
-      const boardScheme = relevantSchemes.find(s => s.isGlobal) || relevantSchemes[0];
+      const boardScheme = selectedScheme;
 
       const handleFullPaperWithScheme = () => {
+         if (!boardScheme) return;
          const allChNames = relevantChapters.map(c => c.name);
          const allTopNames = relevantChapters.flatMap(c => getSubtopicsForChapter(c.name));
 
          const struct: PaperStructure = {};
          (boardScheme.structure as SchemeSectionDef[]).forEach((secDef, idx) => {
             const secId = `sec_scheme_${Date.now()}_${idx}`;
-            const isObjective = ['MCQ', 'Match Columns', 'Fill in the Blanks', 'True/False', 'Spelling Check'].includes(secDef.type);
+            const sectionRole = secDef.sectionRole || (secDef.type === 'Long Answer' ? 'LONG_QUESTION' : secDef.type === 'Short Answer' ? 'SHORT_GROUP' : 'OBJECTIVE');
+            const isObjective = sectionRole === 'OBJECTIVE';
+            const instruction = secDef.instruction || (sectionRole === 'SHORT_GROUP'
+               ? `Write short answers to any ${secDef.selectCount} questions:`
+               : getDefaultSectionInstruction(secDef.type, secDef.selectCount, secDef.totalCount));
+            const instructionUrdu = secDef.instructionUrdu || (sectionRole === 'SHORT_GROUP'
+               ? `کوئی سے ${secDef.selectCount} سوالات کے مختصر جوابات لکھئے:`
+               : getDefaultSectionInstructionUrdu(secDef.type, secDef.selectCount, secDef.totalCount));
             struct[secId] = {
                id: secId,
                title: secDef.title || `Q.${idx + 1} ${secDef.type}`,
-               instruction: secDef.instruction || getDefaultSectionInstruction(secDef.type, secDef.selectCount, secDef.totalCount),
-               instructionUrdu: secDef.instructionUrdu,
+               instruction,
+               instructionUrdu,
                questionType: secDef.type,
                marksPerQuestion: secDef.marksPerQuestion,
                totalCount: secDef.totalCount,
@@ -928,8 +1042,11 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                sourceFilter: [],
                category: isObjective ? 'Objective' : 'Subjective',
                subQuestionNumbering: secDef.type === 'MCQ' ? 'Numeric' : 'Roman',
+               sectionRole,
+               questionNumber: secDef.questionNumber || idx + 1,
                hasParts: secDef.hasParts,
                parts: secDef.parts,
+               hasInternalChoice: secDef.hasInternalChoice,
                chapterDistribution: secDef.chapterDistribution,
                isCompulsory: secDef.isCompulsory
             };
@@ -946,7 +1063,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
 
       return (
          <div className="p-4 md:p-12 max-w-7xl">
-            <button onClick={() => setState({ ...state, step: 'SUBJECT' })} className="text-gray-400 hover:text-gray-900 flex items-center gap-2 mb-8 font-bold text-sm uppercase tracking-widest transition-colors"><ArrowLeft size={18} /> Back</button>
+            <button onClick={() => setState({ ...state, step: 'SCHEME' })} className="text-gray-400 hover:text-gray-900 flex items-center gap-2 mb-8 font-bold text-sm uppercase tracking-widest transition-colors"><ArrowLeft size={18} /> Back</button>
             <StepIndicator />
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
                <div>
@@ -958,7 +1075,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                   <button onClick={handleSelectAllChapters} className="px-5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-black text-gray-700 uppercase tracking-widest hover:bg-gray-100 transition-all">Select All Topics (Normal)</button>
                   {boardScheme && (
                      <button onClick={handleFullPaperWithScheme} className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200">
-                        <Sparkles size={14} /> Full Book Paper (with Board Scheme)
+                        <Sparkles size={14} /> Full Book ({boardScheme.name})
                      </button>
                   )}
                </div>
@@ -1331,13 +1448,21 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
             instructions: 'Carefully follow all section instructions.'
          },
          structure: state.paperStructure,
+         selectedSchemeId: selectedScheme?.id,
+         schemeVersion: state.selectedSchemeVersion,
+         attemptLongQuestions: selectedScheme?.attemptLongQuestions,
+         compulsoryQuestionNumber: selectedScheme?.compulsoryQuestionNumber,
          watermark: state.watermark,
          layoutMode: state.paperLayout,
          showQuestionMarks: true,
          longQuestionHeading: 'Subjective Part II',
          longQuestionHeadingUrdu: 'حصہ دوم – تفصیلی سوالات',
-         longQuestionInstruction: 'Write detailed answers to the following questions.',
-         longQuestionInstructionUrdu: 'درج ذیل سوالات کے تفصیلی جوابات لکھیں۔',
+         longQuestionInstruction: selectedScheme
+            ? `Attempt ${selectedScheme.attemptLongQuestions || selectedScheme.structure.filter(s => (s.sectionRole || (s.type === 'Long Answer' ? 'LONG_QUESTION' : '')) === 'LONG_QUESTION').filter(s => !s.isCompulsory).length} questions in all.${selectedScheme.compulsoryQuestionNumber ? ` Question No. ${selectedScheme.compulsoryQuestionNumber} is Compulsory.` : ''}`
+            : 'Write detailed answers to the following questions.',
+         longQuestionInstructionUrdu: selectedScheme
+            ? `کل ${selectedScheme.attemptLongQuestions || selectedScheme.structure.filter(s => (s.sectionRole || (s.type === 'Long Answer' ? 'LONG_QUESTION' : '')) === 'LONG_QUESTION').filter(s => !s.isCompulsory).length} سوالات حل کریں۔${selectedScheme.compulsoryQuestionNumber ? ` سوال نمبر ${selectedScheme.compulsoryQuestionNumber} لازمی ہے۔` : ''}`
+            : 'درج ذیل سوالات کے تفصیلی جوابات لکھیں۔',
          createdAt: new Date().toISOString(),
          createdBy: user.name,
          schoolId: user.schoolId,

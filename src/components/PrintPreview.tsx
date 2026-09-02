@@ -226,7 +226,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [textSizeMode, setTextSizeMode] = useState<'English' | 'Urdu' | 'Header' | 'OptionLabel' | 'OptionEn' | 'OptionUr'>('English');
   const [optionLabelSize, setOptionLabelSize] = useState(9);
   const [optionTextSize, setOptionTextSize] = useState(9);
-  const [optionUrduSize, setOptionUrduSize] = useState(6);
+  const [optionUrduSize, setOptionUrduSize] = useState(12);
 
   // Expanded Font Families
   const [englishFont, setEnglishFont] = useState("'Inter', sans-serif");
@@ -1691,9 +1691,13 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     <button onClick={() => removeQuestion(q.id)} className="p-1.5 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors shadow-sm"><Trash2 size={14} /></button>
                   </div>
                 )}
-                <div className="flex gap-3 items-start relative">
+                <div className={`flex gap-3 items-start relative ${languageMode === 'Urdu' ? 'flex-row-reverse text-right' : ''}`} dir={languageMode === 'Urdu' ? 'rtl' : 'ltr'}>
                   <span className="font-black text-sm min-w-[20px] pt-0.5 text-slate-900">
-                    {sec.subQuestionNumbering === 'Roman' ? `${["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"][idx] || idx + 1}.` : `${idx + 1}.`}
+                    {sec.hasParts
+                      ? `(${['a', 'b', 'c', 'd', 'e', 'f', 'g'][idx] || 'a'})`
+                      : (sec.subQuestionNumbering === 'Roman'
+                        ? `${["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"][idx] || idx + 1}.`
+                        : `${idx + 1}.`)}
                   </span>
                   <div className="flex-1 space-y-2">
                     <div className="flex justify-between items-start w-full relative">

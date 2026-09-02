@@ -211,35 +211,65 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
 
    const initStructure = () => {
       const structure: PaperStructure = {};
-      // Use available types to initialize structure intelligently
-      const availableTypeIds = availableTypesForConfig.map(t => t.id);
-      // If no types available, fallback to defaults
-      const defaultTypes = availableTypeIds.length > 0 ? availableTypeIds.slice(0, 3) : ['MCQ', 'Short Answer', 'Long Answer'];
+      // If a pairing scheme was selected, populate structure from the scheme
+      if (selectedScheme && selectedScheme.structure && selectedScheme.structure.length > 0) {
+         selectedScheme.structure.forEach((secDef, idx) => {
+            const id = secDef.id || `sec_${Date.now()}_${idx}`;
+            const isObjective = (secDef.sectionRole === 'OBJECTIVE') || ['MCQ', 'Match Columns', 'Fill in the Blanks', 'True/False', 'Spelling Check'].includes(secDef.type);
+            structure[id] = {
+               id: id,
+               title: secDef.title || `Q.${idx + 1} ${secDef.type}`,
+               instruction: secDef.instruction || getDefaultSectionInstruction(secDef.type, secDef.selectCount, secDef.totalCount),
+               instructionUrdu: secDef.instructionUrdu || getDefaultSectionInstructionUrdu(secDef.type, secDef.selectCount, secDef.totalCount),
+               questionType: secDef.type,
+               marksPerQuestion: secDef.marksPerQuestion || (secDef.type === 'MCQ' ? 1 : secDef.type === 'Short Answer' ? 2 : 5),
+               totalCount: secDef.totalCount,
+               selectCount: secDef.selectCount,
+               blankLines: 0,
+               blankLineType: 'Line',
+               questionsPerLine: false,
+               languageMedium: 'Bilingual',
+               sourceFilter: [],
+               category: isObjective ? 'Objective' : 'Subjective',
+               subQuestionNumbering: secDef.type === 'MCQ' ? 'Numeric' : 'Alpha',
+               sectionRole: secDef.sectionRole,
+               questionNumber: secDef.questionNumber || idx + 1,
+               hasParts: secDef.hasParts,
+               parts: secDef.parts,
+               hasInternalChoice: secDef.hasInternalChoice,
+               chapterDistribution: secDef.chapterDistribution,
+               isCompulsory: secDef.isCompulsory
+            };
+         });
+      } else {
+         // Use available types to initialize structure intelligently
+         const availableTypeIds = availableTypesForConfig.map(t => t.id);
+         const defaultTypes = availableTypeIds.length > 0 ? availableTypeIds.slice(0, 3) : ['MCQ', 'Short Answer', 'Long Answer'];
 
-      defaultTypes.forEach((type, idx) => {
-         const id = `sec_${Date.now()}_${idx}`;
-         // Determine category based on type
-         const isObjective = ['MCQ', 'Match Columns', 'Fill in the Blanks', 'True/False', 'Spelling Check'].includes(type);
-         const totalCount = type === 'MCQ' ? 10 : 8;
-         const selectCount = type === 'MCQ' ? 10 : 6;
+         defaultTypes.forEach((type, idx) => {
+            const id = `sec_${Date.now()}_${idx}`;
+            const isObjective = ['MCQ', 'Match Columns', 'Fill in the Blanks', 'True/False', 'Spelling Check'].includes(type);
+            const totalCount = type === 'MCQ' ? 10 : 8;
+            const selectCount = type === 'MCQ' ? 10 : 6;
 
-         structure[id] = {
-            id: id,
-            title: `Q.${idx + 1} ${type}`,
-            instruction: getDefaultSectionInstruction(type, selectCount, totalCount),
-            questionType: type,
-            marksPerQuestion: type === 'MCQ' ? 1 : type === 'Short Answer' ? 2 : 5,
-            totalCount: totalCount,
-            selectCount: selectCount,
-            blankLines: 0,
-            blankLineType: 'Line',
-            questionsPerLine: false,
-            languageMedium: 'Bilingual',
-            sourceFilter: [],
-            category: isObjective ? 'Objective' : 'Subjective',
-            subQuestionNumbering: type === 'MCQ' ? 'Numeric' : 'Roman'
-         };
-      });
+            structure[id] = {
+               id: id,
+               title: `Q.${idx + 1} ${type}`,
+               instruction: getDefaultSectionInstruction(type, selectCount, totalCount),
+               questionType: type,
+               marksPerQuestion: type === 'MCQ' ? 1 : type === 'Short Answer' ? 2 : 5,
+               totalCount: totalCount,
+               selectCount: selectCount,
+               blankLines: 0,
+               blankLineType: 'Line',
+               questionsPerLine: false,
+               languageMedium: 'Bilingual',
+               sourceFilter: [],
+               category: isObjective ? 'Objective' : 'Subjective',
+               subQuestionNumbering: type === 'MCQ' ? 'Numeric' : 'Alpha'
+            };
+         });
+      }
       setState(prev => ({ ...prev, paperStructure: structure, step: 'SETUP' }));
    };
 
@@ -938,7 +968,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
          <h2 className="text-3xl font-black text-gray-900 mb-12 tracking-tight">Step 3: Select Subject</h2>
          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
             {filteredSubjects.map(s => (
-               <div key={s.id} onClick={() => setState({ ...state, selectedSubject: s.id, selectedSchemeId: '', step: 'SCHEME' })} className="group p-6 bg-white border border-gray-100 rounded-[2rem] shadow-sm hover:shadow-2xl transition-all cursor-pointer">
+               <div key={s.id} onClick={() => setState({ ...state, selectedSubject: s.id, selectedSchemeId: '', step: 'CHAPTERS' })} className="group p-6 bg-white border border-gray-100 rounded-[2rem] shadow-sm hover:shadow-2xl transition-all cursor-pointer">
                   <div className="flex justify-between items-start mb-6">
                      <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center overflow-hidden border border-emerald-100 shadow-inner group-hover:scale-110 transition-transform">
                         {s.logo ? <img src={s.logo} className="w-full h-full object-cover" /> : <Library size={28} />}
@@ -1076,7 +1106,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
 
       return (
          <div className="p-4 md:p-12 max-w-7xl">
-            <button onClick={() => setState({ ...state, step: 'SCHEME' })} className="text-gray-400 hover:text-gray-900 flex items-center gap-2 mb-8 font-bold text-sm uppercase tracking-widest transition-colors"><ArrowLeft size={18} /> Back</button>
+            <button onClick={() => setState({ ...state, step: 'SUBJECT' })} className="text-gray-400 hover:text-gray-900 flex items-center gap-2 mb-8 font-bold text-sm uppercase tracking-widest transition-colors"><ArrowLeft size={18} /> Back</button>
             <StepIndicator />
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                <div>
@@ -1088,13 +1118,13 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                            <Sparkles size={8} /> {boardScheme.name}
                         </span>
                      ) : (
-                        <span className="text-[9px] px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 font-black uppercase">No Scheme</span>
+                        <span className="text-[9px] px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 font-black uppercase">No Scheme Selected</span>
                      )}
                   </div>
                </div>
                <div className="flex flex-wrap items-center gap-2">
-                  <button onClick={() => setState({ ...state, step: 'SCHEME' })} className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-[9px] font-black text-gray-500 uppercase tracking-widest hover:bg-gray-50 transition-all flex items-center gap-1.5">
-                     <Layers size={10} /> All Schemes
+                  <button onClick={() => setState({ ...state, step: 'SCHEME' })} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200">
+                     <Layers size={14} /> Pairing Schemes
                   </button>
                   <button onClick={() => setState(prev => ({ ...prev, selectedChapters: [], selectedTopics: [] }))} className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-black text-gray-400 uppercase tracking-widest hover:bg-gray-50 transition-all">Clear Selection</button>
                   <button onClick={handleSelectAllChapters} className="px-5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-black text-gray-700 uppercase tracking-widest hover:bg-gray-100 transition-all">Select All Topics (Normal)</button>
@@ -1223,14 +1253,37 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                  <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-500 uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-slate-200">
                                     <Library size={12} className="text-indigo-500" /> {sec.questionType}
                                  </div>
-                                 <div className="flex items-center gap-1.5 text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-slate-200">
-                                    <CheckCircle2 size={12} /> Attempts: {sec.selectCount} / {sec.totalCount} Qs
+                                 <div className="flex items-center gap-1.5 text-[9px] font-black text-emerald-600 bg-white px-2.5 py-1 rounded-lg border border-emerald-200">
+                                    <CheckCircle2 size={12} />
+                                    <span className="uppercase tracking-widest text-slate-500">Attempt:</span>
+                                    <input
+                                       type="number"
+                                       min="1"
+                                       max={sec.totalCount}
+                                       value={sec.selectCount}
+                                       onChange={e => updateSection(sec.id, { selectCount: parseInt(e.target.value) || 1 })}
+                                       className="w-10 h-6 text-center font-black text-emerald-600 bg-emerald-50 border border-emerald-200 rounded outline-none focus:ring-2 focus:ring-emerald-500 text-xs"
+                                    />
+                                    <span className="text-slate-400">/</span>
+                                    <input
+                                       type="number"
+                                       min="1"
+                                       value={sec.totalCount}
+                                       onChange={e => updateSection(sec.id, { totalCount: parseInt(e.target.value) || 1 })}
+                                       className="w-10 h-6 text-center font-black text-slate-700 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+                                    />
+                                    <span className="uppercase tracking-widest text-slate-500">Qs</span>
                                  </div>
-                                 <div className="flex items-center gap-1.5 text-[9px] font-black text-amber-600 uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-slate-200">
-                                    <Hash size={12} /> {sec.totalCount - sec.selectCount} Ignored
-                                 </div>
-                                 <div className="flex items-center gap-1.5 text-[9px] font-black text-rose-600 uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-rose-200">
-                                    <Tag size={12} /> {sec.marksPerQuestion} Marks/Q
+                                 <div className="flex items-center gap-1.5 text-[9px] font-black text-rose-600 bg-white px-2.5 py-1 rounded-lg border border-rose-200">
+                                    <Tag size={12} />
+                                    <span className="uppercase tracking-widest text-slate-500">Marks/Q:</span>
+                                    <input
+                                       type="number"
+                                       min="1"
+                                       value={sec.marksPerQuestion}
+                                       onChange={e => updateSection(sec.id, { marksPerQuestion: parseInt(e.target.value) || 1 })}
+                                       className="w-12 h-6 text-center font-black text-rose-600 bg-rose-50 border border-rose-200 rounded outline-none focus:ring-2 focus:ring-rose-500 text-xs"
+                                    />
                                  </div>
                               </div>
                               {isLongQ && (

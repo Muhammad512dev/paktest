@@ -59,7 +59,7 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
    const [questionFontEn, setQuestionFontEn] = useState<number>(14);
    const [questionFontUr, setQuestionFontUr] = useState<number>(14);
    const [optionFontEn, setOptionFontEn] = useState<number>(9);
-   const [optionFontUr, setOptionFontUr] = useState<number>(6);
+   const [optionFontUr, setOptionFontUr] = useState<number>(12);
    const [mcqColumns, setMcqColumns] = useState<number>(4);
 
    // Repository Data States
@@ -620,7 +620,7 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                               <p className="font-black uppercase tracking-[0.2em] text-sm text-center">NO QUESTIONS FOUND.<br /><span className="text-xs text-slate-400 font-bold mt-2 block">Try adjusting your filters or active scope.</span></p>
                            </div>
                         ) : (
-                           <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-300">
+                           <div className="space-y-3 animate-in slide-in-from-bottom-4 duration-300">
                               <div className="sticky top-0 z-10 -mx-10 px-10 pt-2 pb-4 bg-white/90 backdrop-blur border-b border-slate-100">
                                  <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-3">
                                     <div className="flex items-center gap-4">
@@ -671,20 +671,20 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                  const isSelectedInOtherSection = currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId !== activeSectionId);
                                  const isSelected = isSelectedInThisSection || isSelectedInOtherSection;
                                  return (
-                                    <div key={q.id} onClick={() => toggleQuestionSelection(q)} className={`p-6 rounded-[1.5rem] border-2 transition-all cursor-pointer group relative overflow-hidden ${isSelectedInThisSection ? 'border-indigo-600 bg-indigo-50/20 shadow-md' : isSelectedInOtherSection ? 'border-amber-400 bg-amber-50/20 shadow-sm' : 'border-slate-100 hover:border-indigo-200 hover:bg-slate-50/50'}`}>
-                                       {isSelectedInThisSection && <div className="absolute top-0 right-0 w-12 h-12 bg-indigo-600 flex items-center justify-center rounded-bl-2xl text-white shadow-lg"><Check size={20} strokeWidth={4} /></div>}
-                                       <div className="flex gap-5 items-start">
-                                          <div className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all font-black text-xs ${isSelectedInThisSection ? 'bg-indigo-600 border-indigo-600 text-white' : isSelectedInOtherSection ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-200 bg-white text-slate-300'}`}>{idx + 1}</div>
-                                          <div className="flex-1 space-y-4 pr-8">
+                                    <div key={q.id} onClick={() => toggleQuestionSelection(q)} className={`p-4 rounded-2xl border-2 transition-all cursor-pointer group relative overflow-hidden ${isSelectedInThisSection ? 'border-indigo-600 bg-indigo-50/20 shadow-md' : isSelectedInOtherSection ? 'border-amber-400 bg-amber-50/20 shadow-sm' : 'border-slate-100 hover:border-indigo-200 hover:bg-slate-50/50'}`}>
+                                       {isSelectedInThisSection && <div className="absolute top-0 right-0 w-10 h-10 bg-indigo-600 flex items-center justify-center rounded-bl-xl text-white shadow-lg"><Check size={16} strokeWidth={4} /></div>}
+                                       <div className="flex gap-4 items-start">
+                                          <div className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all font-black text-xs ${isSelectedInThisSection ? 'bg-indigo-600 border-indigo-600 text-white' : isSelectedInOtherSection ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-200 bg-white text-slate-300'}`}>{idx + 1}</div>
+                                          <div className="flex-1 space-y-2 pr-6">
                                              {/* CHAPTER, TOPIC & STATUS BADGES */}
-                                             <div className="flex flex-wrap items-center gap-2">
+                                             <div className="flex flex-wrap items-center gap-1.5">
                                                 {q.chapter && (
-                                                   <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-indigo-100 flex items-center gap-1">
+                                                   <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md text-[9px] font-black uppercase tracking-wider border border-indigo-100 flex items-center gap-1">
                                                       📖 {q.chapter}
                                                    </span>
                                                 )}
                                                 {q.topic && (
-                                                   <span className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-purple-100 flex items-center gap-1">
+                                                   <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded-md text-[9px] font-black uppercase tracking-wider border border-purple-100 flex items-center gap-1">
                                                       🏷️ {q.topic}
                                                    </span>
                                                 )}
@@ -692,12 +692,12 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                                    {q.type}
                                                 </span>
                                                 {isSelectedInThisSection && (
-                                                   <span className="px-2.5 py-0.5 bg-emerald-600 text-white rounded-md text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
-                                                      <Check size={11} strokeWidth={3} /> Added in This Section
+                                                   <span className="px-2 py-0.5 bg-emerald-600 text-white rounded-md text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                                                      <Check size={10} strokeWidth={3} /> Added in This Section
                                                    </span>
                                                 )}
                                                 {isSelectedInOtherSection && (
-                                                   <span className="px-2.5 py-0.5 bg-amber-500 text-white rounded-md text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                                                   <span className="px-2 py-0.5 bg-amber-500 text-white rounded-md text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
                                                       In Another Section
                                                    </span>
                                                 )}
@@ -705,7 +705,7 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
 
                                              <div className="flex justify-between items-start gap-4">
                                                 {(extractionLanguage === 'Bilingual' || extractionLanguage === 'English') && q.text && (
-                                                   <MathRenderer text={q.text} className="text-[15px] font-bold text-slate-800 leading-relaxed" />
+                                                   <MathRenderer text={q.text} className="text-sm font-bold text-slate-800 leading-snug" />
                                                 )}
                                                 <div className="flex flex-col items-end gap-1">
                                                    <div className="flex flex-wrap justify-end gap-1">
@@ -722,25 +722,25 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                                 </div>
                                              </div>
                                              {(extractionLanguage === 'Bilingual' || extractionLanguage === 'Urdu') && q.textUrdu && (
-                                                <div className="font-urdu text-[26px] text-slate-700 leading-relaxed text-right border-t border-slate-50 pt-2" dir="rtl">
+                                                <div className="font-urdu text-[15px] text-slate-700 leading-relaxed text-right border-t border-slate-50 pt-1.5" dir="rtl">
                                                    <MathRenderer text={q.textUrdu} />
                                                 </div>
                                              )}
                                              {q.imageUrl && (
-                                                <div className="mt-2 p-2 bg-slate-50 rounded-lg border border-slate-100 w-fit">
-                                                   <img src={q.imageUrl} alt="Question Diagram" className="h-20 w-auto object-contain rounded" />
+                                                <div className="mt-1.5 p-1.5 bg-slate-50 rounded-lg border border-slate-100 w-fit">
+                                                   <img src={q.imageUrl} alt="Question Diagram" className="h-16 w-auto object-contain rounded" />
                                                 </div>
                                              )}
 
                                              {normalizeType(q.type) === 'mcq' && ((q.options && q.options.length > 0) || (q.optionsUrdu && q.optionsUrdu.length > 0)) && (
-                                                <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 pt-4 border-t border-slate-50">
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-1.5 mt-2 pt-2 border-t border-slate-50">
                                                    {((q.options && q.options.length > 0) ? q.options : (q.optionsUrdu || [])).map((opt: string, i: number) => (
-                                                      <div key={i} className="flex gap-2 items-baseline text-[11px] text-slate-500">
-                                                         <span className="font-black text-indigo-300">({String.fromCharCode(65 + i)})</span>
+                                                      <div key={i} className="flex gap-1.5 items-baseline text-[11px] text-slate-500">
+                                                         <span className="font-black text-indigo-500">({String.fromCharCode(65 + i)})</span>
                                                          <div className="flex flex-col">
                                                             <span className="font-medium"><MathRenderer text={opt} inline /></span>
                                                             {q.optionsUrdu && q.optionsUrdu[i] && (
-                                                               <span className="text-right font-urdu text-sm mt-0.5" dir="rtl"><MathRenderer text={q.optionsUrdu[i]} /></span>
+                                                               <span className="text-right font-urdu text-xs mt-0.5" dir="rtl"><MathRenderer text={q.optionsUrdu[i]} /></span>
                                                             )}
                                                          </div>
                                                       </div>

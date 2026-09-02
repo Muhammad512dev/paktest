@@ -966,13 +966,21 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                <h2 className="text-3xl font-black text-gray-900 tracking-tight">Step 4: Select Pairing Scheme</h2>
                <p className="text-gray-500 text-sm mt-2">Old/New is an additional filter. Board and custom scheme choices remain available.</p>
             </div>
-            <div className="grid grid-cols-2 gap-2 p-1.5 bg-gray-100 rounded-2xl min-w-[260px]">
-               {(['OLD', 'NEW'] as SchemeVersion[]).map(version => (
-                  <button key={version} type="button" onClick={() => setState(prev => ({ ...prev, selectedSchemeVersion: version, selectedSchemeId: '' }))}
-                     className={`h-11 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${(state.selectedSchemeVersion || 'NEW') === version ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-gray-500 hover:bg-white'}`}>
-                     {version === 'OLD' ? 'Old Scheme' : 'New Scheme'}
-                  </button>
-               ))}
+            <div className="flex flex-wrap items-center gap-3">
+               <button
+                  onClick={() => setState(prev => ({ ...prev, selectedSchemeId: '', step: 'CHAPTERS' }))}
+                  className="px-5 py-2.5 bg-white border-2 border-gray-200 rounded-xl text-xs font-black text-gray-500 uppercase tracking-widest hover:bg-gray-50 hover:border-indigo-200 transition-all"
+               >
+                  Skip → Continue to Topics
+               </button>
+               <div className="grid grid-cols-2 gap-2 p-1.5 bg-gray-100 rounded-2xl min-w-[260px]">
+                  {(['OLD', 'NEW'] as SchemeVersion[]).map(version => (
+                     <button key={version} type="button" onClick={() => setState(prev => ({ ...prev, selectedSchemeVersion: version, selectedSchemeId: '' }))}
+                        className={`h-11 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${(state.selectedSchemeVersion || 'NEW') === version ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-gray-500 hover:bg-white'}`}>
+                        {version === 'OLD' ? 'Old Scheme' : 'New Scheme'}
+                     </button>
+                  ))}
+               </div>
             </div>
          </div>
 
@@ -990,10 +998,15 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                         {group.items.map(scheme => (
                            <button key={scheme.id} type="button" onClick={() => setState(prev => ({ ...prev, selectedSchemeId: scheme.id, step: 'CHAPTERS' }))}
-                              className="text-left p-6 bg-white border-2 border-gray-100 rounded-3xl hover:border-indigo-500 hover:shadow-xl transition-all">
+                              className={`text-left p-6 bg-white border-2 rounded-3xl hover:border-indigo-500 hover:shadow-xl transition-all relative overflow-hidden ${ (scheme.schemeVersion || 'OLD') === 'NEW' ? 'border-indigo-200 shadow-md' : 'border-gray-100'}`}>
+                              {(scheme.schemeVersion || 'OLD') === 'NEW' && (
+                                 <div className="absolute top-3 right-3 bg-indigo-600 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1">
+                                    <Sparkles size={8} /> Latest
+                                 </div>
+                              )}
                               <div className="flex items-center justify-between gap-2 mb-3">
                                  <span className={`text-[9px] px-2 py-1 rounded-full font-black uppercase ${scheme.isGlobal ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>{scheme.isGlobal ? 'Board' : 'Custom'}</span>
-                                 <span className="text-[9px] px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 font-black uppercase">{scheme.schemeVersion || 'OLD'}</span>
+                                 <span className={`text-[9px] px-2 py-1 rounded-full font-black uppercase ${ (scheme.schemeVersion || 'OLD') === 'NEW' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>{scheme.schemeVersion || 'OLD'}</span>
                               </div>
                               <h4 className="font-black text-gray-900">{scheme.name}</h4>
                               <p className="mt-3 text-xs font-bold text-gray-400">{scheme.totalMarks} marks • {scheme.durationMin} min • {scheme.structure.length} sections</p>
@@ -1065,12 +1078,24 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
          <div className="p-4 md:p-12 max-w-7xl">
             <button onClick={() => setState({ ...state, step: 'SCHEME' })} className="text-gray-400 hover:text-gray-900 flex items-center gap-2 mb-8 font-bold text-sm uppercase tracking-widest transition-colors"><ArrowLeft size={18} /> Back</button>
             <StepIndicator />
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                <div>
-                  <h2 className="text-3xl font-black text-gray-900 tracking-tight">Step 4: Select Chapters & Topics</h2>
-                  <p className="text-gray-500 text-xs mt-1">Select individual chapters/topics or generate a Full Book Paper</p>
+                  <h2 className="text-3xl font-black text-gray-900 tracking-tight">Step 4: Select Chapters &amp; Topics</h2>
+                  <div className="flex items-center gap-3 mt-2 flex-wrap">
+                     <p className="text-gray-500 text-xs">Select individual chapters/topics or generate a Full Book Paper</p>
+                     {boardScheme ? (
+                        <span className="text-[9px] px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700 font-black uppercase border border-indigo-200 flex items-center gap-1">
+                           <Sparkles size={8} /> {boardScheme.name}
+                        </span>
+                     ) : (
+                        <span className="text-[9px] px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 font-black uppercase">No Scheme</span>
+                     )}
+                  </div>
                </div>
                <div className="flex flex-wrap items-center gap-2">
+                  <button onClick={() => setState({ ...state, step: 'SCHEME' })} className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-[9px] font-black text-gray-500 uppercase tracking-widest hover:bg-gray-50 transition-all flex items-center gap-1.5">
+                     <Layers size={10} /> All Schemes
+                  </button>
                   <button onClick={() => setState(prev => ({ ...prev, selectedChapters: [], selectedTopics: [] }))} className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-black text-gray-400 uppercase tracking-widest hover:bg-gray-50 transition-all">Clear Selection</button>
                   <button onClick={handleSelectAllChapters} className="px-5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-black text-gray-700 uppercase tracking-widest hover:bg-gray-100 transition-all">Select All Topics (Normal)</button>
                   {boardScheme && (
@@ -1081,13 +1106,13 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                </div>
             </div>
 
-            <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-xl overflow-hidden mb-10 divide-y divide-gray-50">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
                {relevantChapters.map((c, idx) => (
-                  <div key={idx} className={`p-6 md:p-8 flex items-start gap-6 transition-all ${state.selectedChapters.includes(c.name) ? 'bg-indigo-50/20' : 'hover:bg-gray-50/50'}`}>
-                     <div onClick={() => handleChapterToggle(c.name)} className={`mt-1 w-7 h-7 rounded-lg border-2 flex items-center justify-center shrink-0 cursor-pointer transition-all ${state.selectedChapters.includes(c.name) ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200' : 'border-gray-200 bg-white'}`}>{state.selectedChapters.includes(c.name) && <Check size={16} strokeWidth={3} />}</div>
-                     <div className="flex-1">
-                        <span onClick={() => handleChapterToggle(c.name)} className="font-black block text-lg text-gray-900 cursor-pointer">{c.name}</span>
-                        <div className="flex flex-wrap gap-2 mt-4">
+                  <div key={idx} className={`p-5 bg-white rounded-[2rem] border-2 flex items-start gap-4 transition-all ${state.selectedChapters.includes(c.name) ? 'border-indigo-300 bg-indigo-50/20 shadow-md' : 'border-gray-100 hover:bg-gray-50/50'}`}>
+                     <div onClick={() => handleChapterToggle(c.name)} className={`mt-1.5 w-7 h-7 rounded-lg border-2 flex items-center justify-center shrink-0 cursor-pointer transition-all ${state.selectedChapters.includes(c.name) ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200' : 'border-gray-200 bg-white'}`}>{state.selectedChapters.includes(c.name) && <Check size={16} strokeWidth={3} />}</div>
+                     <div className="flex-1 min-w-0">
+                        <span onClick={() => handleChapterToggle(c.name)} className="font-black block text-xl text-gray-900 cursor-pointer leading-tight mb-3">{c.name}</span>
+                        <div className="flex flex-wrap gap-2">
                            {getSubtopicsForChapter(c.name).map((sub, i) => (
                               <span key={i} onClick={() => {
                                  const isSelected = state.selectedTopics.includes(sub);
@@ -1096,7 +1121,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                     const newChapters = !isSelected && !prev.selectedChapters.includes(c.name) ? [...prev.selectedChapters, c.name] : prev.selectedChapters;
                                     return { ...prev, selectedTopics: newTopics, selectedChapters: newChapters };
                                  });
-                              }} className={`text-[10px] px-4 py-2 rounded-xl border-2 cursor-pointer transition-all font-black uppercase tracking-widest ${state.selectedTopics.includes(sub) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-400 border-gray-100 hover:border-indigo-200'}`}>{sub}</span>
+                              }} className={`text-[10px] px-3 py-1.5 rounded-xl border-2 cursor-pointer transition-all font-black uppercase tracking-widest ${state.selectedTopics.includes(sub) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-400 border-gray-100 hover:border-indigo-200'}`}>{sub}</span>
                            ))}
                         </div>
                      </div>
@@ -1162,43 +1187,71 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                      </button>
                   </div>
                   <div className="space-y-4 max-h-[55vh] lg:max-h-[440px] overflow-y-scroll overscroll-contain pr-2 custom-scrollbar">
-                     {(Object.values(state.paperStructure) as PaperSectionConfig[]).map((sec, idx) => (
-                        <div key={sec.id} className="bg-gray-50 rounded-2xl sm:rounded-3xl p-4 sm:p-5 border-2 border-transparent hover:border-indigo-100 transition-all group relative min-w-0">
-                           <div className="flex items-center justify-between gap-2 mb-4">
-                              <div className="flex items-center gap-3">
-                                 <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xs font-black shadow-lg shadow-indigo-100">{idx + 1}</div>
-                                 <span className="font-black text-sm text-gray-800">{sec.title}</span>
+                     {(Object.values(state.paperStructure) as PaperSectionConfig[]).map((sec, idx) => {
+                        const isLongQ = sec.questionType === 'Long Answer';
+                        return (
+                           <div key={sec.id} className="bg-gray-50 rounded-2xl sm:rounded-3xl p-4 sm:p-5 border-2 border-transparent hover:border-indigo-100 transition-all group relative min-w-0">
+                              <div className="flex items-center justify-between gap-2 mb-4">
+                                 <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xs font-black shadow-lg shadow-indigo-100">{idx + 1}</div>
+                                    <span className="font-black text-sm text-gray-800">{sec.title}</span>
+                                 </div>
+                                 <div className="flex gap-2 shrink-0">
+                                    <button onClick={() => setEditingSection(sec)} className="p-2 bg-white text-gray-400 hover:text-indigo-600 rounded-xl shadow-sm border border-gray-100 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all"><Settings2 size={16} /></button>
+                                    <button onClick={() => removeSection(sec.id)} className="p-2 bg-white text-gray-400 hover:text-red-500 rounded-xl shadow-sm border border-gray-100 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>
+                                 </div>
                               </div>
-                              <div className="flex gap-2 shrink-0">
-                                 <button onClick={() => setEditingSection(sec)} className="p-2 bg-white text-gray-400 hover:text-indigo-600 rounded-xl shadow-sm border border-gray-100 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all"><Settings2 size={16} /></button>
-                                 <button onClick={() => removeSection(sec.id)} className="p-2 bg-white text-gray-400 hover:text-red-500 rounded-xl shadow-sm border border-gray-100 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>
+                              <div className="sm:ml-12 mb-3">
+                                 <div className="flex gap-2 items-start">
+                                    <textarea
+                                       value={sec.instruction || getDefaultSectionInstruction(sec.questionType, sec.selectCount, sec.totalCount)}
+                                       onChange={e => updateSection(sec.id, { instruction: e.target.value })}
+                                       placeholder="Question heading / statement..."
+                                       rows={2}
+                                       className="flex-1 resize-y text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500"
+                                    />
+                                    <button
+                                       onClick={() => updateSection(sec.id, { instruction: getDefaultSectionInstruction(sec.questionType, sec.selectCount, sec.totalCount) })}
+                                       className="px-2.5 py-1.5 text-[9px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg hover:bg-indigo-100 transition-all whitespace-nowrap mt-0.5"
+                                    >Default</button>
+                                 </div>
                               </div>
+                              <div className="flex flex-wrap gap-2 sm:ml-12">
+                                 <div className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border ${sec.category === 'Objective' ? 'text-blue-600 border-blue-200' : 'text-purple-600 border-purple-200'}`}>
+                                    <Layers size={12} /> {sec.category} Part
+                                 </div>
+                                 <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-500 uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                                    <Library size={12} className="text-indigo-500" /> {sec.questionType}
+                                 </div>
+                                 <div className="flex items-center gap-1.5 text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                                    <CheckCircle2 size={12} /> Attempts: {sec.selectCount} / {sec.totalCount} Qs
+                                 </div>
+                                 <div className="flex items-center gap-1.5 text-[9px] font-black text-amber-600 uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                                    <Hash size={12} /> {sec.totalCount - sec.selectCount} Ignored
+                                 </div>
+                                 <div className="flex items-center gap-1.5 text-[9px] font-black text-rose-600 uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-rose-200">
+                                    <Tag size={12} /> {sec.marksPerQuestion} Marks/Q
+                                 </div>
+                              </div>
+                              {isLongQ && (
+                                 <div className="sm:ml-12 mt-3 flex flex-wrap gap-2">
+                                    <button
+                                       onClick={() => updateSection(sec.id, { hasParts: !sec.hasParts })}
+                                       className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all ${ sec.hasParts ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300'}`}
+                                    >
+                                       {sec.hasParts ? '✓ Sub-parts (a,b,c) On' : '+ Enable Sub-parts (a,b,c)'}
+                                    </button>
+                                    <button
+                                       onClick={() => updateSection(sec.id, { isCompulsory: !sec.isCompulsory })}
+                                       className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all ${ sec.isCompulsory ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-gray-500 border-gray-200 hover:border-amber-300'}`}
+                                    >
+                                       {sec.isCompulsory ? '★ Compulsory' : '☆ Mark as Compulsory'}
+                                    </button>
+                                 </div>
+                              )}
                            </div>
-                           <div className="sm:ml-12 mb-3">
-                              <textarea
-                                 value={sec.instruction || getDefaultSectionInstruction(sec.questionType, sec.selectCount, sec.totalCount)}
-                                 onChange={e => updateSection(sec.id, { instruction: e.target.value })}
-                                 placeholder="Question heading / statement..."
-                                 rows={2}
-                                 className="w-full resize-y text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500"
-                              />
-                           </div>
-                           <div className="flex flex-wrap gap-3 sm:ml-12">
-                              <div className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border ${sec.category === 'Objective' ? 'text-blue-600 border-blue-200' : 'text-purple-600 border-purple-200'}`}>
-                                 <Layers size={12} /> {sec.category} Part
-                              </div>
-                              <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-500 uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-slate-200">
-                                 <Library size={12} className="text-indigo-500" /> {sec.questionType}
-                              </div>
-                              <div className="flex items-center gap-1.5 text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-slate-200">
-                                 <CheckCircle2 size={12} /> Attempts: {sec.selectCount} / {sec.totalCount} Qs
-                              </div>
-                              <div className="flex items-center gap-1.5 text-[9px] font-black text-amber-600 uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-slate-200">
-                                 <Hash size={12} /> {sec.totalCount - sec.selectCount} Ignored
-                              </div>
-                           </div>
-                        </div>
-                     ))}
+                        );
+                     })}
                   </div>
                </div>
             </div>

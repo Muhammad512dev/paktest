@@ -312,6 +312,38 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
       }));
    };
 
+   const updateSectionConfigValues = (sectionId: string, updates: Partial<PaperSectionConfig>) => {
+      if (!sectionId) return;
+      setCurrentPaper(prev => {
+         const currentSec = prev.structure[sectionId];
+         if (!currentSec) return prev;
+         const updatedSec = { ...currentSec, ...updates };
+         if (updatedSec.selectCount > updatedSec.totalCount) {
+            updatedSec.selectCount = updatedSec.totalCount;
+         }
+         return {
+            ...prev,
+            structure: {
+               ...prev.structure,
+               [sectionId]: updatedSec
+            },
+            questions: prev.questions.map(q =>
+               q.sectionId === sectionId && !updatedSec.hasParts
+                  ? { ...q, marks: updatedSec.marksPerQuestion }
+                  : q
+            )
+         };
+      });
+      setSectionConfig(prev => {
+         if (!prev || prev.id !== sectionId) return prev;
+         const next = { ...prev, ...updates };
+         if (next.selectCount > next.totalCount) {
+            next.selectCount = next.totalCount;
+         }
+         return next;
+      });
+   };
+
    const updateSectionConfig = () => {
       if (!sectionConfig) return;
       setCurrentPaper(prev => ({
@@ -436,31 +468,115 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
          {isSelectionModalOpen && sectionConfig && (
             <div className="fixed inset-0 z-[250] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 md:p-12 animate-in fade-in duration-300">
                <div className="bg-white w-full max-w-[95vw] h-[90vh] rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden border border-slate-200">
-                  <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-white shrink-0">
-                     <div className="flex items-center gap-6">
-                        <div className="w-14 h-14 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-center shadow-inner shrink-0">
-                           <Library size={28} className="text-indigo-600" />
-                        </div>
-                        <div>
-                           <div className="flex items-center gap-3">
-                              <h3 className="font-black text-2xl text-slate-900 tracking-tight">{sectionConfig.title}</h3>
-                              <span className="text-slate-300 font-medium text-2xl">|</span>
-                              <span className="text-slate-400 font-bold text-lg">Question Selection</span>
-                           </div>
-                           <div className="flex items-center gap-4 mt-1.5">
-                              <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">SUBJECT: {currentPaper.subject.toUpperCase()}</span>
-                              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-                                 <Layers size={12} />
-                                 <span>
-                                    {activeChapters.length > 0 ? `${activeChapters.length} Chapters` : 'All Chapters'} &bull; {activeTopics.length > 0 ? `${activeTopics.length} Topics` : 'All Topics'}
+                  {/* TOP HORIZONTAL CHAPTER & TOPIC BAR (Simple Font Style) */}
+                  <div className="bg-slate-50 border-b border-slate-200 px-8 py-2.5 flex flex-wrap items-center gap-3 font-sans text-xs shrink-0">
+                     <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-slate-500">Chapters:</span>
+                        <div className="flex flex-wrap gap-1.5">
+                           {paper.selectedChapters.length > 0 ? (
+                              paper.selectedChapters.map(chap => (
+                                 <span key={chap} className="bg-white text-slate-700 font-normal px-2.5 py-0.5 rounded-md border border-slate-200 shadow-2xs">
+                                    📖 {chap}
                                  </span>
-                              </div>
-                           </div>
+                              ))
+                           ) : (
+                              <span className="text-slate-400 font-normal italic">All Chapters</span>
+                           )}
                         </div>
                      </div>
-                     <button onClick={() => setIsSelectionModalOpen(false)} className="text-slate-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-full transition-all">
-                        <X size={36} />
-                     </button>
+
+                     <span className="text-slate-300 font-light mx-1">|</span>
+
+                     <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-slate-500">Topics:</span>
+                        <div className="flex flex-wrap gap-1.5">
+                           {paper.selectedTopics.length > 0 ? (
+                              paper.selectedTopics.map(top => (
+                                 <span key={top} className="bg-purple-50 text-purple-900 font-normal px-2.5 py-0.5 rounded-md border border-purple-200 shadow-2xs">
+                                    🏷️ {top}
+                                 </span>
+                              ))
+                           ) : (
+                              <span className="text-slate-400 font-normal italic">All Topics</span>
+                           )}
+                        </div>
+                     </div>
+                  </div>
+
+                  {/* MAIN MODAL HEADER */}
+                  <div className="px-8 py-4 border-b border-slate-100 flex flex-col gap-3 bg-white shrink-0">
+                     <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                           <div className="w-12 h-12 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-center shadow-inner shrink-0">
+                              <Library size={24} className="text-indigo-600" />
+                           </div>
+                           <div>
+                              <div className="flex items-center gap-3">
+                                 <h3 className="font-black text-2xl text-slate-900 tracking-tight">{sectionConfig.title}</h3>
+                                 <span className="text-slate-300 font-medium text-2xl">|</span>
+                                 <span className="text-slate-400 font-bold text-lg">Question Selection</span>
+                              </div>
+                              <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-0.5 rounded-full border border-indigo-100 mt-0.5 inline-block">
+                                 SUBJECT: {currentPaper.subject.toUpperCase()}
+                              </span>
+                           </div>
+                        </div>
+                        <button onClick={() => setIsSelectionModalOpen(false)} className="text-slate-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-full transition-all">
+                           <X size={32} />
+                        </button>
+                     </div>
+
+                     {/* EDITABLE SECTION PARAMETERS TOOLBAR */}
+                     <div className="flex flex-wrap items-center gap-4 p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                        <div className="flex items-center gap-2">
+                           <label className="text-xs font-bold text-slate-600">Total Questions:</label>
+                           <input
+                              type="number"
+                              min="1"
+                              max="100"
+                              value={sectionConfig.totalCount}
+                              onChange={(e) => {
+                                 const val = Math.max(1, parseInt(e.target.value) || 1);
+                                 updateSectionConfigValues(activeSectionId, { totalCount: val });
+                              }}
+                              className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 text-center outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                           />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                           <label className="text-xs font-bold text-slate-600">Attempt Question:</label>
+                           <input
+                              type="number"
+                              min="1"
+                              max={sectionConfig.totalCount}
+                              value={sectionConfig.selectCount}
+                              onChange={(e) => {
+                                 const val = Math.max(1, parseInt(e.target.value) || 1);
+                                 updateSectionConfigValues(activeSectionId, { selectCount: val });
+                              }}
+                              className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 text-center outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                           />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                           <label className="text-xs font-bold text-slate-600">Marks / Question:</label>
+                           <input
+                              type="number"
+                              min="0.5"
+                              step="0.5"
+                              value={sectionConfig.marksPerQuestion}
+                              onChange={(e) => {
+                                 const val = Math.max(0.5, parseFloat(e.target.value) || 1);
+                                 updateSectionConfigValues(activeSectionId, { marksPerQuestion: val });
+                              }}
+                              className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 text-center outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                           />
+                        </div>
+
+                        <div className="sm:ml-auto flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+                           <span>Total Section Marks: {sectionConfig.selectCount * sectionConfig.marksPerQuestion}</span>
+                        </div>
+                     </div>
                   </div>
 
                   <div className="flex-1 flex overflow-hidden">
@@ -1185,21 +1301,93 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                              </button>
                                           )}
                                        </div>
-                                       <div className="mb-4">
-                                          <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">{sec.title}</h3>
-                                          <div className="flex flex-wrap gap-2 mt-2">
-                                             <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200">
-                                                Required: {sec.selectCount}
-                                             </span>
-                                             <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-100">
-                                                Choice: {sec.totalCount - sec.selectCount}
-                                             </span>
-                                             <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
-                                                {sec.marksPerQuestion} Mark{sec.marksPerQuestion !== 1 ? 's' : ''} each
-                                             </span>
-                                             <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
-                                                Total: {sec.selectCount * sec.marksPerQuestion} Marks
-                                             </span>
+                                       <div className="mb-6 rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden print:border-none print:shadow-none">
+                                          {/* Horizontal Top Chapters & Topics */}
+                                          <div className="bg-slate-50 border-b border-slate-200 px-4 py-2 flex flex-wrap items-center gap-3 font-sans text-xs print:hidden">
+                                             <div className="flex items-center gap-1.5">
+                                                <span className="font-semibold text-slate-500">Chapters:</span>
+                                                <div className="flex flex-wrap gap-1">
+                                                   {paper.selectedChapters.length > 0 ? (
+                                                      paper.selectedChapters.map(chap => (
+                                                         <span key={chap} className="bg-white text-slate-700 font-normal px-2 py-0.5 rounded border border-slate-200">
+                                                            📖 {chap}
+                                                         </span>
+                                                      ))
+                                                   ) : (
+                                                      <span className="text-slate-400 font-normal italic">All Chapters</span>
+                                                   )}
+                                                </div>
+                                             </div>
+                                             <span className="text-slate-300 font-light">|</span>
+                                             <div className="flex items-center gap-1.5">
+                                                <span className="font-semibold text-slate-500">Topics:</span>
+                                                <div className="flex flex-wrap gap-1">
+                                                   {paper.selectedTopics.length > 0 ? (
+                                                      paper.selectedTopics.map(top => (
+                                                         <span key={top} className="bg-purple-50 text-purple-900 font-normal px-2 py-0.5 rounded border border-purple-200">
+                                                            🏷️ {top}
+                                                         </span>
+                                                      ))
+                                                   ) : (
+                                                      <span className="text-slate-400 font-normal italic">All Topics</span>
+                                                   )}
+                                                </div>
+                                             </div>
+                                          </div>
+
+                                          {/* Section Title & Parameter Controls */}
+                                          <div className="p-4">
+                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                                                <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">{sec.title}</h3>
+                                                <button
+                                                   onClick={() => handleOpenSelection(sec.id)}
+                                                   className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 self-start sm:self-auto print:hidden"
+                                                >
+                                                   <Plus size={14} /> Select / Replace Questions
+                                                </button>
+                                             </div>
+
+                                             <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100 text-xs print:hidden">
+                                                <div className="flex items-center gap-1.5">
+                                                   <span className="font-semibold text-slate-600">Total Qs:</span>
+                                                   <input
+                                                      type="number"
+                                                      min="1"
+                                                      max="100"
+                                                      value={sec.totalCount}
+                                                      onChange={(e) => updateSectionConfigValues(sec.id, { totalCount: Math.max(1, parseInt(e.target.value) || 1) })}
+                                                      className="w-14 px-1.5 py-0.5 bg-slate-50 border border-slate-300 rounded text-center font-bold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500"
+                                                   />
+                                                </div>
+
+                                                <div className="flex items-center gap-1.5">
+                                                   <span className="font-semibold text-slate-600">Attempt Qs:</span>
+                                                   <input
+                                                      type="number"
+                                                      min="1"
+                                                      max={sec.totalCount}
+                                                      value={sec.selectCount}
+                                                      onChange={(e) => updateSectionConfigValues(sec.id, { selectCount: Math.max(1, parseInt(e.target.value) || 1) })}
+                                                      className="w-14 px-1.5 py-0.5 bg-slate-50 border border-slate-300 rounded text-center font-bold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500"
+                                                   />
+                                                </div>
+
+                                                <div className="flex items-center gap-1.5">
+                                                   <span className="font-semibold text-slate-600">Marks/Q:</span>
+                                                   <input
+                                                      type="number"
+                                                      min="0.5"
+                                                      step="0.5"
+                                                      value={sec.marksPerQuestion}
+                                                      onChange={(e) => updateSectionConfigValues(sec.id, { marksPerQuestion: Math.max(0.5, parseFloat(e.target.value) || 1) })}
+                                                      className="w-14 px-1.5 py-0.5 bg-slate-50 border border-slate-300 rounded text-center font-bold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500"
+                                                   />
+                                                </div>
+
+                                                <span className="ml-auto font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200">
+                                                   Total: {sec.selectCount * sec.marksPerQuestion} Marks
+                                                </span>
+                                             </div>
                                           </div>
                                        </div>
                                        <div className={`space-y-4 ${sec.questionsPerLine ? 'grid grid-cols-2 gap-x-8 gap-y-4 space-y-0' : ''}`}>
@@ -1304,21 +1492,93 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                              </button>
                                           )}
                                        </div>
-                                       <div className="mb-4">
-                                          <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">{sec.title}</h3>
-                                          <div className="flex flex-wrap gap-2 mt-2">
-                                             <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200">
-                                                Required: {sec.selectCount}
-                                             </span>
-                                             <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-100">
-                                                Choice: {sec.totalCount - sec.selectCount}
-                                             </span>
-                                             <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
-                                                {sec.marksPerQuestion} Mark{sec.marksPerQuestion !== 1 ? 's' : ''} each
-                                             </span>
-                                             <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
-                                                Total: {sec.selectCount * sec.marksPerQuestion} Marks
-                                             </span>
+                                       <div className="mb-6 rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden print:border-none print:shadow-none">
+                                          {/* Horizontal Top Chapters & Topics */}
+                                          <div className="bg-slate-50 border-b border-slate-200 px-4 py-2 flex flex-wrap items-center gap-3 font-sans text-xs print:hidden">
+                                             <div className="flex items-center gap-1.5">
+                                                <span className="font-semibold text-slate-500">Chapters:</span>
+                                                <div className="flex flex-wrap gap-1">
+                                                   {paper.selectedChapters.length > 0 ? (
+                                                      paper.selectedChapters.map(chap => (
+                                                         <span key={chap} className="bg-white text-slate-700 font-normal px-2 py-0.5 rounded border border-slate-200">
+                                                            📖 {chap}
+                                                         </span>
+                                                      ))
+                                                   ) : (
+                                                      <span className="text-slate-400 font-normal italic">All Chapters</span>
+                                                   )}
+                                                </div>
+                                             </div>
+                                             <span className="text-slate-300 font-light">|</span>
+                                             <div className="flex items-center gap-1.5">
+                                                <span className="font-semibold text-slate-500">Topics:</span>
+                                                <div className="flex flex-wrap gap-1">
+                                                   {paper.selectedTopics.length > 0 ? (
+                                                      paper.selectedTopics.map(top => (
+                                                         <span key={top} className="bg-purple-50 text-purple-900 font-normal px-2 py-0.5 rounded border border-purple-200">
+                                                            🏷️ {top}
+                                                         </span>
+                                                      ))
+                                                   ) : (
+                                                      <span className="text-slate-400 font-normal italic">All Topics</span>
+                                                   )}
+                                                </div>
+                                             </div>
+                                          </div>
+
+                                          {/* Section Title & Parameter Controls */}
+                                          <div className="p-4">
+                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                                                <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">{sec.title}</h3>
+                                                <button
+                                                   onClick={() => handleOpenSelection(sec.id)}
+                                                   className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 self-start sm:self-auto print:hidden"
+                                                >
+                                                   <Plus size={14} /> Select / Replace Questions
+                                                </button>
+                                             </div>
+
+                                             <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100 text-xs print:hidden">
+                                                <div className="flex items-center gap-1.5">
+                                                   <span className="font-semibold text-slate-600">Total Qs:</span>
+                                                   <input
+                                                      type="number"
+                                                      min="1"
+                                                      max="100"
+                                                      value={sec.totalCount}
+                                                      onChange={(e) => updateSectionConfigValues(sec.id, { totalCount: Math.max(1, parseInt(e.target.value) || 1) })}
+                                                      className="w-14 px-1.5 py-0.5 bg-slate-50 border border-slate-300 rounded text-center font-bold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500"
+                                                   />
+                                                </div>
+
+                                                <div className="flex items-center gap-1.5">
+                                                   <span className="font-semibold text-slate-600">Attempt Qs:</span>
+                                                   <input
+                                                      type="number"
+                                                      min="1"
+                                                      max={sec.totalCount}
+                                                      value={sec.selectCount}
+                                                      onChange={(e) => updateSectionConfigValues(sec.id, { selectCount: Math.max(1, parseInt(e.target.value) || 1) })}
+                                                      className="w-14 px-1.5 py-0.5 bg-slate-50 border border-slate-300 rounded text-center font-bold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500"
+                                                   />
+                                                </div>
+
+                                                <div className="flex items-center gap-1.5">
+                                                   <span className="font-semibold text-slate-600">Marks/Q:</span>
+                                                   <input
+                                                      type="number"
+                                                      min="0.5"
+                                                      step="0.5"
+                                                      value={sec.marksPerQuestion}
+                                                      onChange={(e) => updateSectionConfigValues(sec.id, { marksPerQuestion: Math.max(0.5, parseFloat(e.target.value) || 1) })}
+                                                      className="w-14 px-1.5 py-0.5 bg-slate-50 border border-slate-300 rounded text-center font-bold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500"
+                                                   />
+                                                </div>
+
+                                                <span className="ml-auto font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200">
+                                                   Total: {sec.selectCount * sec.marksPerQuestion} Marks
+                                                </span>
+                                             </div>
                                           </div>
                                        </div>
                                        <div className="space-y-6">

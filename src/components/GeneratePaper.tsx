@@ -6,7 +6,7 @@ import {
    Layers, FileText, CheckCircle2, ChevronDown, MonitorPlay, Layout, Library, Settings2,
    Hash, Info, Edit3, Tag, RefreshCw, Zap, Upload, FileUp, Briefcase, Wand2, FileCode, Paperclip, Database, Shuffle
 } from 'lucide-react';
-import { WizardState, Question, Difficulty, PaperStructure, PaperSectionConfig, User, WatermarkType, PaperLayoutMode, School, UserRole, QuestionType, getDefaultSectionInstruction, getDefaultSectionInstructionUrdu, PairingScheme, SchemeSectionDef, SchemeVersion } from '../types';
+import { WizardState, Question, Difficulty, PaperStructure, PaperSectionConfig, User, WatermarkType, PaperLayoutMode, School, UserRole, getDefaultSectionInstruction, getDefaultSectionInstructionUrdu, PairingScheme, SchemeSectionDef, SchemeVersion } from '../types';
 import {
    getSyllabuses, getClasses, getSubjects, getChapters, getTopics, getQuestions, getQuestionTypes, getSchoolById, getSystemConfig, checkAndTrackAiUsage, getSchemes
 } from '../services/dataService';
@@ -41,6 +41,21 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
 
    // Manual Mode State
    const [autoFillRepo, setAutoFillRepo] = useState(true);
+
+   // Quick Auto-Builder for Section Initializing
+   const [isQuickBuilderOpen, setIsQuickBuilderOpen] = useState(false);
+   const [quickSections, setQuickSections] = useState<Array<{
+      id: string;
+      questionType: string;
+      marksPerQuestion: number;
+      selectCount: number;
+      hasChoice: boolean;
+      totalCount: number;
+   }>>([
+      { id: 'qs_1', questionType: 'Multiple Choice', marksPerQuestion: 1, selectCount: 10, hasChoice: false, totalCount: 10 },
+      { id: 'qs_2', questionType: 'Short Question', marksPerQuestion: 2, selectCount: 5, hasChoice: true, totalCount: 8 },
+      { id: 'qs_3', questionType: 'Long Answer', marksPerQuestion: 4, selectCount: 2, hasChoice: true, totalCount: 3 }
+   ]);
 
    // AI Configuration - Multiple Sections
    const [aiSections, setAiSections] = useState<AISectionRequest[]>([
@@ -337,6 +352,86 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
       });
    };
 
+   // Quick Auto-Builder Management
+   const addQuickSection = () => {
+      const id = `qs_${Date.now()}`;
+      setQuickSections(prev => [
+         ...prev,
+         {
+            id,
+            questionType: 'Short Question',
+            marksPerQuestion: 2,
+            selectCount: 5,
+            hasChoice: true,
+            totalCount: 8
+         }
+      ]);
+   };
+
+   const removeQuickSection = (id: string) => {
+      setQuickSections(prev => prev.filter(s => s.id !== id));
+   };
+
+   const updateQuickSection = (id: string, updates: Partial<{
+      questionType: string;
+      marksPerQuestion: number;
+      selectCount: number;
+      hasChoice: boolean;
+      totalCount: number;
+   }>) => {
+      setQuickSections(prev => prev.map(s => {
+         if (s.id !== id) return s;
+         const updated = { ...s, ...updates };
+         // Auto adjust counts when choice toggled
+         if (updates.hasChoice !== undefined) {
+            if (updates.hasChoice) {
+               // Add choice
+               const extra = updated.questionType === 'Multiple Choice' ? 0 : updated.selectCount >= 5 ? 3 : 2;
+               updated.totalCount = updated.selectCount + extra;
+            } else {
+               // No choice
+               updated.totalCount = updated.selectCount;
+            }
+         }
+         if (updates.selectCount !== undefined && !updated.hasChoice) {
+            updated.totalCount = updates.selectCount;
+         }
+         return updated;
+      }));
+   };
+
+   const applyQuickSections = () => {
+      const newStructure: PaperStructure = {};
+      quickSections.forEach((qsec, idx) => {
+         const secId = `sec_quick_${Date.now()}_${idx}`;
+         const isObjective = ['Multiple Choice', 'Fill in the Blanks', 'True/False'].includes(qsec.questionType);
+         const total = qsec.hasChoice ? Math.max(qsec.selectCount, qsec.totalCount) : qsec.selectCount;
+         newStructure[secId] = {
+            id: secId,
+            title: `Q.${idx + 1} ${qsec.questionType}`,
+            instruction: getDefaultSectionInstruction(qsec.questionType, qsec.selectCount, total),
+            instructionUrdu: getDefaultSectionInstructionUrdu(qsec.questionType, qsec.selectCount, total),
+            questionType: qsec.questionType,
+            marksPerQuestion: qsec.marksPerQuestion,
+            totalCount: total,
+            selectCount: qsec.selectCount,
+            blankLines: 0,
+            blankLineType: 'Line',
+            questionsPerLine: false,
+            languageMedium: 'Bilingual',
+            sourceFilter: [],
+            category: isObjective ? 'Objective' : 'Subjective',
+            subQuestionNumbering: 'Numeric'
+         };
+      });
+
+      setState(prev => ({
+         ...prev,
+         paperStructure: newStructure
+      }));
+      setIsQuickBuilderOpen(false);
+   };
+
    // Handle Document Upload
    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files[0]) {
@@ -493,7 +588,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                });
             };
 
-            (Object.values(state.paperStructure) as PaperSectionConfig[]).forEach(sec => {
+(Object.values(state.paperStructure) as PaperSectionConfig[]).forEach(sec => {
                // Scheme Handling 1: Long Answer with sub-parts (a), (b), (c)...
                if (sec.hasParts && sec.parts && sec.parts.length > 0) {
                   sec.parts.forEach(part => {
@@ -566,7 +661,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                      });
                   }
                }
-               // Standard Random Shuffle
+               // Standard Random Selection (Balanced & Fair across selected chapters)
                else {
                   const pool = repoQuestions.filter(q =>
                      q.type === sec.questionType &&
@@ -576,8 +671,49 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                      matchesSectionMedium(q, sec.languageMedium)
                   );
 
-                  const shuffled = [...pool].sort(() => 0.5 - Math.random());
-                  const picked = shuffled.slice(0, sec.totalCount);
+                  // Group by chapter for equal distribution
+                  const byChapter: Record<string, Question[]> = {};
+                  pool.forEach(q => {
+                     const chKey = q.chapter || 'general';
+                     if (!byChapter[chKey]) byChapter[chKey] = [];
+                     byChapter[chKey].push(q);
+                  });
+
+                  // Shuffle within each chapter
+                  Object.keys(byChapter).forEach(ch => {
+                     byChapter[ch] = [...byChapter[ch]].sort(() => 0.5 - Math.random());
+                  });
+
+                  const chapterKeys = Object.keys(byChapter).sort(() => 0.5 - Math.random());
+                  const picked: Question[] = [];
+                  const targetCount = sec.totalCount;
+
+                  if (chapterKeys.length > 0) {
+                     let round = 0;
+                     while (picked.length < targetCount) {
+                        let addedThisRound = false;
+                        for (const ch of chapterKeys) {
+                           if (picked.length >= targetCount) break;
+                           const chList = byChapter[ch];
+                           if (round < chList.length) {
+                              picked.push(chList[round]);
+                              addedThisRound = true;
+                           }
+                        }
+                        round++;
+                        if (!addedThisRound) break;
+                     }
+                  }
+
+                  // If still short of targetCount, fill remainder from pool
+                  if (picked.length < targetCount && pool.length > 0) {
+                     const pickedIds = new Set(picked.map(p => p.id));
+                     const remaining = pool.filter(q => !pickedIds.has(q.id)).sort(() => 0.5 - Math.random());
+                     for (const q of remaining) {
+                        if (picked.length >= targetCount) break;
+                        picked.push(q);
+                     }
+                  }
 
                   picked.forEach(q => {
                      generatedQuestions.push({
@@ -1208,17 +1344,59 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
 
                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-gray-100 shadow-sm min-w-0">
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-5 sm:mb-6">
-                     <h4 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2"><CheckCircle2 size={18} /> Initializing Sections</h4>
-                     <button
-                        onClick={addNewSection}
-                        className="w-full sm:w-auto justify-center px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all flex items-center gap-2"
-                     >
-                        <Plus size={14} /> Add Custom Section
-                     </button>
+                     <div>
+                        <h4 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2"><CheckCircle2 size={18} /> Initializing Sections</h4>
+                        <p className="text-[11px] text-slate-500 font-medium mt-0.5">Quickly set marks, question type, and choice to auto-compose the paper.</p>
+                     </div>
+                     <div className="flex flex-wrap items-center gap-2">
+                        <button
+                           type="button"
+                           onClick={() => setIsQuickBuilderOpen(true)}
+                           className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:from-indigo-700 hover:to-violet-700 transition-all flex items-center justify-center gap-2 shadow-md shadow-indigo-200"
+                        >
+                           <Sparkles size={14} className="text-amber-300" /> Quick Auto-Builder
+                        </button>
+                        <button
+                           onClick={addNewSection}
+                           className="w-full sm:w-auto justify-center px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all flex items-center gap-2"
+                        >
+                           <Plus size={14} /> Add Custom Section
+                        </button>
+                     </div>
                   </div>
+
+                  {/* SUMMARY STATS STRIP */}
+                  {Object.keys(state.paperStructure).length > 0 && (
+                     <div className="mb-5 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-200/70 text-xs">
+                        <div className="text-center p-1.5 bg-white rounded-xl shadow-xs">
+                           <span className="text-[9px] uppercase tracking-wider text-slate-400 font-black block">Sections</span>
+                           <span className="text-sm font-black text-indigo-600">{Object.keys(state.paperStructure).length}</span>
+                        </div>
+                        <div className="text-center p-1.5 bg-white rounded-xl shadow-xs">
+                           <span className="text-[9px] uppercase tracking-wider text-slate-400 font-black block">Total Qs</span>
+                           <span className="text-sm font-black text-slate-800">
+                              {Object.values(state.paperStructure).reduce((acc: number, s: any) => acc + (s.totalCount || 0), 0)}
+                           </span>
+                        </div>
+                        <div className="text-center p-1.5 bg-white rounded-xl shadow-xs">
+                           <span className="text-[9px] uppercase tracking-wider text-slate-400 font-black block">To Attempt</span>
+                           <span className="text-sm font-black text-emerald-600">
+                              {Object.values(state.paperStructure).reduce((acc: number, s: any) => acc + (s.selectCount || 0), 0)}
+                           </span>
+                        </div>
+                        <div className="text-center p-1.5 bg-white rounded-xl shadow-xs">
+                           <span className="text-[9px] uppercase tracking-wider text-slate-400 font-black block">Total Marks</span>
+                           <span className="text-sm font-black text-rose-600">
+                              {Object.values(state.paperStructure).reduce((acc: number, s: any) => acc + ((s.selectCount || 0) * (s.marksPerQuestion || 1)), 0)}
+                           </span>
+                        </div>
+                     </div>
+                  )}
+
                   <div className="space-y-4 max-h-[55vh] lg:max-h-[440px] overflow-y-scroll overscroll-contain pr-2 custom-scrollbar">
                      {(Object.values(state.paperStructure) as PaperSectionConfig[]).map((sec, idx) => {
                         const isLongQ = sec.questionType === 'Long Answer';
+                        const hasStudentChoice = sec.totalCount > sec.selectCount;
                         return (
                            <div key={sec.id} className="bg-gray-50 rounded-2xl sm:rounded-3xl p-4 sm:p-5 border-2 border-transparent hover:border-indigo-100 transition-all group relative min-w-0">
                               <div className="flex items-center justify-between gap-2 mb-4">
@@ -1246,13 +1424,77 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                     >Default</button>
                                  </div>
                               </div>
-                              <div className="flex flex-wrap gap-2 sm:ml-12">
+                              <div className="flex flex-wrap items-center gap-2 sm:ml-12">
                                  <div className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border ${sec.category === 'Objective' ? 'text-blue-600 border-blue-200' : 'text-purple-600 border-purple-200'}`}>
                                     <Layers size={12} /> {sec.category} Part
                                  </div>
-                                 <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-500 uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-slate-200">
-                                    <Library size={12} className="text-indigo-500" /> {sec.questionType}
+
+                                 {/* INLINE QUESTION TYPE DROPDOWN */}
+                                 <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-200">
+                                    <Library size={12} className="text-indigo-500 shrink-0" />
+                                    <select
+                                       value={sec.questionType}
+                                       onChange={e => {
+                                          const newType = e.target.value;
+                                          const newCategory = newType === 'Multiple Choice' ? 'Objective' : 'Subjective';
+                                          const newMarks = newType === 'Multiple Choice' ? 1 : newType === 'Short Question' ? 2 : 4;
+                                          updateSection(sec.id, {
+                                             questionType: newType,
+                                             category: newCategory,
+                                             marksPerQuestion: newMarks,
+                                             instruction: getDefaultSectionInstruction(newType, sec.selectCount, sec.totalCount)
+                                          });
+                                       }}
+                                       className="text-[10px] font-black uppercase tracking-wider text-slate-700 bg-transparent outline-none cursor-pointer"
+                                    >
+                                       <option value="Multiple Choice">Multiple Choice</option>
+                                       <option value="Short Question">Short Question</option>
+                                       <option value="Long Answer">Long Answer</option>
+                                       <option value="Fill in the Blanks">Fill in Blanks</option>
+                                       <option value="True/False">True/False</option>
+                                       <option value="Translation">Translation</option>
+                                       <option value="Words/Sentences">Words/Sentences</option>
+                                    </select>
                                  </div>
+
+                                 {/* CHOICE TOGGLE BUTTON */}
+                                 <button
+                                    type="button"
+                                    onClick={() => {
+                                       if (hasStudentChoice) {
+                                          updateSection(sec.id, {
+                                             totalCount: sec.selectCount,
+                                             instruction: getDefaultSectionInstruction(sec.questionType, sec.selectCount, sec.selectCount)
+                                          });
+                                       } else {
+                                          const extra = sec.questionType === 'Multiple Choice' ? 0 : sec.selectCount >= 5 ? 3 : 2;
+                                          const newTotal = sec.selectCount + extra;
+                                          updateSection(sec.id, {
+                                             totalCount: newTotal,
+                                             instruction: getDefaultSectionInstruction(sec.questionType, sec.selectCount, newTotal)
+                                          });
+                                       }
+                                    }}
+                                    className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-all ${
+                                       hasStudentChoice 
+                                          ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100' 
+                                          : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                                    }`}
+                                    title="Toggle student choice on/off for this section"
+                                 >
+                                    {hasStudentChoice ? (
+                                       <>
+                                          <CheckCircle2 size={12} className="text-emerald-600" />
+                                          <span>Choice: {sec.selectCount} of {sec.totalCount}</span>
+                                       </>
+                                    ) : (
+                                       <>
+                                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                                          <span>No Choice (All {sec.selectCount})</span>
+                                       </>
+                                    )}
+                                 </button>
+
                                  <div className="flex items-center gap-1.5 text-[9px] font-black text-emerald-600 bg-white px-2.5 py-1 rounded-lg border border-emerald-200">
                                     <CheckCircle2 size={12} />
                                     <span className="uppercase tracking-widest text-slate-500">Attempt:</span>
@@ -1261,15 +1503,29 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                        min="1"
                                        max={sec.totalCount}
                                        value={sec.selectCount}
-                                       onChange={e => updateSection(sec.id, { selectCount: parseInt(e.target.value) || 1 })}
+                                       onChange={e => {
+                                          const val = parseInt(e.target.value) || 1;
+                                          const newTotal = Math.max(val, sec.totalCount);
+                                          updateSection(sec.id, {
+                                             selectCount: val,
+                                             totalCount: newTotal,
+                                             instruction: getDefaultSectionInstruction(sec.questionType, val, newTotal)
+                                          });
+                                       }}
                                        className="w-10 h-6 text-center font-black text-emerald-600 bg-emerald-50 border border-emerald-200 rounded outline-none focus:ring-2 focus:ring-emerald-500 text-xs"
                                     />
                                     <span className="text-slate-400">/</span>
                                     <input
                                        type="number"
-                                       min="1"
+                                       min={sec.selectCount}
                                        value={sec.totalCount}
-                                       onChange={e => updateSection(sec.id, { totalCount: parseInt(e.target.value) || 1 })}
+                                       onChange={e => {
+                                          const val = parseInt(e.target.value) || 1;
+                                          updateSection(sec.id, {
+                                             totalCount: Math.max(val, sec.selectCount),
+                                             instruction: getDefaultSectionInstruction(sec.questionType, sec.selectCount, Math.max(val, sec.selectCount))
+                                          });
+                                       }}
                                        className="w-10 h-6 text-center font-black text-slate-700 bg-slate-50 border border-slate-200 rounded outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
                                     />
                                     <span className="uppercase tracking-widest text-slate-500">Qs</span>
@@ -1284,6 +1540,10 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                        onChange={e => updateSection(sec.id, { marksPerQuestion: parseInt(e.target.value) || 1 })}
                                        className="w-12 h-6 text-center font-black text-rose-600 bg-rose-50 border border-rose-200 rounded outline-none focus:ring-2 focus:ring-rose-500 text-xs"
                                     />
+                                 </div>
+                                 <div className="flex items-center gap-1 text-[9px] font-black text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200">
+                                    <span className="uppercase tracking-widest text-purple-400">Total:</span>
+                                    <span>{(sec.selectCount || 0) * (sec.marksPerQuestion || 1)} M</span>
                                  </div>
                               </div>
                               {isLongQ && (
@@ -1525,6 +1785,197 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                         className="flex-[2] py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all"
                      >
                         Apply Configuration
+                     </button>
+                  </div>
+               </div>
+            </div>
+         )}
+
+         {/* QUICK AUTO-BUILDER MODAL */}
+         {isQuickBuilderOpen && (
+            <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
+               <div className="bg-white rounded-3xl sm:rounded-[2.5rem] w-full max-w-2xl border border-slate-100 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+                  <div className="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between shrink-0 bg-gradient-to-r from-indigo-50/80 via-white to-violet-50/80">
+                     <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100">
+                           <Sparkles size={20} className="text-amber-300" />
+                        </div>
+                        <div>
+                           <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">Quick Paper Auto-Builder</h3>
+                           <p className="text-[10px] sm:text-xs text-slate-500 font-medium">Just specify marks, question type, and choice. The system creates and auto-fills questions.</p>
+                        </div>
+                     </div>
+                     <button
+                        onClick={() => setIsQuickBuilderOpen(false)}
+                        className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-all"
+                     >
+                        <X size={18} />
+                     </button>
+                  </div>
+
+                  {/* MODAL BODY */}
+                  <div className="p-4 sm:p-6 overflow-y-auto space-y-4 custom-scrollbar flex-1">
+                     <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">Sections Blueprint</span>
+                        <button
+                           type="button"
+                           onClick={addQuickSection}
+                           className="px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all"
+                        >
+                           <Plus size={12} /> Add Section Row
+                        </button>
+                     </div>
+
+                     <div className="space-y-3">
+                        {quickSections.map((qsec, index) => (
+                           <div
+                              key={qsec.id}
+                              className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 hover:border-indigo-200 transition-all space-y-3"
+                           >
+                              <div className="flex items-center justify-between">
+                                 <div className="flex items-center gap-2">
+                                    <span className="w-6 h-6 rounded-lg bg-indigo-600 text-white text-[11px] font-black flex items-center justify-center">
+                                       {index + 1}
+                                    </span>
+                                    <span className="text-xs font-black text-slate-800">
+                                       Section {index + 1}
+                                    </span>
+                                 </div>
+                                 <div className="flex items-center gap-2">
+                                    <span className="text-[11px] font-black text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                                       {qsec.selectCount * qsec.marksPerQuestion} Marks
+                                    </span>
+                                    {quickSections.length > 1 && (
+                                       <button
+                                          type="button"
+                                          onClick={() => removeQuickSection(qsec.id)}
+                                          className="text-slate-400 hover:text-rose-500 p-1 transition-all"
+                                          title="Remove row"
+                                       >
+                                          <Trash2 size={15} />
+                                       </button>
+                                    )}
+                                 </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
+                                 {/* QUESTION TYPE */}
+                                 <div className="sm:col-span-4">
+                                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Type of Question</label>
+                                    <select
+                                       value={qsec.questionType}
+                                       onChange={e => {
+                                          const newType = e.target.value;
+                                          const defMarks = newType === 'Multiple Choice' ? 1 : newType === 'Short Question' ? 2 : 4;
+                                          updateQuickSection(qsec.id, {
+                                             questionType: newType,
+                                             marksPerQuestion: defMarks
+                                          });
+                                       }}
+                                       className="w-full h-9 px-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
+                                    >
+                                       <option value="Multiple Choice">Multiple Choice (MCQ)</option>
+                                       <option value="Short Question">Short Question</option>
+                                       <option value="Long Answer">Long Answer</option>
+                                       <option value="Fill in the Blanks">Fill in the Blanks</option>
+                                       <option value="True/False">True / False</option>
+                                       <option value="Translation">Translation</option>
+                                       <option value="Words/Sentences">Words / Sentences</option>
+                                    </select>
+                                 </div>
+
+                                 {/* MARKS PER QUESTION */}
+                                 <div className="sm:col-span-2">
+                                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Marks / Q</label>
+                                    <input
+                                       type="number"
+                                       min="1"
+                                       value={qsec.marksPerQuestion}
+                                       onChange={e => updateQuickSection(qsec.id, { marksPerQuestion: parseInt(e.target.value) || 1 })}
+                                       className="w-full h-9 px-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-rose-600 text-center outline-none focus:border-rose-500"
+                                    />
+                                 </div>
+
+                                 {/* ATTEMPT REQUIRED */}
+                                 <div className="sm:col-span-3">
+                                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Required Attempt</label>
+                                    <input
+                                       type="number"
+                                       min="1"
+                                       value={qsec.selectCount}
+                                       onChange={e => updateQuickSection(qsec.id, { selectCount: parseInt(e.target.value) || 1 })}
+                                       className="w-full h-9 px-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-emerald-600 text-center outline-none focus:border-emerald-500"
+                                    />
+                                 </div>
+
+                                 {/* CHOICE TOGGLE */}
+                                 <div className="sm:col-span-3">
+                                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Student Choice</label>
+                                    <button
+                                       type="button"
+                                       onClick={() => updateQuickSection(qsec.id, { hasChoice: !qsec.hasChoice })}
+                                       className={`w-full h-9 px-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all flex items-center justify-center gap-1 ${
+                                          qsec.hasChoice
+                                             ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                             : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'
+                                       }`}
+                                    >
+                                       {qsec.hasChoice ? '✓ Choice ON' : '✕ No Choice'}
+                                    </button>
+                                 </div>
+                              </div>
+
+                              {/* CHOICE DETAIL ROW */}
+                              {qsec.hasChoice && (
+                                 <div className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-emerald-100 text-xs">
+                                    <Info size={14} className="text-emerald-600 shrink-0" />
+                                    <span className="text-[11px] text-slate-600 font-medium">
+                                       Total questions to print:
+                                    </span>
+                                    <input
+                                       type="number"
+                                       min={qsec.selectCount}
+                                       value={qsec.totalCount}
+                                       onChange={e => updateQuickSection(qsec.id, { totalCount: Math.max(parseInt(e.target.value) || qsec.selectCount, qsec.selectCount) })}
+                                       className="w-14 h-7 text-center font-black text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-emerald-500 text-xs"
+                                    />
+                                    <span className="text-[11px] font-black text-emerald-700">
+                                       (Student attempts {qsec.selectCount} of {qsec.totalCount} Qs)
+                                    </span>
+                                 </div>
+                              )}
+                           </div>
+                        ))}
+                     </div>
+
+                     {/* STATS PREVIEW */}
+                     <div className="p-3 bg-indigo-50/70 rounded-2xl border border-indigo-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-4 text-indigo-900 font-bold text-[11px]">
+                           <span>Sections: <strong>{quickSections.length}</strong></span>
+                           <span>Total Qs: <strong>{quickSections.reduce((sum, s) => sum + (s.hasChoice ? s.totalCount : s.selectCount), 0)}</strong></span>
+                           <span>Attempt Qs: <strong>{quickSections.reduce((sum, s) => sum + s.selectCount, 0)}</strong></span>
+                        </div>
+                        <div className="text-xs font-black text-rose-600 bg-white px-3 py-1 rounded-xl shadow-xs border border-rose-100">
+                           Total Paper Marks: {quickSections.reduce((sum, s) => sum + (s.selectCount * s.marksPerQuestion), 0)}
+                        </div>
+                     </div>
+                  </div>
+
+                  {/* FOOTER */}
+                  <div className="p-4 sm:p-6 border-t border-slate-100 bg-slate-50 flex gap-3 shrink-0">
+                     <button
+                        type="button"
+                        onClick={() => setIsQuickBuilderOpen(false)}
+                        className="flex-1 py-3 text-xs font-black text-slate-500 hover:bg-slate-200 rounded-2xl transition-all uppercase tracking-wider"
+                     >
+                        Cancel
+                     </button>
+                     <button
+                        type="button"
+                        onClick={applyQuickSections}
+                        className="flex-[2] py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-xl shadow-indigo-200 hover:from-indigo-700 hover:to-violet-700 transition-all flex items-center justify-center gap-2"
+                     >
+                        <CheckCircle2 size={16} /> Auto-Generate Sections & Pick Questions
                      </button>
                   </div>
                </div>

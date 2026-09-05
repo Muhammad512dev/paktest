@@ -162,6 +162,12 @@ export interface PaperSectionConfig {
   sourceFilter: string[];
   category: 'Objective' | 'Subjective';
   subQuestionNumbering: NumberingStyle;
+  /** Number of sub-parts in each long question, e.g. 2 renders (a) and (b). */
+  longPartCount?: number;
+  /** Whether the long-question statement/instruction is printed for each question. */
+  showQuestionStatement?: boolean;
+  /** Explicit compulsory long-question number within this section. */
+  compulsoryQuestionNumber?: number;
   /** Explicit hierarchy role. Legacy papers fall back to category/question type. */
   sectionRole?: SchemeSectionRole;
   /** Printed question number/label, independent of title parsing. */

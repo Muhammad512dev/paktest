@@ -51,6 +51,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
    const [quickTotalPaperMarks, setQuickTotalPaperMarks] = useState<number>(100);
    const [quickHasChoice, setQuickHasChoice] = useState<boolean>(true);
    const [quickLongPartsMode, setQuickLongPartsMode] = useState<'SINGLE' | 'SUBPARTS'>('SUBPARTS'); // SUBPARTS = 4+4=8, SINGLE = 8 marks per question
+   const [quickLongPartCount, setQuickLongPartCount] = useState<number>(2);
    const [quickLongHasStatement, setQuickLongHasStatement] = useState<boolean>(true); // Add instruction statement or simple direct parts
    const [quickCustomMarks, setQuickCustomMarks] = useState<Record<string, number>>({
       'Multiple Choice': 1,
@@ -448,7 +449,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
       selected.forEach((type, idx) => {
          const secId = `sec_quick_${Date.now()}_${idx}`;
          const secMarksShare = Math.max(2, Math.round(totalPaperMarks * weights[type]));
-         
+
          // Marks per question according to user specification:
          // mcqs = 1 mark
          // short = 2 marks
@@ -459,7 +460,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
          else if (type === 'Long Answer') marksPerQ = (quickLongPartsMode === 'SINGLE' ? 8 : 4);
 
          const selectCount = Math.max(1, Math.round(secMarksShare / marksPerQ));
-         
+
          // Student choice logic:
          // MCQs typically have no choice (attempt all)
          // Short questions typically have choice (e.g. attempt 5 out of 8, ~30-40% extra)
@@ -507,10 +508,11 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
             category: isObjective ? 'Objective' : 'Subjective',
             subQuestionNumbering: 'Numeric',
             hasParts: isLong && quickLongPartsMode === 'SUBPARTS',
-            parts: (isLong && quickLongPartsMode === 'SUBPARTS') ? [
-               { label: 'a', marks: 4, count: 1 },
-               { label: 'b', marks: 4, count: 1 }
-            ] : undefined
+            longPartCount: isLong && quickLongPartsMode === 'SUBPARTS' ? quickLongPartCount : 1,
+            showQuestionStatement: isLong ? quickLongHasStatement : undefined,
+            parts: (isLong && quickLongPartsMode === 'SUBPARTS') ? Array.from({ length: quickLongPartCount }, (_, partIdx) => ({
+               label: String.fromCharCode(97 + partIdx), marks: Math.max(1, Math.round(8 / quickLongPartCount)), count: 1
+            })) : undefined
          };
       });
 
@@ -528,6 +530,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
          const secId = `sec_quick_${Date.now()}_${idx}`;
          const isObjective = ['Multiple Choice', 'Fill in the Blanks', 'True/False'].includes(qsec.questionType);
          const total = qsec.hasChoice ? Math.max(qsec.selectCount, qsec.totalCount) : qsec.selectCount;
+         const isLong = qsec.questionType === 'Long Answer';
          newStructure[secId] = {
             id: secId,
             title: `Q.${idx + 1} ${qsec.questionType}`,
@@ -543,7 +546,11 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
             languageMedium: 'Bilingual',
             sourceFilter: [],
             category: isObjective ? 'Objective' : 'Subjective',
-            subQuestionNumbering: 'Numeric'
+            subQuestionNumbering: 'Numeric',
+            hasParts: false,
+            longPartCount: isLong ? 1 : undefined,
+            showQuestionStatement: isLong,
+            isCompulsory: false
          };
       });
 
@@ -731,7 +738,8 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
             (Object.values(state.paperStructure) as PaperSectionConfig[]).forEach((sec, secIdx) => {
                // Scheme Handling 1: Long Answer with sub-parts (a), (b), (c)...
                if (sec.hasParts && sec.parts && sec.parts.length > 0) {
-                  const requiredLongCount = Math.max(1, sec.totalCount || 1);
+                  const configuredPartCount = Math.max(1, sec.longPartCount || sec.parts.length);
+                  const requiredLongCount = Math.max(1, Math.ceil((sec.totalCount || 1) / configuredPartCount));
                   const usedPartIds = new Set<string>();
 
                   for (let qIdx = 0; qIdx < requiredLongCount; qIdx++) {
@@ -761,7 +769,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                         const picked = poolToUse.length > 0 ? poolToUse[Math.floor(Math.random() * poolToUse.length)] : null;
                         if (picked) {
                            usedPartIds.add(picked.id);
-                           const prefix = `Q.${secIdx + 1 + qIdx} (${part.label})`;
+                           const prefix = `Q.${sec.questionNumber || secIdx + 1 + qIdx} (${part.label})`;
                            generatedQuestions.push({
                               ...picked,
                               id: `${picked.id}_q${qIdx + 1}_part_${part.label}_${Math.random().toString(36).substr(2, 7)}`,
@@ -1336,7 +1344,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                         {group.items.map(scheme => (
                            <button key={scheme.id} type="button" onClick={() => setState(prev => ({ ...prev, selectedSchemeId: scheme.id, step: 'CHAPTERS' }))}
-                              className={`text-left p-6 bg-white border-2 rounded-3xl hover:border-indigo-500 hover:shadow-xl transition-all relative overflow-hidden ${ (scheme.schemeVersion || 'OLD') === 'NEW' ? 'border-indigo-200 shadow-md' : 'border-gray-100'}`}>
+                              className={`text-left p-6 bg-white border-2 rounded-3xl hover:border-indigo-500 hover:shadow-xl transition-all relative overflow-hidden ${(scheme.schemeVersion || 'OLD') === 'NEW' ? 'border-indigo-200 shadow-md' : 'border-gray-100'}`}>
                               {(scheme.schemeVersion || 'OLD') === 'NEW' && (
                                  <div className="absolute top-3 right-3 bg-indigo-600 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1">
                                     <Sparkles size={8} /> Latest
@@ -1344,7 +1352,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                               )}
                               <div className="flex items-center justify-between gap-2 mb-3">
                                  <span className={`text-[9px] px-2 py-1 rounded-full font-black uppercase ${scheme.isGlobal ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>{scheme.isGlobal ? 'Board' : 'Custom'}</span>
-                                 <span className={`text-[9px] px-2 py-1 rounded-full font-black uppercase ${ (scheme.schemeVersion || 'OLD') === 'NEW' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>{scheme.schemeVersion || 'OLD'}</span>
+                                 <span className={`text-[9px] px-2 py-1 rounded-full font-black uppercase ${(scheme.schemeVersion || 'OLD') === 'NEW' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>{scheme.schemeVersion || 'OLD'}</span>
                               </div>
                               <h4 className="font-black text-gray-900">{scheme.name}</h4>
                               <p className="mt-3 text-xs font-bold text-gray-400">{scheme.totalMarks} marks • {scheme.durationMin} min • {scheme.structure.length} sections</p>
@@ -1647,11 +1655,10 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                           });
                                        }
                                     }}
-                                    className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-all ${
-                                       hasStudentChoice 
-                                          ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100' 
-                                          : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
-                                    }`}
+                                    className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-all ${hasStudentChoice
+                                       ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                                       : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                                       }`}
                                     title="Toggle student choice on/off for this section"
                                  >
                                     {hasStudentChoice ? (
@@ -1721,17 +1728,36 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                               {isLongQ && (
                                  <div className="sm:ml-12 mt-3 flex flex-wrap gap-2">
                                     <button
-                                       onClick={() => updateSection(sec.id, { hasParts: !sec.hasParts })}
-                                       className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all ${ sec.hasParts ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300'}`}
+                                       onClick={() => updateSection(sec.id, {
+                                          hasParts: !sec.hasParts,
+                                          longPartCount: !sec.hasParts ? (sec.longPartCount || 2) : 1,
+                                          parts: !sec.hasParts ? Array.from({ length: sec.longPartCount || 2 }, (_, i) => ({ label: String.fromCharCode(97 + i), marks: Math.max(1, Math.round((sec.marksPerQuestion || 8) / (sec.longPartCount || 2))), count: 1 })) : undefined
+                                       })}
+                                       className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all ${sec.hasParts ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300'}`}
                                     >
                                        {sec.hasParts ? '✓ Sub-parts (a,b,c) On' : '+ Enable Sub-parts (a,b,c)'}
                                     </button>
                                     <button
                                        onClick={() => updateSection(sec.id, { isCompulsory: !sec.isCompulsory })}
-                                       className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all ${ sec.isCompulsory ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-gray-500 border-gray-200 hover:border-amber-300'}`}
+                                       className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all ${sec.isCompulsory ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-gray-500 border-gray-200 hover:border-amber-300'}`}
                                     >
                                        {sec.isCompulsory ? '★ Compulsory' : '☆ Mark as Compulsory'}
                                     </button>
+                                 </div>
+                              )}
+                              {isLongQ && sec.hasParts && (
+                                 <div className="sm:ml-12 mt-2 flex flex-wrap items-center gap-2 text-[9px] font-black uppercase tracking-widest">
+                                    <span className="text-slate-500">Parts per long:</span>
+                                    {[2, 3, 4, 5].map(count => (
+                                       <button key={count} type="button" onClick={() => updateSection(sec.id, {
+                                          longPartCount: count,
+                                          parts: Array.from({ length: count }, (_, i) => ({ label: String.fromCharCode(97 + i), marks: Math.max(1, Math.round((sec.marksPerQuestion || 8) / count)), count: 1 }))
+                                       })} className={`px-2 py-1 rounded border ${((sec.longPartCount || sec.parts?.length || 2) === count) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200'}`}>{count}</button>
+                                    ))}
+                                    <label className="flex items-center gap-1.5 px-2 py-1 bg-white border border-slate-200 rounded">
+                                       <input type="checkbox" checked={sec.showQuestionStatement !== false} onChange={e => updateSection(sec.id, { showQuestionStatement: e.target.checked })} className="accent-indigo-600" />
+                                       Statement on every long question
+                                    </label>
                                  </div>
                               )}
                            </div>
@@ -1939,6 +1965,33 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                            />
                         </div>
                      </div>
+                     {editingSection.questionType === 'Long Answer' && (
+                        <div className="space-y-3 p-4 bg-violet-50 rounded-2xl border border-violet-100">
+                           <p className="text-[10px] font-black text-violet-700 uppercase tracking-widest">Long Question Board Pattern</p>
+                           <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                              <input type="checkbox" checked={!!editingSection.hasParts} onChange={e => setEditingSection({ ...editingSection, hasParts: e.target.checked, longPartCount: e.target.checked ? (editingSection.longPartCount || 2) : 1, parts: e.target.checked ? Array.from({ length: editingSection.longPartCount || 2 }, (_, i) => ({ label: String.fromCharCode(97 + i), marks: Math.max(1, Math.round((editingSection.marksPerQuestion || 8) / (editingSection.longPartCount || 2))), count: 1 })) : [] })} className="accent-violet-600" />
+                              Divide each main long question into parts
+                           </label>
+                           {editingSection.hasParts && <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-bold text-slate-700">Parts per main question:</span>
+                              {[2, 3, 4, 5].map(count => (
+                                 <button key={count} type="button" onClick={() => setEditingSection({ ...editingSection, longPartCount: count, parts: Array.from({ length: count }, (_, i) => ({ label: String.fromCharCode(97 + i), marks: Math.max(1, Math.round((editingSection.marksPerQuestion || 8) / count)), count: 1 })) })} className={`px-2.5 py-1 rounded-lg text-[10px] font-black border ${(editingSection.longPartCount || 2) === count ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-slate-600 border-slate-200'}`}>{count}</button>
+                              ))}
+                           </div>}
+                           <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                              <input type="checkbox" checked={editingSection.showQuestionStatement === true} onChange={e => setEditingSection({ ...editingSection, showQuestionStatement: e.target.checked })} className="accent-violet-600" />
+                              Write the statement on every main long question
+                           </label>
+                           <div className="grid grid-cols-2 gap-3">
+                              <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                                 <input type="checkbox" checked={!!editingSection.isCompulsory} onChange={e => setEditingSection({ ...editingSection, isCompulsory: e.target.checked, compulsoryQuestionNumber: e.target.checked ? (editingSection.compulsoryQuestionNumber || editingSection.questionNumber || 1) : undefined })} className="accent-rose-600" />
+                                 Compulsory question
+                              </label>
+                              {editingSection.isCompulsory && <input type="number" min="1" value={editingSection.compulsoryQuestionNumber || editingSection.questionNumber || 1} onChange={e => setEditingSection({ ...editingSection, compulsoryQuestionNumber: Math.max(1, parseInt(e.target.value) || 1), questionNumber: Math.max(1, parseInt(e.target.value) || 1) })} className="h-9 px-3 bg-white border border-violet-200 rounded-lg text-xs font-bold" aria-label="Compulsory printed question number" />}
+                           </div>
+                           <p className="text-[10px] text-violet-600">Example: 8 total items with 2 parts produces 4 main questions: 3(a), 3(b), 4(a), 4(b).</p>
+                        </div>
+                     )}
                      <div className="p-4 bg-indigo-50 rounded-2xl flex items-start gap-3">
                         <Info size={18} className="text-indigo-600 mt-0.5" />
                         <p className="text-[10px] text-indigo-900 font-bold uppercase tracking-tight leading-relaxed">
@@ -1990,11 +2043,10 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                      <button
                         type="button"
                         onClick={() => setBuilderTab('SIMPLE')}
-                        className={`pb-2.5 px-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 ${
-                           builderTab === 'SIMPLE'
-                              ? 'border-indigo-600 text-indigo-600'
-                              : 'border-transparent text-slate-400 hover:text-slate-600'
-                        }`}
+                        className={`pb-2.5 px-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 ${builderTab === 'SIMPLE'
+                           ? 'border-indigo-600 text-indigo-600'
+                           : 'border-transparent text-slate-400 hover:text-slate-600'
+                           }`}
                      >
                         <Zap size={13} className="text-amber-500" />
                         Auto Paper Generator (Total Marks & Types)
@@ -2002,11 +2054,10 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                      <button
                         type="button"
                         onClick={() => setBuilderTab('ADVANCED')}
-                        className={`pb-2.5 px-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 ${
-                           builderTab === 'ADVANCED'
-                              ? 'border-indigo-600 text-indigo-600'
-                              : 'border-transparent text-slate-400 hover:text-slate-600'
-                        }`}
+                        className={`pb-2.5 px-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 ${builderTab === 'ADVANCED'
+                           ? 'border-indigo-600 text-indigo-600'
+                           : 'border-transparent text-slate-400 hover:text-slate-600'
+                           }`}
                      >
                         <Layers size={13} />
                         Manual Section Rows ({quickSections.length})
@@ -2047,11 +2098,10 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                              key={m}
                                              type="button"
                                              onClick={() => setQuickTotalPaperMarks(m)}
-                                             className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all ${
-                                                quickTotalPaperMarks === m
-                                                   ? 'bg-rose-600 text-white'
-                                                   : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-                                             }`}
+                                             className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all ${quickTotalPaperMarks === m
+                                                ? 'bg-rose-600 text-white'
+                                                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                                                }`}
                                           >
                                              {m}M
                                           </button>
@@ -2114,18 +2164,17 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                                 setQuickSelectedTypes([...quickSelectedTypes, item.type]);
                                              }
                                           }}
-                                          className={`p-3 rounded-xl border-2 transition-all cursor-pointer ${
-                                             isChecked
-                                                ? 'bg-white border-indigo-600 shadow-sm'
-                                                : 'bg-white/60 border-slate-200 opacity-60 hover:opacity-100'
-                                          }`}
+                                          className={`p-3 rounded-xl border-2 transition-all cursor-pointer ${isChecked
+                                             ? 'bg-white border-indigo-600 shadow-sm'
+                                             : 'bg-white/60 border-slate-200 opacity-60 hover:opacity-100'
+                                             }`}
                                        >
                                           <div className="flex items-center justify-between mb-1">
                                              <span className="text-xs font-black text-slate-800">{item.label}</span>
                                              <input
                                                 type="checkbox"
                                                 checked={isChecked}
-                                                onChange={() => {}}
+                                                onChange={() => { }}
                                                 className="w-4 h-4 text-indigo-600 rounded accent-indigo-600 cursor-pointer"
                                              />
                                           </div>
@@ -2154,11 +2203,10 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                                    setQuickSelectedTypes([...quickSelectedTypes, t]);
                                                 }
                                              }}
-                                             className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all flex items-center gap-1.5 ${
-                                                isChecked
-                                                   ? 'bg-indigo-50 text-indigo-700 border-indigo-300'
-                                                   : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'
-                                             }`}
+                                             className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all flex items-center gap-1.5 ${isChecked
+                                                ? 'bg-indigo-50 text-indigo-700 border-indigo-300'
+                                                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'
+                                                }`}
                                           >
                                              <span>{isChecked ? '✓' : '+'}</span> {t}
                                           </button>
@@ -2168,9 +2216,9 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                               </div>
                            </div>
 
-                           {/* 3. LONG QUESTION SUBPARTS MODE (4 MARKS EACH OR 8 MARKS SINGLE) */}
+                           {/* 3. LONG QUESTION SUBPARTS MODE */}
                            {quickSelectedTypes.includes('Long Answer') && (
-                              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">
+                              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
                                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
                                     <Layers size={13} className="text-purple-600" /> Long Questions Configuration
                                  </label>
@@ -2178,11 +2226,10 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                     <button
                                        type="button"
                                        onClick={() => setQuickLongPartsMode('SUBPARTS')}
-                                       className={`p-3 rounded-xl border text-left transition-all ${
-                                          quickLongPartsMode === 'SUBPARTS'
-                                             ? 'bg-purple-50 border-purple-400 shadow-sm'
-                                             : 'bg-white border-slate-200 hover:bg-slate-100'
-                                       }`}
+                                       className={`p-3 rounded-xl border text-left transition-all ${quickLongPartsMode === 'SUBPARTS'
+                                          ? 'bg-purple-50 border-purple-400 shadow-sm'
+                                          : 'bg-white border-slate-200 hover:bg-slate-100'
+                                          }`}
                                     >
                                        <span className="text-xs font-black text-purple-900 block">
                                           Sub-parts (a, b) - 4 Marks each
@@ -2194,22 +2241,21 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                     <button
                                        type="button"
                                        onClick={() => setQuickLongPartsMode('SINGLE')}
-                                       className={`p-3 rounded-xl border text-left transition-all ${
-                                          quickLongPartsMode === 'SINGLE'
-                                             ? 'bg-purple-50 border-purple-400 shadow-sm'
-                                             : 'bg-white border-slate-200 hover:bg-slate-100'
-                                       }`}
+                                       className={`p-3 rounded-xl border text-left transition-all ${quickLongPartsMode === 'SINGLE'
+                                          ? 'bg-purple-50 border-purple-400 shadow-sm'
+                                          : 'bg-white border-slate-200 hover:bg-slate-100'
+                                          }`}
                                     >
                                        <span className="text-xs font-black text-purple-900 block">
-                                           Single Full Question - 8 Marks
-                                        </span>
+                                          Single Full Question - 8 Marks
+                                       </span>
                                        <span className="text-[10px] text-purple-600 font-medium block mt-0.5">
                                           Only 1 full detailed part worth 8 marks per question
                                        </span>
                                     </button>
                                  </div>
 
-                                 <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                                 <div className="pt-2 border-t border-slate-200/60 flex flex-wrap items-center justify-between gap-3">
                                     <div>
                                        <span className="text-xs font-black text-slate-800 block">Question Statement / Heading</span>
                                        <span className="text-[10px] text-slate-500 font-medium block">
@@ -2228,6 +2274,15 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                        </span>
                                     </label>
                                  </div>
+                                 {quickLongPartsMode === 'SUBPARTS' && (
+                                    <div className="pt-2 border-t border-slate-200/60 flex flex-wrap items-center gap-2">
+                                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Parts per long question:</span>
+                                       {[2, 3, 4, 5].map(count => (
+                                          <button key={count} type="button" onClick={() => setQuickLongPartCount(count)} className={`px-3 py-1.5 rounded-lg text-[10px] font-black border ${quickLongPartCount === count ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200'}`}>{count} parts</button>
+                                       ))}
+                                       <span className="text-[10px] text-slate-500">Example: 8 questions with 2 parts = 4 main questions, each with (a) and (b).</span>
+                                    </div>
+                                 )}
                               </div>
                            )}
 
@@ -2394,11 +2449,10 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                           <button
                                              type="button"
                                              onClick={() => updateQuickSection(qsec.id, { hasChoice: !qsec.hasChoice })}
-                                             className={`w-full h-9 px-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all flex items-center justify-center gap-1 ${
-                                                qsec.hasChoice
-                                                   ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                                                   : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'
-                                             }`}
+                                             className={`w-full h-9 px-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all flex items-center justify-center gap-1 ${qsec.hasChoice
+                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'
+                                                }`}
                                           >
                                              {qsec.hasChoice ? '✓ Choice ON' : '✕ No Choice'}
                                           </button>
@@ -2437,7 +2491,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                               </div>
                               <div className="text-xs font-black text-rose-600 bg-white px-3 py-1 rounded-xl shadow-xs border border-rose-100">
                                  Total Paper Marks: {quickSections.reduce((sum, s) => sum + (s.selectCount * s.marksPerQuestion), 0)}
-                               </div>
+                              </div>
                            </div>
                         </>
                      )}

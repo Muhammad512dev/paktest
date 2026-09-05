@@ -518,8 +518,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
       };
       const subNameUr = getUrduSubject(paper.subject);
 
-      const timeAllowedEn = isObj ? '20 Minutes' : '2.10 hours';
-      const timeAllowedUr = isObj ? '20 منٹ' : '2.10 گھنٹے';
+      const timeAllowedEn = `${paper.durationMinutes || (isObj ? 20 : 130)} Minutes`;
+      const timeAllowedUr = `${paper.durationMinutes || (isObj ? 20 : 130)} منٹ`;
 
       // Calculate dynamic marks based on sections
       const marksVal = isObj
@@ -547,7 +547,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
           </div>
 
           {/* Main Details Grid */}
-          <div className={`${languageMode === 'Bilingual' ? 'grid grid-cols-3' : 'grid grid-cols-2'} gap-y-2 border-t border-b border-black py-2`}>
+          <div dir="ltr" className={`${languageMode === 'Bilingual' ? 'grid grid-cols-3' : 'grid grid-cols-2'} gap-y-2 border-t border-b border-black py-2`}>
             {/* Left Side: English Info */}
             {showEnglish && <div className="flex flex-col gap-1 text-[11px] text-left">
               <div className="font-black" contentEditable suppressContentEditableWarning>{subNameEn}</div>
@@ -563,7 +563,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             </div>
 
             {/* Right Side: Urdu Info */}
-            {showUrdu && <div className="flex flex-col gap-1 text-[11px] text-right font-urdu items-end" dir="rtl">
+            {showUrdu && <div dir="rtl" className="flex flex-col gap-1 text-[11px] text-right font-urdu items-end">
               <div className="font-black" contentEditable suppressContentEditableWarning>{subNameUr}</div>
               <div contentEditable suppressContentEditableWarning>{paperTitleUr}</div>
               <div>وقت: <span contentEditable suppressContentEditableWarning>{timeAllowedUr}</span></div>
@@ -639,22 +639,24 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                   </div>
                 )}
 
-                {/* Detailed answers instruction – once for all long questions */}
-                <div className="flex justify-between items-center my-3 py-2 px-3 border border-black rounded break-inside-avoid">
-                  <div className="font-bold italic text-left" style={{ fontSize: `${englishFontSize}px` }} contentEditable suppressContentEditableWarning>
-                    {paper.longQuestionInstruction || `Attempt ${paper.attemptLongQuestions || subjectiveLongSections.length} questions in all.${paper.compulsoryQuestionNumber ? ` Question No. ${paper.compulsoryQuestionNumber} is Compulsory.` : ''}`}
+                {/* Print the common instruction once unless a section explicitly requests it for every main question. */}
+                {!subjectiveLongSections.some(sec => sec.showQuestionStatement === true) && (
+                  <div className="flex justify-between items-center my-3 py-2 px-3 border border-black rounded break-inside-avoid">
+                    <div className="font-bold italic text-left" style={{ fontSize: `${englishFontSize}px` }} contentEditable suppressContentEditableWarning>
+                      {paper.longQuestionInstruction || `Attempt ${paper.attemptLongQuestions || subjectiveLongSections.length} questions in all.${paper.compulsoryQuestionNumber ? ` Question No. ${paper.compulsoryQuestionNumber} is Compulsory.` : ''}`}
+                    </div>
+                    <div dir="rtl" className="font-urdu font-bold text-right ml-4" style={{ fontSize: `${urduFontSize}px` }} contentEditable suppressContentEditableWarning>
+                      {paper.longQuestionInstructionUrdu || `کل ${paper.attemptLongQuestions || subjectiveLongSections.length} سوالات حل کریں۔${paper.compulsoryQuestionNumber ? ` سوال نمبر ${paper.compulsoryQuestionNumber} لازمی ہے۔` : ''}`}
+                    </div>
                   </div>
-                  <div dir="rtl" className="font-urdu font-bold text-right ml-4" style={{ fontSize: `${urduFontSize}px` }} contentEditable suppressContentEditableWarning>
-                    {paper.longQuestionInstructionUrdu || `کل ${paper.attemptLongQuestions || subjectiveLongSections.length} سوالات حل کریں۔${paper.compulsoryQuestionNumber ? ` سوال نمبر ${paper.compulsoryQuestionNumber} لازمی ہے۔` : ''}`}
-                  </div>
-                </div>
+                )}
 
                 <div className={`${layoutMode === 'DoubleColumn' ? 'columns-2 gap-8' : 'space-y-4'}`}>
                   {subjectiveLongSections.map((sec, idx) => {
                     const secQuestions = questions.filter(q => (q as any).sectionId === sec.id);
                     if (secQuestions.length === 0) return null;
                     const qNum = sec.questionNumber || subjectiveShortSections.length + 2 + idx;
-                    const isCompulsory = !!sec.isCompulsory;
+                    const isCompulsory = !!sec.isCompulsory || sec.compulsoryQuestionNumber === qNum || paper.compulsoryQuestionNumber === qNum;
                     return (
                       <div key={sec.id} className={`break-inside-avoid ${isCompulsory ? 'border-l-2 border-black pl-2' : ''}`}>
                         {/* Compulsory badge before Q9 */}
@@ -1342,8 +1344,9 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
     const romanNums = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', 'xi', 'xii', 'xiii', 'xiv', 'xv'];
 
     // Calculate total marks for this section/question
+    const partCount = Math.max(1, sec.longPartCount || (sec.parts || []).length || 1);
     const sectionMarks = sec.hasParts
-      ? (sec.parts || []).reduce((a, p) => a + p.marks, 0)
+      ? (sec.parts || []).slice(0, partCount).reduce((a, p) => a + p.marks, 0)
       : (sec.marksPerQuestion * sec.selectCount);
 
     const engInstruction = sec.instruction || getDefaultSectionInstruction(sec.questionType, sec.selectCount, sec.totalCount);
@@ -1410,6 +1413,13 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               const showEn = showEnglish && q.text && (q.medium !== 'Urdu' || languageMode === 'English');
               const showUr = showUrdu && q.textUrdu;
 
+              // Generated long-question parts carry their main-question index in the id.
+              // This keeps 8 configured items with 2 parts as Q3(a), Q3(b), Q4(a), Q4(b).
+              const generatedPartMatch = q.id.match(/_q(\d+)_part_([a-z])_/i);
+              const mainQuestionIndex = generatedPartMatch ? Math.max(1, parseInt(generatedPartMatch[1], 10)) : Math.floor(idx / Math.max(1, sec.longPartCount || (sec.parts || []).length || 1)) + 1;
+              const mainQuestionNumber = sec.hasParts ? qNum + mainQuestionIndex - 1 : qNum;
+              const partIndex = generatedPartMatch ? Math.max(0, generatedPartMatch[2].toLowerCase().charCodeAt(0) - 97) : idx % Math.max(1, sec.longPartCount || (sec.parts || []).length || 1);
+
               // Compute labels depending on whether the section uses parts (a/b) or sub-questions (i/ii/iii)
               let subNumEn = '';
               let subNumUr = '';
@@ -1421,13 +1431,13 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                   subNumUr = `${qNum}. `;
                 }
               } else if (sec.hasParts) {
-                const labelEn = getPartLabelEn(q.id, idx);
+                const labelEn = generatedPartMatch ? generatedPartMatch[2].toLowerCase() : getPartLabelEn(q.id, idx);
                 const labelUr = getPartLabelUr(labelEn);
                 // Subpart format:
                 // If first part, show question number then part: 1. (a) or (a), and Urdu (الف) 1. or (الف)
-                if (idx === 0) {
-                  subNumEn = `${qNum}. (${labelEn}) `;
-                  subNumUr = `(${labelUr}) .${qNum}`;
+                if (partIndex === 0) {
+                  subNumEn = `${mainQuestionNumber}. (${labelEn}) `;
+                  subNumUr = `(${labelUr}) ${mainQuestionNumber}.`;
                 } else {
                   subNumEn = `     (${labelEn}) `;
                   subNumUr = `(${labelUr})     `;
@@ -1444,8 +1454,20 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               const cleanedTextEn = sec.hasParts ? cleanPartText(q.text) : q.text;
               const cleanedTextUr = sec.hasParts ? cleanPartText(q.textUrdu) : q.textUrdu;
 
+              const isFirstPartOfMainQuestion = sec.hasParts && partIndex === 0;
+              const showRepeatedStatement = sec.showQuestionStatement === true && isFirstPartOfMainQuestion;
               return (
                 <React.Fragment key={q.id}>
+                  {showRepeatedStatement && (
+                    <tr className="break-inside-avoid">
+                      <td colSpan={(showQuestionMarks ? 1 : 0) + (showUr ? 3 : 2)} className="py-1 border-b border-slate-300">
+                        <div className="flex justify-between gap-4 italic font-bold">
+                          {(languageMode === 'English' || languageMode === 'Bilingual') && <span>{sec.instruction || paper.longQuestionInstruction}</span>}
+                          {(languageMode === 'Urdu' || languageMode === 'Bilingual') && <span dir="rtl" className="font-urdu text-right">{sec.instructionUrdu || paper.longQuestionInstructionUrdu}</span>}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                   {/* Scheme-configured alternative questions are separated with OR / یا. */}
                   {hasInternalChoice && q.isInternalChoiceAlternative && (
                     <tr className="break-inside-avoid">
@@ -1523,9 +1545,9 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       </td>
                     )}
 
-                    {/* Sub-number repeat on far right (Urdu side only paper style) */}
+                    {/* Urdu numbering is kept in its own RTL cell so it cannot appear on the English side. */}
                     {showUrdu && (
-                      <td className="text-right font-black pr-0.5 align-top" style={{ width: '24px', fontSize: `${englishFontSize}px`, paddingTop: '3px' }}>
+                      <td dir="rtl" className="text-right font-black pl-0.5 pr-0.5 align-top font-urdu" style={{ width: '32px', fontSize: `${englishFontSize}px`, paddingTop: '3px' }}>
                         {subNumUr}
                       </td>
                     )}
@@ -1691,7 +1713,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
           </table>
         ) : (
           /* STANDARD LIST MODE */
-          <div className={`space-y-4 ${sec.questionsPerLine ? 'grid grid-cols-2 gap-x-8 gap-y-4 space-y-0' : ''}`} style={{ rowGap: `${questionGap}px` }}>
+          <div className={`space-y-4 ${sec.questionsPerLine ? 'grid grid-cols-2 gap-x-8 gap-y-4 space-y-0' : ''}`} style={{ rowGap: `${questionGap}px`, lineHeight }}>
             {secQuestions.map((q, idx) => {
               const showEn = (languageMode === 'Bilingual' || languageMode === 'English') && q.text && (q.medium !== 'Urdu' || languageMode === 'English');
               const showUr = (languageMode === 'Bilingual' || languageMode === 'Urdu') && q.textUrdu;
@@ -1701,14 +1723,18 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               const partLabelUrMapping: Record<string, string> = { a: 'الف', b: 'ب', c: 'ج', d: 'د', e: 'ہ' };
               const partLabelUr = partLabelUrMapping[partLabelEn] || 'الف';
 
+              const standardMainNumber = sec.questionNumber || questionNumber || idx + 1;
+              const partNumber = sec.hasParts
+                ? Math.floor(idx / Math.max(1, sec.longPartCount || (sec.parts || []).length || 1))
+                : 0;
               const numEn = sec.hasParts
-                ? `(${partLabelEn})`
+                ? `${standardMainNumber + partNumber}. ${partLabelEn})`
                 : (sec.subQuestionNumbering === 'Roman'
                   ? `${["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"][idx] || idx + 1}.`
                   : `${idx + 1}.`);
 
               const numUr = sec.hasParts
-                ? `(${partLabelUr})`
+                ? `${partLabelUr}) ${standardMainNumber + partNumber}.`
                 : (sec.subQuestionNumbering === 'Roman'
                   ? `${["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"][idx] || idx + 1}.`
                   : `${idx + 1}.`);
@@ -1722,9 +1748,16 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     </div>
                   )}
 
+                  {sec.hasParts && sec.showQuestionStatement === true && idx % Math.max(1, sec.longPartCount || (sec.parts || []).length || 1) === 0 && (
+                    <div className="mb-1 flex justify-between gap-4 border-b border-slate-300 pb-1 italic font-bold">
+                      {(languageMode === 'English' || languageMode === 'Bilingual') && <span>{sec.instruction || paper.longQuestionInstruction}</span>}
+                      {(languageMode === 'Urdu' || languageMode === 'Bilingual') && <span dir="rtl" className="font-urdu text-right">{sec.instructionUrdu || paper.longQuestionInstructionUrdu}</span>}
+                    </div>
+                  )}
+
                   {isBilingual ? (
                     /* BILINGUAL: English on Left, Urdu on Right on Same Line */
-                    <div className="flex justify-between items-start gap-6 w-full">
+                    <div dir="ltr" className="flex justify-between items-start gap-6 w-full">
                       {/* Left: English text */}
                       <div className="flex-1 flex gap-2 items-start text-left">
                         <span className="font-black text-sm min-w-[22px] pt-0.5 text-slate-900 shrink-0">
@@ -1810,123 +1843,123 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                           h: (q as any).imageHeight,
                           x: (q as any).imageX || 0,
                           y: (q as any).imageY || 0
-                          }}
-                          isEditing={isManualEdit}
-                          onUpdate={(d) => updateQuestionImageDims(q.id, d)}
-                        />
-                      </div>
-                    )}
-
-                    {/* SHOW ANSWER LOGIC FOR LIST VIEW (INLINE) */}
-                    {showAnswersInline && (
-                      <div className="mt-1 mb-2 font-bold text-sm text-green-700 flex flex-col items-start gap-1 p-1 bg-green-50/50 rounded border border-transparent">
-                        <span className="text-[10px] uppercase tracking-wider text-green-600">Answer:</span>
-                        {(languageMode === 'Bilingual' || languageMode === 'English') && q.correctAnswer && (
-                          <MathRenderer text={q.correctAnswer} inline />
-                        )}
-                        {(languageMode === 'Bilingual' || languageMode === 'Urdu') && q.correctAnswerUrdu && (
-                          <div className="font-urdu text-right w-full" dir="rtl">
-                            <MathRenderer text={q.correctAnswerUrdu} inline />
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {isMCQType(q.type) && (
-                      <div
-                        className={`grid gap-x-4 mt-2 break-inside-avoid transition-all`}
-                        style={{
-                          gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))`,
-                          rowGap: `${verticalSpacing * 2}px`
                         }}
-                      >
-                        {getMcqOptions(q).map((_, i) => {
-                          const opt = q.options?.[i] || '';
-                          const optUrdu = q.optionsUrdu?.[i] || '';
-                          // Highlight if showing answers
-                          const isCorrect = showAnswersInline && (opt === q.correctAnswer || (optUrdu === q.correctAnswerUrdu && optUrdu !== ''));
+                        isEditing={isManualEdit}
+                        onUpdate={(d) => updateQuestionImageDims(q.id, d)}
+                      />
+                    </div>
+                  )}
 
-                          return (
-                            <div key={i} className={`flex items-start gap-2 relative ${isCorrect ? 'bg-green-100/50 rounded p-1 -m-1 border border-green-200' : ''}`}>
-                              <span style={{ fontSize: `${optionLabelSize}px` }} className={`font-black uppercase shrink-0 pt-0.5 ${isCorrect ? 'text-green-700' : 'text-slate-400'}`}>({String.fromCharCode(65 + i)})</span>
-                              <div className={`flex-1 min-w-0 flex ${bilingualInline ? 'flex-row items-baseline gap-2' : 'flex-col gap-0.5'}`}>
-                                {(languageMode === 'Bilingual' || languageMode === 'English') && opt && (q.medium !== 'Urdu' || languageMode === 'English') && (
-                                  isManualEdit ?
-                                    <span style={{ fontSize: `${optionTextSize}px` }} contentEditable suppressContentEditableWarning={true} className="font-medium text-slate-800 outline-none whitespace-normal break-words">{opt}</span> :
-                                    <MathRenderer text={opt} className={`font-medium whitespace-normal break-words ${isCorrect ? 'text-green-900 font-bold' : 'text-slate-800'}`} />
-                                )}
-                                {(languageMode === 'Bilingual' || languageMode === 'Urdu') && optUrdu && (
-                                  <div dir="rtl" style={{ fontSize: `${optionUrduSize}px` }} className={`font-urdu text-right whitespace-normal break-words ${isCorrect ? 'text-green-900 font-bold' : 'text-black'} ${bilingualInline ? 'leading-none' : 'mt-0.5'}`}>
-                                    {isManualEdit ?
-                                      <span contentEditable suppressContentEditableWarning={true} className="outline-none">{optUrdu}</span> :
-                                      <MathRenderer text={optUrdu} />
-                                    }
-                                  </div>
-                                )}
+                  {/* SHOW ANSWER LOGIC FOR LIST VIEW (INLINE) */}
+                  {showAnswersInline && (
+                    <div className="mt-1 mb-2 font-bold text-sm text-green-700 flex flex-col items-start gap-1 p-1 bg-green-50/50 rounded border border-transparent">
+                      <span className="text-[10px] uppercase tracking-wider text-green-600">Answer:</span>
+                      {(languageMode === 'Bilingual' || languageMode === 'English') && q.correctAnswer && (
+                        <MathRenderer text={q.correctAnswer} inline />
+                      )}
+                      {(languageMode === 'Bilingual' || languageMode === 'Urdu') && q.correctAnswerUrdu && (
+                        <div className="font-urdu text-right w-full" dir="rtl">
+                          <MathRenderer text={q.correctAnswerUrdu} inline />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {isMCQType(q.type) && (
+                    <div
+                      className={`grid gap-x-4 mt-2 break-inside-avoid transition-all`}
+                      style={{
+                        gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))`,
+                        rowGap: `${verticalSpacing * 2}px`
+                      }}
+                    >
+                      {getMcqOptions(q).map((_, i) => {
+                        const opt = q.options?.[i] || '';
+                        const optUrdu = q.optionsUrdu?.[i] || '';
+                        // Highlight if showing answers
+                        const isCorrect = showAnswersInline && (opt === q.correctAnswer || (optUrdu === q.correctAnswerUrdu && optUrdu !== ''));
+
+                        return (
+                          <div key={i} className={`flex items-start gap-2 relative ${isCorrect ? 'bg-green-100/50 rounded p-1 -m-1 border border-green-200' : ''}`}>
+                            <span style={{ fontSize: `${optionLabelSize}px` }} className={`font-black uppercase shrink-0 pt-0.5 ${isCorrect ? 'text-green-700' : 'text-slate-400'}`}>({String.fromCharCode(65 + i)})</span>
+                            <div className={`flex-1 min-w-0 flex ${bilingualInline ? 'flex-row items-baseline gap-2' : 'flex-col gap-0.5'}`}>
+                              {(languageMode === 'Bilingual' || languageMode === 'English') && opt && (q.medium !== 'Urdu' || languageMode === 'English') && (
+                                isManualEdit ?
+                                  <span style={{ fontSize: `${optionTextSize}px` }} contentEditable suppressContentEditableWarning={true} className="font-medium text-slate-800 outline-none whitespace-normal break-words">{opt}</span> :
+                                  <MathRenderer text={opt} className={`font-medium whitespace-normal break-words ${isCorrect ? 'text-green-900 font-bold' : 'text-slate-800'}`} />
+                              )}
+                              {(languageMode === 'Bilingual' || languageMode === 'Urdu') && optUrdu && (
+                                <div dir="rtl" style={{ fontSize: `${optionUrduSize}px` }} className={`font-urdu text-right whitespace-normal break-words ${isCorrect ? 'text-green-900 font-bold' : 'text-black'} ${bilingualInline ? 'leading-none' : 'mt-0.5'}`}>
+                                  {isManualEdit ?
+                                    <span contentEditable suppressContentEditableWarning={true} className="outline-none">{optUrdu}</span> :
+                                    <MathRenderer text={optUrdu} />
+                                  }
+                                </div>
+                              )}
+                            </div>
+                            {isCorrect && <CheckCircle2 size={12} className="text-green-600 absolute -right-2 top-0" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {q.type === 'Match Columns' && q.matchingPairs && (
+                    <div className="mt-6 mx-1 md:mx-4 break-inside-avoid">
+                      {/* Changed to Grid with Gap for separation */}
+                      <div className="grid grid-cols-2 gap-16">
+                        {/* Column A */}
+                        <div className="border-2 border-black rounded-lg overflow-hidden">
+                          <div className="bg-slate-100 border-b-2 border-black p-2 text-center">
+                            <h4 className="font-black text-xs uppercase tracking-widest">Column A</h4>
+                          </div>
+                          <div className="divide-y-2 divide-black bg-white">
+                            {q.matchingPairs.map((pair, i) => (
+                              <div key={`left-${i}`} className="p-3 flex gap-3 items-center min-h-[40px]">
+                                <span className="font-bold text-xs w-5 shrink-0">({i + 1})</span>
+                                <div className={`flex-1 flex ${bilingualInline ? 'flex-col gap-1' : 'flex-col'}`}>
+                                  {(languageMode === 'Bilingual' || languageMode === 'English') && pair.left && (q.medium !== 'Urdu' || languageMode === 'English') &&
+                                    (isManualEdit ? <span contentEditable suppressContentEditableWarning={true} className="text-xs font-bold leading-tight outline-none">{pair.left}</span> : <MathRenderer text={pair.left} className="text-xs font-bold leading-tight" />)
+                                  }
+                                  {(languageMode === 'Bilingual' || languageMode === 'Urdu') && pair.leftUrdu &&
+                                    <div className="font-urdu text-right mt-1 leading-tight text-sm" dir="rtl">
+                                      {isManualEdit ? <span contentEditable suppressContentEditableWarning={true} className="outline-none">{pair.leftUrdu}</span> : <MathRenderer text={pair.leftUrdu} />}
+                                    </div>
+                                  }
+                                </div>
                               </div>
-                              {isCorrect && <CheckCircle2 size={12} className="text-green-600 absolute -right-2 top-0" />}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {q.type === 'Match Columns' && q.matchingPairs && (
-                      <div className="mt-6 mx-1 md:mx-4 break-inside-avoid">
-                        {/* Changed to Grid with Gap for separation */}
-                        <div className="grid grid-cols-2 gap-16">
-                          {/* Column A */}
-                          <div className="border-2 border-black rounded-lg overflow-hidden">
-                            <div className="bg-slate-100 border-b-2 border-black p-2 text-center">
-                              <h4 className="font-black text-xs uppercase tracking-widest">Column A</h4>
-                            </div>
-                            <div className="divide-y-2 divide-black bg-white">
-                              {q.matchingPairs.map((pair, i) => (
-                                <div key={`left-${i}`} className="p-3 flex gap-3 items-center min-h-[40px]">
-                                  <span className="font-bold text-xs w-5 shrink-0">({i + 1})</span>
+                            ))}
+                          </div>
+                        </div>
+                        {/* Column B - Shuffled Display for Exam */}
+                        <div className="border-2 border-black rounded-lg overflow-hidden">
+                          <div className="bg-slate-100 border-b-2 border-black p-2 text-center">
+                            <h4 className="font-black text-xs uppercase tracking-widest">Column B</h4>
+                          </div>
+                          <div className="divide-y-2 divide-black bg-white">
+                            {[...q.matchingPairs]
+                              .sort((a, b) => (showAnswersInline ? 0 : (a.right || '').localeCompare(b.right || ''))) // If showing answers, don't shuffle (or show matched)
+                              .map((pair, i) => (
+                                <div key={`right-${i}`} className={`p-3 flex gap-3 items-center min-h-[40px] ${showAnswersInline ? 'bg-green-50' : ''}`}>
+                                  <span style={{ fontSize: `${optionLabelSize}px` }} className="font-black w-5 shrink-0">({String.fromCharCode(65 + i)})</span>
                                   <div className={`flex-1 flex ${bilingualInline ? 'flex-col gap-1' : 'flex-col'}`}>
-                                    {(languageMode === 'Bilingual' || languageMode === 'English') && pair.left && (q.medium !== 'Urdu' || languageMode === 'English') &&
-                                      (isManualEdit ? <span contentEditable suppressContentEditableWarning={true} className="text-xs font-bold leading-tight outline-none">{pair.left}</span> : <MathRenderer text={pair.left} className="text-xs font-bold leading-tight" />)
+                                    {(languageMode === 'Bilingual' || languageMode === 'English') && pair.right && (q.medium !== 'Urdu' || languageMode === 'English') &&
+                                      (isManualEdit ? <span contentEditable suppressContentEditableWarning={true} className="text-xs font-bold leading-tight outline-none">{pair.right}</span> : <MathRenderer text={pair.right} className="text-xs font-bold leading-tight" />)
                                     }
-                                    {(languageMode === 'Bilingual' || languageMode === 'Urdu') && pair.leftUrdu &&
+                                    {(languageMode === 'Bilingual' || languageMode === 'Urdu') && pair.rightUrdu &&
                                       <div className="font-urdu text-right mt-1 leading-tight text-sm" dir="rtl">
-                                        {isManualEdit ? <span contentEditable suppressContentEditableWarning={true} className="outline-none">{pair.leftUrdu}</span> : <MathRenderer text={pair.leftUrdu} />}
+                                        {isManualEdit ? <span contentEditable suppressContentEditableWarning={true} className="outline-none">{pair.rightUrdu}</span> : <MathRenderer text={pair.rightUrdu} />}
                                       </div>
                                     }
                                   </div>
+                                  {showAnswersInline && <span className="text-[9px] font-bold text-green-600 border border-green-300 px-1 rounded">Matches ({i + 1})</span>}
                                 </div>
                               ))}
-                            </div>
-                          </div>
-                          {/* Column B - Shuffled Display for Exam */}
-                          <div className="border-2 border-black rounded-lg overflow-hidden">
-                            <div className="bg-slate-100 border-b-2 border-black p-2 text-center">
-                              <h4 className="font-black text-xs uppercase tracking-widest">Column B</h4>
-                            </div>
-                            <div className="divide-y-2 divide-black bg-white">
-                              {[...q.matchingPairs]
-                                .sort((a, b) => (showAnswersInline ? 0 : (a.right || '').localeCompare(b.right || ''))) // If showing answers, don't shuffle (or show matched)
-                                .map((pair, i) => (
-                                  <div key={`right-${i}`} className={`p-3 flex gap-3 items-center min-h-[40px] ${showAnswersInline ? 'bg-green-50' : ''}`}>
-                                    <span style={{ fontSize: `${optionLabelSize}px` }} className="font-black w-5 shrink-0">({String.fromCharCode(65 + i)})</span>
-                                    <div className={`flex-1 flex ${bilingualInline ? 'flex-col gap-1' : 'flex-col'}`}>
-                                      {(languageMode === 'Bilingual' || languageMode === 'English') && pair.right && (q.medium !== 'Urdu' || languageMode === 'English') &&
-                                        (isManualEdit ? <span contentEditable suppressContentEditableWarning={true} className="text-xs font-bold leading-tight outline-none">{pair.right}</span> : <MathRenderer text={pair.right} className="text-xs font-bold leading-tight" />)
-                                      }
-                                      {(languageMode === 'Bilingual' || languageMode === 'Urdu') && pair.rightUrdu &&
-                                        <div className="font-urdu text-right mt-1 leading-tight text-sm" dir="rtl">
-                                          {isManualEdit ? <span contentEditable suppressContentEditableWarning={true} className="outline-none">{pair.rightUrdu}</span> : <MathRenderer text={pair.rightUrdu} />}
-                                        </div>
-                                      }
-                                    </div>
-                                    {showAnswersInline && <span className="text-[9px] font-bold text-green-600 border border-green-300 px-1 rounded">Matches ({i + 1})</span>}
-                                  </div>
-                                ))}
-                            </div>
                           </div>
                         </div>
                       </div>
-                    )}
+                    </div>
+                  )}
 
                   {q.pageBreakAfter && (
                     <div className="page-break relative print:hidden h-8 flex items-center justify-center">

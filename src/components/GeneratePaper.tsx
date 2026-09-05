@@ -51,6 +51,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
    const [quickTotalPaperMarks, setQuickTotalPaperMarks] = useState<number>(100);
    const [quickHasChoice, setQuickHasChoice] = useState<boolean>(true);
    const [quickLongPartsMode, setQuickLongPartsMode] = useState<'SINGLE' | 'SUBPARTS'>('SUBPARTS'); // SUBPARTS = 4+4=8, SINGLE = 8 marks per question
+   const [quickLongHasStatement, setQuickLongHasStatement] = useState<boolean>(true); // Add instruction statement or simple direct parts
    const [quickCustomMarks, setQuickCustomMarks] = useState<Record<string, number>>({
       'Multiple Choice': 1,
       'Short Question': 2,
@@ -481,11 +482,19 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
          const isObjective = ['Multiple Choice', 'Fill in the Blanks', 'True/False'].includes(type);
          const isLong = type === 'Long Answer';
 
+         // If long question has instruction statement turned off, use empty/minimal instruction
+         const secInstruction = isLong && !quickLongHasStatement
+            ? ''
+            : getDefaultSectionInstruction(type, selectCount, totalCount);
+         const secInstructionUrdu = isLong && !quickLongHasStatement
+            ? ''
+            : getDefaultSectionInstructionUrdu(type, selectCount, totalCount);
+
          newStructure[secId] = {
             id: secId,
-            title: `Q.${idx + 1} ${type}`,
-            instruction: getDefaultSectionInstruction(type, selectCount, totalCount),
-            instructionUrdu: getDefaultSectionInstructionUrdu(type, selectCount, totalCount),
+            title: isLong && !quickLongHasStatement ? `Q.${idx + 1} Long Question` : `Q.${idx + 1} ${type}`,
+            instruction: secInstruction,
+            instructionUrdu: secInstructionUrdu,
             questionType: type,
             marksPerQuestion: marksPerQ,
             totalCount: totalCount,
@@ -2192,12 +2201,32 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                        }`}
                                     >
                                        <span className="text-xs font-black text-purple-900 block">
-                                          Single Full Question - 8 Marks
-                                       </span>
+                                           Single Full Question - 8 Marks
+                                        </span>
                                        <span className="text-[10px] text-purple-600 font-medium block mt-0.5">
                                           Only 1 full detailed part worth 8 marks per question
                                        </span>
                                     </button>
+                                 </div>
+
+                                 <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                                    <div>
+                                       <span className="text-xs font-black text-slate-800 block">Question Statement / Heading</span>
+                                       <span className="text-[10px] text-slate-500 font-medium block">
+                                          {quickLongHasStatement ? 'Write statement instruction before long questions' : 'Simple format without statement (1. a ..., b ...)'}
+                                       </span>
+                                    </div>
+                                    <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-xl border border-slate-200 hover:border-purple-300 transition-all select-none">
+                                       <input
+                                          type="checkbox"
+                                          checked={quickLongHasStatement}
+                                          onChange={e => setQuickLongHasStatement(e.target.checked)}
+                                          className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500 accent-purple-600 cursor-pointer"
+                                       />
+                                       <span className="text-xs font-bold text-slate-700">
+                                          {quickLongHasStatement ? 'Include Statement' : 'No Statement'}
+                                       </span>
+                                    </label>
                                  </div>
                               </div>
                            )}

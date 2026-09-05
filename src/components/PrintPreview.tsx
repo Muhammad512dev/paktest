@@ -604,9 +604,13 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             {subjectiveShortSections.length > 0 && (
               <div className="subjective-part-1 mb-8">
                 {showPartHeadings && (
-                  <div className="text-center mb-4 pb-1 border-b-2 border-black flex justify-between items-center px-2">
-                    <span className="font-black uppercase tracking-widest" style={{ fontSize: `${sectionHeaderSize}px` }} contentEditable suppressContentEditableWarning>PART I</span>
-                    <span dir="rtl" className="font-urdu font-black" style={{ fontSize: `${urduFontSize}px` }} contentEditable suppressContentEditableWarning>حصہ اول</span>
+                  <div className={`mb-4 pb-1 border-b-2 border-black px-2 ${languageMode === 'Bilingual' ? 'flex justify-between items-center' : 'text-center'}`}>
+                    {(languageMode === 'Bilingual' || languageMode === 'English') && (
+                      <span className="font-black uppercase tracking-widest inline-block" style={{ fontSize: `${sectionHeaderSize}px` }} contentEditable suppressContentEditableWarning>PART I (Short Questions)</span>
+                    )}
+                    {(languageMode === 'Bilingual' || languageMode === 'Urdu') && (
+                      <span dir="rtl" className="font-urdu font-black inline-block" style={{ fontSize: `${urduFontSize}px` }} contentEditable suppressContentEditableWarning>حصہ اول (مختصر سوالات)</span>
+                    )}
                   </div>
                 )}
 
@@ -625,9 +629,13 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             {subjectiveLongSections.length > 0 && (
               <div className="subjective-part-2">
                 {showPartHeadings && (
-                  <div className="text-center mb-2 pb-1 border-b-2 border-black flex justify-between items-center px-2">
-                    <span className="font-black uppercase tracking-widest" style={{ fontSize: `${sectionHeaderSize}px` }} contentEditable suppressContentEditableWarning>PART II</span>
-                    <span dir="rtl" className="font-urdu font-black" style={{ fontSize: `${urduFontSize}px` }} contentEditable suppressContentEditableWarning>حصہ دوم</span>
+                  <div className={`mb-2 pb-1 border-b-2 border-black px-2 ${languageMode === 'Bilingual' ? 'flex justify-between items-center' : 'text-center'}`}>
+                    {(languageMode === 'Bilingual' || languageMode === 'English') && (
+                      <span className="font-black uppercase tracking-widest inline-block" style={{ fontSize: `${sectionHeaderSize}px` }} contentEditable suppressContentEditableWarning>PART II (Detailed Questions)</span>
+                    )}
+                    {(languageMode === 'Bilingual' || languageMode === 'Urdu') && (
+                      <span dir="rtl" className="font-urdu font-black inline-block" style={{ fontSize: `${urduFontSize}px` }} contentEditable suppressContentEditableWarning>حصہ دوم (انشائیہ سوالات)</span>
+                    )}
                   </div>
                 )}
 
@@ -1410,25 +1418,26 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                 // Alternatives share one parent question number and have no sub-labels.
                 if (!q.isInternalChoiceAlternative) {
                   subNumEn = `${qNum}. `;
-                  subNumUr = ` ${qNum}`;
+                  subNumUr = `${qNum}. `;
                 }
               } else if (sec.hasParts) {
                 const labelEn = getPartLabelEn(q.id, idx);
                 const labelUr = getPartLabelUr(labelEn);
-                // The first part prepends the question number (e.g. "5. (a)" / "(الف) 5")
+                // Subpart format:
+                // If first part, show question number then part: 1. (a) or (a), and Urdu (الف) 1. or (الف)
                 if (idx === 0) {
                   subNumEn = `${qNum}. (${labelEn}) `;
-                  subNumUr = ` (${labelUr}) ${qNum}`;
+                  subNumUr = `(${labelUr}) .${qNum}`;
                 } else {
-                  subNumEn = `(${labelEn}) `;
-                  subNumUr = ` (${labelUr})`;
+                  subNumEn = `     (${labelEn}) `;
+                  subNumUr = `(${labelUr})     `;
                 }
               } else {
                 const subNum = sec.subQuestionNumbering === 'Roman'
                   ? `(${romanNums[idx] || idx + 1})`
                   : `(${idx + 1})`;
                 subNumEn = `${subNum} `;
-                subNumUr = ` ${subNum}`;
+                subNumUr = `${subNum} `;
               }
 
               // Strip labels from question texts to avoid double-labeling
@@ -1683,51 +1692,124 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
         ) : (
           /* STANDARD LIST MODE */
           <div className={`space-y-4 ${sec.questionsPerLine ? 'grid grid-cols-2 gap-x-8 gap-y-4 space-y-0' : ''}`} style={{ rowGap: `${questionGap}px` }}>
-            {secQuestions.map((q, idx) => (
-              <div key={q.id} className="relative break-inside-avoid group/q" style={{ marginBottom: `${questionGap}px` }}>
-                {isManualEdit && (
-                  <div className="absolute -left-12 top-0 flex flex-col gap-1 print:hidden">
-                    <button onClick={() => togglePageBreak(q.id)} className={`p-1.5 rounded transition-colors shadow-sm ${q.pageBreakAfter ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><Scissors size={14} /></button>
-                    <button onClick={() => removeQuestion(q.id)} className="p-1.5 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors shadow-sm"><Trash2 size={14} /></button>
-                  </div>
-                )}
-                <div className={`flex gap-3 items-start relative ${languageMode === 'Urdu' ? 'flex-row-reverse text-right' : ''}`} dir={languageMode === 'Urdu' ? 'rtl' : 'ltr'}>
-                  <span className="font-black text-sm min-w-[20px] pt-0.5 text-slate-900">
-                    {sec.hasParts
-                      ? `(${['a', 'b', 'c', 'd', 'e', 'f', 'g'][idx] || 'a'})`
-                      : (sec.subQuestionNumbering === 'Roman'
-                        ? `${["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"][idx] || idx + 1}.`
-                        : `${idx + 1}.`)}
-                  </span>
-                  <div className="flex-1 space-y-2">
-                    <div className="flex justify-between items-start w-full relative">
-                      {(languageMode === 'Bilingual' || languageMode === 'English') && q.text && (q.medium !== 'Urdu' || languageMode === 'English') && (
-                        isManualEdit ?
-                          <p contentEditable suppressContentEditableWarning={true} className={`leading-relaxed outline-none flex-1 pr-12 bg-amber-50 rounded border-dashed border border-amber-300 p-1`}>{q.text}</p> :
-                          <MathRenderer text={q.text} className="leading-relaxed flex-1 pr-10" />
-                      )}
-                      {showQuestionMarks && <span contentEditable={isManualEdit} suppressContentEditableWarning={true} className="text-[10px] font-black text-slate-500 pt-0.5 shrink-0 absolute right-0 top-0">[{q.marks}]</span>}
+            {secQuestions.map((q, idx) => {
+              const showEn = (languageMode === 'Bilingual' || languageMode === 'English') && q.text && (q.medium !== 'Urdu' || languageMode === 'English');
+              const showUr = (languageMode === 'Bilingual' || languageMode === 'Urdu') && q.textUrdu;
+              const isBilingual = showEn && showUr;
+
+              const partLabelEn = ['a', 'b', 'c', 'd', 'e', 'f', 'g'][idx] || 'a';
+              const partLabelUrMapping: Record<string, string> = { a: 'الف', b: 'ب', c: 'ج', d: 'د', e: 'ہ' };
+              const partLabelUr = partLabelUrMapping[partLabelEn] || 'الف';
+
+              const numEn = sec.hasParts
+                ? `(${partLabelEn})`
+                : (sec.subQuestionNumbering === 'Roman'
+                  ? `${["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"][idx] || idx + 1}.`
+                  : `${idx + 1}.`);
+
+              const numUr = sec.hasParts
+                ? `(${partLabelUr})`
+                : (sec.subQuestionNumbering === 'Roman'
+                  ? `${["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"][idx] || idx + 1}.`
+                  : `${idx + 1}.`);
+
+              return (
+                <div key={q.id} className="relative break-inside-avoid group/q" style={{ marginBottom: `${questionGap}px` }}>
+                  {isManualEdit && (
+                    <div className="absolute -left-12 top-0 flex flex-col gap-1 print:hidden">
+                      <button onClick={() => togglePageBreak(q.id)} className={`p-1.5 rounded transition-colors shadow-sm ${q.pageBreakAfter ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><Scissors size={14} /></button>
+                      <button onClick={() => removeQuestion(q.id)} className="p-1.5 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors shadow-sm"><Trash2 size={14} /></button>
                     </div>
+                  )}
 
-                    {(languageMode === 'Bilingual' || languageMode === 'Urdu') && q.textUrdu && (
-                      <div dir="rtl" style={{ fontSize: `${urduFontSize}px` }} className={`font-urdu text-right text-black leading-[1.8] py-1`}>
-                        {isManualEdit ?
-                          <p contentEditable suppressContentEditableWarning={true} className="bg-amber-50 rounded border-dashed border border-amber-300 p-2 outline-none">{q.textUrdu}</p> :
-                          <MathRenderer text={q.textUrdu} />
-                        }
+                  {isBilingual ? (
+                    /* BILINGUAL: English on Left, Urdu on Right on Same Line */
+                    <div className="flex justify-between items-start gap-6 w-full">
+                      {/* Left: English text */}
+                      <div className="flex-1 flex gap-2 items-start text-left">
+                        <span className="font-black text-sm min-w-[22px] pt-0.5 text-slate-900 shrink-0">
+                          {numEn}
+                        </span>
+                        <div className="flex-1 space-y-1">
+                          {isManualEdit ? (
+                            <p contentEditable suppressContentEditableWarning={true} className="leading-relaxed outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-1 font-bold">{q.text}</p>
+                          ) : (
+                            <MathRenderer text={q.text} className="leading-relaxed font-bold" />
+                          )}
+                          {showQuestionMarks && (
+                            <span contentEditable={isManualEdit} suppressContentEditableWarning={true} className="text-[10px] font-black text-slate-500 pt-0.5 inline-block">[{q.marks}]</span>
+                          )}
+                        </div>
                       </div>
-                    )}
 
-                    {q.imageUrl && (
-                      <div className="my-3 flex justify-center">
-                        <ResizableImage
-                          src={q.imageUrl}
-                          alt="Diagram"
-                          initialDims={{
-                            w: (q as any).imageWidth,
-                            h: (q as any).imageHeight,
-                            x: (q as any).imageX || 0,
-                            y: (q as any).imageY || 0
+                      {/* Right: Urdu text */}
+                      <div dir="rtl" className="flex-1 flex gap-2 items-start text-right font-urdu justify-end">
+                        <div className="flex-1 space-y-1">
+                          {isManualEdit ? (
+                            <p contentEditable suppressContentEditableWarning={true} style={{ fontSize: `${urduFontSize}px` }} className="bg-amber-50 rounded border-dashed border border-amber-300 p-1 outline-none font-bold text-black leading-[1.8]">{q.textUrdu}</p>
+                          ) : (
+                            <div style={{ fontSize: `${urduFontSize}px` }} className="font-bold text-black leading-[1.8]">
+                              <MathRenderer text={q.textUrdu!} />
+                            </div>
+                          )}
+                        </div>
+                        <span className="font-black text-sm min-w-[22px] pt-0.5 text-slate-900 shrink-0" dir="ltr">
+                          {numUr}
+                        </span>
+                      </div>
+                    </div>
+                  ) : showUr ? (
+                    /* URDU ONLY: Aligned to Right */
+                    <div dir="rtl" className="flex gap-2 items-start text-right font-urdu w-full justify-start">
+                      <span className="font-black text-sm min-w-[22px] pt-0.5 text-slate-900 shrink-0" dir="ltr">
+                        {numUr}
+                      </span>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex justify-between items-start">
+                          {isManualEdit ? (
+                            <p contentEditable suppressContentEditableWarning={true} style={{ fontSize: `${urduFontSize}px` }} className="bg-amber-50 rounded border-dashed border border-amber-300 p-1 outline-none font-bold text-black leading-[1.8] flex-1">{q.textUrdu}</p>
+                          ) : (
+                            <div style={{ fontSize: `${urduFontSize}px` }} className="font-bold text-black leading-[1.8] flex-1">
+                              <MathRenderer text={q.textUrdu!} />
+                            </div>
+                          )}
+                          {showQuestionMarks && (
+                            <span contentEditable={isManualEdit} suppressContentEditableWarning={true} className="text-[10px] font-black text-slate-500 pt-0.5 shrink-0 ml-3">[{q.marks}]</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ENGLISH ONLY: Aligned to Left */
+                    <div className="flex gap-2 items-start text-left w-full">
+                      <span className="font-black text-sm min-w-[22px] pt-0.5 text-slate-900 shrink-0">
+                        {numEn}
+                      </span>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex justify-between items-start">
+                          {isManualEdit ? (
+                            <p contentEditable suppressContentEditableWarning={true} className="leading-relaxed outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-1 font-bold flex-1">{q.text}</p>
+                          ) : (
+                            <MathRenderer text={q.text} className="leading-relaxed font-bold flex-1" />
+                          )}
+                          {showQuestionMarks && (
+                            <span contentEditable={isManualEdit} suppressContentEditableWarning={true} className="text-[10px] font-black text-slate-500 pt-0.5 shrink-0 ml-3">[{q.marks}]</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {q.imageUrl && (
+                    <div className="my-3 flex justify-center">
+                      <ResizableImage
+                        src={q.imageUrl}
+                        alt="Diagram"
+                        initialDims={{
+                          w: (q as any).imageWidth,
+                          h: (q as any).imageHeight,
+                          x: (q as any).imageX || 0,
+                          y: (q as any).imageY || 0
                           }}
                           isEditing={isManualEdit}
                           onUpdate={(d) => updateQuestionImageDims(q.id, d)}
@@ -1845,19 +1927,18 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                         </div>
                       </div>
                     )}
-                  </div>
-                </div>
 
-                {q.pageBreakAfter && (
-                  <div className="page-break relative print:hidden h-8 flex items-center justify-center">
-                    <div className="w-full border-t-2 border-dashed border-indigo-400 opacity-50"></div>
-                    <div className="absolute bg-indigo-600 text-white text-[8px] font-bold px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-1 shadow-lg">
-                      <Scissors size={10} /> Manual Page Break
+                  {q.pageBreakAfter && (
+                    <div className="page-break relative print:hidden h-8 flex items-center justify-center">
+                      <div className="w-full border-t-2 border-dashed border-indigo-400 opacity-50"></div>
+                      <div className="absolute bg-indigo-600 text-white text-[8px] font-bold px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-1 shadow-lg">
+                        <Scissors size={10} /> Manual Page Break
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </section>

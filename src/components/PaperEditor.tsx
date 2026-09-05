@@ -246,8 +246,60 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
    const handleRandomSelect = () => {
       if (!sectionConfig || availableQuestions.length === 0) return;
       const count = sectionConfig.totalCount;
-      const shuffled = [...availableQuestions].sort(() => 0.5 - Math.random());
-      const selected = shuffled.slice(0, count);
+
+      // Group available questions by chapter to enable balanced/equal distribution
+      const chapterMap: Record<string, Question[]> = {};
+      availableQuestions.forEach(q => {
+         const chap = q.chapter || 'Other';
+         if (!chapterMap[chap]) chapterMap[chap] = [];
+         chapterMap[chap].push(q);
+      });
+
+      // Shuffle each chapter's questions
+      Object.keys(chapterMap).forEach(chap => {
+         chapterMap[chap].sort(() => 0.5 - Math.random());
+      });
+
+      // Determine chapters list: prioritize activeChapters, then whatever chapters exist in availableQuestions
+      const uniqueChaps = Object.keys(chapterMap).sort((a, b) => {
+         const aActive = activeChapters.includes(a);
+         const bActive = activeChapters.includes(b);
+         if (aActive && !bActive) return -1;
+         if (!aActive && bActive) return 1;
+         return 0;
+      });
+
+      const selected: Question[] = [];
+      const selectedIds = new Set<string>();
+
+      // Round-robin equal distribution across chapters
+      let addedInRound = true;
+      while (selected.length < count && addedInRound) {
+         addedInRound = false;
+         for (const chap of uniqueChaps) {
+            if (selected.length >= count) break;
+            const pool = chapterMap[chap];
+            if (pool && pool.length > 0) {
+               const nextQ = pool.shift();
+               if (nextQ && !selectedIds.has(nextQ.id)) {
+                  selected.push(nextQ);
+                  selectedIds.add(nextQ.id);
+                  addedInRound = true;
+               }
+            }
+         }
+      }
+
+      // If still need more questions (unlikely), fill from remaining available questions
+      if (selected.length < count) {
+         const remaining = availableQuestions.filter(q => !selectedIds.has(q.id)).sort(() => 0.5 - Math.random());
+         for (const q of remaining) {
+            if (selected.length >= count) break;
+            selected.push(q);
+            selectedIds.add(q.id);
+         }
+      }
+
       const otherQuestions = currentPaper.questions.filter(q => q.sectionId !== activeSectionId);
       const newQuestions = selected.map(q => ({ ...q, sectionId: activeSectionId, marks: sectionConfig.marksPerQuestion }));
       setCurrentPaper(prev => ({ ...prev, questions: [...otherQuestions, ...newQuestions] }));
@@ -550,7 +602,7 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                             />
                          </div>
 
-                         {/* QUESTION TYPES DROPDOWN POPOVER */}
+                         {/* QUESTION TYPES DROPDOWN POPOVER - SINGLE SELECT ONLY */}
                          <div className="relative">
                             <button
                                type="button"
@@ -561,37 +613,51 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                className="px-3 py-1.5 bg-white border border-slate-300 hover:border-indigo-500 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-2 shadow-2xs transition-all cursor-pointer"
                             >
                                <ListFilter size={14} className="text-indigo-600" />
-                               <span>Types ({activeTypes.length > 0 ? activeTypes.length : 'All'})</span>
+                               <span>Type: <strong className="text-indigo-600">{activeTypes.length > 0 ? activeTypes[0] : 'All'}</strong></span>
                                <ChevronDown size={14} className={`text-slate-400 transition-transform ${isTypeDropdownOpen ? 'rotate-180' : ''}`} />
                             </button>
 
                             {isTypeDropdownOpen && (
                                <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 animate-in fade-in duration-150">
                                   <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
-                                     <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">Question Types</span>
+                                     <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">Question Type (Single)</span>
                                      <button
                                         type="button"
-                                        onClick={() => setActiveTypes([])}
+                                        onClick={() => { setActiveTypes([]); setIsTypeDropdownOpen(false); }}
                                         className="text-[10px] font-bold text-slate-400 hover:text-indigo-600"
                                      >
-                                        Select All
+                                        Any Type
                                      </button>
                                   </div>
                                   <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
-                                     {availableTypesInScope.map(({ type, count }) => (
-                                        <label key={type} className="flex items-center justify-between cursor-pointer p-1.5 rounded-lg hover:bg-slate-50 transition-colors">
-                                           <div className="flex items-center gap-2">
-                                              <input
-                                                 type="checkbox"
-                                                 checked={activeTypes.includes(type)}
-                                                 onChange={() => setActiveTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type])}
-                                                 className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                                              />
-                                              <span className="text-xs font-bold text-slate-700">{type}</span>
-                                           </div>
-                                           <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md">{count}</span>
-                                        </label>
-                                     ))}
+                                     {availableTypesInScope.map(({ type, count }) => {
+                                        const isSelected = activeTypes.includes(type);
+                                        return (
+                                           <label
+                                              key={type}
+                                              onClick={() => {
+                                                 // Single-select: toggle to this type only or unselect if clicked again
+                                                 setActiveTypes(isSelected ? [] : [type]);
+                                                 setIsTypeDropdownOpen(false);
+                                              }}
+                                              className={`flex items-center justify-between cursor-pointer p-1.5 rounded-lg transition-colors ${
+                                                 isSelected ? 'bg-indigo-50 text-indigo-900 font-bold' : 'hover:bg-slate-50 text-slate-700'
+                                              }`}
+                                           >
+                                              <div className="flex items-center gap-2">
+                                                 <input
+                                                    type="radio"
+                                                    name="single_question_type"
+                                                    checked={isSelected}
+                                                    onChange={() => {}}
+                                                    className="w-4 h-4 border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                 />
+                                                 <span className="text-xs">{type}</span>
+                                              </div>
+                                              <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md">{count}</span>
+                                           </label>
+                                        );
+                                     })}
                                   </div>
                                </div>
                             )}
@@ -837,15 +903,67 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                            <div className="space-y-3 animate-in slide-in-from-bottom-4 duration-300 pb-8">
                               <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 md:-mx-8 px-4 sm:px-6 md:px-8 pt-2 pb-4 bg-white/95 backdrop-blur border-b border-slate-100 shadow-2xs">
                                  <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-3">
-                                    <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-                                       <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                          {displayedMenuQuestions.length} Results • {selectedInActiveSection} Selected
-                                       </span>
-                                       <div className="hidden sm:flex gap-2 items-center">
-                                          <span className="w-3 h-3 bg-indigo-50 border border-indigo-200 rounded-full"></span>
-                                          <span className="text-[10px] font-bold text-slate-400">Available</span>
-                                          <span className="w-3 h-3 bg-indigo-600 rounded-full ml-2"></span>
-                                          <span className="text-[10px] font-bold text-slate-400">Selected</span>
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                       {/* TABS: ALL / SELECTED / UNSELECTED */}
+                                       <div className="flex items-center bg-slate-100/90 p-1 rounded-2xl border border-slate-200/80 gap-1 overflow-x-auto custom-scrollbar">
+                                          <button
+                                             type="button"
+                                             onClick={() => setSelectionStatusFilter('all')}
+                                             className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                                                selectionStatusFilter === 'all'
+                                                   ? 'bg-white text-indigo-600 shadow-xs ring-1 ring-slate-200'
+                                                   : 'text-slate-500 hover:text-slate-900'
+                                             }`}
+                                          >
+                                             <span>All Questions</span>
+                                             <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                                                selectionStatusFilter === 'all' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/80 text-slate-600'
+                                             }`}>
+                                                {availableQuestions.length}
+                                             </span>
+                                          </button>
+
+                                          <button
+                                             type="button"
+                                             onClick={() => setSelectionStatusFilter('selected')}
+                                             className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                                                selectionStatusFilter === 'selected'
+                                                   ? 'bg-white text-emerald-700 shadow-xs ring-1 ring-slate-200'
+                                                   : 'text-slate-500 hover:text-slate-900'
+                                             }`}
+                                          >
+                                             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                             <span>Selected</span>
+                                             <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                                                selectionStatusFilter === 'selected' ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-200/80 text-slate-600'
+                                             }`}>
+                                                {availableQuestions.filter(q => currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId === activeSectionId)).length}
+                                             </span>
+                                          </button>
+
+                                          <button
+                                             type="button"
+                                             onClick={() => setSelectionStatusFilter('unselected')}
+                                             className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                                                selectionStatusFilter === 'unselected'
+                                                   ? 'bg-white text-amber-700 shadow-xs ring-1 ring-slate-200'
+                                                   : 'text-slate-500 hover:text-slate-900'
+                                             }`}
+                                          >
+                                             <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                                             <span>Unselected</span>
+                                             <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                                                selectionStatusFilter === 'unselected' ? 'bg-amber-50 text-amber-800' : 'bg-slate-200/80 text-slate-600'
+                                             }`}>
+                                                {availableQuestions.filter(q => !currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId === activeSectionId)).length}
+                                             </span>
+                                          </button>
+                                       </div>
+
+                                       <div className="flex items-center gap-3">
+                                          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                             {displayedMenuQuestions.length} Shown • {selectedInActiveSection} Total Selected
+                                          </span>
                                        </div>
                                     </div>
 
@@ -859,18 +977,6 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                              className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
                                           />
                                        </div>
-
-                                       {/* FILTER BY SELECTION STATUS */}
-                                       <select
-                                          value={selectionStatusFilter}
-                                          onChange={(e) => setSelectionStatusFilter(e.target.value as any)}
-                                          className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                                          title="Filter by Selection Status"
-                                       >
-                                          <option value="all">Filter: All Questions</option>
-                                          <option value="selected">Filter: Selected Only</option>
-                                          <option value="unselected">Filter: Unselected Only</option>
-                                       </select>
 
                                        {/* COLUMNS FORM TOGGLE */}
                                        <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
@@ -1015,6 +1121,45 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                                    ))}
                                                 </div>
                                              )}
+
+                                             {/* QUESTION CARD ACTION BAR (SELECT / UNSELECT TOGGLE) */}
+                                             <div className="flex items-center justify-between pt-1.5 mt-1 border-t border-slate-100">
+                                                <div className="text-[10px] font-bold text-slate-400">
+                                                   {isSelectedInThisSection ? (
+                                                      <span className="text-emerald-600 flex items-center gap-1 font-black">
+                                                         <Check size={11} strokeWidth={3} /> Currently Selected in this Section
+                                                      </span>
+                                                   ) : isSelectedInOtherSection ? (
+                                                      <span className="text-amber-600 font-bold">Selected in another section</span>
+                                                   ) : (
+                                                      <span>Click anywhere on card or button to select</span>
+                                                   )}
+                                                </div>
+
+                                                <button
+                                                   type="button"
+                                                   onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      toggleQuestionSelection(q);
+                                                   }}
+                                                   className={`px-3 py-1 rounded-lg text-[11px] font-black transition-all flex items-center gap-1 cursor-pointer active:scale-95 ${
+                                                      isSelectedInThisSection
+                                                         ? 'bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200'
+                                                         : 'bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 border border-indigo-200'
+                                                   }`}
+                                                   title={isSelectedInThisSection ? 'Unselect this question' : 'Select this question'}
+                                                >
+                                                   {isSelectedInThisSection ? (
+                                                      <>
+                                                         <X size={12} strokeWidth={3} /> Unselect
+                                                      </>
+                                                   ) : (
+                                                      <>
+                                                         <Plus size={12} strokeWidth={3} /> Select Question
+                                                      </>
+                                                   )}
+                                                </button>
+                                             </div>
                                           </div>
                                        </div>
                                     </div>

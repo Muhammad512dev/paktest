@@ -44,6 +44,15 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
 
    // Quick Auto-Builder for Section Initializing
    const [isQuickBuilderOpen, setIsQuickBuilderOpen] = useState(false);
+   const [builderTab, setBuilderTab] = useState<'SIMPLE' | 'ADVANCED'>('SIMPLE');
+
+   // Simple 1-Step Input: Total Marks, Question Type, Choice or Not
+   const [quickSimpleType, setQuickSimpleType] = useState<string>('Short Question');
+   const [quickSimpleMarksPerQ, setQuickSimpleMarksPerQ] = useState<number>(2);
+   const [quickSimpleTotalMarks, setQuickSimpleTotalMarks] = useState<number>(10);
+   const [quickSimpleHasChoice, setQuickSimpleHasChoice] = useState<boolean>(true);
+   const [quickSimpleExtraChoices, setQuickSimpleExtraChoices] = useState<number>(3); // e.g. 5 to attempt + 3 extra = 8 total
+
    const [quickSections, setQuickSections] = useState<Array<{
       id: string;
       questionType: string;
@@ -398,6 +407,45 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
          }
          return updated;
       }));
+   };
+
+   const applySimpleQuickBuild = () => {
+      const marksPerQ = Math.max(1, quickSimpleMarksPerQ);
+      const totalMarks = Math.max(marksPerQ, quickSimpleTotalMarks);
+      const selectCount = Math.max(1, Math.round(totalMarks / marksPerQ));
+      const extra = quickSimpleHasChoice ? Math.max(1, quickSimpleExtraChoices) : 0;
+      const totalCount = selectCount + extra;
+      const isObjective = ['Multiple Choice', 'Fill in the Blanks', 'True/False'].includes(quickSimpleType);
+
+      const secId = `sec_quick_${Date.now()}`;
+      const nextNum = Object.keys(state.paperStructure).length + 1;
+      const newSec: PaperSectionConfig = {
+         id: secId,
+         title: `Q.${nextNum} ${quickSimpleType}`,
+         instruction: getDefaultSectionInstruction(quickSimpleType, selectCount, totalCount),
+         instructionUrdu: getDefaultSectionInstructionUrdu(quickSimpleType, selectCount, totalCount),
+         questionType: quickSimpleType,
+         marksPerQuestion: marksPerQ,
+         totalCount: totalCount,
+         selectCount: selectCount,
+         blankLines: 0,
+         blankLineType: 'Line',
+         questionsPerLine: false,
+         languageMedium: 'Bilingual',
+         sourceFilter: [],
+         category: isObjective ? 'Objective' : 'Subjective',
+         subQuestionNumbering: 'Numeric'
+      };
+
+      // Add to existing sections
+      setState(prev => ({
+         ...prev,
+         paperStructure: {
+            ...prev.paperStructure,
+            [secId]: newSec
+         }
+      }));
+      setIsQuickBuilderOpen(false);
    };
 
    const applyQuickSections = () => {
@@ -1813,152 +1861,326 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                      </button>
                   </div>
 
+                  {/* TAB SWITCHER */}
+                  <div className="px-5 pt-3 border-b border-slate-100 bg-slate-50/50 flex gap-2 shrink-0">
+                     <button
+                        type="button"
+                        onClick={() => setBuilderTab('SIMPLE')}
+                        className={`pb-2.5 px-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 ${
+                           builderTab === 'SIMPLE'
+                              ? 'border-indigo-600 text-indigo-600'
+                              : 'border-transparent text-slate-400 hover:text-slate-600'
+                        }`}
+                     >
+                        <Zap size={13} className="text-amber-500" />
+                        Quick 1-Step (Total Marks + Type + Choice)
+                     </button>
+                     <button
+                        type="button"
+                        onClick={() => setBuilderTab('ADVANCED')}
+                        className={`pb-2.5 px-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 ${
+                           builderTab === 'ADVANCED'
+                              ? 'border-indigo-600 text-indigo-600'
+                              : 'border-transparent text-slate-400 hover:text-slate-600'
+                        }`}
+                     >
+                        <Layers size={13} />
+                        Multi-Section Blueprint ({quickSections.length})
+                     </button>
+                  </div>
+
                   {/* MODAL BODY */}
-                  <div className="p-4 sm:p-6 overflow-y-auto space-y-4 custom-scrollbar flex-1">
-                     <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">Sections Blueprint</span>
-                        <button
-                           type="button"
-                           onClick={addQuickSection}
-                           className="px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all"
-                        >
-                           <Plus size={12} /> Add Section Row
-                        </button>
-                     </div>
+                  <div className="p-5 sm:p-6 overflow-y-auto space-y-4 custom-scrollbar flex-1">
+                     {builderTab === 'SIMPLE' ? (
+                        /* SIMPLE MODE: ONLY ASK TOTAL MARKS, QUESTION TYPE, CHOICE OR NOT */
+                        <div className="space-y-4">
+                           <div className="bg-gradient-to-br from-indigo-50/90 to-purple-50/60 p-4 rounded-2xl border border-indigo-100">
+                              <p className="text-xs font-bold text-indigo-950 leading-relaxed">
+                                 Enter <strong>Total Marks</strong>, choose <strong>Question Type</strong>, and select whether to give <strong>Student Choice</strong>.
+                                 The system will automatically calculate the questions to attempt and auto-fill them evenly across your chapters!
+                              </p>
+                           </div>
 
-                     <div className="space-y-3">
-                        {quickSections.map((qsec, index) => (
-                           <div
-                              key={qsec.id}
-                              className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 hover:border-indigo-200 transition-all space-y-3"
-                           >
-                              <div className="flex items-center justify-between">
-                                 <div className="flex items-center gap-2">
-                                    <span className="w-6 h-6 rounded-lg bg-indigo-600 text-white text-[11px] font-black flex items-center justify-center">
-                                       {index + 1}
-                                    </span>
-                                    <span className="text-xs font-black text-slate-800">
-                                       Section {index + 1}
-                                    </span>
-                                 </div>
-                                 <div className="flex items-center gap-2">
-                                    <span className="text-[11px] font-black text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
-                                       {qsec.selectCount * qsec.marksPerQuestion} Marks
-                                    </span>
-                                    {quickSections.length > 1 && (
-                                       <button
-                                          type="button"
-                                          onClick={() => removeQuickSection(qsec.id)}
-                                          className="text-slate-400 hover:text-rose-500 p-1 transition-all"
-                                          title="Remove row"
-                                       >
-                                          <Trash2 size={15} />
-                                       </button>
-                                    )}
-                                 </div>
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              {/* QUESTION TYPE */}
+                              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                                 <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                    <Library size={13} className="text-indigo-600" /> 1. Question Type
+                                 </label>
+                                 <select
+                                    value={quickSimpleType}
+                                    onChange={e => {
+                                       const t = e.target.value;
+                                       setQuickSimpleType(t);
+                                       const defMarks = t === 'Multiple Choice' ? 1 : t === 'Short Question' ? 2 : 4;
+                                       setQuickSimpleMarksPerQ(defMarks);
+                                    }}
+                                    className="w-full h-11 px-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 cursor-pointer"
+                                 >
+                                    <option value="Short Question">Short Question</option>
+                                    <option value="Multiple Choice">Multiple Choice (MCQ)</option>
+                                    <option value="Long Answer">Long Answer</option>
+                                    <option value="Fill in the Blanks">Fill in the Blanks</option>
+                                    <option value="True/False">True / False</option>
+                                    <option value="Translation">Translation</option>
+                                    <option value="Words/Sentences">Words / Sentences</option>
+                                 </select>
+                                 <p className="text-[10px] text-slate-400 mt-2">Default: {quickSimpleMarksPerQ} marks per question</p>
                               </div>
 
-                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
-                                 {/* QUESTION TYPE */}
-                                 <div className="sm:col-span-4">
-                                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Type of Question</label>
-                                    <select
-                                       value={qsec.questionType}
-                                       onChange={e => {
-                                          const newType = e.target.value;
-                                          const defMarks = newType === 'Multiple Choice' ? 1 : newType === 'Short Question' ? 2 : 4;
-                                          updateQuickSection(qsec.id, {
-                                             questionType: newType,
-                                             marksPerQuestion: defMarks
-                                          });
-                                       }}
-                                       className="w-full h-9 px-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
-                                    >
-                                       <option value="Multiple Choice">Multiple Choice (MCQ)</option>
-                                       <option value="Short Question">Short Question</option>
-                                       <option value="Long Answer">Long Answer</option>
-                                       <option value="Fill in the Blanks">Fill in the Blanks</option>
-                                       <option value="True/False">True / False</option>
-                                       <option value="Translation">Translation</option>
-                                       <option value="Words/Sentences">Words / Sentences</option>
-                                    </select>
-                                 </div>
-
-                                 {/* MARKS PER QUESTION */}
-                                 <div className="sm:col-span-2">
-                                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Marks / Q</label>
+                              {/* TOTAL MARKS */}
+                              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                                 <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                    <Tag size={13} className="text-rose-600" /> 2. Total Marks for Section
+                                 </label>
+                                 <div className="flex items-center gap-2">
                                     <input
                                        type="number"
                                        min="1"
-                                       value={qsec.marksPerQuestion}
-                                       onChange={e => updateQuickSection(qsec.id, { marksPerQuestion: parseInt(e.target.value) || 1 })}
-                                       className="w-full h-9 px-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-rose-600 text-center outline-none focus:border-rose-500"
+                                       step="1"
+                                       value={quickSimpleTotalMarks}
+                                       onChange={e => setQuickSimpleTotalMarks(Math.max(1, parseInt(e.target.value) || 1))}
+                                       className="flex-1 h-11 px-3 bg-white border border-slate-200 rounded-xl text-base font-black text-rose-600 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100 text-center"
                                     />
+                                    <span className="text-xs font-black text-slate-400">Marks</span>
                                  </div>
-
-                                 {/* ATTEMPT REQUIRED */}
-                                 <div className="sm:col-span-3">
-                                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Required Attempt</label>
+                                 <div className="flex items-center justify-between mt-2 text-[10px] text-slate-500">
+                                    <span>Marks / Q:</span>
                                     <input
                                        type="number"
                                        min="1"
-                                       value={qsec.selectCount}
-                                       onChange={e => updateQuickSection(qsec.id, { selectCount: parseInt(e.target.value) || 1 })}
-                                       className="w-full h-9 px-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-emerald-600 text-center outline-none focus:border-emerald-500"
+                                       value={quickSimpleMarksPerQ}
+                                       onChange={e => setQuickSimpleMarksPerQ(Math.max(1, parseInt(e.target.value) || 1))}
+                                       className="w-12 h-6 text-center font-bold text-slate-700 bg-white border border-slate-200 rounded outline-none text-xs"
                                     />
-                                 </div>
-
-                                 {/* CHOICE TOGGLE */}
-                                 <div className="sm:col-span-3">
-                                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Student Choice</label>
-                                    <button
-                                       type="button"
-                                       onClick={() => updateQuickSection(qsec.id, { hasChoice: !qsec.hasChoice })}
-                                       className={`w-full h-9 px-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all flex items-center justify-center gap-1 ${
-                                          qsec.hasChoice
-                                             ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                                             : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'
-                                       }`}
-                                    >
-                                       {qsec.hasChoice ? '✓ Choice ON' : '✕ No Choice'}
-                                    </button>
                                  </div>
                               </div>
+                           </div>
 
-                              {/* CHOICE DETAIL ROW */}
-                              {qsec.hasChoice && (
-                                 <div className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-emerald-100 text-xs">
-                                    <Info size={14} className="text-emerald-600 shrink-0" />
-                                    <span className="text-[11px] text-slate-600 font-medium">
-                                       Total questions to print:
-                                    </span>
-                                    <input
-                                       type="number"
-                                       min={qsec.selectCount}
-                                       value={qsec.totalCount}
-                                       onChange={e => updateQuickSection(qsec.id, { totalCount: Math.max(parseInt(e.target.value) || qsec.selectCount, qsec.selectCount) })}
-                                       className="w-14 h-7 text-center font-black text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-emerald-500 text-xs"
-                                    />
-                                    <span className="text-[11px] font-black text-emerald-700">
-                                       (Student attempts {qsec.selectCount} of {qsec.totalCount} Qs)
-                                    </span>
+                           {/* CHOICE OR NOT */}
+                           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
+                              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                                 <CheckCircle2 size={13} className="text-emerald-600" /> 3. Student Choice
+                              </label>
+                              <div className="grid grid-cols-2 gap-3">
+                                 <button
+                                    type="button"
+                                    onClick={() => setQuickSimpleHasChoice(true)}
+                                    className={`py-3 px-4 rounded-xl border text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                                       quickSimpleHasChoice
+                                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-100'
+                                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                    }`}
+                                 >
+                                    <CheckCircle2 size={15} /> Give Choice (e.g. 5 of 8)
+                                 </button>
+                                 <button
+                                    type="button"
+                                    onClick={() => setQuickSimpleHasChoice(false)}
+                                    className={`py-3 px-4 rounded-xl border text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                                       !quickSimpleHasChoice
+                                          ? 'bg-slate-800 text-white border-slate-800 shadow-md shadow-slate-200'
+                                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                    }`}
+                                 >
+                                    <span>✕</span> No Choice (Attempt All)
+                                 </button>
+                              </div>
+
+                              {quickSimpleHasChoice && (
+                                 <div className="bg-white p-3 rounded-xl border border-emerald-100 flex items-center justify-between text-xs">
+                                    <span className="text-slate-600 font-semibold">Extra optional questions for choice:</span>
+                                    <div className="flex items-center gap-2">
+                                       <input
+                                          type="number"
+                                          min="1"
+                                          value={quickSimpleExtraChoices}
+                                          onChange={e => setQuickSimpleExtraChoices(Math.max(1, parseInt(e.target.value) || 1))}
+                                          className="w-12 h-7 text-center font-black text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg outline-none text-xs"
+                                       />
+                                       <span className="text-slate-400 font-bold">extra Qs</span>
+                                    </div>
                                  </div>
                               )}
                            </div>
-                        ))}
-                     </div>
 
-                     {/* STATS PREVIEW */}
-                     <div className="p-3 bg-indigo-50/70 rounded-2xl border border-indigo-100 flex flex-wrap items-center justify-between gap-2 text-xs">
-                        <div className="flex items-center gap-4 text-indigo-900 font-bold text-[11px]">
-                           <span>Sections: <strong>{quickSections.length}</strong></span>
-                           <span>Total Qs: <strong>{quickSections.reduce((sum, s) => sum + (s.hasChoice ? s.totalCount : s.selectCount), 0)}</strong></span>
-                           <span>Attempt Qs: <strong>{quickSections.reduce((sum, s) => sum + s.selectCount, 0)}</strong></span>
+                           {/* LIVE PREVIEW OF SYSTEM AUTO CALCULATION */}
+                           {(() => {
+                              const marksPerQ = Math.max(1, quickSimpleMarksPerQ);
+                              const totalMarks = Math.max(marksPerQ, quickSimpleTotalMarks);
+                              const selectCount = Math.max(1, Math.round(totalMarks / marksPerQ));
+                              const extra = quickSimpleHasChoice ? Math.max(1, quickSimpleExtraChoices) : 0;
+                              const totalCount = selectCount + extra;
+                              return (
+                                 <div className="bg-indigo-900 text-white p-4 rounded-2xl flex items-center justify-between shadow-lg shadow-indigo-950/20">
+                                    <div>
+                                       <span className="text-[9px] uppercase tracking-widest text-indigo-300 font-black block">Auto-Calculated Output</span>
+                                       <span className="text-sm font-black">
+                                          Print {totalCount} Questions → Student Attempts {selectCount}
+                                       </span>
+                                       <span className="text-[11px] text-indigo-200 block mt-0.5">
+                                          ({selectCount} Qs × {marksPerQ} Marks = {selectCount * marksPerQ} Marks total)
+                                       </span>
+                                    </div>
+                                    <div className="text-right bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
+                                       <span className="text-[9px] uppercase tracking-wider text-indigo-200 font-black block">Choice Status</span>
+                                       <span className="text-xs font-black text-amber-300">
+                                          {quickSimpleHasChoice ? `Attempt ${selectCount} of ${totalCount}` : 'Compulsory (All)'}
+                                       </span>
+                                    </div>
+                                 </div>
+                              );
+                           })()}
                         </div>
-                        <div className="text-xs font-black text-rose-600 bg-white px-3 py-1 rounded-xl shadow-xs border border-rose-100">
-                           Total Paper Marks: {quickSections.reduce((sum, s) => sum + (s.selectCount * s.marksPerQuestion), 0)}
-                        </div>
-                     </div>
+                     ) : (
+                        /* ADVANCED MODE: MULTIPLE SECTION BLUEPRINT */
+                        <>
+                           <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">Sections Blueprint</span>
+                              <button
+                                 type="button"
+                                 onClick={addQuickSection}
+                                 className="px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all"
+                              >
+                                 <Plus size={12} /> Add Section Row
+                              </button>
+                           </div>
+
+                           <div className="space-y-3">
+                              {quickSections.map((qsec, index) => (
+                                 <div
+                                    key={qsec.id}
+                                    className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 hover:border-indigo-200 transition-all space-y-3"
+                                 >
+                                    <div className="flex items-center justify-between">
+                                       <div className="flex items-center gap-2">
+                                          <span className="w-6 h-6 rounded-lg bg-indigo-600 text-white text-[11px] font-black flex items-center justify-center">
+                                             {index + 1}
+                                          </span>
+                                          <span className="text-xs font-black text-slate-800">
+                                             Section {index + 1}
+                                          </span>
+                                       </div>
+                                       <div className="flex items-center gap-2">
+                                          <span className="text-[11px] font-black text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                                             {qsec.selectCount * qsec.marksPerQuestion} Marks
+                                          </span>
+                                          {quickSections.length > 1 && (
+                                             <button
+                                                type="button"
+                                                onClick={() => removeQuickSection(qsec.id)}
+                                                className="text-slate-400 hover:text-rose-500 p-1 transition-all"
+                                                title="Remove row"
+                                             >
+                                                <Trash2 size={15} />
+                                             </button>
+                                          )}
+                                       </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
+                                       {/* QUESTION TYPE */}
+                                       <div className="sm:col-span-4">
+                                          <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Type of Question</label>
+                                          <select
+                                             value={qsec.questionType}
+                                             onChange={e => {
+                                                const newType = e.target.value;
+                                                const defMarks = newType === 'Multiple Choice' ? 1 : newType === 'Short Question' ? 2 : 4;
+                                                updateQuickSection(qsec.id, {
+                                                   questionType: newType,
+                                                   marksPerQuestion: defMarks
+                                                });
+                                             }}
+                                             className="w-full h-9 px-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
+                                          >
+                                             <option value="Multiple Choice">Multiple Choice (MCQ)</option>
+                                             <option value="Short Question">Short Question</option>
+                                             <option value="Long Answer">Long Answer</option>
+                                             <option value="Fill in the Blanks">Fill in the Blanks</option>
+                                             <option value="True/False">True / False</option>
+                                             <option value="Translation">Translation</option>
+                                             <option value="Words/Sentences">Words / Sentences</option>
+                                          </select>
+                                       </div>
+
+                                       {/* MARKS PER QUESTION */}
+                                       <div className="sm:col-span-2">
+                                          <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Marks / Q</label>
+                                          <input
+                                             type="number"
+                                             min="1"
+                                             value={qsec.marksPerQuestion}
+                                             onChange={e => updateQuickSection(qsec.id, { marksPerQuestion: parseInt(e.target.value) || 1 })}
+                                             className="w-full h-9 px-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-rose-600 text-center outline-none focus:border-rose-500"
+                                          />
+                                       </div>
+
+                                       {/* ATTEMPT REQUIRED */}
+                                       <div className="sm:col-span-3">
+                                          <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Required Attempt</label>
+                                          <input
+                                             type="number"
+                                             min="1"
+                                             value={qsec.selectCount}
+                                             onChange={e => updateQuickSection(qsec.id, { selectCount: parseInt(e.target.value) || 1 })}
+                                             className="w-full h-9 px-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-emerald-600 text-center outline-none focus:border-emerald-500"
+                                          />
+                                       </div>
+
+                                       {/* CHOICE TOGGLE */}
+                                       <div className="sm:col-span-3">
+                                          <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Student Choice</label>
+                                          <button
+                                             type="button"
+                                             onClick={() => updateQuickSection(qsec.id, { hasChoice: !qsec.hasChoice })}
+                                             className={`w-full h-9 px-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all flex items-center justify-center gap-1 ${
+                                                qsec.hasChoice
+                                                   ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                                   : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'
+                                             }`}
+                                          >
+                                             {qsec.hasChoice ? '✓ Choice ON' : '✕ No Choice'}
+                                          </button>
+                                       </div>
+                                    </div>
+
+                                    {/* CHOICE DETAIL ROW */}
+                                    {qsec.hasChoice && (
+                                       <div className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-emerald-100 text-xs">
+                                          <Info size={14} className="text-emerald-600 shrink-0" />
+                                          <span className="text-[11px] text-slate-600 font-medium">
+                                             Total questions to print:
+                                          </span>
+                                          <input
+                                             type="number"
+                                             min={qsec.selectCount}
+                                             value={qsec.totalCount}
+                                             onChange={e => updateQuickSection(qsec.id, { totalCount: Math.max(parseInt(e.target.value) || qsec.selectCount, qsec.selectCount) })}
+                                             className="w-14 h-7 text-center font-black text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-emerald-500 text-xs"
+                                          />
+                                          <span className="text-[11px] font-black text-emerald-700">
+                                             (Student attempts {qsec.selectCount} of {qsec.totalCount} Qs)
+                                          </span>
+                                       </div>
+                                    )}
+                                 </div>
+                              ))}
+                           </div>
+
+                           {/* STATS PREVIEW */}
+                           <div className="p-3 bg-indigo-50/70 rounded-2xl border border-indigo-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                              <div className="flex items-center gap-4 text-indigo-900 font-bold text-[11px]">
+                                 <span>Sections: <strong>{quickSections.length}</strong></span>
+                                 <span>Total Qs: <strong>{quickSections.reduce((sum, s) => sum + (s.hasChoice ? s.totalCount : s.selectCount), 0)}</strong></span>
+                                 <span>Attempt Qs: <strong>{quickSections.reduce((sum, s) => sum + s.selectCount, 0)}</strong></span>
+                              </div>
+                              <div className="text-xs font-black text-rose-600 bg-white px-3 py-1 rounded-xl shadow-xs border border-rose-100">
+                                 Total Paper Marks: {quickSections.reduce((sum, s) => sum + (s.selectCount * s.marksPerQuestion), 0)}
+                               </div>
+                           </div>
+                        </>
+                     )}
                   </div>
 
                   {/* FOOTER */}
@@ -1972,7 +2194,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                      </button>
                      <button
                         type="button"
-                        onClick={applyQuickSections}
+                        onClick={builderTab === 'SIMPLE' ? applySimpleQuickBuild : applyQuickSections}
                         className="flex-[2] py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-xl shadow-indigo-200 hover:from-indigo-700 hover:to-violet-700 transition-all flex items-center justify-center gap-2"
                      >
                         <CheckCircle2 size={16} /> Auto-Generate Sections & Pick Questions

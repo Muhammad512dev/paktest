@@ -870,94 +870,106 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                        </button>
                                     </div>
                                  </div>
-                              </div>
+                               </div>
 
-                              {displayedMenuQuestions.map((q, idx) => {
-                                  const isSelectedInThisSection = currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId === activeSectionId);
-                                  const isSelectedInOtherSection = currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId !== activeSectionId);
-                                  const isSelected = isSelectedInThisSection || isSelectedInOtherSection;
-                                  return (
-                                     <div key={q.id} onClick={() => toggleQuestionSelection(q)} className={`p-2.5 sm:p-3 rounded-xl border transition-all cursor-pointer group relative overflow-hidden ${isSelectedInThisSection ? 'border-indigo-500 bg-indigo-50/30 shadow-xs ring-1 ring-indigo-400' : isSelectedInOtherSection ? 'border-amber-400 bg-amber-50/20 shadow-2xs' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50/60'}`}>
-                                        {isSelectedInThisSection && <div className="absolute top-0 right-0 w-7 h-7 bg-indigo-600 flex items-center justify-center rounded-bl-lg text-white shadow-xs"><Check size={12} strokeWidth={3.5} /></div>}
-                                        <div className="flex gap-2.5 sm:gap-3 items-start">
-                                           <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-md border flex items-center justify-center shrink-0 transition-all font-bold text-[10px] sm:text-[11px] ${isSelectedInThisSection ? 'bg-indigo-600 border-indigo-600 text-white' : isSelectedInOtherSection ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-300 bg-slate-50 text-slate-500'}`}>{idx + 1}</div>
-                                           <div className="flex-1 space-y-1.5 pr-4 min-w-0">
-                                              {/* CHAPTER, TOPIC & STATUS BADGES */}
-                                              <div className="flex flex-wrap items-center gap-1">
-                                                 {q.chapter && (
-                                                    <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[9px] font-bold tracking-tight border border-indigo-100 flex items-center gap-0.5">
-                                                       📖 {q.chapter}
-                                                    </span>
-                                                 )}
-                                                 {q.topic && (
-                                                    <span className="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded text-[9px] font-bold tracking-tight border border-purple-100 flex items-center gap-0.5">
-                                                       🏷️ {q.topic}
-                                                    </span>
-                                                 )}
-                                                 <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 border border-slate-200">
-                                                    {q.type}
-                                                 </span>
-                                                 {isSelectedInThisSection && (
-                                                    <span className="px-1.5 py-0.5 bg-emerald-600 text-white rounded text-[9px] font-bold tracking-tight flex items-center gap-1 shadow-2xs">
-                                                       <Check size={9} strokeWidth={3} /> In Section
-                                                    </span>
-                                                 )}
-                                                 {isSelectedInOtherSection && (
-                                                    <span className="px-1.5 py-0.5 bg-amber-500 text-white rounded text-[9px] font-bold tracking-tight flex items-center gap-1 shadow-2xs">
-                                                       In Another Section
-                                                    </span>
-                                                 )}
-                                              </div>
+                               {displayedMenuQuestions.map((q, idx) => {
+                                 const isSelectedInThisSection = currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId === activeSectionId);
+                                 const isSelectedInOtherSection = currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId !== activeSectionId);
+                                 const isSelected = isSelectedInThisSection || isSelectedInOtherSection;
+                                 const showEnglish = (extractionLanguage === 'Bilingual' || extractionLanguage === 'English') && !!q.text;
+                                 const showUrdu = (extractionLanguage === 'Bilingual' || extractionLanguage === 'Urdu') && !!q.textUrdu;
+                                 const isTwoColumn = showEnglish && showUrdu;
 
-                                              <div className="flex justify-between items-start gap-2">
-                                                 {(extractionLanguage === 'Bilingual' || extractionLanguage === 'English') && q.text && (
-                                                    <MathRenderer text={q.text} className="text-xs sm:text-sm font-bold text-slate-800 leading-tight" />
-                                                 )}
-                                                 <div className="flex flex-col items-end gap-0.5 shrink-0 ml-auto">
-                                                    <div className="flex flex-wrap justify-end gap-1">
-                                                       {q.sources && q.sources.length > 0 ? q.sources.map(s => (
-                                                          <span key={s} className="px-1.5 py-0.5 bg-white text-slate-400 rounded text-[9px] font-bold uppercase tracking-wider border border-slate-200 whitespace-nowrap">
-                                                             {s}
-                                                          </span>
-                                                       )) : (
-                                                          <span className="px-1.5 py-0.5 bg-white text-slate-400 rounded text-[9px] font-bold uppercase tracking-wider border border-slate-200 whitespace-nowrap">
-                                                             {q.source}
-                                                          </span>
-                                                       )}
-                                                    </div>
-                                                 </div>
-                                              </div>
-                                              {(extractionLanguage === 'Bilingual' || extractionLanguage === 'Urdu') && q.textUrdu && (
-                                                 <div className="font-urdu text-[13px] sm:text-[14px] text-slate-700 leading-snug text-right border-t border-slate-100 pt-1 mt-1" dir="rtl">
-                                                    <MathRenderer text={q.textUrdu} />
-                                                 </div>
-                                              )}
-                                              {q.imageUrl && (
-                                                 <div className="mt-1 p-1 bg-slate-50 rounded-lg border border-slate-100 w-fit">
-                                                    <img src={q.imageUrl} alt="Question Diagram" className="h-12 sm:h-14 w-auto object-contain rounded" />
-                                                 </div>
-                                              )}
+                                 return (
+                                    <div key={q.id} onClick={() => toggleQuestionSelection(q)} className={`p-2 sm:p-2.5 rounded-lg border transition-all cursor-pointer group relative overflow-hidden ${isSelectedInThisSection ? 'border-indigo-500 bg-indigo-50/25 shadow-xs ring-1 ring-indigo-400' : isSelectedInOtherSection ? 'border-amber-400 bg-amber-50/15 shadow-2xs' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50/50'}`}>
+                                       {isSelectedInThisSection && <div className="absolute top-0 right-0 w-6 h-6 bg-indigo-600 flex items-center justify-center rounded-bl-md text-white shadow-xs"><Check size={11} strokeWidth={3.5} /></div>}
+                                       <div className="flex gap-2 items-start">
+                                          <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-all font-bold text-[10px] ${isSelectedInThisSection ? 'bg-indigo-600 border-indigo-600 text-white' : isSelectedInOtherSection ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-300 bg-slate-50 text-slate-500'}`}>{idx + 1}</div>
+                                          <div className="flex-1 space-y-1 min-w-0 pr-3">
+                                             {/* CHAPTER, TOPIC, TYPE BADGES & SOURCES (TOP BAR) */}
+                                             <div className="flex flex-wrap items-center justify-between gap-1">
+                                                <div className="flex flex-wrap items-center gap-1">
+                                                   {q.chapter && (
+                                                      <span className="px-1.5 py-0.2 bg-indigo-50 text-indigo-700 rounded text-[9px] font-bold tracking-tight border border-indigo-100 flex items-center gap-0.5">
+                                                         📖 {q.chapter}
+                                                      </span>
+                                                   )}
+                                                   {q.topic && (
+                                                      <span className="px-1.5 py-0.2 bg-purple-50 text-purple-700 rounded text-[9px] font-bold tracking-tight border border-purple-100 flex items-center gap-0.5">
+                                                         🏷️ {q.topic}
+                                                      </span>
+                                                   )}
+                                                   <span className="px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 border border-slate-200">
+                                                      {q.type}
+                                                   </span>
+                                                   {isSelectedInThisSection && (
+                                                      <span className="px-1.5 py-0.2 bg-emerald-600 text-white rounded text-[9px] font-bold tracking-tight flex items-center gap-0.5 shadow-2xs">
+                                                         <Check size={8} strokeWidth={3} /> In Section
+                                                      </span>
+                                                   )}
+                                                   {isSelectedInOtherSection && (
+                                                      <span className="px-1.5 py-0.2 bg-amber-500 text-white rounded text-[9px] font-bold tracking-tight flex items-center gap-0.5 shadow-2xs">
+                                                         In Another Section
+                                                      </span>
+                                                   )}
+                                                </div>
 
-                                              {normalizeType(q.type) === 'mcq' && ((q.options && q.options.length > 0) || (q.optionsUrdu && q.optionsUrdu.length > 0)) && (
-                                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 mt-1.5 pt-1.5 border-t border-slate-100">
-                                                    {((q.options && q.options.length > 0) ? q.options : (q.optionsUrdu || [])).map((opt: string, i: number) => (
-                                                       <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-50 border border-slate-100 text-[11px] leading-tight text-slate-700">
-                                                          <span className="font-black text-indigo-600 text-[10px]">({String.fromCharCode(65 + i)})</span>
-                                                          <div className="flex flex-col min-w-0 flex-1">
-                                                             <span className="font-medium truncate"><MathRenderer text={opt} inline /></span>
-                                                             {q.optionsUrdu && q.optionsUrdu[i] && (
-                                                                <span className="text-right font-urdu text-[11px] leading-tight truncate" dir="rtl"><MathRenderer text={q.optionsUrdu[i]} /></span>
-                                                             )}
-                                                          </div>
-                                                       </div>
-                                                    ))}
-                                                 </div>
-                                              )}
-                                           </div>
-                                        </div>
-                                     </div>
-                                  );
-                               })}
+                                                <div className="flex flex-wrap items-center gap-1 ml-auto">
+                                                   {q.sources && q.sources.length > 0 ? q.sources.map(s => (
+                                                      <span key={s} className="px-1.5 py-0.2 bg-white text-slate-400 rounded text-[8.5px] font-bold uppercase tracking-wider border border-slate-200 whitespace-nowrap">
+                                                         {s}
+                                                      </span>
+                                                   )) : (
+                                                      <span className="px-1.5 py-0.2 bg-white text-slate-400 rounded text-[8.5px] font-bold uppercase tracking-wider border border-slate-200 whitespace-nowrap">
+                                                         {q.source}
+                                                      </span>
+                                                   )}
+                                                </div>
+                                             </div>
+
+                                             {/* 2-COLUMN SIDE-BY-SIDE STATEMENTS: ENGLISH ON LEFT, URDU ON RIGHT */}
+                                             <div className={`grid ${isTwoColumn ? 'grid-cols-1 md:grid-cols-2 gap-2 md:gap-4' : 'grid-cols-1'} items-start pt-0.5`}>
+                                                {showEnglish && q.text && (
+                                                   <div className="text-left text-xs sm:text-[13px] font-bold text-slate-800 leading-tight">
+                                                      <MathRenderer text={q.text} />
+                                                   </div>
+                                                )}
+                                                {showUrdu && q.textUrdu && (
+                                                   <div className="font-urdu text-[13px] sm:text-[14px] text-slate-700 leading-snug text-right" dir="rtl">
+                                                      <MathRenderer text={q.textUrdu} />
+                                                   </div>
+                                                )}
+                                             </div>
+
+                                             {q.imageUrl && (
+                                                <div className="mt-1 p-0.5 bg-slate-50 rounded border border-slate-100 w-fit">
+                                                   <img src={q.imageUrl} alt="Question Diagram" className="h-10 sm:h-12 w-auto object-contain rounded" />
+                                                </div>
+                                             )}
+
+                                             {/* MCQ OPTIONS WITH COMPACT SIDE-BY-SIDE ENGLISH & URDU */}
+                                             {normalizeType(q.type) === 'mcq' && ((q.options && q.options.length > 0) || (q.optionsUrdu && q.optionsUrdu.length > 0)) && (
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 sm:gap-1.5 mt-1 pt-1 border-t border-slate-100">
+                                                   {((q.options && q.options.length > 0) ? q.options : (q.optionsUrdu || [])).map((opt: string, i: number) => (
+                                                      <div key={i} className="flex items-center justify-between gap-1.5 px-2 py-0.5 rounded bg-slate-50 border border-slate-100 text-[11px] leading-tight text-slate-700">
+                                                         <div className="flex items-center gap-1 min-w-0">
+                                                            <span className="font-black text-indigo-600 text-[10px]">({String.fromCharCode(65 + i)})</span>
+                                                            <span className="font-medium truncate"><MathRenderer text={opt} inline /></span>
+                                                         </div>
+                                                         {q.optionsUrdu && q.optionsUrdu[i] && (
+                                                            <span className="text-right font-urdu text-[11px] leading-tight text-slate-600 shrink-0 ml-1" dir="rtl">
+                                                               <MathRenderer text={q.optionsUrdu[i]} />
+                                                            </span>
+                                                         )}
+                                                      </div>
+                                                   ))}
+                                                </div>
+                                             )}
+                                          </div>
+                                       </div>
+                                    </div>
+                                 );
+                              })}
                            </div>
                         )}
                      </main>

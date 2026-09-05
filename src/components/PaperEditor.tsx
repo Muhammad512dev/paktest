@@ -113,8 +113,10 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
    const [questionMenuQuery, setQuestionMenuQuery] = useState('');
    const [questionMenuSort, setQuestionMenuSort] = useState<'default' | 'type' | 'marks'>('default');
 
-   // Toggle State for Scope Section
+   // Toggle State for Scope & Filter Dropdowns
    const [isScopeExpanded, setIsScopeExpanded] = useState(true);
+   const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
+   const [isSourceDropdownOpen, setIsSourceDropdownOpen] = useState(false);
 
    // Calculated Marks
    const totalCalculatedMarks = useMemo(() => {
@@ -493,271 +495,339 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                         </button>
                      </div>
 
-                     {/* EDITABLE SECTION PARAMETERS TOOLBAR */}
-                     <div className="flex flex-wrap items-center gap-4 p-3 bg-slate-50 rounded-2xl border border-slate-200">
-                        <div className="flex items-center gap-2">
-                           <label className="text-xs font-bold text-slate-600">Total Questions:</label>
-                           <input
-                              type="number"
-                              min="1"
-                              max="100"
-                              value={sectionConfig.totalCount}
-                              onChange={(e) => {
-                                 const val = Math.max(1, parseInt(e.target.value) || 1);
-                                 updateSectionConfigValues(activeSectionId, { totalCount: val });
-                              }}
-                              className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 text-center outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
-                           />
-                        </div>
+                     {/* EDITABLE SECTION PARAMETERS & FILTERS TOOLBAR */}
+                      <div className="flex flex-wrap items-center gap-3 sm:gap-4 p-3 bg-slate-50 rounded-2xl border border-slate-200 relative">
+                         <div className="flex items-center gap-2">
+                            <label className="text-xs font-bold text-slate-600">Total Questions:</label>
+                            <input
+                               type="number"
+                               min="1"
+                               max="100"
+                               value={sectionConfig.totalCount}
+                               onChange={(e) => {
+                                  const val = Math.max(1, parseInt(e.target.value) || 1);
+                                  updateSectionConfigValues(activeSectionId, { totalCount: val });
+                               }}
+                               className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 text-center outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                            />
+                         </div>
 
-                        <div className="flex items-center gap-2">
-                           <label className="text-xs font-bold text-slate-600">Attempt Question:</label>
-                           <input
-                              type="number"
-                              min="1"
-                              max={sectionConfig.totalCount}
-                              value={sectionConfig.selectCount}
-                              onChange={(e) => {
-                                 const val = Math.max(1, parseInt(e.target.value) || 1);
-                                 updateSectionConfigValues(activeSectionId, { selectCount: val });
-                              }}
-                              className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 text-center outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
-                           />
-                        </div>
+                         <div className="flex items-center gap-2">
+                            <label className="text-xs font-bold text-slate-600">Attempt Question:</label>
+                            <input
+                               type="number"
+                               min="1"
+                               max={sectionConfig.totalCount}
+                               value={sectionConfig.selectCount}
+                               onChange={(e) => {
+                                  const val = Math.max(1, parseInt(e.target.value) || 1);
+                                  updateSectionConfigValues(activeSectionId, { selectCount: val });
+                               }}
+                               className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 text-center outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                            />
+                         </div>
 
-                        <div className="flex items-center gap-2">
-                           <label className="text-xs font-bold text-slate-600">Marks / Question:</label>
-                           <input
-                              type="number"
-                              min="0.5"
-                              step="0.5"
-                              value={sectionConfig.marksPerQuestion}
-                              onChange={(e) => {
-                                 const val = Math.max(0.5, parseFloat(e.target.value) || 1);
-                                 updateSectionConfigValues(activeSectionId, { marksPerQuestion: val });
-                              }}
-                              className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 text-center outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
-                           />
-                        </div>
+                         <div className="flex items-center gap-2">
+                            <label className="text-xs font-bold text-slate-600">Marks / Question:</label>
+                            <input
+                               type="number"
+                               min="0.5"
+                               step="0.5"
+                               value={sectionConfig.marksPerQuestion}
+                               onChange={(e) => {
+                                  const val = Math.max(0.5, parseFloat(e.target.value) || 1);
+                                  updateSectionConfigValues(activeSectionId, { marksPerQuestion: val });
+                               }}
+                               className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 text-center outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                            />
+                         </div>
 
-                        <div className="sm:ml-auto flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
-                           <span>Total Section Marks: {sectionConfig.selectCount * sectionConfig.marksPerQuestion}</span>
-                        </div>
-                     </div>
+                         {/* QUESTION TYPES DROPDOWN POPOVER */}
+                         <div className="relative">
+                            <button
+                               type="button"
+                               onClick={() => {
+                                  setIsTypeDropdownOpen(!isTypeDropdownOpen);
+                                  setIsSourceDropdownOpen(false);
+                               }}
+                               className="px-3 py-1.5 bg-white border border-slate-300 hover:border-indigo-500 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-2 shadow-2xs transition-all cursor-pointer"
+                            >
+                               <ListFilter size={14} className="text-indigo-600" />
+                               <span>Types ({activeTypes.length > 0 ? activeTypes.length : 'All'})</span>
+                               <ChevronDown size={14} className={`text-slate-400 transition-transform ${isTypeDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
 
-                     {/* HORIZONTAL ACTIVE SCOPE (Chapters & Topics) */}
-                     <div className="p-3 bg-indigo-50/40 rounded-2xl border border-indigo-100 flex flex-col gap-2">
-                        <div className="flex items-center justify-between">
-                           <span className="text-[11px] font-black text-indigo-700 uppercase tracking-widest flex items-center gap-2">
-                              <BookOpen size={14} /> Active Scope (Chapters & Topics)
-                           </span>
-                           <span className="text-[10px] font-bold text-slate-400">
-                              {activeChapters.length} Chapters &bull; {activeTopics.length} Topics Active
-                           </span>
-                        </div>
+                            {isTypeDropdownOpen && (
+                               <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 animate-in fade-in duration-150">
+                                  <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                                     <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">Question Types</span>
+                                     <button
+                                        type="button"
+                                        onClick={() => setActiveTypes([])}
+                                        className="text-[10px] font-bold text-slate-400 hover:text-indigo-600"
+                                     >
+                                        Select All
+                                     </button>
+                                  </div>
+                                  <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
+                                     {availableTypesInScope.map(({ type, count }) => (
+                                        <label key={type} className="flex items-center justify-between cursor-pointer p-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+                                           <div className="flex items-center gap-2">
+                                              <input
+                                                 type="checkbox"
+                                                 checked={activeTypes.includes(type)}
+                                                 onChange={() => setActiveTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type])}
+                                                 className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                              />
+                                              <span className="text-xs font-bold text-slate-700">{type}</span>
+                                           </div>
+                                           <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md">{count}</span>
+                                        </label>
+                                     ))}
+                                  </div>
+                               </div>
+                            )}
+                         </div>
 
-                        <div className="flex flex-wrap items-start gap-3 overflow-x-auto custom-scrollbar pb-1 max-h-48">
-                           {paper.selectedChapters.length > 0 ? (
-                              paper.selectedChapters.map(chap => {
-                                 const isChapActive = activeChapters.includes(chap);
-                                 const isExpanded = expandedChapters.includes(chap);
-                                 const chapterId = allChapters.find(c => c.name === chap)?.id;
-                                 const topicsInChapter = allTopics.filter(t => t.chapterId === chapterId);
+                         {/* QUESTION SOURCE DROPDOWN POPOVER */}
+                         <div className="relative">
+                            <button
+                               type="button"
+                               onClick={() => {
+                                  setIsSourceDropdownOpen(!isSourceDropdownOpen);
+                                  setIsTypeDropdownOpen(false);
+                               }}
+                               className="px-3 py-1.5 bg-white border border-slate-300 hover:border-indigo-500 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-2 shadow-2xs transition-all cursor-pointer"
+                            >
+                               <Filter size={14} className="text-indigo-600" />
+                               <span>Sources ({activeSources.length > 0 ? activeSources.length : 'All'})</span>
+                               <ChevronDown size={14} className={`text-slate-400 transition-transform ${isSourceDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
 
-                                 return (
-                                    <div key={chap} className="flex flex-col bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden min-w-[200px] max-w-xs flex-1">
-                                       <div className="flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 border-b border-slate-100">
-                                          <label className="flex items-center gap-2 cursor-pointer group flex-1 min-w-0">
-                                             <div className="relative flex items-center justify-center shrink-0">
-                                                <input
-                                                   type="checkbox"
-                                                   checked={isChapActive}
-                                                   onChange={() => {
-                                                      if (isChapActive) {
-                                                         setActiveChapters(prev => prev.filter(c => c !== chap));
-                                                         const topicNames = topicsInChapter.map(t => t.name);
-                                                         setActiveTopics(prev => prev.filter(t => !topicNames.includes(t)));
-                                                      } else {
-                                                         setActiveChapters(prev => [...prev, chap]);
-                                                         setExpandedChapters(prev => Array.from(new Set([...prev, chap])));
-                                                         const topicNames = topicsInChapter.map(t => t.name);
-                                                         setActiveTopics(prev => Array.from(new Set([...prev, ...topicNames])));
-                                                      }
-                                                   }}
-                                                   className="peer appearance-none w-4 h-4 rounded border-2 border-slate-300 checked:bg-indigo-600 checked:border-indigo-600 transition-all cursor-pointer"
-                                                />
-                                                <Check className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={4} />
-                                             </div>
-                                             <span className={`text-xs font-bold leading-tight truncate ${isChapActive ? 'text-slate-900' : 'text-slate-400'}`}>{chap}</span>
-                                          </label>
+                            {isSourceDropdownOpen && (
+                               <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 animate-in fade-in duration-150">
+                                  <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                                     <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">Question Source</span>
+                                     <button
+                                        type="button"
+                                        onClick={() => setActiveSources([])}
+                                        className="text-[10px] font-bold text-slate-400 hover:text-indigo-600"
+                                     >
+                                        Select All
+                                     </button>
+                                  </div>
+                                  <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
+                                     {availableSourcesInScope.map(({ source, count }) => (
+                                        <label key={source} className="flex items-center justify-between cursor-pointer p-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+                                           <div className="flex items-center gap-2">
+                                              <input
+                                                 type="checkbox"
+                                                 checked={activeSources.includes(source)}
+                                                 onChange={() => setActiveSources(prev => prev.includes(source) ? prev.filter(s => s !== source) : [...prev, source])}
+                                                 className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                              />
+                                              <span className="text-xs font-bold text-slate-700">{source}</span>
+                                           </div>
+                                           <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md">{count}</span>
+                                        </label>
+                                     ))}
+                                  </div>
+                               </div>
+                            )}
+                         </div>
 
-                                          <button
-                                             type="button"
-                                             onClick={() => {
-                                                if (isExpanded) setExpandedChapters(prev => prev.filter(c => c !== chap));
-                                                else setExpandedChapters(prev => Array.from(new Set([...prev, chap])));
-                                             }}
-                                             className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 transition-colors shrink-0"
-                                             title="Toggle topics list"
-                                          >
-                                             {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                                          </button>
-                                       </div>
+                         {/* FETCH QUESTIONS BUTTON */}
+                         <button
+                            type="button"
+                            onClick={executeSearch}
+                            disabled={isSearching}
+                            className="px-4 py-1.5 bg-[#1a202c] hover:bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                         >
+                            {isSearching ? <RefreshCw className="animate-spin" size={14} /> : <Search size={14} />}
+                            <span>Fetch Questions</span>
+                         </button>
 
-                                       {/* HORIZONTAL EXPANDABLE TOPIC BOX */}
-                                       {isExpanded && topicsInChapter.length > 0 && (
-                                          <div className="p-2.5 bg-white space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
-                                             <div className="flex items-center justify-between border-b border-slate-100 pb-1">
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase">Topics ({topicsInChapter.length})</span>
-                                                <div className="flex items-center gap-2">
-                                                   <button
-                                                      type="button"
-                                                      onClick={() => {
-                                                         const topicNames = topicsInChapter.map(t => t.name);
-                                                         setActiveTopics(prev => Array.from(new Set([...prev, ...topicNames])));
-                                                      }}
-                                                      className="text-[9px] font-bold text-indigo-600 hover:underline"
-                                                   >
-                                                      All
-                                                   </button>
-                                                   <span className="text-slate-300">|</span>
-                                                   <button
-                                                      type="button"
-                                                      onClick={() => {
-                                                         const topicNames = topicsInChapter.map(t => t.name);
-                                                         setActiveTopics(prev => prev.filter(t => !topicNames.includes(t)));
-                                                      }}
-                                                      className="text-[9px] font-bold text-slate-400 hover:text-red-500"
-                                                   >
-                                                      Clear
-                                                   </button>
-                                                </div>
-                                             </div>
+                         <div className="sm:ml-auto flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+                            <span>Total Section Marks: {sectionConfig.selectCount * sectionConfig.marksPerQuestion}</span>
+                         </div>
+                      </div>
 
-                                             <div className="space-y-1">
-                                                {topicsInChapter.map(t => {
-                                                   const isTopicActive = activeTopics.includes(t.name);
-                                                   return (
-                                                      <label key={t.id} className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-slate-50 transition-colors">
-                                                         <div className="relative flex items-center justify-center shrink-0">
-                                                            <input
-                                                               type="checkbox"
-                                                               checked={isTopicActive}
-                                                               onChange={() => {
-                                                                  if (isTopicActive) setActiveTopics(prev => prev.filter(top => top !== t.name));
-                                                                  else setActiveTopics(prev => [...prev, t.name]);
-                                                               }}
-                                                               className="peer appearance-none w-3.5 h-3.5 rounded border border-slate-300 checked:bg-purple-600 checked:border-purple-600 transition-all cursor-pointer"
-                                                            />
-                                                            <Check className="absolute w-2.5 h-2.5 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={4} />
-                                                         </div>
-                                                         <span className={`text-[11px] font-medium leading-tight truncate ${isTopicActive ? 'text-purple-900 font-bold' : 'text-slate-600'}`}>
-                                                            {t.name}
-                                                         </span>
-                                                      </label>
-                                                   );
-                                                })}
-                                             </div>
-                                          </div>
-                                       )}
-                                    </div>
-                                 );
-                              })
-                           ) : (
-                              <p className="text-xs text-slate-400 italic">No specific chapters selected.</p>
-                           )}
-                        </div>
-                     </div>
-                  </div>
+                      {/* HORIZONTAL ACTIVE SCOPE (Chapters & Topics - TOGGLEABLE / COLLAPSIBLE) */}
+                      <div className="p-3 bg-indigo-50/40 rounded-2xl border border-indigo-100 flex flex-col gap-2">
+                         <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                               <span className="text-[11px] font-black text-indigo-700 uppercase tracking-widest flex items-center gap-2">
+                                  <BookOpen size={14} /> Active Scope (Chapters & Topics)
+                               </span>
+                               <span className="text-[10px] font-bold text-indigo-800 bg-indigo-100/70 px-2 py-0.5 rounded-md">
+                                  {activeChapters.length} Chapters &bull; {activeTopics.length} Topics Active
+                               </span>
+                            </div>
 
-                  <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-                     {/* SIDEBAR FILTERS - RESPONSIVE & INTERACTIVE */}
-                     <aside className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-slate-100 bg-white p-4 sm:p-6 overflow-y-auto space-y-6 custom-scrollbar shrink-0 max-h-[45vh] lg:max-h-none">
+                            <button
+                               type="button"
+                               onClick={() => setIsScopeExpanded(!isScopeExpanded)}
+                               className="px-3 py-1 bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+                               title={isScopeExpanded ? 'Reduce Active Scope' : 'Expand Active Scope'}
+                            >
+                               {isScopeExpanded ? (
+                                  <>
+                                     <ChevronUp size={14} /> Reduce Scope
+                                  </>
+                               ) : (
+                                  <>
+                                     <ChevronDown size={14} /> Expand Scope
+                                  </>
+                               )}
+                            </button>
+                         </div>
 
-                        {/* QUESTION TYPES (Dynamic) */}
-                        <div>
-                           <h4 className="text-[12px] font-black text-indigo-600 uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
-                              <ListFilter size={16} /> Question Types
-                           </h4>
-                           {availableTypesInScope.length > 0 ? (
-                              <div className="space-y-2">
-                                 {availableTypesInScope.map(({ type, count }) => (
-                                    <label key={type} className="flex items-center justify-between cursor-pointer group p-2 hover:bg-slate-50 rounded-lg transition-colors">
-                                       <div className="flex items-center gap-3">
-                                          <div className="relative flex items-center justify-center">
-                                             <input
-                                                type="checkbox"
-                                                checked={activeTypes.includes(type)}
-                                                onChange={() => setActiveTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type])}
-                                                className="peer appearance-none w-5 h-5 rounded-md border-2 border-slate-200 checked:bg-purple-600 checked:border-purple-600 transition-all cursor-pointer"
-                                             />
-                                             <Check className="absolute w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={4} />
-                                          </div>
-                                          <span className="text-xs font-bold text-slate-600 group-hover:text-purple-600 transition-colors">{type}</span>
-                                       </div>
-                                       <span className="text-[10px] font-black text-slate-300 bg-slate-100 px-1.5 rounded">{count}</span>
-                                    </label>
-                                 ))}
-                              </div>
-                           ) : (
-                              <p className="text-xs text-slate-400 italic">No question types found for selected scope.</p>
-                           )}
-                        </div>
+                         {isScopeExpanded ? (
+                            <div className="flex flex-wrap items-start gap-3 overflow-x-auto custom-scrollbar pb-1 max-h-48 animate-in fade-in duration-200">
+                               {paper.selectedChapters.length > 0 ? (
+                                  paper.selectedChapters.map(chap => {
+                                     const isChapActive = activeChapters.includes(chap);
+                                     const isExpanded = expandedChapters.includes(chap);
+                                     const chapterId = allChapters.find(c => c.name === chap)?.id;
+                                     const topicsInChapter = allTopics.filter(t => t.chapterId === chapterId);
 
-                        <div className="h-px bg-slate-100 w-full"></div>
+                                     return (
+                                        <div key={chap} className="flex flex-col bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden min-w-[200px] max-w-xs flex-1">
+                                           <div className="flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 border-b border-slate-100">
+                                              <label className="flex items-center gap-2 cursor-pointer group flex-1 min-w-0">
+                                                 <div className="relative flex items-center justify-center shrink-0">
+                                                    <input
+                                                       type="checkbox"
+                                                       checked={isChapActive}
+                                                       onChange={() => {
+                                                          if (isChapActive) {
+                                                             setActiveChapters(prev => prev.filter(c => c !== chap));
+                                                             const topicNames = topicsInChapter.map(t => t.name);
+                                                             setActiveTopics(prev => prev.filter(t => !topicNames.includes(t)));
+                                                          } else {
+                                                             setActiveChapters(prev => [...prev, chap]);
+                                                             setExpandedChapters(prev => Array.from(new Set([...prev, chap])));
+                                                             const topicNames = topicsInChapter.map(t => t.name);
+                                                             setActiveTopics(prev => Array.from(new Set([...prev, ...topicNames])));
+                                                          }
+                                                       }}
+                                                       className="peer appearance-none w-4 h-4 rounded border-2 border-slate-300 checked:bg-indigo-600 checked:border-indigo-600 transition-all cursor-pointer"
+                                                    />
+                                                    <Check className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={4} />
+                                                 </div>
+                                                 <span className={`text-xs font-bold leading-tight truncate ${isChapActive ? 'text-slate-900' : 'text-slate-400'}`}>{chap}</span>
+                                              </label>
 
-                        {/* 3. QUESTION SOURCE (Dynamic) */}
-                        <div>
-                           <h4 className="text-[12px] font-black text-indigo-600 uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
-                              <Filter size={16} /> Question Source
-                           </h4>
-                           {availableSourcesInScope.length > 0 ? (
-                              <div className="space-y-2">
-                                 {availableSourcesInScope.map(({ source, count }) => (
-                                    <label key={source} className="flex items-center justify-between cursor-pointer group p-2 hover:bg-slate-50 rounded-lg transition-colors">
-                                       <div className="flex items-center gap-3">
-                                          <div className="relative flex items-center justify-center">
-                                             <input
-                                                type="checkbox"
-                                                checked={activeSources.includes(source)}
-                                                onChange={() => setActiveSources(prev => prev.includes(source) ? prev.filter(s => s !== source) : [...prev, source])}
-                                                className="peer appearance-none w-5 h-5 rounded-md border-2 border-slate-200 checked:bg-indigo-600 checked:border-indigo-600 transition-all cursor-pointer"
-                                             />
-                                             <Check className="absolute w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={4} />
-                                          </div>
-                                          <span className="text-xs font-bold text-slate-600 group-hover:text-indigo-600 transition-colors">{source}</span>
-                                       </div>
-                                       <span className="text-[10px] font-black text-slate-300 bg-slate-100 px-1.5 rounded">{count}</span>
-                                    </label>
-                                 ))}
-                              </div>
-                           ) : (
-                              <p className="text-xs text-slate-400 italic">No sources found for selected scope.</p>
-                           )}
-                        </div>
+                                              <button
+                                                 type="button"
+                                                 onClick={() => {
+                                                    if (isExpanded) setExpandedChapters(prev => prev.filter(c => c !== chap));
+                                                    else setExpandedChapters(prev => Array.from(new Set([...prev, chap])));
+                                                 }}
+                                                 className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 transition-colors shrink-0"
+                                                 title="Toggle topics list"
+                                              >
+                                                 {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                              </button>
+                                           </div>
 
-                        <button onClick={executeSearch} disabled={isSearching} className="w-full mt-4 py-4 bg-[#1a202c] text-white font-black uppercase tracking-[0.2em] rounded-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 shadow-xl shadow-slate-200 active:scale-95">
-                           {isSearching ? <RefreshCw className="animate-spin" size={20} /> : <Search size={20} />} FETCH QUESTIONS
-                        </button>
-                     </aside>
+                                           {/* HORIZONTAL EXPANDABLE TOPIC BOX */}
+                                           {isExpanded && topicsInChapter.length > 0 && (
+                                              <div className="p-2.5 bg-white space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
+                                                 <div className="flex items-center justify-between border-b border-slate-100 pb-1">
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase">Topics ({topicsInChapter.length})</span>
+                                                    <div className="flex items-center gap-2">
+                                                       <button
+                                                          type="button"
+                                                          onClick={() => {
+                                                             const topicNames = topicsInChapter.map(t => t.name);
+                                                             setActiveTopics(prev => Array.from(new Set([...prev, ...topicNames])));
+                                                          }}
+                                                          className="text-[9px] font-bold text-indigo-600 hover:underline"
+                                                       >
+                                                          All
+                                                       </button>
+                                                       <span className="text-slate-300">|</span>
+                                                       <button
+                                                          type="button"
+                                                          onClick={() => {
+                                                             const topicNames = topicsInChapter.map(t => t.name);
+                                                             setActiveTopics(prev => prev.filter(t => !topicNames.includes(t)));
+                                                          }}
+                                                          className="text-[9px] font-bold text-slate-400 hover:text-red-500"
+                                                       >
+                                                          Clear
+                                                       </button>
+                                                    </div>
+                                                 </div>
 
-                     {/* CONTENT AREA */}
-                     <main className="flex-1 bg-white p-10 overflow-y-auto custom-scrollbar relative border-l border-slate-50">
+                                                 <div className="space-y-1">
+                                                    {topicsInChapter.map(t => {
+                                                       const isTopicActive = activeTopics.includes(t.name);
+                                                       return (
+                                                          <label key={t.id} className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-slate-50 transition-colors">
+                                                             <div className="relative flex items-center justify-center shrink-0">
+                                                                <input
+                                                                   type="checkbox"
+                                                                   checked={isTopicActive}
+                                                                   onChange={() => {
+                                                                      if (isTopicActive) setActiveTopics(prev => prev.filter(top => top !== t.name));
+                                                                      else setActiveTopics(prev => [...prev, t.name]);
+                                                                   }}
+                                                                   className="peer appearance-none w-3.5 h-3.5 rounded border border-slate-300 checked:bg-purple-600 checked:border-purple-600 transition-all cursor-pointer"
+                                                                />
+                                                                <Check className="absolute w-2.5 h-2.5 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={4} />
+                                                             </div>
+                                                             <span className={`text-[11px] font-medium leading-tight truncate ${isTopicActive ? 'text-purple-900 font-bold' : 'text-slate-600'}`}>
+                                                                {t.name}
+                                                             </span>
+                                                          </label>
+                                                       );
+                                                    })}
+                                                 </div>
+                                              </div>
+                                           )}
+                                        </div>
+                                     );
+                                  })
+                               ) : (
+                                  <p className="text-xs text-slate-400 italic">No specific chapters selected.</p>
+                               )}
+                            </div>
+                         ) : (
+                            <div className="flex flex-wrap items-center gap-2 pt-1">
+                               {activeChapters.length > 0 ? (
+                                  activeChapters.map(chap => (
+                                     <span key={chap} className="px-2.5 py-1 bg-white text-indigo-800 rounded-lg text-[11px] font-bold border border-indigo-200 shadow-2xs flex items-center gap-1">
+                                        📖 {chap}
+                                     </span>
+                                  ))
+                               ) : (
+                                  <span className="text-xs text-slate-400 italic">No active scope selected.</span>
+                               )}
+                            </div>
+                         )}
+                      </div>
+                   </div>
+
+                  <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+                     {/* CONTENT AREA - FULL WIDTH WITH DEDICATED VERTICAL SCROLLBAR & SCROLL DOWN */}
+                     <main className="flex-1 bg-white p-4 sm:p-6 md:p-8 overflow-y-auto custom-scrollbar relative min-h-0">
                         {isSearching ? (
-                           <div className="h-full flex flex-col items-center justify-center space-y-6">
+                           <div className="h-full flex flex-col items-center justify-center space-y-6 py-12">
                               <div className="w-20 h-20 border-[6px] border-indigo-50 border-t-indigo-600 rounded-full animate-spin"></div>
                               <p className="text-slate-400 font-black uppercase tracking-widest text-sm animate-pulse">Scanning Repository...</p>
                            </div>
                         ) : availableQuestions.length === 0 ? (
-                           <div className="h-full flex flex-col items-center justify-center text-slate-300">
+                           <div className="h-full flex flex-col items-center justify-center text-slate-300 py-12">
                               <div className="w-32 h-32 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-inner">
                                  <Search size={56} className="opacity-50" />
                               </div>
                               <p className="font-black uppercase tracking-[0.2em] text-sm text-center">NO QUESTIONS FOUND.<br /><span className="text-xs text-slate-400 font-bold mt-2 block">Try adjusting your filters or active scope.</span></p>
                            </div>
                         ) : (
-                           <div className="space-y-3 animate-in slide-in-from-bottom-4 duration-300">
-                              <div className="sticky top-0 z-10 -mx-10 px-10 pt-2 pb-4 bg-white/90 backdrop-blur border-b border-slate-100">
+                           <div className="space-y-3 animate-in slide-in-from-bottom-4 duration-300 pb-8">
+                              <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 md:-mx-8 px-4 sm:px-6 md:px-8 pt-2 pb-4 bg-white/95 backdrop-blur border-b border-slate-100 shadow-2xs">
                                  <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-3">
                                     <div className="flex items-center gap-4">
                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">

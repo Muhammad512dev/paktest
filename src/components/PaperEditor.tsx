@@ -470,28 +470,28 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
          {/* ... (Existing Selection Modal Content) ... */}
          {/* SELECTION MODAL */}
          {isSelectionModalOpen && sectionConfig && (
-            <div className="fixed inset-0 z-[250] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 md:p-12 animate-in fade-in duration-300">
-               <div className="bg-white w-full max-w-[95vw] h-[90vh] rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden border border-slate-200">
+            <div className="fixed inset-0 z-[250] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-1 sm:p-2 md:p-3 animate-in fade-in duration-300">
+               <div className="bg-white w-full max-w-[98vw] h-[96vh] rounded-2xl md:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden border border-slate-200">
                   {/* MAIN MODAL HEADER */}
-                  <div className="px-8 py-4 border-b border-slate-100 flex flex-col gap-3 bg-white shrink-0">
+                  <div className="px-4 sm:px-6 py-2 sm:py-3 border-b border-slate-100 flex flex-col gap-2 bg-white shrink-0">
                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-4">
-                           <div className="w-12 h-12 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-center shadow-inner shrink-0">
-                              <Library size={24} className="text-indigo-600" />
+                        <div className="flex items-center gap-3">
+                           <div className="w-9 h-9 sm:w-10 sm:h-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center shadow-inner shrink-0">
+                              <Library size={20} className="text-indigo-600" />
                            </div>
                            <div>
-                              <div className="flex items-center gap-3">
-                                 <h3 className="font-black text-2xl text-slate-900 tracking-tight">{sectionConfig.title}</h3>
-                                 <span className="text-slate-300 font-medium text-2xl">|</span>
-                                 <span className="text-slate-400 font-bold text-lg">Question Selection</span>
+                              <div className="flex items-center gap-2 sm:gap-3">
+                                 <h3 className="font-black text-lg sm:text-xl text-slate-900 tracking-tight">{sectionConfig.title}</h3>
+                                 <span className="text-slate-300 font-medium text-lg sm:text-xl">|</span>
+                                 <span className="text-slate-400 font-bold text-sm sm:text-base">Question Selection</span>
                               </div>
-                              <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-0.5 rounded-full border border-indigo-100 mt-0.5 inline-block">
+                              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100 mt-0.5 inline-block">
                                  SUBJECT: {currentPaper.subject.toUpperCase()}
                               </span>
                            </div>
                         </div>
-                        <button onClick={() => setIsSelectionModalOpen(false)} className="text-slate-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-full transition-all">
-                           <X size={32} />
+                        <button onClick={() => setIsSelectionModalOpen(false)} className="text-slate-300 hover:text-red-500 p-1.5 hover:bg-red-50 rounded-full transition-all">
+                           <X size={26} />
                         </button>
                      </div>
 
@@ -873,113 +873,113 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                               </div>
 
                               {displayedMenuQuestions.map((q, idx) => {
-                                 const isSelectedInThisSection = currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId === activeSectionId);
-                                 const isSelectedInOtherSection = currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId !== activeSectionId);
-                                 const isSelected = isSelectedInThisSection || isSelectedInOtherSection;
-                                 return (
-                                    <div key={q.id} onClick={() => toggleQuestionSelection(q)} className={`p-4 rounded-2xl border-2 transition-all cursor-pointer group relative overflow-hidden ${isSelectedInThisSection ? 'border-indigo-600 bg-indigo-50/20 shadow-md' : isSelectedInOtherSection ? 'border-amber-400 bg-amber-50/20 shadow-sm' : 'border-slate-100 hover:border-indigo-200 hover:bg-slate-50/50'}`}>
-                                       {isSelectedInThisSection && <div className="absolute top-0 right-0 w-10 h-10 bg-indigo-600 flex items-center justify-center rounded-bl-xl text-white shadow-lg"><Check size={16} strokeWidth={4} /></div>}
-                                       <div className="flex gap-4 items-start">
-                                          <div className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all font-black text-xs ${isSelectedInThisSection ? 'bg-indigo-600 border-indigo-600 text-white' : isSelectedInOtherSection ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-200 bg-white text-slate-300'}`}>{idx + 1}</div>
-                                          <div className="flex-1 space-y-2 pr-6">
-                                             {/* CHAPTER, TOPIC & STATUS BADGES */}
-                                             <div className="flex flex-wrap items-center gap-1.5">
-                                                {q.chapter && (
-                                                   <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md text-[9px] font-black uppercase tracking-wider border border-indigo-100 flex items-center gap-1">
-                                                      📖 {q.chapter}
-                                                   </span>
-                                                )}
-                                                {q.topic && (
-                                                   <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded-md text-[9px] font-black uppercase tracking-wider border border-purple-100 flex items-center gap-1">
-                                                      🏷️ {q.topic}
-                                                   </span>
-                                                )}
-                                                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px] font-black uppercase tracking-widest shrink-0 border border-slate-200">
-                                                   {q.type}
-                                                </span>
-                                                {isSelectedInThisSection && (
-                                                   <span className="px-2 py-0.5 bg-emerald-600 text-white rounded-md text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
-                                                      <Check size={10} strokeWidth={3} /> Added in This Section
-                                                   </span>
-                                                )}
-                                                {isSelectedInOtherSection && (
-                                                   <span className="px-2 py-0.5 bg-amber-500 text-white rounded-md text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
-                                                      In Another Section
-                                                   </span>
-                                                )}
-                                             </div>
+                                  const isSelectedInThisSection = currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId === activeSectionId);
+                                  const isSelectedInOtherSection = currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId !== activeSectionId);
+                                  const isSelected = isSelectedInThisSection || isSelectedInOtherSection;
+                                  return (
+                                     <div key={q.id} onClick={() => toggleQuestionSelection(q)} className={`p-2.5 sm:p-3 rounded-xl border transition-all cursor-pointer group relative overflow-hidden ${isSelectedInThisSection ? 'border-indigo-500 bg-indigo-50/30 shadow-xs ring-1 ring-indigo-400' : isSelectedInOtherSection ? 'border-amber-400 bg-amber-50/20 shadow-2xs' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50/60'}`}>
+                                        {isSelectedInThisSection && <div className="absolute top-0 right-0 w-7 h-7 bg-indigo-600 flex items-center justify-center rounded-bl-lg text-white shadow-xs"><Check size={12} strokeWidth={3.5} /></div>}
+                                        <div className="flex gap-2.5 sm:gap-3 items-start">
+                                           <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-md border flex items-center justify-center shrink-0 transition-all font-bold text-[10px] sm:text-[11px] ${isSelectedInThisSection ? 'bg-indigo-600 border-indigo-600 text-white' : isSelectedInOtherSection ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-300 bg-slate-50 text-slate-500'}`}>{idx + 1}</div>
+                                           <div className="flex-1 space-y-1.5 pr-4 min-w-0">
+                                              {/* CHAPTER, TOPIC & STATUS BADGES */}
+                                              <div className="flex flex-wrap items-center gap-1">
+                                                 {q.chapter && (
+                                                    <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[9px] font-bold tracking-tight border border-indigo-100 flex items-center gap-0.5">
+                                                       📖 {q.chapter}
+                                                    </span>
+                                                 )}
+                                                 {q.topic && (
+                                                    <span className="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded text-[9px] font-bold tracking-tight border border-purple-100 flex items-center gap-0.5">
+                                                       🏷️ {q.topic}
+                                                    </span>
+                                                 )}
+                                                 <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 border border-slate-200">
+                                                    {q.type}
+                                                 </span>
+                                                 {isSelectedInThisSection && (
+                                                    <span className="px-1.5 py-0.5 bg-emerald-600 text-white rounded text-[9px] font-bold tracking-tight flex items-center gap-1 shadow-2xs">
+                                                       <Check size={9} strokeWidth={3} /> In Section
+                                                    </span>
+                                                 )}
+                                                 {isSelectedInOtherSection && (
+                                                    <span className="px-1.5 py-0.5 bg-amber-500 text-white rounded text-[9px] font-bold tracking-tight flex items-center gap-1 shadow-2xs">
+                                                       In Another Section
+                                                    </span>
+                                                 )}
+                                              </div>
 
-                                             <div className="flex justify-between items-start gap-4">
-                                                {(extractionLanguage === 'Bilingual' || extractionLanguage === 'English') && q.text && (
-                                                   <MathRenderer text={q.text} className="text-sm font-bold text-slate-800 leading-snug" />
-                                                )}
-                                                <div className="flex flex-col items-end gap-1">
-                                                   <div className="flex flex-wrap justify-end gap-1">
-                                                      {q.sources && q.sources.length > 0 ? q.sources.map(s => (
-                                                         <span key={s} className="px-2 py-0.5 bg-white text-slate-400 rounded text-[10px] font-bold uppercase tracking-widest shrink-0 border border-slate-100 whitespace-nowrap">
-                                                            {s}
-                                                         </span>
-                                                      )) : (
-                                                         <span className="px-2 py-0.5 bg-white text-slate-400 rounded text-[10px] font-bold uppercase tracking-widest shrink-0 border border-slate-100 whitespace-nowrap">
-                                                            {q.source}
-                                                         </span>
-                                                      )}
-                                                   </div>
-                                                </div>
-                                             </div>
-                                             {(extractionLanguage === 'Bilingual' || extractionLanguage === 'Urdu') && q.textUrdu && (
-                                                <div className="font-urdu text-[15px] text-slate-700 leading-relaxed text-right border-t border-slate-50 pt-1.5" dir="rtl">
-                                                   <MathRenderer text={q.textUrdu} />
-                                                </div>
-                                             )}
-                                             {q.imageUrl && (
-                                                <div className="mt-1.5 p-1.5 bg-slate-50 rounded-lg border border-slate-100 w-fit">
-                                                   <img src={q.imageUrl} alt="Question Diagram" className="h-16 w-auto object-contain rounded" />
-                                                </div>
-                                             )}
+                                              <div className="flex justify-between items-start gap-2">
+                                                 {(extractionLanguage === 'Bilingual' || extractionLanguage === 'English') && q.text && (
+                                                    <MathRenderer text={q.text} className="text-xs sm:text-sm font-bold text-slate-800 leading-tight" />
+                                                 )}
+                                                 <div className="flex flex-col items-end gap-0.5 shrink-0 ml-auto">
+                                                    <div className="flex flex-wrap justify-end gap-1">
+                                                       {q.sources && q.sources.length > 0 ? q.sources.map(s => (
+                                                          <span key={s} className="px-1.5 py-0.5 bg-white text-slate-400 rounded text-[9px] font-bold uppercase tracking-wider border border-slate-200 whitespace-nowrap">
+                                                             {s}
+                                                          </span>
+                                                       )) : (
+                                                          <span className="px-1.5 py-0.5 bg-white text-slate-400 rounded text-[9px] font-bold uppercase tracking-wider border border-slate-200 whitespace-nowrap">
+                                                             {q.source}
+                                                          </span>
+                                                       )}
+                                                    </div>
+                                                 </div>
+                                              </div>
+                                              {(extractionLanguage === 'Bilingual' || extractionLanguage === 'Urdu') && q.textUrdu && (
+                                                 <div className="font-urdu text-[13px] sm:text-[14px] text-slate-700 leading-snug text-right border-t border-slate-100 pt-1 mt-1" dir="rtl">
+                                                    <MathRenderer text={q.textUrdu} />
+                                                 </div>
+                                              )}
+                                              {q.imageUrl && (
+                                                 <div className="mt-1 p-1 bg-slate-50 rounded-lg border border-slate-100 w-fit">
+                                                    <img src={q.imageUrl} alt="Question Diagram" className="h-12 sm:h-14 w-auto object-contain rounded" />
+                                                 </div>
+                                              )}
 
-                                             {normalizeType(q.type) === 'mcq' && ((q.options && q.options.length > 0) || (q.optionsUrdu && q.optionsUrdu.length > 0)) && (
-                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-1.5 mt-2 pt-2 border-t border-slate-50">
-                                                   {((q.options && q.options.length > 0) ? q.options : (q.optionsUrdu || [])).map((opt: string, i: number) => (
-                                                      <div key={i} className="flex gap-1.5 items-baseline text-[11px] text-slate-500">
-                                                         <span className="font-black text-indigo-500">({String.fromCharCode(65 + i)})</span>
-                                                         <div className="flex flex-col">
-                                                            <span className="font-medium"><MathRenderer text={opt} inline /></span>
-                                                            {q.optionsUrdu && q.optionsUrdu[i] && (
-                                                               <span className="text-right font-urdu text-xs mt-0.5" dir="rtl"><MathRenderer text={q.optionsUrdu[i]} /></span>
-                                                            )}
-                                                         </div>
-                                                      </div>
-                                                   ))}
-                                                </div>
-                                             )}
-                                          </div>
-                                       </div>
-                                    </div>
-                                 );
-                              })}
+                                              {normalizeType(q.type) === 'mcq' && ((q.options && q.options.length > 0) || (q.optionsUrdu && q.optionsUrdu.length > 0)) && (
+                                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 mt-1.5 pt-1.5 border-t border-slate-100">
+                                                    {((q.options && q.options.length > 0) ? q.options : (q.optionsUrdu || [])).map((opt: string, i: number) => (
+                                                       <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-50 border border-slate-100 text-[11px] leading-tight text-slate-700">
+                                                          <span className="font-black text-indigo-600 text-[10px]">({String.fromCharCode(65 + i)})</span>
+                                                          <div className="flex flex-col min-w-0 flex-1">
+                                                             <span className="font-medium truncate"><MathRenderer text={opt} inline /></span>
+                                                             {q.optionsUrdu && q.optionsUrdu[i] && (
+                                                                <span className="text-right font-urdu text-[11px] leading-tight truncate" dir="rtl"><MathRenderer text={q.optionsUrdu[i]} /></span>
+                                                             )}
+                                                          </div>
+                                                       </div>
+                                                    ))}
+                                                 </div>
+                                              )}
+                                           </div>
+                                        </div>
+                                     </div>
+                                  );
+                               })}
                            </div>
                         )}
                      </main>
                   </div>
 
                   {/* MODAL FOOTER */}
-                  <div className="px-10 py-6 border-t border-slate-100 bg-white flex flex-col md:flex-row justify-between items-center gap-8 shrink-0 shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
-                     <div className="flex items-center gap-4">
-                        <p className="text-[12px] font-black text-slate-400 uppercase tracking-[0.3em]">PROGRESS:</p>
-                        <div className="flex items-baseline gap-2">
-                           <span className={`text-4xl font-black tracking-tighter tabular-nums ${getSectionSelectedCount(activeSectionId) >= (sectionConfig?.totalCount || 0) ? 'text-emerald-600' : 'text-indigo-600'}`}>
+                  <div className="px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-100 bg-white flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 shrink-0 shadow-[0_-6px_20px_rgba(0,0,0,0.02)]">
+                     <div className="flex items-center gap-3">
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">PROGRESS:</p>
+                        <div className="flex items-baseline gap-1.5">
+                           <span className={`text-2xl sm:text-3xl font-black tracking-tight tabular-nums ${getSectionSelectedCount(activeSectionId) >= (sectionConfig?.totalCount || 0) ? 'text-emerald-600' : 'text-indigo-600'}`}>
                               {getSectionSelectedCount(activeSectionId)}
                            </span>
-                           <span className="text-slate-300 font-bold text-2xl">/</span>
-                           <span className="text-slate-400 font-black text-4xl tracking-tighter tabular-nums">{sectionConfig?.totalCount}</span>
+                           <span className="text-slate-300 font-bold text-xl">/</span>
+                           <span className="text-slate-400 font-black text-2xl sm:text-3xl tracking-tight tabular-nums">{sectionConfig?.totalCount}</span>
                         </div>
                      </div>
-                     <div className="flex gap-4">
-                        <button onClick={handleRandomSelect} disabled={availableQuestions.length === 0} className="px-8 py-3 bg-white border-2 border-slate-200 text-slate-700 font-black uppercase tracking-widest rounded-xl hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-100 transition-all text-xs flex items-center gap-3 active:scale-95">
-                           <Sparkles size={18} /> SMART RANDOM
+                     <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
+                        <button onClick={handleRandomSelect} disabled={availableQuestions.length === 0} className="px-4 sm:px-6 py-2 bg-white border border-slate-300 text-slate-700 font-bold uppercase tracking-wider rounded-xl hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-all text-xs flex items-center gap-2 active:scale-95 cursor-pointer shadow-2xs">
+                           <Sparkles size={14} /> SMART RANDOM
                         </button>
-                        <button onClick={() => { setCurrentPaper({ ...currentPaper, structure: { ...currentPaper.structure, [activeSectionId]: sectionConfig } }); setIsSelectionModalOpen(false); }} className="px-14 py-3 bg-indigo-600 text-white font-black uppercase tracking-widest rounded-xl hover:bg-indigo-700 shadow-2xl shadow-indigo-200 transition-all text-xs active:scale-95 border-b-4 border-indigo-800">DEPLOY TO CANVAS</button>
+                        <button onClick={() => { setCurrentPaper({ ...currentPaper, structure: { ...currentPaper.structure, [activeSectionId]: sectionConfig } }); setIsSelectionModalOpen(false); }} className="px-6 sm:px-8 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold uppercase tracking-wider rounded-xl shadow-md shadow-indigo-200 transition-all text-xs active:scale-95 cursor-pointer">DEPLOY TO CANVAS</button>
                      </div>
                   </div>
                </div>

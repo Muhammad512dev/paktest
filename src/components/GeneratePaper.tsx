@@ -674,6 +674,24 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
          }
          // Case 2: Repository Shuffle (Manual Mode with Auto-Fill)
          else {
+            const normalizeQType = (t: string) => {
+               const val = (t || '').toLowerCase().trim();
+               if (val.includes('mcq') || val.includes('multiple choice') || val.includes('multi choice')) return 'mcq';
+               if (val.includes('short')) return 'short';
+               if (val.includes('long') || val.includes('essay')) return 'long';
+               if (val.includes('blank')) return 'blank';
+               if (val.includes('true') || val.includes('false')) return 'true_false';
+               if (val.includes('translation')) return 'translation';
+               if (val.includes('words') || val.includes('sentence')) return 'words';
+               return val;
+            };
+
+            const matchesSectionType = (qType: string, secType: string) => {
+               if (!qType || !secType) return false;
+               if (qType === secType) return true;
+               return normalizeQType(qType) === normalizeQType(secType);
+            };
+
             const matchesSectionMedium = (q: any, sectionMedium: 'English' | 'Urdu' | 'Bilingual') => {
                const qm = (q?.medium || 'Bilingual') as 'English' | 'Urdu' | 'Bilingual';
                if (sectionMedium === 'Bilingual') return qm === 'Bilingual' || qm === 'English' || qm === 'Urdu';
@@ -701,31 +719,51 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                });
             };
 
-(Object.values(state.paperStructure) as PaperSectionConfig[]).forEach(sec => {
+            (Object.values(state.paperStructure) as PaperSectionConfig[]).forEach((sec, secIdx) => {
                // Scheme Handling 1: Long Answer with sub-parts (a), (b), (c)...
                if (sec.hasParts && sec.parts && sec.parts.length > 0) {
-                  sec.parts.forEach(part => {
-                     const targetChapters = part.chapter ? [part.chapter] : (part.chapters || []);
-                     const partPool = repoQuestions.filter(q =>
-                        q.type === sec.questionType &&
-                        q.subject === subjectName &&
-                        (q.classLevel === className || !q.classLevel) &&
-                        (targetChapters.length === 0 || isChapterMatch(q.chapter, targetChapters)) &&
-                        matchesSectionMedium(q, sec.languageMedium)
-                     );
-                     const poolToUse = partPool.length > 0 ? partPool : repoQuestions.filter(q => q.type === sec.questionType && q.subject === subjectName);
-                     const picked = poolToUse.length > 0 ? poolToUse[Math.floor(Math.random() * poolToUse.length)] : null;
-                     if (picked) {
-                        generatedQuestions.push({
-                           ...picked,
-                           id: `${picked.id}_part_${part.label}_${Math.random().toString(36).substr(2, 7)}`,
-                           sectionId: sec.id,
-                           marks: part.marks,
-                           text: `(${part.label}) ${picked.text || ''}`,
-                           textUrdu: picked.textUrdu ? `(${part.label}) ${picked.textUrdu}` : undefined
-                        });
-                     }
-                  });
+                  const requiredLongCount = Math.max(1, sec.totalCount || 1);
+                  const usedPartIds = new Set<string>();
+
+                  for (let qIdx = 0; qIdx < requiredLongCount; qIdx++) {
+                     sec.parts.forEach(part => {
+                        const targetChapters = part.chapter ? [part.chapter] : (part.chapters || []);
+                        const partPool = repoQuestions.filter(q =>
+                           !usedPartIds.has(q.id) &&
+                           matchesSectionType(q.type, sec.questionType) &&
+                           q.subject === subjectName &&
+                           (q.classLevel === className || !q.classLevel) &&
+                           (targetChapters.length === 0 || isChapterMatch(q.chapter, targetChapters)) &&
+                           matchesSectionMedium(q, sec.languageMedium)
+                        );
+
+                        // Fallback 1: Any question matching section type & subject
+                        const fallback1 = partPool.length > 0 ? partPool : repoQuestions.filter(q =>
+                           !usedPartIds.has(q.id) &&
+                           matchesSectionType(q.type, sec.questionType) &&
+                           q.subject === subjectName
+                        );
+
+                        // Fallback 2: Any question matching section type overall
+                        const poolToUse = fallback1.length > 0 ? fallback1 : repoQuestions.filter(q =>
+                           matchesSectionType(q.type, sec.questionType)
+                        );
+
+                        const picked = poolToUse.length > 0 ? poolToUse[Math.floor(Math.random() * poolToUse.length)] : null;
+                        if (picked) {
+                           usedPartIds.add(picked.id);
+                           const prefix = `Q.${secIdx + 1 + qIdx} (${part.label})`;
+                           generatedQuestions.push({
+                              ...picked,
+                              id: `${picked.id}_q${qIdx + 1}_part_${part.label}_${Math.random().toString(36).substr(2, 7)}`,
+                              sectionId: sec.id,
+                              marks: part.marks,
+                              text: `${prefix} ${picked.text || ''}`,
+                              textUrdu: picked.textUrdu ? `${prefix} ${picked.textUrdu}` : undefined
+                           });
+                        }
+                     });
+                  }
                }
                // Scheme Handling 2: Section with specific chapter distribution rules
                else if (sec.chapterDistribution && sec.chapterDistribution.length > 0) {
@@ -733,7 +771,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                   sec.chapterDistribution.forEach(rule => {
                      const rulePool = repoQuestions.filter(q =>
                         !usedIds.has(q.id) &&
-                        q.type === sec.questionType &&
+                        matchesSectionType(q.type, sec.questionType) &&
                         q.subject === subjectName &&
                         (q.classLevel === className || !q.classLevel) &&
                         isChapterMatch(q.chapter, rule.chapters) &&
@@ -757,7 +795,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                      const remainder = sec.totalCount - secGenerated;
                      const fallbackPool = repoQuestions.filter(q =>
                         !usedIds.has(q.id) &&
-                        q.type === sec.questionType &&
+                        matchesSectionType(q.type, sec.questionType) &&
                         q.subject === subjectName &&
                         (q.classLevel === className || !q.classLevel) &&
                         (state.selectedChapters.length === 0 || state.selectedChapters.includes(q.chapter || '')) &&
@@ -777,7 +815,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                // Standard Random Selection (Balanced & Fair across selected chapters)
                else {
                   const pool = repoQuestions.filter(q =>
-                     q.type === sec.questionType &&
+                     matchesSectionType(q.type, sec.questionType) &&
                      q.subject === subjectName &&
                      (q.classLevel === className || !q.classLevel) &&
                      (state.selectedChapters.length === 0 || state.selectedChapters.includes(q.chapter || '')) &&
@@ -842,12 +880,24 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                // Reusing a repository item with a unique generated ID is preferable to silently producing
                // fewer questions than the selected pairing scheme requires.
                if (!sec.hasParts) {
-                  const eligiblePool = repoQuestions.filter(q =>
-                     q.type === sec.questionType &&
+                  let eligiblePool = repoQuestions.filter(q =>
+                     matchesSectionType(q.type, sec.questionType) &&
                      q.subject === subjectName &&
                      (q.classLevel === className || !q.classLevel) &&
                      matchesSectionMedium(q, sec.languageMedium)
                   );
+                  // Broader fallback if eligiblePool is empty
+                  if (eligiblePool.length === 0) {
+                     eligiblePool = repoQuestions.filter(q =>
+                        matchesSectionType(q.type, sec.questionType) &&
+                        q.subject === subjectName
+                     );
+                  }
+                  if (eligiblePool.length === 0) {
+                     eligiblePool = repoQuestions.filter(q =>
+                        matchesSectionType(q.type, sec.questionType)
+                     );
+                  }
                   const sectionItems = generatedQuestions.filter(q => q.sectionId === sec.id);
                   const requiredMainCount = Math.max(0, sec.totalCount);
                   for (let i = sectionItems.length; i < requiredMainCount && eligiblePool.length > 0; i += 1) {

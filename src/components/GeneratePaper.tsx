@@ -46,12 +46,20 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
    const [isQuickBuilderOpen, setIsQuickBuilderOpen] = useState(false);
    const [builderTab, setBuilderTab] = useState<'SIMPLE' | 'ADVANCED'>('SIMPLE');
 
-   // Simple 1-Step Input: Total Marks, Question Type, Choice or Not
-   const [quickSimpleType, setQuickSimpleType] = useState<string>('Short Question');
-   const [quickSimpleMarksPerQ, setQuickSimpleMarksPerQ] = useState<number>(2);
-   const [quickSimpleTotalMarks, setQuickSimpleTotalMarks] = useState<number>(10);
-   const [quickSimpleHasChoice, setQuickSimpleHasChoice] = useState<boolean>(true);
-   const [quickSimpleExtraChoices, setQuickSimpleExtraChoices] = useState<number>(3); // e.g. 5 to attempt + 3 extra = 8 total
+   // Quick Auto-Builder Configuration (Whole Paper Distribution)
+   const [quickSelectedTypes, setQuickSelectedTypes] = useState<string[]>(['Multiple Choice', 'Short Question', 'Long Answer']);
+   const [quickTotalPaperMarks, setQuickTotalPaperMarks] = useState<number>(100);
+   const [quickHasChoice, setQuickHasChoice] = useState<boolean>(true);
+   const [quickLongPartsMode, setQuickLongPartsMode] = useState<'SINGLE' | 'SUBPARTS'>('SUBPARTS'); // SUBPARTS = 4+4=8, SINGLE = 8 marks per question
+   const [quickCustomMarks, setQuickCustomMarks] = useState<Record<string, number>>({
+      'Multiple Choice': 1,
+      'Short Question': 2,
+      'Long Answer': 4, // 4 for subpart or 8 for single
+      'Fill in the Blanks': 1,
+      'True/False': 1,
+      'Translation': 5,
+      'Words/Sentences': 5
+   });
 
    const [quickSections, setQuickSections] = useState<Array<{
       id: string;
@@ -410,40 +418,97 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
    };
 
    const applySimpleQuickBuild = () => {
-      const marksPerQ = Math.max(1, quickSimpleMarksPerQ);
-      const totalMarks = Math.max(marksPerQ, quickSimpleTotalMarks);
-      const selectCount = Math.max(1, Math.round(totalMarks / marksPerQ));
-      const extra = quickSimpleHasChoice ? Math.max(1, quickSimpleExtraChoices) : 0;
-      const totalCount = selectCount + extra;
-      const isObjective = ['Multiple Choice', 'Fill in the Blanks', 'True/False'].includes(quickSimpleType);
+      const selected = quickSelectedTypes.length > 0 ? quickSelectedTypes : ['Short Question'];
+      const totalPaperMarks = Math.max(10, quickTotalPaperMarks);
+      const newStructure: PaperStructure = {};
 
-      const secId = `sec_quick_${Date.now()}`;
-      const nextNum = Object.keys(state.paperStructure).length + 1;
-      const newSec: PaperSectionConfig = {
-         id: secId,
-         title: `Q.${nextNum} ${quickSimpleType}`,
-         instruction: getDefaultSectionInstruction(quickSimpleType, selectCount, totalCount),
-         instructionUrdu: getDefaultSectionInstructionUrdu(quickSimpleType, selectCount, totalCount),
-         questionType: quickSimpleType,
-         marksPerQuestion: marksPerQ,
-         totalCount: totalCount,
-         selectCount: selectCount,
-         blankLines: 0,
-         blankLineType: 'Line',
-         questionsPerLine: false,
-         languageMedium: 'Bilingual',
-         sourceFilter: [],
-         category: isObjective ? 'Objective' : 'Subjective',
-         subQuestionNumbering: 'Numeric'
-      };
+      // Determine percentage targets for each selected type
+      // If default set (MCQ, Short, Long) or subset:
+      // MCQs = 25%, Short = 45%, Long = 30%
+      const weights: Record<string, number> = {};
+      const hasMcq = selected.includes('Multiple Choice');
+      const hasShort = selected.includes('Short Question');
+      const hasLong = selected.includes('Long Answer');
 
-      // Add to existing sections
+      // Base weights
+      selected.forEach(t => {
+         if (t === 'Multiple Choice') weights[t] = 0.25;
+         else if (t === 'Short Question') weights[t] = 0.45;
+         else if (t === 'Long Answer') weights[t] = 0.30;
+         else weights[t] = 0.20; // fallback for others like Translation, Fill in blanks
+      });
+
+      // Normalize weights so they sum to 1.0 across selected types
+      const sumWeights = Object.values(weights).reduce((a, b) => a + b, 0) || 1;
+      selected.forEach(t => {
+         weights[t] = weights[t] / sumWeights;
+      });
+
+      selected.forEach((type, idx) => {
+         const secId = `sec_quick_${Date.now()}_${idx}`;
+         const secMarksShare = Math.max(2, Math.round(totalPaperMarks * weights[type]));
+         
+         // Marks per question according to user specification:
+         // mcqs = 1 mark
+         // short = 2 marks
+         // long = 4 marks (for sub-part a/b) or 8 marks (for single full question)
+         let marksPerQ = quickCustomMarks[type] || 1;
+         if (type === 'Multiple Choice') marksPerQ = 1;
+         else if (type === 'Short Question') marksPerQ = 2;
+         else if (type === 'Long Answer') marksPerQ = (quickLongPartsMode === 'SINGLE' ? 8 : 4);
+
+         const selectCount = Math.max(1, Math.round(secMarksShare / marksPerQ));
+         
+         // Student choice logic:
+         // MCQs typically have no choice (attempt all)
+         // Short questions typically have choice (e.g. attempt 5 out of 8, ~30-40% extra)
+         // Long questions typically have choice (e.g. attempt 2 out of 3)
+         let totalCount = selectCount;
+         if (quickHasChoice) {
+            if (type === 'Multiple Choice') {
+               totalCount = selectCount; // MCQs attempt all
+            } else if (type === 'Short Question') {
+               const extra = selectCount >= 8 ? 4 : selectCount >= 5 ? 3 : 2;
+               totalCount = selectCount + extra;
+            } else if (type === 'Long Answer') {
+               const extra = selectCount >= 3 ? 2 : 1;
+               totalCount = selectCount + extra;
+            } else {
+               totalCount = selectCount + (selectCount >= 5 ? 2 : 1);
+            }
+         }
+
+         const isObjective = ['Multiple Choice', 'Fill in the Blanks', 'True/False'].includes(type);
+         const isLong = type === 'Long Answer';
+
+         newStructure[secId] = {
+            id: secId,
+            title: `Q.${idx + 1} ${type}`,
+            instruction: getDefaultSectionInstruction(type, selectCount, totalCount),
+            instructionUrdu: getDefaultSectionInstructionUrdu(type, selectCount, totalCount),
+            questionType: type,
+            marksPerQuestion: marksPerQ,
+            totalCount: totalCount,
+            selectCount: selectCount,
+            blankLines: 0,
+            blankLineType: 'Line',
+            questionsPerLine: false,
+            languageMedium: 'Bilingual',
+            sourceFilter: [],
+            category: isObjective ? 'Objective' : 'Subjective',
+            subQuestionNumbering: 'Numeric',
+            hasParts: isLong && quickLongPartsMode === 'SUBPARTS',
+            parts: (isLong && quickLongPartsMode === 'SUBPARTS') ? [
+               { label: 'a', marks: 4, count: 1 },
+               { label: 'b', marks: 4, count: 1 }
+            ] : undefined
+         };
+      });
+
+      // Set whole paper structure
       setState(prev => ({
          ...prev,
-         paperStructure: {
-            ...prev.paperStructure,
-            [secId]: newSec
-         }
+         paperStructure: newStructure
       }));
       setIsQuickBuilderOpen(false);
    };
@@ -1873,7 +1938,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                         }`}
                      >
                         <Zap size={13} className="text-amber-500" />
-                        Quick 1-Step (Total Marks + Type + Choice)
+                        Auto Paper Generator (Total Marks & Types)
                      </button>
                      <button
                         type="button"
@@ -1885,148 +1950,264 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                         }`}
                      >
                         <Layers size={13} />
-                        Multi-Section Blueprint ({quickSections.length})
+                        Manual Section Rows ({quickSections.length})
                      </button>
                   </div>
 
                   {/* MODAL BODY */}
-                  <div className="p-5 sm:p-6 overflow-y-auto space-y-4 custom-scrollbar flex-1">
+                  <div className="p-5 sm:p-6 overflow-y-auto space-y-5 custom-scrollbar flex-1">
                      {builderTab === 'SIMPLE' ? (
-                        /* SIMPLE MODE: ONLY ASK TOTAL MARKS, QUESTION TYPE, CHOICE OR NOT */
-                        <div className="space-y-4">
-                           <div className="bg-gradient-to-br from-indigo-50/90 to-purple-50/60 p-4 rounded-2xl border border-indigo-100">
+                        <div className="space-y-5">
+                           {/* TOP NOTICE BANNER */}
+                           <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 p-4 rounded-2xl border border-indigo-100/80">
                               <p className="text-xs font-bold text-indigo-950 leading-relaxed">
-                                 Enter <strong>Total Marks</strong>, choose <strong>Question Type</strong>, and select whether to give <strong>Student Choice</strong>.
-                                 The system will automatically calculate the questions to attempt and auto-fill them evenly across your chapters!
+                                 ⚡ Enter your <strong>Whole Paper Marks</strong>, select which <strong>Question Types</strong> to include, and toggle <strong>Student Choice</strong>.
+                                 The system auto-allocates: <strong>25% MCQs</strong> (1 Mark), <strong>45% Short Questions</strong> (2 Marks), and remaining for <strong>Long Questions</strong> (4 Marks subparts or 8 Marks single).
                               </p>
                            </div>
 
-                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              {/* QUESTION TYPE */}
-                              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                           {/* 1. TOTAL PAPER MARKS & STUDENT CHOICE */}
+                           <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                              {/* TOTAL PAPER MARKS */}
+                              <div className="sm:col-span-7 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
                                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                                    <Library size={13} className="text-indigo-600" /> 1. Question Type
+                                    <Tag size={13} className="text-rose-600" /> Total Paper Marks
                                  </label>
-                                 <select
-                                    value={quickSimpleType}
-                                    onChange={e => {
-                                       const t = e.target.value;
-                                       setQuickSimpleType(t);
-                                       const defMarks = t === 'Multiple Choice' ? 1 : t === 'Short Question' ? 2 : 4;
-                                       setQuickSimpleMarksPerQ(defMarks);
-                                    }}
-                                    className="w-full h-11 px-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 cursor-pointer"
-                                 >
-                                    <option value="Short Question">Short Question</option>
-                                    <option value="Multiple Choice">Multiple Choice (MCQ)</option>
-                                    <option value="Long Answer">Long Answer</option>
-                                    <option value="Fill in the Blanks">Fill in the Blanks</option>
-                                    <option value="True/False">True / False</option>
-                                    <option value="Translation">Translation</option>
-                                    <option value="Words/Sentences">Words / Sentences</option>
-                                 </select>
-                                 <p className="text-[10px] text-slate-400 mt-2">Default: {quickSimpleMarksPerQ} marks per question</p>
-                              </div>
-
-                              {/* TOTAL MARKS */}
-                              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
-                                 <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                                    <Tag size={13} className="text-rose-600" /> 2. Total Marks for Section
-                                 </label>
-                                 <div className="flex items-center gap-2">
+                                 <div className="flex items-center gap-3">
                                     <input
                                        type="number"
-                                       min="1"
-                                       step="1"
-                                       value={quickSimpleTotalMarks}
-                                       onChange={e => setQuickSimpleTotalMarks(Math.max(1, parseInt(e.target.value) || 1))}
-                                       className="flex-1 h-11 px-3 bg-white border border-slate-200 rounded-xl text-base font-black text-rose-600 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100 text-center"
+                                       min="10"
+                                       step="5"
+                                       value={quickTotalPaperMarks}
+                                       onChange={e => setQuickTotalPaperMarks(Math.max(10, parseInt(e.target.value) || 10))}
+                                       className="w-32 h-11 px-3 bg-white border border-slate-200 rounded-xl text-lg font-black text-rose-600 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100 text-center"
                                     />
-                                    <span className="text-xs font-black text-slate-400">Marks</span>
-                                 </div>
-                                 <div className="flex items-center justify-between mt-2 text-[10px] text-slate-500">
-                                    <span>Marks / Q:</span>
-                                    <input
-                                       type="number"
-                                       min="1"
-                                       value={quickSimpleMarksPerQ}
-                                       onChange={e => setQuickSimpleMarksPerQ(Math.max(1, parseInt(e.target.value) || 1))}
-                                       className="w-12 h-6 text-center font-bold text-slate-700 bg-white border border-slate-200 rounded outline-none text-xs"
-                                    />
-                                 </div>
-                              </div>
-                           </div>
-
-                           {/* CHOICE OR NOT */}
-                           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
-                              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                                 <CheckCircle2 size={13} className="text-emerald-600" /> 3. Student Choice
-                              </label>
-                              <div className="grid grid-cols-2 gap-3">
-                                 <button
-                                    type="button"
-                                    onClick={() => setQuickSimpleHasChoice(true)}
-                                    className={`py-3 px-4 rounded-xl border text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
-                                       quickSimpleHasChoice
-                                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-100'
-                                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
-                                    }`}
-                                 >
-                                    <CheckCircle2 size={15} /> Give Choice (e.g. 5 of 8)
-                                 </button>
-                                 <button
-                                    type="button"
-                                    onClick={() => setQuickSimpleHasChoice(false)}
-                                    className={`py-3 px-4 rounded-xl border text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
-                                       !quickSimpleHasChoice
-                                          ? 'bg-slate-800 text-white border-slate-800 shadow-md shadow-slate-200'
-                                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
-                                    }`}
-                                 >
-                                    <span>✕</span> No Choice (Attempt All)
-                                 </button>
-                              </div>
-
-                              {quickSimpleHasChoice && (
-                                 <div className="bg-white p-3 rounded-xl border border-emerald-100 flex items-center justify-between text-xs">
-                                    <span className="text-slate-600 font-semibold">Extra optional questions for choice:</span>
-                                    <div className="flex items-center gap-2">
-                                       <input
-                                          type="number"
-                                          min="1"
-                                          value={quickSimpleExtraChoices}
-                                          onChange={e => setQuickSimpleExtraChoices(Math.max(1, parseInt(e.target.value) || 1))}
-                                          className="w-12 h-7 text-center font-black text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg outline-none text-xs"
-                                       />
-                                       <span className="text-slate-400 font-bold">extra Qs</span>
+                                    <div className="flex flex-wrap gap-1.5">
+                                       {[25, 50, 75, 100].map(m => (
+                                          <button
+                                             key={m}
+                                             type="button"
+                                             onClick={() => setQuickTotalPaperMarks(m)}
+                                             className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all ${
+                                                quickTotalPaperMarks === m
+                                                   ? 'bg-rose-600 text-white'
+                                                   : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                                             }`}
+                                          >
+                                             {m}M
+                                          </button>
+                                       ))}
                                     </div>
                                  </div>
-                              )}
-                           </div>
+                              </div>
 
-                           {/* LIVE PREVIEW OF SYSTEM AUTO CALCULATION */}
-                           {(() => {
-                              const marksPerQ = Math.max(1, quickSimpleMarksPerQ);
-                              const totalMarks = Math.max(marksPerQ, quickSimpleTotalMarks);
-                              const selectCount = Math.max(1, Math.round(totalMarks / marksPerQ));
-                              const extra = quickSimpleHasChoice ? Math.max(1, quickSimpleExtraChoices) : 0;
-                              const totalCount = selectCount + extra;
-                              return (
-                                 <div className="bg-indigo-900 text-white p-4 rounded-2xl flex items-center justify-between shadow-lg shadow-indigo-950/20">
+                              {/* CHOICE OR NOT CHECKBOX */}
+                              <div className="sm:col-span-5 bg-slate-50 p-4 rounded-2xl border border-slate-200/80 flex flex-col justify-between">
+                                 <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                    <CheckCircle2 size={13} className="text-emerald-600" /> Student Choice
+                                 </label>
+                                 <label className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:border-emerald-300 transition-all select-none">
+                                    <input
+                                       type="checkbox"
+                                       checked={quickHasChoice}
+                                       onChange={e => setQuickHasChoice(e.target.checked)}
+                                       className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 accent-emerald-600 cursor-pointer"
+                                    />
                                     <div>
-                                       <span className="text-[9px] uppercase tracking-widest text-indigo-300 font-black block">Auto-Calculated Output</span>
-                                       <span className="text-sm font-black">
-                                          Print {totalCount} Questions → Student Attempts {selectCount}
+                                       <span className="text-xs font-black text-slate-800 block">
+                                          {quickHasChoice ? '✓ Give Student Choice' : '✕ No Choice (Attempt All)'}
                                        </span>
-                                       <span className="text-[11px] text-indigo-200 block mt-0.5">
-                                          ({selectCount} Qs × {marksPerQ} Marks = {selectCount * marksPerQ} Marks total)
+                                       <span className="text-[10px] text-slate-400 font-medium block">
+                                          {quickHasChoice ? 'Extra optional Qs for Short & Long' : 'Every question is compulsory'}
                                        </span>
                                     </div>
-                                    <div className="text-right bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
-                                       <span className="text-[9px] uppercase tracking-wider text-indigo-200 font-black block">Choice Status</span>
-                                       <span className="text-xs font-black text-amber-300">
-                                          {quickSimpleHasChoice ? `Attempt ${selectCount} of ${totalCount}` : 'Compulsory (All)'}
+                                 </label>
+                              </div>
+                           </div>
+
+                           {/* 2. QUESTION TYPES SELECTION (CHECKBOXES) */}
+                           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
+                              <div className="flex items-center justify-between">
+                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                                    <Library size={13} className="text-indigo-600" /> Select Question Types to Include
+                                 </label>
+                                 <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                                    {quickSelectedTypes.length} types selected
+                                 </span>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                 {[
+                                    { type: 'Multiple Choice', label: 'MCQs', defaultMarks: 1, desc: '25% share (1 mark each)' },
+                                    { type: 'Short Question', label: 'Short Questions', defaultMarks: 2, desc: '45% share (2 marks each)' },
+                                    { type: 'Long Answer', label: 'Long Answer', defaultMarks: 4, desc: '30% share (detailed)' }
+                                 ].map(item => {
+                                    const isChecked = quickSelectedTypes.includes(item.type);
+                                    return (
+                                       <div
+                                          key={item.type}
+                                          onClick={() => {
+                                             if (isChecked) {
+                                                if (quickSelectedTypes.length > 1) {
+                                                   setQuickSelectedTypes(quickSelectedTypes.filter(t => t !== item.type));
+                                                }
+                                             } else {
+                                                setQuickSelectedTypes([...quickSelectedTypes, item.type]);
+                                             }
+                                          }}
+                                          className={`p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                                             isChecked
+                                                ? 'bg-white border-indigo-600 shadow-sm'
+                                                : 'bg-white/60 border-slate-200 opacity-60 hover:opacity-100'
+                                          }`}
+                                       >
+                                          <div className="flex items-center justify-between mb-1">
+                                             <span className="text-xs font-black text-slate-800">{item.label}</span>
+                                             <input
+                                                type="checkbox"
+                                                checked={isChecked}
+                                                onChange={() => {}}
+                                                className="w-4 h-4 text-indigo-600 rounded accent-indigo-600 cursor-pointer"
+                                             />
+                                          </div>
+                                          <p className="text-[10px] text-slate-500 font-medium">{item.desc}</p>
+                                       </div>
+                                    );
+                                 })}
+                              </div>
+
+                              {/* OTHER OPTIONAL TYPES */}
+                              <div className="pt-2 border-t border-slate-200/60">
+                                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-2">Other Additional Types:</span>
+                                 <div className="flex flex-wrap gap-2">
+                                    {['Fill in the Blanks', 'True/False', 'Translation', 'Words/Sentences'].map(t => {
+                                       const isChecked = quickSelectedTypes.includes(t);
+                                       return (
+                                          <button
+                                             key={t}
+                                             type="button"
+                                             onClick={() => {
+                                                if (isChecked) {
+                                                   if (quickSelectedTypes.length > 1) {
+                                                      setQuickSelectedTypes(quickSelectedTypes.filter(x => x !== t));
+                                                   }
+                                                } else {
+                                                   setQuickSelectedTypes([...quickSelectedTypes, t]);
+                                                }
+                                             }}
+                                             className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all flex items-center gap-1.5 ${
+                                                isChecked
+                                                   ? 'bg-indigo-50 text-indigo-700 border-indigo-300'
+                                                   : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'
+                                             }`}
+                                          >
+                                             <span>{isChecked ? '✓' : '+'}</span> {t}
+                                          </button>
+                                       );
+                                    })}
+                                 </div>
+                              </div>
+                           </div>
+
+                           {/* 3. LONG QUESTION SUBPARTS MODE (4 MARKS EACH OR 8 MARKS SINGLE) */}
+                           {quickSelectedTypes.includes('Long Answer') && (
+                              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">
+                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                                    <Layers size={13} className="text-purple-600" /> Long Questions Configuration
+                                 </label>
+                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <button
+                                       type="button"
+                                       onClick={() => setQuickLongPartsMode('SUBPARTS')}
+                                       className={`p-3 rounded-xl border text-left transition-all ${
+                                          quickLongPartsMode === 'SUBPARTS'
+                                             ? 'bg-purple-50 border-purple-400 shadow-sm'
+                                             : 'bg-white border-slate-200 hover:bg-slate-100'
+                                       }`}
+                                    >
+                                       <span className="text-xs font-black text-purple-900 block">
+                                          Sub-parts (a, b) - 4 Marks each
                                        </span>
+                                       <span className="text-[10px] text-purple-600 font-medium block mt-0.5">
+                                          Standard board style: Part (a) 4 Marks + Part (b) 4 Marks = 8 Marks / Q
+                                       </span>
+                                    </button>
+                                    <button
+                                       type="button"
+                                       onClick={() => setQuickLongPartsMode('SINGLE')}
+                                       className={`p-3 rounded-xl border text-left transition-all ${
+                                          quickLongPartsMode === 'SINGLE'
+                                             ? 'bg-purple-50 border-purple-400 shadow-sm'
+                                             : 'bg-white border-slate-200 hover:bg-slate-100'
+                                       }`}
+                                    >
+                                       <span className="text-xs font-black text-purple-900 block">
+                                          Single Full Question - 8 Marks
+                                       </span>
+                                       <span className="text-[10px] text-purple-600 font-medium block mt-0.5">
+                                          Only 1 full detailed part worth 8 marks per question
+                                       </span>
+                                    </button>
+                                 </div>
+                              </div>
+                           )}
+
+                           {/* 4. LIVE DISTRIBUTION PREVIEW BANNER */}
+                           {(() => {
+                              const selected = quickSelectedTypes.length > 0 ? quickSelectedTypes : ['Short Question'];
+                              const weights: Record<string, number> = {};
+                              selected.forEach(t => {
+                                 if (t === 'Multiple Choice') weights[t] = 0.25;
+                                 else if (t === 'Short Question') weights[t] = 0.45;
+                                 else if (t === 'Long Answer') weights[t] = 0.30;
+                                 else weights[t] = 0.20;
+                              });
+                              const sumW = Object.values(weights).reduce((a, b) => a + b, 0) || 1;
+                              selected.forEach(t => { weights[t] = weights[t] / sumW; });
+
+                              return (
+                                 <div className="bg-slate-900 text-white p-4 sm:p-5 rounded-2xl shadow-xl space-y-3">
+                                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                                       <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">
+                                          System Auto-Calculation Breakdown
+                                       </span>
+                                       <span className="text-xs font-black text-amber-300">
+                                          Total Paper: {quickTotalPaperMarks} Marks
+                                       </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                                       {selected.map(t => {
+                                          const share = Math.max(2, Math.round(quickTotalPaperMarks * weights[t]));
+                                          let marksPerQ = 1;
+                                          if (t === 'Multiple Choice') marksPerQ = 1;
+                                          else if (t === 'Short Question') marksPerQ = 2;
+                                          else if (t === 'Long Answer') marksPerQ = quickLongPartsMode === 'SINGLE' ? 8 : 4;
+                                          else marksPerQ = quickCustomMarks[t] || 2;
+
+                                          const selectCount = Math.max(1, Math.round(share / marksPerQ));
+                                          let totalCount = selectCount;
+                                          if (quickHasChoice) {
+                                             if (t === 'Short Question') totalCount = selectCount + (selectCount >= 8 ? 4 : 3);
+                                             else if (t === 'Long Answer') totalCount = selectCount + 1;
+                                             else if (t !== 'Multiple Choice') totalCount = selectCount + 2;
+                                          }
+
+                                          return (
+                                             <div key={t} className="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+                                                <div className="flex items-center justify-between mb-1">
+                                                   <span className="font-bold text-white text-[11px] truncate">{t}</span>
+                                                   <span className="text-rose-400 font-black text-[10px]">{selectCount * marksPerQ}M</span>
+                                                </div>
+                                                <p className="text-[10px] text-slate-300">
+                                                   Attempt <strong>{selectCount}</strong> {quickHasChoice && totalCount > selectCount ? `of ${totalCount}` : ''} Qs
+                                                </p>
+                                                <p className="text-[9px] text-slate-400 mt-0.5">
+                                                   {marksPerQ} Mark{marksPerQ > 1 ? 's' : ''} per Q ({Math.round(weights[t] * 100)}% share)
+                                                </p>
+                                             </div>
+                                          );
+                                       })}
                                     </div>
                                  </div>
                               );

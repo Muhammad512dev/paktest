@@ -112,6 +112,8 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
    const [activeTypes, setActiveTypes] = useState<string[]>([]);
    const [questionMenuQuery, setQuestionMenuQuery] = useState('');
    const [questionMenuSort, setQuestionMenuSort] = useState<'default' | 'type' | 'marks'>('default');
+   const [selectionStatusFilter, setSelectionStatusFilter] = useState<'all' | 'selected' | 'unselected'>('all');
+   const [questionGridColumns, setQuestionGridColumns] = useState<1 | 2 | 3>(2);
 
    // Toggle State for Scope & Filter Dropdowns
    const [isScopeExpanded, setIsScopeExpanded] = useState(true);
@@ -266,6 +268,12 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
       const q = questionMenuQuery.trim().toLowerCase();
       let list = availableQuestions;
 
+      if (selectionStatusFilter === 'selected') {
+         list = list.filter(item => currentPaper.questions.some(sq => (sq.id === item.id || sq.id.startsWith(item.id + '_')) && sq.sectionId === activeSectionId));
+      } else if (selectionStatusFilter === 'unselected') {
+         list = list.filter(item => !currentPaper.questions.some(sq => (sq.id === item.id || sq.id.startsWith(item.id + '_')) && sq.sectionId === activeSectionId));
+      }
+
       if (q) {
          list = list.filter(item => {
             const hay = [
@@ -291,7 +299,7 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
       }
 
       return list;
-   }, [availableQuestions, questionMenuQuery, questionMenuSort]);
+   }, [availableQuestions, questionMenuQuery, questionMenuSort, selectionStatusFilter, currentPaper.questions, activeSectionId]);
 
    const toggleQuestionSelection = (q: Question) => {
       if (!sectionConfig) return;
@@ -829,7 +837,7 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                            <div className="space-y-3 animate-in slide-in-from-bottom-4 duration-300 pb-8">
                               <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 md:-mx-8 px-4 sm:px-6 md:px-8 pt-2 pb-4 bg-white/95 backdrop-blur border-b border-slate-100 shadow-2xs">
                                  <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-3">
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                                           {displayedMenuQuestions.length} Results • {selectedInActiveSection} Selected
                                        </span>
@@ -841,29 +849,63 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                        </div>
                                     </div>
 
-                                    <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-                                       <div className="relative flex-1 min-w-[240px]">
+                                    <div className="flex flex-wrap gap-2.5 sm:items-center">
+                                       <div className="relative flex-1 min-w-[200px]">
                                           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                           <input
                                              value={questionMenuQuery}
                                              onChange={(e) => setQuestionMenuQuery(e.target.value)}
                                              placeholder="Search in results…"
-                                             className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                                             className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
                                           />
                                        </div>
+
+                                       {/* FILTER BY SELECTION STATUS */}
+                                       <select
+                                          value={selectionStatusFilter}
+                                          onChange={(e) => setSelectionStatusFilter(e.target.value as any)}
+                                          className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                                          title="Filter by Selection Status"
+                                       >
+                                          <option value="all">Filter: All Questions</option>
+                                          <option value="selected">Filter: Selected Only</option>
+                                          <option value="unselected">Filter: Unselected Only</option>
+                                       </select>
+
+                                       {/* COLUMNS FORM TOGGLE */}
+                                       <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+                                          <span className="text-[10px] font-black text-slate-400 uppercase px-1.5 hidden md:inline">Cols:</span>
+                                          {[1, 2, 3].map((cols) => (
+                                             <button
+                                                key={cols}
+                                                type="button"
+                                                onClick={() => setQuestionGridColumns(cols as any)}
+                                                className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all ${
+                                                   questionGridColumns === cols
+                                                      ? 'bg-white text-indigo-600 shadow-xs ring-1 ring-slate-200'
+                                                      : 'text-slate-500 hover:text-slate-800'
+                                                }`}
+                                                title={`View in ${cols} column${cols > 1 ? 's' : ''}`}
+                                             >
+                                                {cols} Col{cols > 1 ? 's' : ''}
+                                             </button>
+                                          ))}
+                                       </div>
+
                                        <select
                                           value={questionMenuSort}
                                           onChange={(e) => setQuestionMenuSort(e.target.value as any)}
-                                          className="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                                          className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
                                           title="Sort"
                                        >
-                                          <option value="default">Default</option>
+                                          <option value="default">Sort: Default</option>
                                           <option value="type">Sort: Type</option>
                                           <option value="marks">Sort: Marks</option>
                                        </select>
+
                                        <button
                                           onClick={clearSectionSelection}
-                                          className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-black text-slate-600 hover:bg-slate-50 hover:text-red-600 transition-colors"
+                                          className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-black text-slate-600 hover:bg-slate-50 hover:text-red-600 transition-colors cursor-pointer"
                                           title="Clear selected questions for this section"
                                        >
                                           Clear Selected
@@ -872,6 +914,14 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                  </div>
                                </div>
 
+                               {/* QUESTION LIST IN COLUMNS / GRID VIEW */}
+                               <div className={`grid gap-2.5 ${
+                                  questionGridColumns === 1
+                                     ? 'grid-cols-1'
+                                     : questionGridColumns === 2
+                                     ? 'grid-cols-1 lg:grid-cols-2'
+                                     : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'
+                               }`}>
                                {displayedMenuQuestions.map((q, idx) => {
                                  const isSelectedInThisSection = currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId === activeSectionId);
                                  const isSelectedInOtherSection = currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId !== activeSectionId);
@@ -881,7 +931,7 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                  const isTwoColumn = showEnglish && showUrdu;
 
                                  return (
-                                    <div key={q.id} onClick={() => toggleQuestionSelection(q)} className={`p-2 sm:p-2.5 rounded-lg border transition-all cursor-pointer group relative overflow-hidden ${isSelectedInThisSection ? 'border-indigo-500 bg-indigo-50/25 shadow-xs ring-1 ring-indigo-400' : isSelectedInOtherSection ? 'border-amber-400 bg-amber-50/15 shadow-2xs' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50/50'}`}>
+                                    <div key={q.id} onClick={() => toggleQuestionSelection(q)} className={`p-2 sm:p-2.5 rounded-lg border transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between ${isSelectedInThisSection ? 'border-indigo-500 bg-indigo-50/25 shadow-xs ring-1 ring-indigo-400' : isSelectedInOtherSection ? 'border-amber-400 bg-amber-50/15 shadow-2xs' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50/50'}`}>
                                        {isSelectedInThisSection && <div className="absolute top-0 right-0 w-6 h-6 bg-indigo-600 flex items-center justify-center rounded-bl-md text-white shadow-xs"><Check size={11} strokeWidth={3.5} /></div>}
                                        <div className="flex gap-2 items-start">
                                           <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-all font-bold text-[10px] ${isSelectedInThisSection ? 'bg-indigo-600 border-indigo-600 text-white' : isSelectedInOtherSection ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-300 bg-slate-50 text-slate-500'}`}>{idx + 1}</div>
@@ -949,7 +999,7 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
 
                                              {/* MCQ OPTIONS WITH COMPACT SIDE-BY-SIDE ENGLISH & URDU */}
                                              {normalizeType(q.type) === 'mcq' && ((q.options && q.options.length > 0) || (q.optionsUrdu && q.optionsUrdu.length > 0)) && (
-                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 sm:gap-1.5 mt-1 pt-1 border-t border-slate-100">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-1 pt-1 border-t border-slate-100">
                                                    {((q.options && q.options.length > 0) ? q.options : (q.optionsUrdu || [])).map((opt: string, i: number) => (
                                                       <div key={i} className="flex items-center justify-between gap-1.5 px-2 py-0.5 rounded bg-slate-50 border border-slate-100 text-[11px] leading-tight text-slate-700">
                                                          <div className="flex items-center gap-1 min-w-0">
@@ -970,28 +1020,80 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                     </div>
                                  );
                               })}
-                           </div>
-                        )}
-                     </main>
-                  </div>
+                               </div>
+                            </div>
+                         )}
+                      </main>
+                   </div>
 
                   {/* MODAL FOOTER */}
                   <div className="px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-100 bg-white flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 shrink-0 shadow-[0_-6px_20px_rgba(0,0,0,0.02)]">
-                     <div className="flex items-center gap-3">
+                     <div className="flex items-center gap-3 flex-wrap">
                         <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">PROGRESS:</p>
                         <div className="flex items-baseline gap-1.5">
-                           <span className={`text-2xl sm:text-3xl font-black tracking-tight tabular-nums ${getSectionSelectedCount(activeSectionId) >= (sectionConfig?.totalCount || 0) ? 'text-emerald-600' : 'text-indigo-600'}`}>
+                           <span className={`text-2xl sm:text-3xl font-black tracking-tight tabular-nums ${getSectionSelectedCount(activeSectionId) === (sectionConfig?.totalCount || 0) ? 'text-emerald-600' : 'text-indigo-600'}`}>
                               {getSectionSelectedCount(activeSectionId)}
                            </span>
                            <span className="text-slate-300 font-bold text-xl">/</span>
                            <span className="text-slate-400 font-black text-2xl sm:text-3xl tracking-tight tabular-nums">{sectionConfig?.totalCount}</span>
                         </div>
+                        {(() => {
+                            const cur = getSectionSelectedCount(activeSectionId);
+                            const tot = sectionConfig?.totalCount || 0;
+                            if (cur < tot) {
+                               return (
+                                  <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[11px] font-bold">
+                                     Select {tot - cur} more question{tot - cur > 1 ? 's' : ''} to deploy
+                                  </span>
+                               );
+                            } else if (cur > tot) {
+                               return (
+                                  <span className="px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-md text-[11px] font-bold">
+                                     {cur - tot} question{cur - tot > 1 ? 's' : ''} extra (unselect {cur - tot} to deploy)
+                                  </span>
+                               );
+                            } else {
+                               return (
+                                  <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-[11px] font-bold flex items-center gap-1">
+                                     <Check size={12} strokeWidth={3} /> Exact count matched! Ready to deploy
+                                  </span>
+                               );
+                            }
+                         })()}
                      </div>
                      <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
                         <button onClick={handleRandomSelect} disabled={availableQuestions.length === 0} className="px-4 sm:px-6 py-2 bg-white border border-slate-300 text-slate-700 font-bold uppercase tracking-wider rounded-xl hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-all text-xs flex items-center gap-2 active:scale-95 cursor-pointer shadow-2xs">
                            <Sparkles size={14} /> SMART RANDOM
                         </button>
-                        <button onClick={() => { setCurrentPaper({ ...currentPaper, structure: { ...currentPaper.structure, [activeSectionId]: sectionConfig } }); setIsSelectionModalOpen(false); }} className="px-6 sm:px-8 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold uppercase tracking-wider rounded-xl shadow-md shadow-indigo-200 transition-all text-xs active:scale-95 cursor-pointer">DEPLOY TO CANVAS</button>
+                        {(() => {
+                           const cur = getSectionSelectedCount(activeSectionId);
+                           const tot = sectionConfig?.totalCount || 0;
+                           const canDeploy = cur === tot;
+
+                           return (
+                              <button
+                                 type="button"
+                                 disabled={!canDeploy}
+                                 onClick={() => {
+                                    if (!canDeploy) return;
+                                    setCurrentPaper({ ...currentPaper, structure: { ...currentPaper.structure, [activeSectionId]: sectionConfig } });
+                                    setIsSelectionModalOpen(false);
+                                 }}
+                                 className={`px-6 sm:px-8 py-2 font-bold uppercase tracking-wider rounded-xl shadow-md transition-all text-xs active:scale-95 ${
+                                    canDeploy
+                                       ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 cursor-pointer'
+                                       : 'bg-slate-200 text-slate-400 border border-slate-300 shadow-none cursor-not-allowed opacity-80'
+                                 }`}
+                                 title={
+                                    canDeploy
+                                       ? 'Deploy selected questions to canvas'
+                                       : `Cannot deploy: exactly ${tot} question${tot === 1 ? '' : 's'} required (${cur} currently selected)`
+                                 }
+                              >
+                                 DEPLOY TO CANVAS
+                              </button>
+                           );
+                        })()}
                      </div>
                   </div>
                </div>

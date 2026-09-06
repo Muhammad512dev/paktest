@@ -36,6 +36,7 @@ const Quiz: React.FC = () => {
     classId: '',
     subjectId: '',
     chapterId: '',
+    level: 'All' as 'All' | 'Easy' | 'Medium' | 'Hard',
     sources: [] as string[],
     count: 10,
     medium: 'Bilingual' as 'English' | 'Urdu' | 'Bilingual'
@@ -87,7 +88,7 @@ const Quiz: React.FC = () => {
     const subjectName = curriculum.subjects.find(s => s.id === config.subjectId)?.name || '';
     const chapterName = curriculum.chapters.find(c => c.id === config.chapterId)?.name || '';
 
-    const newQuestions = await generatePublicQuiz({
+    let newQuestions = await generatePublicQuiz({
         board: boardName,
         grade: className,
         subject: subjectName,
@@ -96,6 +97,11 @@ const Quiz: React.FC = () => {
         count: config.count,
         medium: config.medium
     });
+
+    if (newQuestions && newQuestions.length > 0 && config.level !== 'All') {
+        const filtered = newQuestions.filter((q: any) => String(q.difficulty || '').toLowerCase() === config.level.toLowerCase());
+        if (filtered.length > 0) newQuestions = filtered;
+    }
     
     if (newQuestions && newQuestions.length > 0) {
         setQuestions(newQuestions);
@@ -229,12 +235,35 @@ const Quiz: React.FC = () => {
 
               <div className="space-y-2 md:col-span-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <Award size={12} /> Quiz Difficulty Level
+                </label>
+                <div className="grid grid-cols-4 gap-3">
+                  {['All', 'Easy', 'Medium', 'Hard'].map((lvl) => (
+                    <button
+                      key={lvl}
+                      type="button"
+                      onClick={() => setConfig({...config, level: lvl as any})}
+                      className={`p-3 rounded-xl border font-bold text-xs uppercase tracking-wide transition-all ${
+                        config.level === lvl
+                          ? 'bg-amber-500 text-white border-amber-500 shadow-md'
+                          : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      {lvl === 'All' ? '⚡ All Levels' : lvl}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                   <Languages size={12} /> Language Medium
                 </label>
                 <div className="grid grid-cols-3 gap-3">
                     {['English', 'Urdu', 'Bilingual'].map((medium) => (
                         <button
                             key={medium}
+                            type="button"
                             onClick={() => setConfig({...config, medium: medium as any})}
                             className={`p-3 rounded-xl border font-bold text-xs uppercase tracking-wide transition-all ${
                                 config.medium === medium 

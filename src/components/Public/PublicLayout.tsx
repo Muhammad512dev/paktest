@@ -19,6 +19,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
     { id: 'ABOUT', label: 'About' },
     { id: 'BLOG', label: 'Blog' },
     { id: 'NOTES', label: 'Notes' },
+    { id: 'LESSON_PLANS', label: 'Lesson Plans' },
     { id: 'PAST_PAPERS', label: 'Past Papers' },
     { id: 'QUIZ', label: 'Quiz' },
     { id: 'CONTACT', label: 'Contact' },

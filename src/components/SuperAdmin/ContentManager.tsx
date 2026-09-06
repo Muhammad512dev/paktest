@@ -7,7 +7,7 @@ import {
 import { Plus, Trash2, X, FileText, Upload, BookOpen, Clock, Calendar, CheckSquare, Image as ImageIcon } from 'lucide-react';
 
 const ContentManager: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'BLOG' | 'NOTES' | 'PAPERS'>('BLOG');
+  const [activeTab, setActiveTab] = useState<'BLOG' | 'NOTES' | 'LESSON_PLANS' | 'PAPERS'>('BLOG');
   const [items, setItems] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
@@ -20,6 +20,7 @@ const ContentManager: React.FC = () => {
     let data = [];
     if (activeTab === 'BLOG') data = await getBlogs();
     else if (activeTab === 'NOTES') data = await getNotes();
+    else if (activeTab === 'LESSON_PLANS') data = await getNotes({ noteType: 'Lesson Plan' });
     else if (activeTab === 'PAPERS') data = (await getPastPapers({ pageSize: 1000 })).data;
     setItems(data);
   };
@@ -33,9 +34,12 @@ const ContentManager: React.FC = () => {
        if (!blogForm.title) return;
        await addBlog({ ...blogForm, date: new Date(), readTime: '5 min read' });
        setBlogForm({ title: '', excerpt: '', content: '', category: 'EdTech', author: '', image: '' });
-    } else if (activeTab === 'NOTES') {
+    } else if (activeTab === 'NOTES' || activeTab === 'LESSON_PLANS') {
        if (!noteForm.title) return;
-       await addNote(noteForm);
+       await addNote({
+         ...noteForm,
+         noteType: activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : (noteForm.noteType || 'Book Notes')
+       });
        setNoteForm({ title: '', subject: '', grade: '', board: '', noteType: '', resource: '', book: '', author: '', fileUrl: '', description: '' });
     } else {
        if (!paperForm.title) return;
@@ -49,7 +53,7 @@ const ContentManager: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this item?")) return;
     if (activeTab === 'BLOG') await deleteBlog(id);
-    else if (activeTab === 'NOTES') await deleteNote(id);
+    else if (activeTab === 'NOTES' || activeTab === 'LESSON_PLANS') await deleteNote(id);
     else await deletePastPaper(id);
     loadData();
   };
@@ -59,7 +63,7 @@ const ContentManager: React.FC = () => {
       try {
         const url = await uploadFile(e.target.files[0]);
         if (activeTab === 'BLOG') setBlogForm({ ...blogForm, image: url });
-        else if (activeTab === 'NOTES') setNoteForm({ ...noteForm, fileUrl: url });
+        else if (activeTab === 'NOTES' || activeTab === 'LESSON_PLANS') setNoteForm({ ...noteForm, fileUrl: url });
         else setPaperForm({ ...paperForm, fileUrl: url });
       } catch (err) {
         alert("File upload failed");
@@ -75,18 +79,18 @@ const ContentManager: React.FC = () => {
           <p className="text-sm text-gray-500 mt-1">Manage public-facing resources</p>
         </div>
         <button onClick={() => setIsModalOpen(true)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2">
-          <Plus size={18} /> Add {activeTab === 'BLOG' ? 'Post' : activeTab === 'NOTES' ? 'Note' : 'Paper'}
+          <Plus size={18} /> Add {activeTab === 'BLOG' ? 'Post' : activeTab === 'NOTES' ? 'Note' : activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : 'Paper'}
         </button>
       </div>
 
       <div className="flex gap-4 border-b border-gray-200 mb-6">
-        {['BLOG', 'NOTES', 'PAPERS'].map(tab => (
+        {['BLOG', 'NOTES', 'LESSON_PLANS', 'PAPERS'].map(tab => (
           <button 
             key={tab} 
             onClick={() => setActiveTab(tab as any)}
             className={`px-6 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === tab ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
           >
-            {tab === 'BLOG' ? 'Blog Posts' : tab === 'NOTES' ? 'Study Notes' : 'Past Papers'}
+            {tab === 'BLOG' ? 'Blog Posts' : tab === 'NOTES' ? 'Study Notes' : tab === 'LESSON_PLANS' ? 'Lesson Plans' : 'Past Papers'}
           </button>
         ))}
       </div>
@@ -108,7 +112,7 @@ const ContentManager: React.FC = () => {
                 </>
              )}
 
-             {activeTab === 'NOTES' && (
+             {(activeTab === 'NOTES' || activeTab === 'LESSON_PLANS') && (
                 <>
                    <div className="flex items-start justify-between mb-2">
                       <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center"><FileText size={20}/></div>
@@ -162,20 +166,20 @@ const ContentManager: React.FC = () => {
                     </>
                  )}
 
-                 {activeTab === 'NOTES' && (
+                 {(activeTab === 'NOTES' || activeTab === 'LESSON_PLANS') && (
                     <>
                        <input type="text" placeholder="Title" className="w-full p-3 border rounded-xl" value={noteForm.title} onChange={e => setNoteForm({...noteForm, title: e.target.value})} />
                        <div className="grid grid-cols-2 gap-4">
                           <input type="text" placeholder="Board / Syllabus (e.g. Punjab Board)" className="w-full p-3 border rounded-xl" value={noteForm.board} onChange={e => setNoteForm({...noteForm, board: e.target.value})} />
-                          <input type="text" placeholder="Type (e.g. ECAT, NTS, Book Notes)" className="w-full p-3 border rounded-xl" value={noteForm.noteType} onChange={e => setNoteForm({...noteForm, noteType: e.target.value})} />
+                          <input type="text" placeholder="Type (e.g. ECAT, NTS, Lesson Plan)" className="w-full p-3 border rounded-xl" value={activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : noteForm.noteType} onChange={e => setNoteForm({...noteForm, noteType: e.target.value})} disabled={activeTab === 'LESSON_PLANS'} />
                        </div>
                        <div className="grid grid-cols-2 gap-4">
                           <input type="text" placeholder="Subject" className="w-full p-3 border rounded-xl" value={noteForm.subject} onChange={e => setNoteForm({...noteForm, subject: e.target.value})} />
                           <input type="text" placeholder="Grade" className="w-full p-3 border rounded-xl" value={noteForm.grade} onChange={e => setNoteForm({...noteForm, grade: e.target.value})} />
                        </div>
                        <input type="text" placeholder="Resources / Sources (comma-separated, e.g. KIPS, PGC, Star)" className="w-full p-3 border rounded-xl" value={noteForm.resource} onChange={e => setNoteForm({...noteForm, resource: e.target.value})} />
-                       <input type="text" placeholder="Book (optional)" className="w-full p-3 border rounded-xl" value={noteForm.book} onChange={e => setNoteForm({...noteForm, book: e.target.value})} />
-                       <input type="text" placeholder="Author" className="w-full p-3 border rounded-xl" value={noteForm.author} onChange={e => setNoteForm({...noteForm, author: e.target.value})} />
+                       <input type="text" placeholder="Book / Guide Name (optional)" className="w-full p-3 border rounded-xl" value={noteForm.book} onChange={e => setNoteForm({...noteForm, book: e.target.value})} />
+                       <input type="text" placeholder="Author / Publisher" className="w-full p-3 border rounded-xl" value={noteForm.author} onChange={e => setNoteForm({...noteForm, author: e.target.value})} />
                        <textarea placeholder="Description" className="w-full p-3 border rounded-xl h-24" value={noteForm.description} onChange={e => setNoteForm({...noteForm, description: e.target.value})} />
                        
                        <div className="space-y-3">
@@ -185,7 +189,7 @@ const ContentManager: React.FC = () => {
                          </div>
                          <div className="flex items-center gap-2">
                            <span className="text-xs text-gray-400 font-bold uppercase">OR</span>
-                           <input type="url" placeholder="Paste Google Drive / External PDF Link (https://drive.google.com/...)" className="w-full p-3 border rounded-xl text-sm font-mono" value={noteForm.fileUrl} onChange={e => setNoteForm({...noteForm, fileUrl: e.target.value})} />
+                           <input type="url" placeholder="Paste Google Drive / External File Link (https://drive.google.com/...)" className="w-full p-3 border rounded-xl text-sm font-mono" value={noteForm.fileUrl} onChange={e => setNoteForm({...noteForm, fileUrl: e.target.value})} />
                          </div>
                        </div>
                     </>

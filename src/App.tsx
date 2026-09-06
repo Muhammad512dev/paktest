@@ -44,6 +44,7 @@ const PastPapers = lazy(() => import('./components/Public/PastPapers'));
 const Quiz = lazy(() => import('./components/Public/Quiz'));
 const Blog = lazy(() => import('./components/Public/Blog'));
 const Pricing = lazy(() => import('./components/Public/Pricing'));
+const LessonPlans = lazy(() => import('./components/Public/LessonPlans'));
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -64,7 +65,7 @@ const App: React.FC = () => {
       } else {
         const parts = path.substring(1).split('/');
         const route = parts[0].toUpperCase();
-        const publicRoutes = ['PRICING', 'ABOUT', 'CONTACT', 'NOTES', 'PAST_PAPERS', 'QUIZ', 'BLOG', 'LOGIN', 'STUDENT_LOGIN', 'SIGNUP'];
+        const publicRoutes = ['PRICING', 'ABOUT', 'CONTACT', 'NOTES', 'LESSON_PLANS', 'PAST_PAPERS', 'QUIZ', 'BLOG', 'LOGIN', 'STUDENT_LOGIN', 'SIGNUP'];
         if (publicRoutes.includes(route)) {
           setPublicView(route);
         } else {
@@ -114,6 +115,38 @@ const App: React.FC = () => {
   useEffect(() => {
     initializeDB();
     loadSystemConfig();
+
+    // Check user session & 10-minute expiration
+    const token = localStorage.getItem('token');
+    const loginTimeStr = localStorage.getItem('login_timestamp');
+
+    if (token) {
+      const now = Date.now();
+      const loginTime = loginTimeStr ? parseInt(loginTimeStr, 10) : 0;
+      const TEN_MINUTES_MS = 10 * 60 * 1000;
+
+      // If token expired (more than 10 minutes since login)
+      if (!loginTime || now - loginTime > TEN_MINUTES_MS) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('login_timestamp');
+        setUser(null);
+        setPublicView('HOME');
+      } else {
+        // Restore user session
+        getCurrentUser().then(usr => {
+          if (usr) {
+            setUser(usr);
+          } else {
+            localStorage.removeItem('token');
+            localStorage.removeItem('login_timestamp');
+          }
+        }).catch(() => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('login_timestamp');
+        });
+      }
+    }
+
     // Apply cached theme immediately to avoid flash on reload
     const cached = localStorage.getItem('school_branding');
     if (cached) {
@@ -186,8 +219,8 @@ const App: React.FC = () => {
   };
 
   const handleStaffLogin = (loggedInUser: User) => {
-    // A new session must always start on its role's dashboard, rather than
-    // reopening whichever internal view was active before logout.
+    // A new session must always start on its role's dashboard
+    localStorage.setItem('login_timestamp', Date.now().toString());
     setActiveView('dashboard');
     setIsFullScreen(false);
     setSidebarOpen(false);
@@ -201,6 +234,7 @@ const App: React.FC = () => {
     }
     if (publicView === 'STUDENT_LOGIN') {
       return <StudentLogin onLogin={(studentData: any) => {
+        localStorage.setItem('login_timestamp', Date.now().toString());
         // Normalize student data into User shape for Sidebar/App compatibility
         const normalizedUser: User = {
           id: studentData.id,
@@ -221,7 +255,7 @@ const App: React.FC = () => {
     }
 
     if (publicView === 'SIGNUP') {
-      return <SignUp onLogin={setUser} onNavigate={setPublicView} />;
+      return <SignUp onLogin={(u) => { localStorage.setItem('login_timestamp', Date.now().toString()); setUser(u); }} onNavigate={setPublicView} />;
     }
 
     return (
@@ -236,6 +270,7 @@ const App: React.FC = () => {
         {publicView === 'ABOUT' && <About appName={systemConfig.platformName || 'PakParcha'} />}
         {publicView === 'CONTACT' && <Contact />}
         {publicView === 'NOTES' && <Notes />}
+        {publicView === 'LESSON_PLANS' && <LessonPlans />}
         {publicView === 'PAST_PAPERS' && <PastPapers />}
         {publicView === 'QUIZ' && <Quiz />}
         {publicView === 'BLOG' && <Blog />}

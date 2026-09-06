@@ -1,20 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   getBlogs, addBlog, deleteBlog,
   getNotes, addNote, deleteNote,
-  getPastPapers, addPastPaper, deletePastPaper, uploadFile
+  getPastPapers, addPastPaper, deletePastPaper, uploadFile,
+  getPublicCurriculum
 } from '../../services/dataService';
 import { Plus, Trash2, X, FileText, Upload, BookOpen, Clock, Calendar, CheckSquare, Image as ImageIcon } from 'lucide-react';
+import { Syllabus, ClassLevel } from '../../types';
 
 const ContentManager: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'BLOG' | 'NOTES' | 'LESSON_PLANS' | 'PAPERS'>('BLOG');
   const [items, setItems] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [curriculum, setCurriculum] = useState<{ syllabuses: Syllabus[]; classes: ClassLevel[] }>({ syllabuses: [], classes: [] });
   
   // Forms State
   const [blogForm, setBlogForm] = useState({ title: '', excerpt: '', content: '', category: 'EdTech', author: '', image: '' });
   const [noteForm, setNoteForm] = useState({ title: '', subject: '', grade: '', board: '', noteType: '', resource: '', book: '', author: '', fileUrl: '', description: '' });
   const [paperForm, setPaperForm] = useState({ title: '', year: new Date().getFullYear(), board: '', level: '', subject: '', resource: '', fileUrl: '' });
+
+  useEffect(() => {
+    const loadCurriculum = async () => {
+      try {
+        const data = await getPublicCurriculum();
+        setCurriculum({ syllabuses: data?.syllabuses || [], classes: data?.classes || [] });
+      } catch (_) {}
+    };
+    loadCurriculum();
+  }, []);
 
   const loadData = async () => {
     let data = [];
@@ -43,7 +56,8 @@ const ContentManager: React.FC = () => {
        setNoteForm({ title: '', subject: '', grade: '', board: '', noteType: '', resource: '', book: '', author: '', fileUrl: '', description: '' });
     } else {
        if (!paperForm.title) return;
-       await addPastPaper({ ...paperForm, year: parseInt(paperForm.year as any) });
+       const { resource, ...cleanPaperData } = paperForm;
+       await addPastPaper({ ...cleanPaperData, year: parseInt(paperForm.year as any) });
        setPaperForm({ title: '', year: new Date().getFullYear(), board: '', level: '', subject: '', resource: '', fileUrl: '' });
     }
     setIsModalOpen(false);
@@ -170,12 +184,39 @@ const ContentManager: React.FC = () => {
                     <>
                        <input type="text" placeholder="Title" className="w-full p-3 border rounded-xl" value={noteForm.title} onChange={e => setNoteForm({...noteForm, title: e.target.value})} />
                        <div className="grid grid-cols-2 gap-4">
-                          <input type="text" placeholder="Board / Syllabus (e.g. Punjab Board)" className="w-full p-3 border rounded-xl" value={noteForm.board} onChange={e => setNoteForm({...noteForm, board: e.target.value})} />
-                          <input type="text" placeholder="Type (e.g. ECAT, NTS, Lesson Plan)" className="w-full p-3 border rounded-xl" value={activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : noteForm.noteType} onChange={e => setNoteForm({...noteForm, noteType: e.target.value})} disabled={activeTab === 'LESSON_PLANS'} />
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase">Board / Syllabus</label>
+                            <select 
+                              className="w-full p-3 border rounded-xl bg-white font-medium text-sm"
+                              value={noteForm.board}
+                              onChange={e => setNoteForm({...noteForm, board: e.target.value})}
+                            >
+                              <option value="">Select Board / Syllabus...</option>
+                              {curriculum.syllabuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                            </select>
+                            <input type="text" placeholder="Or type Board manually" className="w-full p-2 border rounded-lg text-xs mt-1" value={noteForm.board} onChange={e => setNoteForm({...noteForm, board: e.target.value})} />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase">Type</label>
+                            <input type="text" placeholder="Type (e.g. ECAT, NTS, Lesson Plan)" className="w-full p-3 border rounded-xl" value={activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : noteForm.noteType} onChange={e => setNoteForm({...noteForm, noteType: e.target.value})} disabled={activeTab === 'LESSON_PLANS'} />
+                          </div>
                        </div>
                        <div className="grid grid-cols-2 gap-4">
-                          <input type="text" placeholder="Subject" className="w-full p-3 border rounded-xl" value={noteForm.subject} onChange={e => setNoteForm({...noteForm, subject: e.target.value})} />
-                          <input type="text" placeholder="Grade" className="w-full p-3 border rounded-xl" value={noteForm.grade} onChange={e => setNoteForm({...noteForm, grade: e.target.value})} />
+                          <input type="text" placeholder="Subject (e.g. Mathematics)" className="w-full p-3 border rounded-xl" value={noteForm.subject} onChange={e => setNoteForm({...noteForm, subject: e.target.value})} />
+                          
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase">Grade / Class</label>
+                            <select 
+                              className="w-full p-3 border rounded-xl bg-white font-medium text-sm"
+                              value={noteForm.grade}
+                              onChange={e => setNoteForm({...noteForm, grade: e.target.value})}
+                            >
+                              <option value="">Select Grade / Class...</option>
+                              {curriculum.classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                            </select>
+                            <input type="text" placeholder="Or type Grade manually" className="w-full p-2 border rounded-lg text-xs mt-1" value={noteForm.grade} onChange={e => setNoteForm({...noteForm, grade: e.target.value})} />
+                          </div>
                        </div>
                        <input type="text" placeholder="Resources / Sources (comma-separated, e.g. KIPS, PGC, Star)" className="w-full p-3 border rounded-xl" value={noteForm.resource} onChange={e => setNoteForm({...noteForm, resource: e.target.value})} />
                        <input type="text" placeholder="Book / Guide Name (optional)" className="w-full p-3 border rounded-xl" value={noteForm.book} onChange={e => setNoteForm({...noteForm, book: e.target.value})} />
@@ -199,14 +240,43 @@ const ContentManager: React.FC = () => {
                     <>
                        <input type="text" placeholder="Paper Title" className="w-full p-3 border rounded-xl" value={paperForm.title} onChange={e => setPaperForm({...paperForm, title: e.target.value})} />
                        <div className="grid grid-cols-2 gap-4">
-                          <input type="text" placeholder="Board" className="w-full p-3 border rounded-xl" value={paperForm.board} onChange={e => setPaperForm({...paperForm, board: e.target.value})} />
-                          <input type="number" placeholder="Year" className="w-full p-3 border rounded-xl" value={paperForm.year} onChange={e => setPaperForm({...paperForm, year: parseInt(e.target.value)})} />
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase">Board / Syllabus</label>
+                            <select 
+                              className="w-full p-3 border rounded-xl bg-white font-medium text-sm"
+                              value={paperForm.board}
+                              onChange={e => setPaperForm({...paperForm, board: e.target.value})}
+                            >
+                              <option value="">Select Board / Syllabus...</option>
+                              {curriculum.syllabuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                            </select>
+                            <input type="text" placeholder="Or type Board manually" className="w-full p-2 border rounded-lg text-xs mt-1" value={paperForm.board} onChange={e => setPaperForm({...paperForm, board: e.target.value})} />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase">Year</label>
+                            <input type="number" placeholder="Year" className="w-full p-3 border rounded-xl" value={paperForm.year} onChange={e => setPaperForm({...paperForm, year: parseInt(e.target.value)})} />
+                          </div>
                        </div>
                        <div className="grid grid-cols-2 gap-4">
-                          <input type="text" placeholder="Level/Grade" className="w-full p-3 border rounded-xl" value={paperForm.level} onChange={e => setPaperForm({...paperForm, level: e.target.value})} />
-                          <input type="text" placeholder="Subject" className="w-full p-3 border rounded-xl" value={paperForm.subject} onChange={e => setPaperForm({...paperForm, subject: e.target.value})} />
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase">Level / Grade</label>
+                            <select 
+                              className="w-full p-3 border rounded-xl bg-white font-medium text-sm"
+                              value={paperForm.level}
+                              onChange={e => setPaperForm({...paperForm, level: e.target.value})}
+                            >
+                              <option value="">Select Level / Grade...</option>
+                              {curriculum.classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                            </select>
+                            <input type="text" placeholder="Or type Level manually" className="w-full p-2 border rounded-lg text-xs mt-1" value={paperForm.level} onChange={e => setPaperForm({...paperForm, level: e.target.value})} />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase">Subject</label>
+                            <input type="text" placeholder="Subject" className="w-full p-3 border rounded-xl" value={paperForm.subject} onChange={e => setPaperForm({...paperForm, subject: e.target.value})} />
+                          </div>
                        </div>
-                       <input type="text" placeholder="Resources / Sources (comma-separated, e.g. KIPS, PGC, Star)" className="w-full p-3 border rounded-xl" value={paperForm.resource} onChange={e => setPaperForm({...paperForm, resource: e.target.value})} />
                        
                        <div className="space-y-3">
                          <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-indigo-400 transition-colors" onClick={() => document.getElementById('paper-file')?.click()}>

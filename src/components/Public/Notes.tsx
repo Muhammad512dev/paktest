@@ -129,6 +129,72 @@ const Notes: React.FC = () => {
     });
   }, [notes, selectedBoard, selectedClass, selectedSubject, selectedType, filters.resource]);
 
+  // Dynamic URL Sync effect for step wizard navigation and note view
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const board = params.get('board') || '';
+      const cls = params.get('class') || '';
+      const subject = params.get('subject') || '';
+      const step = parseInt(params.get('step') || '1', 10);
+      const noteId = params.get('noteId');
+
+      setSelectedBoard(board);
+      setSelectedClass(cls);
+      setSelectedSubject(subject);
+      setCurrentStep(step);
+
+      if (noteId && notes.length > 0) {
+        const found = notes.find(n => String(n.id) === String(noteId));
+        if (found) setSelectedNoteModal(found);
+      } else if (!noteId) {
+        setSelectedNoteModal(null);
+      }
+    };
+
+    handlePopState();
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [notes]);
+
+  const updateRouteUrl = (newBoard: string, newClass: string, newSubject: string, newStep: number, noteId?: string) => {
+    setSelectedBoard(newBoard);
+    setSelectedClass(newClass);
+    setSelectedSubject(newSubject);
+    setCurrentStep(newStep);
+
+    const params = new URLSearchParams();
+    if (newBoard) params.set('board', newBoard);
+    if (newClass) params.set('class', newClass);
+    if (newSubject) params.set('subject', newSubject);
+    if (newStep > 1) params.set('step', newStep.toString());
+    if (noteId) params.set('noteId', noteId);
+
+    const queryString = params.toString();
+    const newPath = queryString ? `/notes?${queryString}` : '/notes';
+    window.history.pushState(null, '', newPath);
+  };
+
+  const handleOpenNote = (note: any, openInNewTab = false) => {
+    if (openInNewTab) {
+      const params = new URLSearchParams();
+      if (note.board) params.set('board', note.board);
+      if (note.grade) params.set('class', note.grade);
+      if (note.subject) params.set('subject', note.subject);
+      params.set('step', '4');
+      params.set('noteId', note.id);
+      window.open(`/notes?${params.toString()}`, '_blank');
+    } else {
+      setSelectedNoteModal(note);
+      updateRouteUrl(selectedBoard, selectedClass, selectedSubject, currentStep, note.id);
+    }
+  };
+
+  const closeNoteModal = () => {
+    setSelectedNoteModal(null);
+    updateRouteUrl(selectedBoard, selectedClass, selectedSubject, currentStep);
+  };
+
   const resetStepWizard = () => {
     setSelectedBoard('');
     setSelectedClass('');
@@ -136,6 +202,8 @@ const Notes: React.FC = () => {
     setSelectedType('');
     setFilters({ board: '', grade: '', noteType: '', resource: '' });
     setCurrentStep(1);
+    setSelectedNoteModal(null);
+    window.history.pushState(null, '', '/notes');
   };
 
   const totalPages = Math.ceil(stepNotes.length / itemsPerPage);
@@ -192,7 +260,7 @@ const Notes: React.FC = () => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
             <button
-              onClick={() => { setSelectedBoard(''); setCurrentStep(2); }}
+              onClick={() => updateRouteUrl('', '', '', 2)}
               className="p-6 rounded-2xl bg-gradient-to-r from-sky-400 to-blue-500 text-white font-black text-lg shadow-lg shadow-sky-200 hover:scale-105 transition-all text-center"
             >
               ALL BOARDS
@@ -200,7 +268,7 @@ const Notes: React.FC = () => {
             {availableBoards.map((board, idx) => (
               <button
                 key={board.id}
-                onClick={() => { setSelectedBoard(board.id); setCurrentStep(2); }}
+                onClick={() => updateRouteUrl(board.id, '', '', 2)}
                 className={`p-6 rounded-2xl bg-gradient-to-r ${pillColors[idx % pillColors.length]} font-black text-lg shadow-lg hover:scale-105 transition-all text-center`}
               >
                 {board.name}
@@ -210,19 +278,19 @@ const Notes: React.FC = () => {
         </div>
       )}
 
-      {/* STEP 2: Select Class / Level (Matching Screenshot 1 Pill Buttons: 9TH, 10TH, 11TH, 12TH) */}
+      {/* STEP 2: Select Class / Level */}
       {currentStep === 2 && (
         <div className="max-w-5xl mx-auto space-y-6">
           <div className="text-center mb-6">
             <span className="text-xs font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">Step 2</span>
             <h2 className="text-xl font-bold text-slate-800 mt-2">Select Class / Level</h2>
-            <button onClick={() => setCurrentStep(1)} className="text-xs text-slate-500 underline hover:text-slate-800 mt-1">← Change Board ({selectedBoard || 'All'})</button>
+            <button onClick={() => updateRouteUrl(selectedBoard, '', '', 1)} className="text-xs text-slate-500 underline hover:text-slate-800 mt-1">← Change Board ({selectedBoard || 'All'})</button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
             {stepClasses.map((cls, idx) => (
               <button
                 key={cls.id}
-                onClick={() => { setSelectedClass(cls.name); setCurrentStep(3); }}
+                onClick={() => updateRouteUrl(selectedBoard, cls.name, '', 3)}
                 className={`p-6 rounded-2xl bg-gradient-to-r ${pillColors[idx % pillColors.length]} font-black text-xl tracking-wider shadow-lg hover:scale-105 transition-all text-center uppercase`}
               >
                 {cls.name}
@@ -232,19 +300,19 @@ const Notes: React.FC = () => {
         </div>
       )}
 
-      {/* STEP 3: Select Subject (Matching Screenshot 2 Grid Pill Buttons) */}
+      {/* STEP 3: Select Subject */}
       {currentStep === 3 && (
         <div className="max-w-5xl mx-auto space-y-6">
           <div className="text-center mb-6">
             <span className="text-xs font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">Step 3</span>
             <h2 className="text-xl font-bold text-slate-800 mt-2">Select Subject</h2>
-            <button onClick={() => setCurrentStep(2)} className="text-xs text-slate-500 underline hover:text-slate-800 mt-1">← Change Class ({selectedClass})</button>
+            <button onClick={() => updateRouteUrl(selectedBoard, selectedClass, '', 2)} className="text-xs text-slate-500 underline hover:text-slate-800 mt-1">← Change Class ({selectedClass})</button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {availableSubjects.map((sub, idx) => (
               <button
                 key={sub}
-                onClick={() => { setSelectedSubject(sub); setCurrentStep(4); }}
+                onClick={() => updateRouteUrl(selectedBoard, selectedClass, sub, 4)}
                 className={`p-5 rounded-2xl bg-gradient-to-r ${pillColors[idx % pillColors.length]} font-black text-base tracking-wide shadow-md hover:scale-105 transition-all text-center uppercase`}
               >
                 {sub}
@@ -278,7 +346,7 @@ const Notes: React.FC = () => {
             {stepNotes.map(note => (
               <div
                 key={note.id}
-                onClick={() => setSelectedNoteModal(note)}
+                onClick={() => handleOpenNote(note, false)}
                 className="p-5 bg-white rounded-2xl border border-slate-200 hover:border-indigo-400 shadow-sm hover:shadow-xl transition-all flex flex-col items-center justify-center text-center group cursor-pointer relative"
               >
                 {/* Red PDF Icon */}
@@ -287,9 +355,22 @@ const Notes: React.FC = () => {
                 </div>
                 <h4 className="font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors line-clamp-2">{note.title || `${note.subject} Notes`}</h4>
                 <p className="text-[11px] text-slate-400 font-semibold uppercase mt-1 tracking-wider">{note.grade || selectedClass} • {note.subject}</p>
-                <div className="mt-3 inline-flex items-center gap-1 text-[11px] font-black text-indigo-600 group-hover:underline">
-                  <span>View Details & PDF</span>
-                  <span>→</span>
+                <div className="mt-3 flex items-center justify-center gap-2">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleOpenNote(note, false); }}
+                    className="inline-flex items-center gap-1 text-[11px] font-black text-indigo-600 hover:underline"
+                  >
+                    <span>Details & Preview</span>
+                  </button>
+                  <span className="text-slate-300">•</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleOpenNote(note, true); }}
+                    className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-600 hover:underline"
+                    title="Open in new browser tab with direct URL"
+                  >
+                    <span>New Tab</span>
+                    <span>↗</span>
+                  </button>
                 </div>
               </div>
             ))}
@@ -320,7 +401,7 @@ const Notes: React.FC = () => {
                 <h3 className="text-xl font-black text-white">{selectedNoteModal.title}</h3>
                 <p className="text-xs text-slate-400 mt-1">Author: {selectedNoteModal.author || 'ExamForge'} {selectedNoteModal.book ? `• Book: ${selectedNoteModal.book}` : ''}</p>
               </div>
-              <button onClick={() => setSelectedNoteModal(null)} className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full transition-colors">✕</button>
+              <button onClick={closeNoteModal} className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full transition-colors">✕</button>
             </div>
 
             {/* Modal Content */}
@@ -369,7 +450,7 @@ const Notes: React.FC = () => {
                 rel="noreferrer"
                 className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-md hover:scale-105 transition-all"
               >
-                <span>Open File in New Tab</span>
+                <span>Open Google Drive File</span>
                 <span className="text-base">➔</span>
               </a>
             </div>
@@ -381,4 +462,5 @@ const Notes: React.FC = () => {
 };
 
 export default Notes;
+
 

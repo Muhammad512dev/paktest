@@ -95,236 +95,258 @@ const Notes: React.FC = () => {
     return Array.from(set);
   }, [notes]);
 
-  const filteredClasses = useMemo(() => {
-    return availableClasses.filter(c => !filters.board || !c.syllabusId || c.syllabusId === filters.board);
-  }, [availableClasses, filters.board]);
+  // Step Navigation state: 1 = Syllabus/Board, 2 = Class, 3 = Subject/NoteType, 4 = Notes/PDF View
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [selectedBoard, setSelectedBoard] = useState<string>('');
+  const [selectedClass, setSelectedClass] = useState<string>('');
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [selectedType, setSelectedType] = useState<string>('');
 
-  const filteredNotes = useMemo(() => {
-    if (!filters.resource) return notes;
-    return notes.filter(n => {
-      const raw = n.resource || n.source || n.book || '';
-      const items = raw.split(',').map((s: string) => s.trim().toLowerCase());
-      return items.includes(filters.resource.toLowerCase());
+  // Extract available subjects from notes
+  const availableSubjects = useMemo(() => {
+    const set = new Set<string>();
+    notes.forEach(n => {
+      if (n.subject) set.add(n.subject);
     });
-  }, [notes, filters.resource]);
+    return Array.from(set);
+  }, [notes]);
 
-  // Recent 5 added notes for right-side widget
-  const recentFiveNotes = useMemo(() => {
-    return [...filteredNotes].slice(0, 5);
-  }, [filteredNotes]);
+  const stepClasses = useMemo(() => {
+    return availableClasses.filter(c => !selectedBoard || !c.syllabusId || c.syllabusId === selectedBoard);
+  }, [availableClasses, selectedBoard]);
 
-  // Pagination Logic
-  const totalPages = Math.ceil(filteredNotes.length / itemsPerPage);
+  const stepNotes = useMemo(() => {
+    return notes.filter(n => {
+      if (selectedBoard && n.board && n.board.toLowerCase() !== selectedBoard.toLowerCase()) return false;
+      if (selectedClass && n.grade && n.grade.toLowerCase() !== selectedClass.toLowerCase()) return false;
+      if (selectedSubject && n.subject && n.subject.toLowerCase() !== selectedSubject.toLowerCase()) return false;
+      if (selectedType && n.noteType && n.noteType.toLowerCase() !== selectedType.toLowerCase()) return false;
+      if (filters.resource && n.resource) {
+        const items = n.resource.split(',').map((s: string) => s.trim().toLowerCase());
+        if (!items.includes(filters.resource.toLowerCase())) return false;
+      }
+      return true;
+    });
+  }, [notes, selectedBoard, selectedClass, selectedSubject, selectedType, filters.resource]);
+
+  const resetStepWizard = () => {
+    setSelectedBoard('');
+    setSelectedClass('');
+    setSelectedSubject('');
+    setSelectedType('');
+    setFilters({ board: '', grade: '', noteType: '', resource: '' });
+    setCurrentStep(1);
+  };
+
+  const totalPages = Math.ceil(stepNotes.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentNotes = filteredNotes.slice(indexOfFirstItem, indexOfLastItem);
+  const currentNotes = stepNotes.slice(indexOfFirstItem, indexOfLastItem);
+  const recentFiveNotes = useMemo(() => stepNotes.slice(0, 5), [stepNotes]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, itemsPerPage, filters.board, filters.grade, filters.noteType]);
+  }, [searchTerm, itemsPerPage, selectedBoard, selectedClass, selectedSubject, selectedType]);
+
+  const stepDescriptions = [
+    { title: 'Step 1: Choose Board / Syllabus', desc: 'Select your educational board or syllabus system to view targeted notes.' },
+    { title: 'Step 2: Choose Academic Class', desc: 'Select the class or grade level for your selected board.' },
+    { title: 'Step 3: Choose Subject & Note Type', desc: 'Select your subject or specific category of notes.' },
+    { title: 'Step 4: View & Download Notes', desc: 'Browse available notes and open or download the PDF files directly.' }
+  ];
 
   return (
     <div className="py-12 max-w-7xl mx-auto px-6 lg:px-8">
-      <div className="text-center mb-12">
-        <h1 className="text-3xl font-black text-slate-900 mb-2">Study Notes Library</h1>
-        <p className="text-slate-500">Curated resources for students and teachers.</p>
+      {/* Title & Description Header */}
+      <div className="text-center mb-10">
+        <span className="px-4 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-black uppercase tracking-widest border border-indigo-100">Step-by-Step Study Notes</span>
+        <h1 className="text-3xl sm:text-4xl font-black text-slate-900 mt-3 mb-2">Interactive Study Notes Portal</h1>
+        <p className="text-slate-500 max-w-2xl mx-auto text-sm">Follow the step-by-step navigation below to easily find and open PDF notes for any board, class, or subject.</p>
       </div>
 
-      {/* Step Wizard Bar */}
+      {/* Breadcrumb Step Progress Indicator */}
       <div className="mb-8 p-6 bg-slate-900 text-white rounded-3xl shadow-xl border border-slate-800">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-6">
           <div>
-            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Interactive Step Wizard</span>
-            <h2 className="text-xl font-black text-white tracking-tight mt-0.5">Filter Notes Step-by-Step</h2>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Step {currentStep} of 4</span>
+              <span className="text-slate-600">•</span>
+              <span className="text-xs font-bold text-slate-400">{stepNotes.length} Notes Available</span>
+            </div>
+            <h2 className="text-xl font-black text-white tracking-tight mt-0.5">{stepDescriptions[currentStep - 1]?.title}</h2>
+            <p className="text-xs text-slate-400 mt-1">{stepDescriptions[currentStep - 1]?.desc}</p>
           </div>
-          {(filters.board || filters.grade || filters.noteType || filters.resource) && (
+          {(selectedBoard || selectedClass || selectedSubject || selectedType || currentStep > 1) && (
             <button 
-              onClick={() => setFilters({ board: '', grade: '', noteType: '', resource: '' })}
-              className="px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
+              onClick={resetStepWizard}
+              className="px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shrink-0"
             >
-              Reset Step Filters
+              Reset to Start
             </button>
           )}
         </div>
 
-        {/* Step 1: Board Selection */}
-        <div className="space-y-3 mb-6">
-          <p className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center text-[10px]">1</span> Select Board
-          </p>
-          <div className="flex flex-wrap gap-2.5">
-            <button 
-              onClick={() => setFilters(prev => ({ ...prev, board: '', grade: '' }))}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${!filters.board ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md font-black' : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+        {/* Step Numbers Bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { step: 1, label: 'Syllabus / Board', val: selectedBoard || 'All Boards' },
+            { step: 2, label: 'Class / Grade', val: selectedClass || 'All Classes' },
+            { step: 3, label: 'Subject / Type', val: selectedSubject || selectedType || 'All Subjects' },
+            { step: 4, label: 'PDF Notes File', val: `${stepNotes.length} Files` }
+          ].map(s => (
+            <button
+              key={s.step}
+              onClick={() => setCurrentStep(s.step)}
+              className={`p-3 rounded-2xl border text-left transition-all ${currentStep === s.step ? 'bg-indigo-600 text-white border-indigo-400 shadow-lg' : currentStep > s.step ? 'bg-slate-800 text-emerald-400 border-slate-700' : 'bg-slate-800/50 text-slate-400 border-slate-800 opacity-60'}`}
             >
-              All Boards
+              <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider mb-1">
+                <span>Step {s.step}</span>
+                {currentStep > s.step && <span className="text-emerald-400">✓ Done</span>}
+              </div>
+              <p className="text-xs font-bold truncate">{s.label}</p>
+              <p className="text-[11px] opacity-80 truncate mt-0.5">{s.val}</p>
             </button>
-            {availableBoards.map(s => (
+          ))}
+        </div>
+      </div>
+
+      {/* PAGE 1: Select Board / Syllabus */}
+      {currentStep === 1 && (
+        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm mb-8">
+          <h3 className="text-lg font-black text-slate-900 mb-2">Step 1: Select Educational Board / Syllabus</h3>
+          <p className="text-sm text-slate-500 mb-6">Choose a board to filter classes and subjects uploaded for that syllabus.</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <button
+              onClick={() => { setSelectedBoard(''); setCurrentStep(2); }}
+              className={`p-5 rounded-2xl border text-left transition-all ${!selectedBoard ? 'bg-indigo-50 border-indigo-500 shadow-md ring-2 ring-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow'}`}
+            >
+              <GraduationCap className="text-indigo-600 mb-3" size={28} />
+              <h4 className="font-bold text-slate-900 text-base">All Boards</h4>
+              <p className="text-xs text-slate-500 mt-1">Show study notes from all educational boards.</p>
+            </button>
+
+            {availableBoards.map(board => (
               <button
-                key={s.id}
-                onClick={() => setFilters(prev => ({ ...prev, board: s.id, grade: '' }))}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${filters.board === s.id ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md font-black' : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+                key={board.id}
+                onClick={() => { setSelectedBoard(board.id); setCurrentStep(2); }}
+                className={`p-5 rounded-2xl border text-left transition-all ${selectedBoard === board.id ? 'bg-indigo-50 border-indigo-500 shadow-md ring-2 ring-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow'}`}
               >
-                {s.name}
+                <GraduationCap className="text-indigo-600 mb-3" size={28} />
+                <h4 className="font-bold text-slate-900 text-base">{board.name}</h4>
+                <p className="text-xs text-slate-500 mt-1">View classes and subject notes for {board.name}.</p>
               </button>
             ))}
           </div>
         </div>
+      )}
 
-        {/* Step 2: Class Selection */}
-        <div className="space-y-3 mb-6">
-          <p className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px]">2</span> Select Academic Class
-          </p>
-          <div className="flex flex-wrap gap-2.5">
-            <button 
-              onClick={() => setFilters(prev => ({ ...prev, grade: '' }))}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${!filters.grade ? 'bg-indigo-600 text-white border-indigo-500 shadow-md font-black' : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+      {/* PAGE 2: Select Class */}
+      {currentStep === 2 && (
+        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-lg font-black text-slate-900">Step 2: Select Academic Class</h3>
+              <p className="text-sm text-slate-500">Board selected: <span className="font-bold text-indigo-600">{selectedBoard || 'All Boards'}</span></p>
+            </div>
+            <button onClick={() => setCurrentStep(1)} className="text-xs font-bold text-slate-500 hover:text-slate-800 underline">← Change Board</button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
+            <button
+              onClick={() => { setSelectedClass(''); setCurrentStep(3); }}
+              className={`p-5 rounded-2xl border text-left transition-all ${!selectedClass ? 'bg-indigo-50 border-indigo-500 shadow-md ring-2 ring-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow'}`}
             >
-              All Classes
+              <Layers className="text-indigo-600 mb-3" size={28} />
+              <h4 className="font-bold text-slate-900 text-base">All Classes</h4>
+              <p className="text-xs text-slate-500 mt-1">Include notes across all class levels.</p>
             </button>
-            {filteredClasses.map(c => (
+
+            {stepClasses.map(cls => (
               <button
-                key={c.id}
-                onClick={() => setFilters(prev => ({ ...prev, grade: c.name }))}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${filters.grade === c.name ? 'bg-indigo-600 text-white border-indigo-500 shadow-md font-black' : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+                key={cls.id}
+                onClick={() => { setSelectedClass(cls.name); setCurrentStep(3); }}
+                className={`p-5 rounded-2xl border text-left transition-all ${selectedClass === cls.name ? 'bg-indigo-50 border-indigo-500 shadow-md ring-2 ring-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow'}`}
               >
-                {c.name}
+                <Layers className="text-indigo-600 mb-3" size={28} />
+                <h4 className="font-bold text-slate-900 text-base">{cls.name}</h4>
+                <p className="text-xs text-slate-500 mt-1">Browse notes available for {cls.name}.</p>
               </button>
             ))}
           </div>
         </div>
+      )}
 
-        {/* Step 3: Type Selection */}
-        <div className="space-y-3 mb-6">
-          <p className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-[10px]">3</span> Select Resource Type
-          </p>
-          <div className="flex flex-wrap gap-2.5">
-            <button 
-              onClick={() => setFilters(prev => ({ ...prev, noteType: '' }))}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${!filters.noteType ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md font-black' : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
-            >
-              All Resource Types
-            </button>
-            {(availableNoteTypes.length > 0 ? availableNoteTypes : NOTE_TYPES).map(t => (
-              <button
-                key={t}
-                onClick={() => setFilters(prev => ({ ...prev, noteType: t }))}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${filters.noteType === t ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md font-black' : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
-              >
-                {t}
-              </button>
-            ))}
+      {/* PAGE 3: Select Subject / Note Type */}
+      {currentStep === 3 && (
+        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm mb-8 space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-black text-slate-900">Step 3: Select Subject or Resource Type</h3>
+              <p className="text-sm text-slate-500">Board: <span className="font-bold text-indigo-600">{selectedBoard || 'All'}</span> • Class: <span className="font-bold text-indigo-600">{selectedClass || 'All'}</span></p>
+            </div>
+            <button onClick={() => setCurrentStep(2)} className="text-xs font-bold text-slate-500 hover:text-slate-800 underline">← Change Class</button>
           </div>
-        </div>
 
-        {/* Step 4: Resource Source Selection */}
-        {availableResources.length > 0 && (
-          <div className="space-y-3">
-            <p className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-[10px]">4</span> Select Specific Resource (Source)
-            </p>
-            <div className="flex flex-wrap gap-2.5">
-              <button 
-                onClick={() => setFilters(prev => ({ ...prev, resource: '' }))}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${!filters.resource ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md font-black' : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+          <div>
+            <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">Filter By Subject</h4>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => { setSelectedSubject(''); setCurrentStep(4); }}
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold border ${!selectedSubject ? 'bg-indigo-600 text-white border-indigo-500' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}
               >
-                All Resources
+                All Subjects
               </button>
-              {availableResources.map(r => (
+              {availableSubjects.map(sub => (
                 <button
-                  key={r}
-                  onClick={() => setFilters(prev => ({ ...prev, resource: r }))}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${filters.resource === r ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md font-black' : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+                  key={sub}
+                  onClick={() => { setSelectedSubject(sub); setCurrentStep(4); }}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-bold border ${selectedSubject === sub ? 'bg-indigo-600 text-white border-indigo-500' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}
                 >
-                  {r}
+                  {sub}
                 </button>
               ))}
             </div>
           </div>
-        )}
-      </div>
 
+          <div>
+            <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">Filter By Resource Type</h4>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => { setSelectedType(''); setCurrentStep(4); }}
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold border ${!selectedType ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}
+              >
+                All Types
+              </button>
+              {(availableNoteTypes.length > 0 ? availableNoteTypes : NOTE_TYPES).map(type => (
+                <button
+                  key={type}
+                  onClick={() => { setSelectedType(type); setCurrentStep(4); }}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-bold border ${selectedType === type ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PAGE 4 / Main View: Notes Cards + Search */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-8 flex flex-col md:flex-row gap-4 justify-between items-center">
         <div className="relative flex-1 w-full md:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
           <input 
             type="text" 
-            placeholder="Search notes by title or subject..." 
+            placeholder="Search notes by title, subject or author..." 
             className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-          <div className="flex items-center gap-2">
-            <Filter className="text-slate-400" size={16} />
-            <span className="text-sm font-bold text-slate-500 whitespace-nowrap">Classic Filters:</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 w-full md:w-[640px]">
-            <div className="relative">
-              <GraduationCap className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <select
-                value={filters.board}
-                onChange={(e) => setFilters(prev => ({ ...prev, board: e.target.value, grade: '' }))}
-                className="w-full pl-9 pr-3 py-3 border border-slate-200 rounded-xl bg-white text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-              >
-                <option value="">All Boards</option>
-                {availableBoards.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="relative">
-              <Layers className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <select
-                value={filters.grade}
-                onChange={(e) => setFilters(prev => ({ ...prev, grade: e.target.value }))}
-                className="w-full pl-9 pr-3 py-3 border border-slate-200 rounded-xl bg-white text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer disabled:opacity-50"
-              >
-                <option value="">All Classes</option>
-                {filteredClasses.map(c => (
-                  <option key={c.id} value={c.name}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="relative">
-              <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <select
-                value={filters.noteType}
-                onChange={(e) => setFilters(prev => ({ ...prev, noteType: e.target.value }))}
-                className="w-full pl-9 pr-3 py-3 border border-slate-200 rounded-xl bg-white text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-              >
-                <option value="">All Types</option>
-                {(availableNoteTypes.length > 0 ? availableNoteTypes : NOTE_TYPES).map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <select
-                value={filters.resource}
-                onChange={(e) => setFilters(prev => ({ ...prev, resource: e.target.value }))}
-                className="w-full pl-9 pr-3 py-3 border border-slate-200 rounded-xl bg-white text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-              >
-                <option value="">All Resources</option>
-                {availableResources.map(r => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-        
         <div className="flex items-center gap-3 w-full md:w-auto">
-           <span className="text-sm font-bold text-slate-500 whitespace-nowrap">Show:</span>
+           <span className="text-sm font-bold text-slate-500 whitespace-nowrap">Show per page:</span>
            <select 
               value={itemsPerPage}
               onChange={(e) => setItemsPerPage(Number(e.target.value))}
@@ -342,41 +364,43 @@ const Notes: React.FC = () => {
         <div className="lg:col-span-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {currentNotes.map(note => (
-              <div key={note.id} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition-all group cursor-pointer">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                    <FileText size={24} />
+              <div key={note.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl transition-all group cursor-pointer flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                      <FileText size={24} />
+                    </div>
+                    <span className="px-3 py-1 bg-slate-100 text-slate-700 text-[10px] font-black uppercase tracking-widest rounded-full">{note.grade || 'General'}</span>
                   </div>
-                  <span className="px-3 py-1 bg-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-widest rounded-full">{note.grade}</span>
+                  <h3 className="text-lg font-bold text-slate-900 mb-1 line-clamp-2">{note.title}</h3>
+                  <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                    <span className="font-bold text-slate-700">{note.subject}</span>
+                    {note.noteType ? ` • ${note.noteType}` : ''}
+                    {note.board ? ` • ${note.board}` : ''}
+                    {note.book ? ` • ${note.book}` : ''}
+                    {' • '}By {note.author || 'ExamForge'}
+                  </p>
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-1">{note.title}</h3>
-                <p className="text-sm text-slate-500 mb-6">
-                  {note.subject}
-                  {note.noteType ? ` • ${note.noteType}` : ''}
-                  {note.board ? ` • ${note.board}` : ''}
-                  {note.book ? ` • ${note.book}` : ''}
-                  {' • '}By {note.author}
-                </p>
-                <div className="flex justify-between items-center border-t border-slate-50 pt-4">
+                <div className="flex justify-between items-center border-t border-slate-100 pt-4 mt-2">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-50 text-rose-600 rounded-lg text-xs font-black uppercase tracking-wider border border-rose-100">
-                    <FileText size={14} /> PDF Resource
+                    <FileText size={14} /> PDF File
                   </span>
                   <a 
                     href={note.fileUrl} 
-                    target={note.fileUrl?.includes('drive.google.com') || note.fileUrl?.startsWith('http') ? '_blank' : '_self'} 
+                    target="_blank" 
                     rel="noreferrer"
-                    download={!note.fileUrl?.includes('drive.google.com')}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider shadow-sm transition-all"
+                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl flex items-center gap-2 text-xs font-bold uppercase tracking-wider shadow-sm transition-all"
                   >
-                    <Download size={14} /> {note.fileUrl?.includes('drive.google.com') ? 'View / Download PDF' : 'Download PDF'}
+                    <Download size={14} /> Open PDF File
                   </a>
                 </div>
               </div>
             ))}
             {currentNotes.length === 0 && (
-                <div className="col-span-full py-12 text-center text-gray-400 bg-white rounded-2xl border border-slate-100">
+                <div className="col-span-full py-16 text-center text-slate-400 bg-white rounded-3xl border border-slate-200">
                    <FileText size={48} className="mx-auto mb-4 opacity-20"/>
-                   <p>No notes found matching your search.</p>
+                   <p className="font-bold text-slate-600">No notes found for your selected criteria.</p>
+                   <button onClick={resetStepWizard} className="mt-4 text-xs font-bold text-indigo-600 hover:underline">Reset step wizard filters</button>
                 </div>
             )}
           </div>
@@ -404,11 +428,11 @@ const Notes: React.FC = () => {
                     <span className="text-[10px] text-slate-400">{recent.board || 'PTB'}</span>
                     <a 
                       href={recent.fileUrl} 
-                      target={recent.fileUrl?.includes('drive.google.com') || recent.fileUrl?.startsWith('http') ? '_blank' : '_self'}
+                      target="_blank"
                       rel="noreferrer"
                       className="text-[10px] font-black text-indigo-400 hover:text-indigo-300 flex items-center gap-1 uppercase"
                     >
-                      <Download size={12} /> View
+                      <Download size={12} /> Open PDF
                     </a>
                   </div>
                 </div>
@@ -423,10 +447,10 @@ const Notes: React.FC = () => {
       </div>
 
       {/* Pagination Controls */}
-      {filteredNotes.length > 0 && (
-        <div className="flex flex-col sm:flex-row justify-between items-center mt-12 gap-4 border-t border-slate-100 pt-8">
+      {stepNotes.length > 0 && (
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-12 gap-4 border-t border-slate-200 pt-8">
            <div className="text-sm text-slate-500 font-medium">
-              Showing <span className="font-bold text-slate-900">{indexOfFirstItem + 1}</span> to <span className="font-bold text-slate-900">{Math.min(indexOfLastItem, filteredNotes.length)}</span> of <span className="font-bold text-slate-900">{filteredNotes.length}</span> notes
+              Showing <span className="font-bold text-slate-900">{indexOfFirstItem + 1}</span> to <span className="font-bold text-slate-900">{Math.min(indexOfLastItem, stepNotes.length)}</span> of <span className="font-bold text-slate-900">{stepNotes.length}</span> notes
            </div>
            
            <div className="flex items-center gap-2">

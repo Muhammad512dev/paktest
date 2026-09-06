@@ -697,10 +697,10 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
         .preview-bold-all * {
           font-weight: 700 !important;
         }
-        /* Subjective questions follow the same bold visual treatment as objective questions. */
-        .preview-subjective-bold [data-section-category="Subjective"] .question-content,
-        .preview-subjective-bold [data-section-category="Subjective"] .question-content * {
-          font-weight: 700 !important;
+        /* Subjective headings and number labels are bold; question content stays regular. */
+        .preview-subjective-bold:not(.preview-bold-all) [data-section-category="Subjective"] .question-content,
+        .preview-subjective-bold:not(.preview-bold-all) [data-section-category="Subjective"] .question-content * {
+          font-weight: 400 !important;
         }
         /* Objective Regular is intentionally applied last so it also overrides All Bold. */
         .preview-objective-regular [data-section-category="Objective"] * {
@@ -943,7 +943,26 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             </div>
           </div>
 
-          {/* 3. Typography, spacing, and MCQ layout */}
+          {/* 3. Extras — kept directly after font-size controls on the first toolbar row */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0 border-l border-slate-700 pl-2">
+            <button onClick={() => setStudentInfoStyle(prev => prev === 'Standard' ? 'Grid' : 'Standard')} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${studentInfoStyle === 'Grid' ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-400' : 'bg-transparent border-slate-700 text-slate-400'}`} title="Student Grid Header">
+              <UserSquare2 size={16} /> <span className="hidden sm:inline">Header</span> Grid
+            </button>
+            <button onClick={() => setPrintBubbleSheet(!printBubbleSheet)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${printBubbleSheet ? 'bg-emerald-600/20 border-emerald-600/50 text-emerald-400' : 'bg-transparent border-slate-700 text-slate-400'}`}>
+              <Grid3X3 size={16} /> OMR
+            </button>
+            <button onClick={() => setPrintAnswerKey(!printAnswerKey)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${printAnswerKey ? 'bg-emerald-600/20 border-emerald-600/50 text-emerald-400' : 'bg-transparent border-slate-700 text-slate-400'}`}>
+              <CheckSquare size={16} /> Key
+            </button>
+            <button onClick={() => setSeparateSubjective(!separateSubjective)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${separateSubjective ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-400' : 'bg-transparent border-slate-700 text-slate-400'}`} title="Print Subjective Part on Separate Page">
+              <Layers size={16} /> Split
+            </button>
+            <button onClick={() => setBoardExamFormat(p => !p)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${boardExamFormat ? 'bg-amber-600/30 border-amber-500/50 text-amber-300' : 'bg-transparent border-slate-700 text-slate-400 hover:text-amber-300'}`} title="Pakistani Board Exam Format (Bilingual side-by-side rows)">
+              <FileText size={16} /> Board Format
+            </button>
+          </div>
+
+          {/* 4. Typography, spacing, and MCQ layout */}
           <div className="flex flex-wrap items-center gap-2 px-2.5 py-1.5 bg-slate-800/50 rounded-lg border border-slate-700">
             <label className="flex items-center gap-1 text-[10px] font-black text-slate-300 uppercase">Font
               <select value={englishFont} onChange={e => setEnglishFont(e.target.value)} className="print-preview-select bg-slate-900 text-white text-xs rounded px-1.5 py-1">
@@ -1000,33 +1019,6 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             )}
           </div>
 
-          {/* 5. Extras */}
-          <div className="flex items-center gap-2 ml-auto shrink-0 justify-end border-l border-slate-700 pl-2">
-            <button onClick={() => setStudentInfoStyle(prev => prev === 'Standard' ? 'Grid' : 'Standard')} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${studentInfoStyle === 'Grid' ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-400' : 'bg-transparent border-slate-700 text-slate-400'}`} title="Student Grid Header">
-              <UserSquare2 size={16} /> <span className="hidden sm:inline">Header</span> Grid
-            </button>
-            <button onClick={() => setPrintBubbleSheet(!printBubbleSheet)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${printBubbleSheet ? 'bg-emerald-600/20 border-emerald-600/50 text-emerald-400' : 'bg-transparent border-slate-700 text-slate-400'}`}>
-              <Grid3X3 size={16} /> OMR
-            </button>
-            <button onClick={() => setPrintAnswerKey(!printAnswerKey)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${printAnswerKey ? 'bg-emerald-600/20 border-emerald-600/50 text-emerald-400' : 'bg-transparent border-slate-700 text-slate-400'}`}>
-              <CheckSquare size={16} /> Key
-            </button>
-            <button
-              onClick={() => setSeparateSubjective(!separateSubjective)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${separateSubjective ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-400' : 'bg-transparent border-slate-700 text-slate-400'}`}
-              title="Print Subjective Part on Separate Page"
-            >
-              <Layers size={16} /> Split
-            </button>
-            {/* Board Exam Format Toggle */}
-            <button
-              onClick={() => setBoardExamFormat(p => !p)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${boardExamFormat ? 'bg-amber-600/30 border-amber-500/50 text-amber-300' : 'bg-transparent border-slate-700 text-slate-400 hover:text-amber-300'}`}
-              title="Pakistani Board Exam Format (Bilingual side-by-side rows)"
-            >
-              <FileText size={16} /> Board Format
-            </button>
-          </div>
         </div>}
       </header>
 
@@ -1712,12 +1704,14 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                   <td style={{ padding: `${tableDensity}px` }} className="p-2 align-top">
                     <div className="space-y-2">
                       {(languageMode === 'Bilingual' || languageMode === 'English') && q.text && (q.medium !== 'Urdu' || languageMode === 'English') && (
-                        isManualEdit ?
-                          <p contentEditable={true} suppressContentEditableWarning={true} className="font-bold leading-relaxed outline-none">{q.text}</p> :
-                          <MathRenderer text={q.text} className="font-bold leading-relaxed" />
+                        <div className="question-content">
+                          {isManualEdit ?
+                            <p contentEditable={true} suppressContentEditableWarning={true} className="font-bold leading-relaxed outline-none">{q.text}</p> :
+                            <MathRenderer text={q.text} className="font-bold leading-relaxed" />}
+                        </div>
                       )}
                       {(languageMode === 'Bilingual' || languageMode === 'Urdu') && q.textUrdu && (
-                        <div dir="rtl" style={{ fontSize: `${urduFontSize}px` }} className="font-urdu text-right leading-[1.8] py-1">
+                        <div dir="rtl" style={{ fontSize: `${urduFontSize}px` }} className="font-urdu text-right leading-[1.8] py-1 question-content">
                           {isManualEdit ?
                             <p contentEditable={true} suppressContentEditableWarning={true} className="outline-none">{q.textUrdu}</p> :
                             <MathRenderer text={q.textUrdu} />

@@ -4,7 +4,7 @@ import {
   X, Printer, Type, Layout, Settings2,
   RotateCcw, CheckCircle2, Languages,
   Shuffle, Edit3, Grid3X3, FileText, Info,
-  Square, CheckSquare, Check, Columns, Globe, Trash2, Maximize, Ruler, ChevronDown,
+  Square, CheckSquare, Check, Columns, Globe, Trash2, Maximize, Ruler, ChevronDown, ChevronUp,
   List, Scissors, Table as TableIcon, MoveVertical, Bold, AlignCenter, Minus, Plus,
   Droplets, Image as ImageIcon, Eye, EyeOff, Palette, Layers, FileInput,
   CreditCard, UserSquare2, Move, GripHorizontal, GripVertical, Scaling, Hash
@@ -221,6 +221,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [sectionHeaderSize, setSectionHeaderSize] = useState(16);
   const [fontColor, setFontColor] = useState('#000000');
   const [fontWeight, setFontWeight] = useState<'400' | '700'>('400');
+  const [boldAllText, setBoldAllText] = useState(false);
+  const [objectiveBold, setObjectiveBold] = useState(false);
 
   // Text Size Selection Mode
   const [textSizeMode, setTextSizeMode] = useState<'English' | 'Urdu' | 'Header' | 'OptionLabel' | 'OptionEn' | 'OptionUr'>('English');
@@ -285,6 +287,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [separateSubjective, setSeparateSubjective] = useState(false); // New State for Page Break
 
   // Interaction State
+  const [isToolbarOpen, setIsToolbarOpen] = useState(true);
   const [isManualEdit, setIsManualEdit] = useState(false);
   const [questions, setQuestions] = useState<Question[]>(paper.questions);
   const [removedSections, setRemovedSections] = useState<Set<string>>(new Set());
@@ -689,6 +692,16 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   return (
     <div className={isEmbedded ? "flex flex-col h-full bg-gray-100 overflow-hidden relative" : "fixed inset-0 z-[500] bg-gray-100 flex flex-col overflow-hidden print:overflow-visible print:bg-white print:static print:h-auto print:block"}>
       <style>{`
+        .preview-bold-all * {
+          font-weight: 700 !important;
+        }
+        .preview-objective-regular [data-section-category="Objective"] * {
+          font-weight: 400 !important;
+        }
+        .preview-bold-all.preview-objective-regular [data-section-category="Objective"] * {
+          font-weight: 400 !important;
+        }
+
         @media print {
           @page { 
             margin: 15mm 10mm 15mm 10mm !important;
@@ -805,7 +818,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
         }
       `}</style>
 
-      {/* TOP TOOLBAR — wraps instead of scrolling */}
+      {/* TOP TOOLBAR — compact and collapsible, like the editor sidebar */}
       <header className="bg-[#0F172A] border-b border-slate-800 text-white shrink-0 z-50 print:hidden shadow-md px-3 sm:px-5 py-2 sm:py-3">
         {/* Row 1: Branding + Actions */}
         <div className="flex items-center justify-between gap-3 mb-2">
@@ -839,14 +852,17 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             <button onClick={() => setIsManualEdit(!isManualEdit)} className={`p-2.5 rounded-lg transition-colors ${isManualEdit ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Edit Mode">
               <Edit3 size={20} />
             </button>
+            <button onClick={() => setIsToolbarOpen(v => !v)} className="p-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800" title={isToolbarOpen ? 'Close preview controls' : 'Open preview controls'} aria-label={isToolbarOpen ? 'Close preview controls' : 'Open preview controls'}>
+              {isToolbarOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
             <button onClick={handlePrint} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 sm:px-5 py-2.5 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-indigo-900/50 transition-all active:scale-95">
               <Printer size={18} /> <span className="hidden sm:inline">Print</span> PDF
             </button>
           </div>
         </div>
 
-        {/* Row 2: All Controls — wraps into rows, NO scrollbar */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 items-start gap-2 sm:gap-3">
+        {/* Controls: one compact flow that naturally settles into two rows on smaller screens */}
+        {isToolbarOpen && <div className="flex flex-wrap items-center gap-2">
           {/* 1. Language & Layout */}
           <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
             <select value={languageMode} onChange={e => setLanguageMode(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-24">
@@ -920,7 +936,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
           </div>
 
           {/* 3. Typography, spacing, and MCQ layout */}
-          <div className="flex flex-wrap items-center gap-3 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
+          <div className="flex flex-wrap items-center gap-2 px-2.5 py-1.5 bg-slate-800/50 rounded-lg border border-slate-700">
             <label className="flex items-center gap-1 text-[10px] font-black text-slate-300 uppercase">Font
               <select value={englishFont} onChange={e => setEnglishFont(e.target.value)} className="print-preview-select bg-slate-900 text-white text-xs rounded px-1.5 py-1">
                 <option value="'Inter', sans-serif">Inter</option>
@@ -943,6 +959,12 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                 <option value="none">No borders</option>
               </select>
             </label>
+            <button onClick={() => setBoldAllText(v => !v)} className={`px-2 py-1 rounded border text-[10px] font-black uppercase whitespace-nowrap ${boldAllText ? 'bg-indigo-600 border-indigo-400 text-white' : 'border-slate-700 text-slate-400'}`} title="Bold all paper text">
+              <Bold size={13} className="inline mr-1" />All Bold
+            </button>
+            <button onClick={() => setObjectiveBold(v => !v)} className={`px-2 py-1 rounded border text-[10px] font-black uppercase whitespace-nowrap ${objectiveBold ? 'bg-indigo-600 border-indigo-400 text-white' : 'border-slate-700 text-slate-400'}`} title="Toggle bold objective questions">
+              Objective {objectiveBold ? 'Bold' : 'Regular'}
+            </button>
             <RangeControl label="Line" value={lineHeight} setValue={setLineHeight} min={1} max={2.5} step={0.1} width="w-14" />
             <RangeControl label="Q Gap" value={questionGap} setValue={setQuestionGap} min={0} max={40} width="w-14" />
             <RangeControl label="Opt Gap" value={verticalSpacing} setValue={setVerticalSpacing} min={0} max={16} width="w-14" />
@@ -997,7 +1019,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               <FileText size={16} /> Board Format
             </button>
           </div>
-        </div>
+        </div>}
       </header>
 
       {/* PAPER CANVAS */}
@@ -1005,16 +1027,16 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
         <div className="screen-scale-wrapper transition-transform" style={{ transform: `scale(${canvasScale})`, transformOrigin: 'top center' }}>
           <div
             id="exam-paper-container"
+            className={`preview-paper ${boldAllText ? 'preview-bold-all' : ''} ${!objectiveBold ? 'preview-objective-regular' : ''} bg-white relative transition-all origin-top min-h-[297mm] mx-auto print:min-h-0 print:h-auto print:w-full print:mx-0 print:bg-white shadow-[0_20px_60px_rgba(15,23,42,0.18)] ring-1 ring-black/5 ${isManualEdit ? 'ring-1 ring-amber-500 ring-dashed' : ''}`}
             style={{
               fontSize: `${englishFontSize}px`,
               lineHeight: lineHeight,
               color: fontColor,
-              fontWeight: fontWeight,
+              fontWeight: boldAllText ? '700' : fontWeight,
               fontFamily: englishFont,
               width: pageStyles[pageSize].width,
               padding: `${pagePadding}mm`
             }}
-            className={`bg-white relative transition-all origin-top min-h-[297mm] mx-auto print:min-h-0 print:h-auto print:w-full print:mx-0 print:bg-white shadow-[0_20px_60px_rgba(15,23,42,0.18)] ring-1 ring-black/5 ${isManualEdit ? 'ring-1 ring-amber-500 ring-dashed' : ''}`}
           >
             {/* Urdu Font Injection */}
             <style>{`
@@ -1393,8 +1415,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
       return text
         // Remove generated prefixes such as “Q.3 (a)”, “Q3 a)” or “Q-3 (a)” because
         // the preview prints the official number and part label in its own column.
-        .replace(/^\s*Q\s*[.\-]?\s*\d+\s*(?:[.(\[]?\s*[a-z]\s*[)\].:]?)?\s*/i, '')
-        .replace(/^\s*\([a-z]\)\s*|^\s*[a-z]\)\s*|^\s*\([\u0600-\u06FF]\)\s*/i, '')
+        .replace(/^\s*(?:Q\s*[.\-]?\s*)?\d+\s*[.\-:]?\s*(?:\(?\s*[a-z]\s*[).:]?\s*)?/i, '')
+        .replace(/^\s*\([a-z\u0600-\u06FF]\)\s*/i, '')
         .trim();
     };
 
@@ -1412,7 +1434,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
     const shouldRenderHeading = showPartHeadings && !sec.hasParts;
 
     return (
-      <section key={sec.id} className="relative print:break-inside-auto mb-2" style={{ marginBottom: `${questionGap}px` }}>
+      <section key={sec.id} data-section-category={sec.category} className="relative print:break-inside-auto mb-2" style={{ marginBottom: `${questionGap}px` }}>
         {shouldRenderHeading && (
           /* ── Section heading bar (only for short questions / objective) ── */
           <table className="w-full border-collapse mb-1" style={{ fontSize: `${englishFontSize}px` }}>
@@ -1606,7 +1628,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
 
   function renderSection(sec: PaperSectionConfig, secQuestions: Question[], questionNumber?: number) {
     return (
-      <section key={sec.id} className="relative print:break-inside-auto mb-4" style={{ marginBottom: `${questionGap}px` }}>
+      <section key={sec.id} data-section-category={sec.category} className="relative print:break-inside-auto mb-4" style={{ marginBottom: `${questionGap}px` }}>
         {showPartHeadings && (
           <>
             {/* ── Section title bar ── */}
@@ -1813,8 +1835,11 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       </div>
 
                       {/* Right: Urdu text */}
-                      <div dir="rtl" style={{ fontFamily: urduFont }} className="flex-1 flex gap-2 items-start text-right font-urdu justify-end">
-                        <div className="flex-1 space-y-1">
+                      <div dir="rtl" style={{ fontFamily: urduFont }} className="flex-1 flex gap-2 items-start text-right font-urdu justify-start min-w-0">
+                        <span className="font-black text-sm min-w-[28px] w-[28px] pt-0.5 text-slate-900 shrink-0 text-right" dir="ltr">
+                          {numUr}
+                        </span>
+                        <div className="flex-1 min-w-0 space-y-1">
                           {isManualEdit ? (
                             <p contentEditable suppressContentEditableWarning={true} style={{ fontSize: `${urduFontSize}px` }} className="bg-amber-50 rounded border-dashed border border-amber-300 p-1 outline-none font-bold text-black leading-[1.8]">{q.textUrdu}</p>
                           ) : (
@@ -1823,9 +1848,6 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                             </div>
                           )}
                         </div>
-                        <span className="font-black text-sm min-w-[22px] pt-0.5 text-slate-900 shrink-0" dir="ltr">
-                          {numUr}
-                        </span>
                       </div>
                     </div>
                   ) : showUr ? (

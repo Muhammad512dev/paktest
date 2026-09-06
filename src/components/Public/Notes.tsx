@@ -160,6 +160,9 @@ const Notes: React.FC = () => {
     'from-emerald-500 to-teal-600 text-white shadow-emerald-200'
   ];
 
+  // Selected Note Modal State
+  const [selectedNoteModal, setSelectedNoteModal] = useState<any | null>(null);
+
   return (
     <div className="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Page Title Banner matching screenshot */}
@@ -251,7 +254,7 @@ const Notes: React.FC = () => {
         </div>
       )}
 
-      {/* STEP 4 / PDF Notes Cards View (Matching Screenshot 3 Grid PDF Cards) */}
+      {/* STEP 4 / PDF Notes Cards View */}
       {(currentStep === 4 || (selectedBoard && selectedClass && selectedSubject)) && (
         <div className="space-y-8 mt-4">
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
@@ -273,20 +276,22 @@ const Notes: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {stepNotes.map(note => (
-              <a
+              <div
                 key={note.id}
-                href={note.fileUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="p-5 bg-white rounded-2xl border border-slate-200 hover:border-indigo-400 shadow-sm hover:shadow-xl transition-all flex flex-col items-center justify-center text-center group cursor-pointer"
+                onClick={() => setSelectedNoteModal(note)}
+                className="p-5 bg-white rounded-2xl border border-slate-200 hover:border-indigo-400 shadow-sm hover:shadow-xl transition-all flex flex-col items-center justify-center text-center group cursor-pointer relative"
               >
-                {/* Red PDF Icon matching screenshot 3 */}
+                {/* Red PDF Icon */}
                 <div className="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                   <FileText size={22} />
                 </div>
                 <h4 className="font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors line-clamp-2">{note.title || `${note.subject} Notes`}</h4>
                 <p className="text-[11px] text-slate-400 font-semibold uppercase mt-1 tracking-wider">{note.grade || selectedClass} • {note.subject}</p>
-              </a>
+                <div className="mt-3 inline-flex items-center gap-1 text-[11px] font-black text-indigo-600 group-hover:underline">
+                  <span>View Details & PDF</span>
+                  <span>→</span>
+                </div>
+              </div>
             ))}
           </div>
 
@@ -299,8 +304,81 @@ const Notes: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Note Detailed Description & PDF Modal */}
+      {selectedNoteModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-200">
+            {/* Modal Header */}
+            <div className="p-6 bg-slate-900 text-white flex justify-between items-start">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="px-2.5 py-0.5 bg-indigo-500/20 text-indigo-300 rounded-md text-[10px] font-black uppercase tracking-wider border border-indigo-500/30">{selectedNoteModal.grade || 'General Class'}</span>
+                  <span className="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-md text-[10px] font-black uppercase tracking-wider border border-emerald-500/30">{selectedNoteModal.subject}</span>
+                  {selectedNoteModal.board && <span className="px-2.5 py-0.5 bg-amber-500/20 text-amber-300 rounded-md text-[10px] font-black uppercase tracking-wider border border-amber-500/30">{selectedNoteModal.board}</span>}
+                </div>
+                <h3 className="text-xl font-black text-white">{selectedNoteModal.title}</h3>
+                <p className="text-xs text-slate-400 mt-1">Author: {selectedNoteModal.author || 'ExamForge'} {selectedNoteModal.book ? `• Book: ${selectedNoteModal.book}` : ''}</p>
+              </div>
+              <button onClick={() => setSelectedNoteModal(null)} className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full transition-colors">✕</button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1">
+              {/* Detailed Description Section */}
+              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Resource Description</h4>
+                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                  {selectedNoteModal.description || selectedNoteModal.content || `Complete study notes and reference material for ${selectedNoteModal.subject || 'this course'} (${selectedNoteModal.grade || 'General'}). Curated for exam preparation according to the ${selectedNoteModal.board || 'standard educational board'} syllabus.`}
+                </p>
+              </div>
+
+              {/* Embedded PDF Preview Frame */}
+              {selectedNoteModal.fileUrl && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">PDF Preview</h4>
+                    <a
+                      href={selectedNoteModal.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-md"
+                    >
+                      <span>Open Drive Link / File</span>
+                      <span className="text-sm">↗</span>
+                    </a>
+                  </div>
+
+                  <div className="w-full h-96 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200">
+                    <iframe
+                      src={selectedNoteModal.fileUrl?.includes('drive.google.com') ? selectedNoteModal.fileUrl.replace('/view', '/preview') : selectedNoteModal.fileUrl}
+                      className="w-full h-full border-0"
+                      title="PDF Document Viewer"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
+              <span className="text-xs text-slate-500">Resource: {selectedNoteModal.resource || selectedNoteModal.noteType || 'PDF Document'}</span>
+              <a
+                href={selectedNoteModal.fileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-md hover:scale-105 transition-all"
+              >
+                <span>Open File in New Tab</span>
+                <span className="text-base">➔</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default Notes;
+

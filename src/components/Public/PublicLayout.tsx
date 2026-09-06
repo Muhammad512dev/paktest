@@ -29,28 +29,29 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
   return (
     <div className="min-h-screen flex flex-col bg-white font-sans text-slate-800">
       {/* Navbar */}
-      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16 sm:h-20 gap-2 sm:gap-4">
+      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-sm w-full">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
+          <div className="flex justify-between items-center h-16 sm:h-20 gap-3">
+            {/* Logo */}
             <div className="flex items-center gap-2 sm:gap-3 cursor-pointer shrink-0" onClick={() => onNavigate('HOME')}>
               {logoUrl ? (
-                <img src={logoUrl} alt="Logo" className="w-8 h-8 sm:w-10 sm:h-10 object-contain" />
+                <img src={logoUrl} alt="Logo" className="w-8 h-8 sm:w-9 sm:h-9 object-contain" />
               ) : (
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-200">
                   <LayoutDashboard size={18} />
                 </div>
               )}
-              <span className="font-black text-base sm:text-xl tracking-tight text-slate-900 whitespace-nowrap">{systemName}</span>
+              <span className="font-black text-base sm:text-lg tracking-tight text-slate-900 whitespace-nowrap">{systemName}</span>
             </div>
 
             {/* Desktop Nav */}
-            <div className="hidden xl:flex flex-1 justify-center items-center space-x-3 2xl:space-x-6 px-2">
+            <div className="hidden xl:flex flex-1 justify-center items-center gap-1 2xl:gap-2 px-2">
               {navItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
-                  className={`text-xs 2xl:text-sm font-bold uppercase tracking-wide transition-colors whitespace-nowrap py-1 px-2 rounded-lg hover:bg-slate-50 ${
-                    currentView === item.id ? 'text-indigo-600 bg-indigo-50/70' : 'text-slate-500 hover:text-slate-900'
+                  className={`text-[11px] 2xl:text-xs font-bold uppercase tracking-wider transition-colors whitespace-nowrap py-1.5 px-2.5 rounded-lg hover:bg-slate-50 ${
+                    currentView === item.id ? 'text-indigo-600 bg-indigo-50/70 font-black' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   {item.label}
@@ -58,22 +59,23 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
               ))}
             </div>
 
-            <div className="hidden xl:flex items-center gap-2 flex-nowrap shrink-0">
+            {/* Auth Action Buttons */}
+            <div className="hidden xl:flex items-center gap-2 shrink-0">
               <button 
                 onClick={() => onNavigate('LOGIN')}
-                className="whitespace-nowrap rounded-lg bg-slate-800 px-3 py-2 text-sm font-bold text-white shadow-lg shadow-slate-200 transition-all hover:bg-slate-700 active:scale-95"
+                className="whitespace-nowrap rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-slate-700 active:scale-95"
               >
                 Staff Login
               </button>
               <button 
                 onClick={() => onNavigate('STUDENT_LOGIN')}
-                className="whitespace-nowrap rounded-lg bg-indigo-600 px-3 py-2 text-sm font-bold text-white shadow-lg shadow-indigo-100 transition-all hover:bg-indigo-700 active:scale-95"
+                className="whitespace-nowrap rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-indigo-700 active:scale-95"
               >
                 Student Login
               </button>
               <button 
                 onClick={() => onNavigate('SIGNUP')}
-                className="whitespace-nowrap rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-100 transition-all hover:bg-violet-700 active:scale-95"
+                className="whitespace-nowrap rounded-lg bg-violet-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-violet-700 active:scale-95"
               >
                 Get Started
               </button>
@@ -134,7 +136,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
 
       {/* Compact Footer */}
       <footer className="bg-slate-900 text-slate-300 py-6 md:py-8">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="col-span-1 md:col-span-1">
               <div className="flex items-center gap-2 mb-6">

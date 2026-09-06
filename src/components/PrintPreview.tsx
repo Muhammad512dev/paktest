@@ -1473,20 +1473,22 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     {sectionMarks > 0 ? sectionMarks : ''}
                   </td>
                 )}
-                {/* Q number + English instruction */}
-                <td className="py-0.5 pl-2 align-top">
-                  <span className="font-black mr-1" style={{ fontSize: `${sectionHeaderSize}px` }}>{qNum}.</span>
-                  <span className="font-bold italic whitespace-pre-line" style={{ fontSize: `${englishFontSize}px` }}>
-                    {(languageMode === 'Bilingual' || languageMode === 'English') ? engInstruction : ''}
-                  </span>
-                </td>
-                {/* Urdu instruction (right side) */}
-                {(languageMode === 'Bilingual' || languageMode === 'Urdu') && (
-                  <td dir="rtl" className="py-0.5 pr-2 text-right align-top font-urdu font-bold whitespace-pre-line" style={{ fontSize: `${urduFontSize}px`, minWidth: '160px' }}>
-                    {urInstruction}
+                {/* English instruction (if English or Bilingual) */}
+                {(languageMode === 'Bilingual' || languageMode === 'English') && (
+                  <td className="py-0.5 pl-2 align-top">
+                    <span className="font-black mr-1" style={{ fontSize: `${sectionHeaderSize}px` }}>{qNum}.</span>
+                    <span className="font-bold italic whitespace-pre-line" style={{ fontSize: `${englishFontSize}px` }}>
+                      {engInstruction}
+                    </span>
                   </td>
                 )}
-                {/* Repeat Marks column on far right if Urdu is showing */}
+                {/* Urdu instruction (right side if Bilingual or full width right if Urdu only) */}
+                {(languageMode === 'Bilingual' || languageMode === 'Urdu') && (
+                  <td dir="rtl" className={`py-0.5 pr-2 text-right align-top font-urdu font-bold whitespace-pre-line ${languageMode === 'Urdu' ? 'pl-2' : ''}`} style={{ fontSize: `${urduFontSize}px`, minWidth: '160px' }}>
+                    <span className="font-black ml-1 font-sans" style={{ fontSize: `${sectionHeaderSize}px` }}>سوال نمبر {qNum}۔ </span>
+                    <span>{urInstruction}</span>
+                  </td>
+                )}
               </tr>
             </tbody>
           </table>

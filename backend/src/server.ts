@@ -1104,14 +1104,39 @@ app.get('/api/past-papers', async (req: any, res: any) => {
     }
 });
 app.post('/api/past-papers', authenticate, async (req: any, res: any) => {
-    if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
-    const paper = await prisma.pastPaper.create({ data: req.body });
-    res.json(paper);
+    try {
+        if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+        const { title, year, board, level, subject, resource, fileUrl } = req.body;
+        if (!title || !board || !level) {
+            return res.status(400).json({ error: 'Title, board, and level are required' });
+        }
+        const paper = await prisma.pastPaper.create({
+            data: {
+                title,
+                year: Number(year) || new Date().getFullYear(),
+                board,
+                level,
+                subject: subject || null,
+                resource: resource || null,
+                fileUrl: fileUrl || null
+            }
+        });
+        res.json(paper);
+    } catch (e: any) {
+        console.error('Error creating past paper:', e);
+        res.status(500).json({ error: e.message || 'Failed to create past paper' });
+    }
 });
+
 app.delete('/api/past-papers/:id', authenticate, async (req: any, res: any) => {
-    if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
-    await prisma.pastPaper.delete({ where: { id: req.params.id } });
-    res.json({ success: true });
+    try {
+        if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+        await prisma.pastPaper.delete({ where: { id: req.params.id } });
+        res.json({ success: true });
+    } catch (e: any) {
+        console.error('Error deleting past paper:', e);
+        res.status(500).json({ error: e.message || 'Failed to delete past paper' });
+    }
 });
 
 app.post('/api/contact', async (req: any, res: any) => {

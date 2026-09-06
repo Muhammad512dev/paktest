@@ -912,11 +912,28 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             </div>
           </div>
 
-          {/* 3. Spacing */}
-          <div className="flex items-center gap-3 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
-            <RangeControl label="Gap" value={questionGap} setValue={setQuestionGap} min={0} max={40} width="w-14" />
+          {/* 3. Typography, spacing, and MCQ layout */}
+          <div className="flex flex-wrap items-center gap-3 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
+            <label className="flex items-center gap-1 text-[10px] font-black text-slate-300 uppercase">Font
+              <select value={englishFont} onChange={e => setEnglishFont(e.target.value)} className="print-preview-select bg-slate-900 text-white text-xs rounded px-1.5 py-1">
+                <option value="'Inter', sans-serif">Inter</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="'Times New Roman', serif">Times New Roman</option>
+                <option value="Georgia, serif">Georgia</option>
+              </select>
+            </label>
+            <label className="flex items-center gap-1 text-[10px] font-black text-slate-300 uppercase">Urdu
+              <select value={urduFont} onChange={e => setUrduFont(e.target.value)} className="print-preview-select bg-slate-900 text-white text-xs rounded px-1.5 py-1">
+                <option value="'Noto Nastaliq Urdu', serif">Nastaliq</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="'Jameel Noori Nastaleeq', serif">Jameel Noori</option>
+              </select>
+            </label>
+            <RangeControl label="Line" value={lineHeight} setValue={setLineHeight} min={1} max={2.5} step={0.1} width="w-14" />
+            <RangeControl label="Q Gap" value={questionGap} setValue={setQuestionGap} min={0} max={40} width="w-14" />
+            <RangeControl label="Opt Gap" value={verticalSpacing} setValue={setVerticalSpacing} min={0} max={16} width="w-14" />
             <RangeControl label="Margin" value={pagePadding} setValue={setPagePadding} min={0} max={40} unit="mm" width="w-16" />
-            {!isGridView && <RangeControl label="MCQ Cols" value={mcqColumns} setValue={setMcqColumns} min={1} max={4} width="w-14" />}
+            <RangeControl label="MCQ Cols" value={mcqColumns} setValue={setMcqColumns} min={1} max={4} width="w-14" />
           </div>
 
           {/* 4. Visibility & Watermark */}
@@ -1358,7 +1375,13 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
     // Helper functions for bilingual part extraction
     const cleanPartText = (text: string | undefined) => {
       if (!text) return '';
-      return text.replace(/^\s*\([a-z]\)\s*|^\s*\([\u0600-\u06FF]\)\s*/i, '').trim();
+      // Generated questions may already contain Q.3 (a); the board renderer supplies that label.
+      return text
+        // Remove generated prefixes such as “Q.3 (a)”, “Q3 a)” or “Q-3 (a)” because
+        // the preview prints the official number and part label in its own column.
+        .replace(/^\s*Q\s*[.\-]?\s*\d+\s*(?:[.(\[]?\s*[a-z]\s*[)\].:]?)?\s*/i, '')
+        .replace(/^\s*\([a-z]\)\s*|^\s*[a-z]\)\s*|^\s*\([\u0600-\u06FF]\)\s*/i, '')
+        .trim();
     };
 
     const getPartLabelEn = (qId: string, idx: number) => {
@@ -1506,7 +1529,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       )}
                       {/* MCQ options below English question */}
                       {isMCQType(q.type) && (languageMode === 'Bilingual' || languageMode === 'English') && (
-                        <div className="grid gap-1 mt-1" style={{ gridTemplateColumns: 'repeat(1, minmax(0, 1fr))' }}>
+                        <div className="grid mt-1" style={{ gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))`, columnGap: `${verticalSpacing * 2}px`, rowGap: `${verticalSpacing}px` }}>
                           {getMcqOptions(q).map((_, i) => {
                             const opt = q.options?.[i] || '';
                             const isCorrect = showAnswersInline && opt === q.correctAnswer;
@@ -1523,13 +1546,13 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
 
                     {/* Urdu text column */}
                     {showUr && (
-                      <td dir="rtl" className="text-right pl-1 pr-1 font-urdu align-top font-bold" style={{ fontSize: `${urduFontSize}px`, paddingTop: '3px', minWidth: '120px' }}>
+                      <td dir="rtl" className="text-right pl-1 pr-1 font-urdu align-top font-bold" style={{ fontSize: `${urduFontSize}px`, fontFamily: urduFont, paddingTop: '3px', minWidth: '120px' }}>
                         {isManualEdit
                           ? <span contentEditable suppressContentEditableWarning className="outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-0.5">{cleanedTextUr}</span>
                           : <MathRenderer text={cleanedTextUr!} inline />}
                         {/* MCQ Urdu options */}
                         {isMCQType(q.type) && (languageMode === 'Bilingual' || languageMode === 'Urdu') && (
-                          <div dir="rtl" className="grid gap-1 mt-1" style={{ gridTemplateColumns: 'repeat(1, minmax(0, 1fr))' }}>
+                          <div dir="rtl" className="grid mt-1" style={{ gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))`, columnGap: `${verticalSpacing * 2}px`, rowGap: `${verticalSpacing}px` }}>
                             {getMcqOptions(q).map((_, i) => {
                               const optUrdu = q.optionsUrdu?.[i] || '';
                               const isCorrect = showAnswersInline && optUrdu === q.correctAnswerUrdu && optUrdu !== '';
@@ -1666,8 +1689,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       )}
                       {isMCQType(q.type) && (
                         <div
-                          className="grid gap-2 pt-2 border-t border-slate-100 mt-1"
-                          style={{ gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))` }}
+                          className="grid pt-2 border-t border-slate-100 mt-1"
+                          style={{ gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))`, gap: `${verticalSpacing}px` }}
                         >
                           {getMcqOptions(q).map((_, i) => {
                             const opt = q.options?.[i] || '';
@@ -1776,7 +1799,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       </div>
 
                       {/* Right: Urdu text */}
-                      <div dir="rtl" className="flex-1 flex gap-2 items-start text-right font-urdu justify-end">
+                      <div dir="rtl" style={{ fontFamily: urduFont }} className="flex-1 flex gap-2 items-start text-right font-urdu justify-end">
                         <div className="flex-1 space-y-1">
                           {isManualEdit ? (
                             <p contentEditable suppressContentEditableWarning={true} style={{ fontSize: `${urduFontSize}px` }} className="bg-amber-50 rounded border-dashed border border-amber-300 p-1 outline-none font-bold text-black leading-[1.8]">{q.textUrdu}</p>
@@ -1793,7 +1816,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     </div>
                   ) : showUr ? (
                     /* URDU ONLY: Aligned to Right */
-                    <div dir="rtl" className="flex gap-2 items-start text-right font-urdu w-full justify-start">
+                    <div dir="rtl" style={{ fontFamily: urduFont }} className="flex gap-2 items-start text-right font-urdu w-full justify-start">
                       <span className="font-black text-sm min-w-[22px] pt-0.5 text-slate-900 shrink-0" dir="ltr">
                         {numUr}
                       </span>
@@ -1870,6 +1893,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       className={`grid gap-x-4 mt-2 break-inside-avoid transition-all`}
                       style={{
                         gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))`,
+                        columnGap: `${verticalSpacing * 2}px`,
                         rowGap: `${verticalSpacing * 2}px`
                       }}
                     >

@@ -6,7 +6,7 @@ import StudentLogin from './components/Student/StudentLogin';
 import { User, UserRole, SystemConfig, School } from './types';
 
 import { Menu } from 'lucide-react';
-import { initializeDB, getSystemConfig, getSchoolById } from './services/dataService';
+import { initializeDB, getSystemConfig, getSchoolById, getCurrentUser } from './services/dataService';
 
 // Public Components
 import PublicLayout from './components/Public/PublicLayout';
@@ -133,7 +133,7 @@ const App: React.FC = () => {
         setPublicView('HOME');
       } else {
         // Restore user session
-        getCurrentUser().then(usr => {
+        getCurrentUser().then((usr: User | null) => {
           if (usr) {
             setUser(usr);
           } else {

@@ -43,6 +43,13 @@ const PastPapers: React.FC = () => {
     setCurrentPage(1);
   }, [searchTerm, filters, itemsPerPage]);
 
+  // Step Navigation State: 1 = Board, 2 = Level/Class, 3 = Subject, 4 = Year, 5 = Papers/PDF View
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [selectedBoard, setSelectedBoard] = useState<string>('');
+  const [selectedLevel, setSelectedLevel] = useState<string>('');
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [selectedYear, setSelectedYear] = useState<string>('');
+
   // Extract dynamic boards strictly from actual existing past paper records (deduplicated)
   const allBoards = useMemo(() => {
     const list: string[] = [];
@@ -98,13 +105,6 @@ const PastPapers: React.FC = () => {
     });
     return list;
   }, [papers]);
-
-  // Step Navigation State: 1 = Board, 2 = Level/Class, 3 = Subject, 4 = Year, 5 = Papers/PDF View
-  const [currentStep, setCurrentStep] = useState<number>(1);
-  const [selectedBoard, setSelectedBoard] = useState<string>('');
-  const [selectedLevel, setSelectedLevel] = useState<string>('');
-  const [selectedSubject, setSelectedSubject] = useState<string>('');
-  const [selectedYear, setSelectedYear] = useState<string>('');
 
   // Dynamic URL Sync effect for Past Papers
   useEffect(() => {

@@ -45,6 +45,7 @@ const Quiz = lazy(() => import('./components/Public/Quiz'));
 const Blog = lazy(() => import('./components/Public/Blog'));
 const Pricing = lazy(() => import('./components/Public/Pricing'));
 const LessonPlans = lazy(() => import('./components/Public/LessonPlans'));
+const Books = lazy(() => import('./components/Public/Books'));
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -65,7 +66,7 @@ const App: React.FC = () => {
       } else {
         const parts = path.substring(1).split('/');
         const route = parts[0].toUpperCase();
-        const publicRoutes = ['PRICING', 'ABOUT', 'CONTACT', 'NOTES', 'LESSON_PLANS', 'PAST_PAPERS', 'QUIZ', 'BLOG', 'LOGIN', 'STUDENT_LOGIN', 'SIGNUP'];
+        const publicRoutes = ['PRICING', 'ABOUT', 'CONTACT', 'NOTES', 'LESSON_PLANS', 'BOOKS', 'PAST_PAPERS', 'QUIZ', 'BLOG', 'LOGIN', 'STUDENT_LOGIN', 'SIGNUP'];
         if (publicRoutes.includes(route)) {
           setPublicView(route);
         } else {
@@ -271,6 +272,7 @@ const App: React.FC = () => {
         {publicView === 'CONTACT' && <Contact />}
         {publicView === 'NOTES' && <Notes />}
         {publicView === 'LESSON_PLANS' && <LessonPlans />}
+        {publicView === 'BOOKS' && <Books />}
         {publicView === 'PAST_PAPERS' && <PastPapers />}
         {publicView === 'QUIZ' && <Quiz />}
         {publicView === 'BLOG' && <Blog />}

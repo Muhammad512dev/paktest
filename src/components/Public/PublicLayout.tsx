@@ -20,6 +20,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
     { id: 'BLOG', label: 'Blog' },
     { id: 'NOTES', label: 'Notes' },
     { id: 'LESSON_PLANS', label: 'Lesson Plans' },
+    { id: 'BOOKS', label: 'Books' },
     { id: 'PAST_PAPERS', label: 'Past Papers' },
     { id: 'QUIZ', label: 'Quiz' },
     { id: 'CONTACT', label: 'Contact' },
@@ -28,28 +29,28 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
   return (
     <div className="min-h-screen flex flex-col bg-white font-sans text-slate-800">
       {/* Navbar */}
-      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-sm">
+      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20 gap-4 lg:gap-8">
-            <div className="flex items-center gap-3 cursor-pointer shrink-0" onClick={() => onNavigate('HOME')}>
+          <div className="flex justify-between items-center h-16 sm:h-20 gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3 cursor-pointer shrink-0" onClick={() => onNavigate('HOME')}>
               {logoUrl ? (
-                <img src={logoUrl} alt="Logo" className="w-10 h-10 object-contain" />
+                <img src={logoUrl} alt="Logo" className="w-8 h-8 sm:w-10 sm:h-10 object-contain" />
               ) : (
-                <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-                  <LayoutDashboard size={20} />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                  <LayoutDashboard size={18} />
                 </div>
               )}
-              <span className="font-black text-xl tracking-tight text-slate-900 whitespace-nowrap">{systemName}</span>
+              <span className="font-black text-base sm:text-xl tracking-tight text-slate-900 whitespace-nowrap">{systemName}</span>
             </div>
 
             {/* Desktop Nav */}
-            <div className="hidden lg:flex flex-1 justify-center items-center space-x-4 xl:space-x-8 px-4 xl:px-12">
+            <div className="hidden xl:flex flex-1 justify-center items-center space-x-3 2xl:space-x-6 px-2">
               {navItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
-                  className={`text-sm font-bold uppercase tracking-wide transition-colors whitespace-nowrap ${
-                    currentView === item.id ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-900'
+                  className={`text-xs 2xl:text-sm font-bold uppercase tracking-wide transition-colors whitespace-nowrap py-1 px-2 rounded-lg hover:bg-slate-50 ${
+                    currentView === item.id ? 'text-indigo-600 bg-indigo-50/70' : 'text-slate-500 hover:text-slate-900'
                   }`}
                 >
                   {item.label}
@@ -57,7 +58,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
               ))}
             </div>
 
-            <div className="hidden lg:flex items-center gap-2 flex-nowrap shrink-0">
+            <div className="hidden xl:flex items-center gap-2 flex-nowrap shrink-0">
               <button 
                 onClick={() => onNavigate('LOGIN')}
                 className="whitespace-nowrap rounded-lg bg-slate-800 px-3 py-2 text-sm font-bold text-white shadow-lg shadow-slate-200 transition-all hover:bg-slate-700 active:scale-95"
@@ -78,18 +79,18 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
               </button>
             </div>
 
-            {/* Mobile Menu Button */}
-            <div className="lg:hidden">
-              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-slate-600" aria-label="Toggle Mobile Menu">
+            {/* Mobile / Tablet Menu Button */}
+            <div className="xl:hidden">
+              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-slate-600 p-2 rounded-lg hover:bg-slate-100" aria-label="Toggle Mobile Menu">
                 {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile / Tablet Menu */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden bg-white border-t border-slate-100 absolute w-full left-0 shadow-xl">
+          <div className="xl:hidden bg-white border-t border-slate-100 absolute w-full left-0 shadow-xl">
             <div className="px-4 pt-2 pb-6 space-y-2">
               {navItems.map((item) => (
                 <button

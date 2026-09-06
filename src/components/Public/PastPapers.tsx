@@ -43,38 +43,50 @@ const PastPapers: React.FC = () => {
     setCurrentPage(1);
   }, [searchTerm, filters, itemsPerPage]);
 
-  // Extract dynamic boards strictly from actual existing past paper records
+  // Extract dynamic boards strictly from actual existing past paper records (deduplicated)
   const allBoards = useMemo(() => {
     const list: string[] = [];
     papers.forEach(p => {
-      if (p.board && !list.includes(p.board)) {
-        list.push(p.board);
+      if (p.board && p.board.trim()) {
+        const b = p.board.trim();
+        if (!list.some(item => item.toLowerCase() === b.toLowerCase())) {
+          list.push(b);
+        }
       }
     });
     return list;
   }, [papers]);
 
-  // Extract dynamic levels strictly from actual existing past paper records
+  // Extract dynamic levels strictly from actual existing past paper records filtered by selected board
   const allLevels = useMemo(() => {
     const list: string[] = [];
     papers.forEach(p => {
-      if (p.level && !list.includes(p.level)) {
-        list.push(p.level);
+      if (p.level && p.level.trim()) {
+        if (selectedBoard && p.board && p.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return;
+        const l = p.level.trim();
+        if (!list.some(item => item.toLowerCase() === l.toLowerCase())) {
+          list.push(l);
+        }
       }
     });
     return list;
-  }, [papers]);
+  }, [papers, selectedBoard]);
 
-  // Extract dynamic subjects strictly from actual existing past paper records
+  // Extract dynamic subjects strictly from actual existing past paper records filtered by board & level
   const allSubjects = useMemo(() => {
     const list: string[] = [];
     papers.forEach(p => {
-      if (p.subject && !list.includes(p.subject)) {
-        list.push(p.subject);
+      if (p.subject && p.subject.trim()) {
+        if (selectedBoard && p.board && p.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return;
+        if (selectedLevel && p.level && p.level.trim().toLowerCase() !== selectedLevel.trim().toLowerCase()) return;
+        const s = p.subject.trim();
+        if (!list.some(item => item.toLowerCase() === s.toLowerCase())) {
+          list.push(s);
+        }
       }
     });
     return list;
-  }, [papers]);
+  }, [papers, selectedBoard, selectedLevel]);
 
   // Extract dynamic years strictly from actual existing past paper records
   const allYears = useMemo(() => {
@@ -87,23 +99,6 @@ const PastPapers: React.FC = () => {
     return list;
   }, [papers]);
 
-  // Extract dynamic resources strictly from comma-separated resource inputs in past papers
-  const allResources = useMemo(() => {
-    const set = new Set<string>();
-    papers.forEach(p => {
-      const raw = p.resource || p.source || '';
-      if (raw) {
-        raw.split(',').map((s: string) => s.trim()).filter(Boolean).forEach((r: string) => set.add(r));
-      }
-    });
-    return Array.from(set);
-  }, [papers]);
-
-  // Recent 5 added past papers
-  const recentFivePapers = useMemo(() => {
-    return [...papers].slice(0, 5);
-  }, [papers]);
-
   // Step Navigation State: 1 = Board, 2 = Level/Class, 3 = Subject, 4 = Year, 5 = Papers/PDF View
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [selectedBoard, setSelectedBoard] = useState<string>('');
@@ -111,19 +106,52 @@ const PastPapers: React.FC = () => {
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>('');
 
+  // Dynamic URL Sync effect for Past Papers
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const board = params.get('board') || '';
+      const level = params.get('class') || params.get('level') || '';
+      const subject = params.get('subject') || '';
+      const step = parseInt(params.get('step') || '1', 10);
+
+      setSelectedBoard(board);
+      setSelectedLevel(level);
+      setSelectedSubject(subject);
+      setCurrentStep(step);
+    };
+
+    handlePopState();
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const updateRouteUrl = (newBoard: string, newLevel: string, newSubject: string, newStep: number) => {
+    setSelectedBoard(newBoard);
+    setSelectedLevel(newLevel);
+    setSelectedSubject(newSubject);
+    setCurrentStep(newStep);
+
+    const params = new URLSearchParams();
+    if (newBoard) params.set('board', newBoard);
+    if (newLevel) params.set('class', newLevel);
+    if (newSubject) params.set('subject', newSubject);
+    if (newStep > 1) params.set('step', newStep.toString());
+
+    const queryString = params.toString();
+    const newPath = queryString ? `/past_papers?${queryString}` : '/past_papers';
+    window.history.pushState(null, '', newPath);
+  };
+
   const filteredPastPapers = useMemo(() => {
     return papers.filter(p => {
-      if (selectedBoard && p.board && p.board.toLowerCase() !== selectedBoard.toLowerCase()) return false;
-      if (selectedLevel && p.level && p.level.toLowerCase() !== selectedLevel.toLowerCase()) return false;
-      if (selectedSubject && p.subject && p.subject.toLowerCase() !== selectedSubject.toLowerCase()) return false;
+      if (selectedBoard && p.board && p.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return false;
+      if (selectedLevel && p.level && p.level.trim().toLowerCase() !== selectedLevel.trim().toLowerCase()) return false;
+      if (selectedSubject && p.subject && p.subject.trim().toLowerCase() !== selectedSubject.trim().toLowerCase()) return false;
       if (selectedYear && p.year && String(p.year) !== selectedYear) return false;
-      if (filters.resource && p.resource) {
-        const items = p.resource.split(',').map((s: string) => s.trim().toLowerCase());
-        if (!items.includes(filters.resource.toLowerCase())) return false;
-      }
       return true;
     });
-  }, [papers, selectedBoard, selectedLevel, selectedSubject, selectedYear, filters.resource]);
+  }, [papers, selectedBoard, selectedLevel, selectedSubject, selectedYear]);
 
   const resetStepWizard = () => {
     setSelectedBoard('');
@@ -132,6 +160,7 @@ const PastPapers: React.FC = () => {
     setSelectedYear('');
     setFilters({ board: '', level: '', subject: '', year: '', resource: '' });
     setCurrentStep(1);
+    window.history.pushState(null, '', '/past_papers');
   };
 
   const stepDescriptions = [
@@ -196,7 +225,7 @@ const PastPapers: React.FC = () => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
             <button
-              onClick={() => { setSelectedBoard(''); setCurrentStep(2); }}
+              onClick={() => updateRouteUrl('', '', '', 2)}
               className="p-6 rounded-2xl bg-gradient-to-r from-sky-400 to-blue-500 text-white font-black text-lg shadow-lg shadow-sky-200 hover:scale-105 transition-all text-center"
             >
               ALL BOARDS
@@ -204,7 +233,7 @@ const PastPapers: React.FC = () => {
             {allBoards.map((board, idx) => (
               <button
                 key={board}
-                onClick={() => { setSelectedBoard(board); setCurrentStep(2); }}
+                onClick={() => updateRouteUrl(board, '', '', 2)}
                 className={`p-6 rounded-2xl bg-gradient-to-r ${pillColors[idx % pillColors.length]} font-black text-lg shadow-lg hover:scale-105 transition-all text-center`}
               >
                 {board}
@@ -220,13 +249,13 @@ const PastPapers: React.FC = () => {
           <div className="text-center mb-6">
             <span className="text-xs font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">Step 2</span>
             <h2 className="text-xl font-bold text-slate-800 mt-2">Select Class / Level</h2>
-            <button onClick={() => setCurrentStep(1)} className="text-xs text-slate-500 underline hover:text-slate-800 mt-1">← Change Board ({selectedBoard || 'All'})</button>
+            <button onClick={() => updateRouteUrl(selectedBoard, '', '', 1)} className="text-xs text-slate-500 underline hover:text-slate-800 mt-1">← Change Board ({selectedBoard || 'All'})</button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
             {allLevels.map((lvl, idx) => (
               <button
                 key={lvl}
-                onClick={() => { setSelectedLevel(lvl); setCurrentStep(3); }}
+                onClick={() => updateRouteUrl(selectedBoard, lvl, '', 3)}
                 className={`p-6 rounded-2xl bg-gradient-to-r ${pillColors[idx % pillColors.length]} font-black text-xl tracking-wider shadow-lg hover:scale-105 transition-all text-center uppercase`}
               >
                 {lvl}
@@ -242,13 +271,13 @@ const PastPapers: React.FC = () => {
           <div className="text-center mb-6">
             <span className="text-xs font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">Step 3</span>
             <h2 className="text-xl font-bold text-slate-800 mt-2">Select Subject</h2>
-            <button onClick={() => setCurrentStep(2)} className="text-xs text-slate-500 underline hover:text-slate-800 mt-1">← Change Class ({selectedLevel})</button>
+            <button onClick={() => updateRouteUrl(selectedBoard, selectedLevel, '', 2)} className="text-xs text-slate-500 underline hover:text-slate-800 mt-1">← Change Class ({selectedLevel})</button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {allSubjects.map((sub, idx) => (
               <button
                 key={sub}
-                onClick={() => { setSelectedSubject(sub); setCurrentStep(4); }}
+                onClick={() => updateRouteUrl(selectedBoard, selectedLevel, sub, 4)}
                 className={`p-5 rounded-2xl bg-gradient-to-r ${pillColors[idx % pillColors.length]} font-black text-base tracking-wide shadow-md hover:scale-105 transition-all text-center uppercase`}
               >
                 {sub}

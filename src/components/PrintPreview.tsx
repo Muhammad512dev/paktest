@@ -265,7 +265,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [verticalSpacing, setVerticalSpacing] = useState<number>(2);
   const [questionGap, setQuestionGap] = useState<number>(12);
   const [bilingualInline, setBilingualInline] = useState(true);
-  const [boardExamFormat, setBoardExamFormat] = useState(false);
+  const [boardExamFormat, setBoardExamFormat] = useState(true);
   const [showQuestionMarks, setShowQuestionMarks] = useState(paper.showQuestionMarks ?? true);
   const [printViewMode, setPrintViewMode] = useState<'both' | 'objective' | 'subjective'>('both');
   const [languageMode, setLanguageMode] = useState<'English' | 'Urdu' | 'Bilingual'>(() => {
@@ -1507,7 +1507,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                   subNumUr = `(${labelUr})     `;
                 }
               } else {
-                const subNum = sec.subQuestionNumbering === 'Roman'
+                const isShortQuestionSection = sec.category !== 'Objective' && !sec.hasParts;
+                const subNum = (sec.subQuestionNumbering === 'Roman' || isShortQuestionSection)
                   ? `(${romanNums[idx] || idx + 1})`
                   : `(${idx + 1})`;
                 subNumEn = `${subNum} `;
@@ -1520,6 +1521,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
 
               const isFirstPartOfMainQuestion = sec.hasParts && partIndex === 0;
               const showRepeatedStatement = sec.showQuestionStatement === true && isFirstPartOfMainQuestion;
+              const effectiveMcqCols = (layoutMode === 'DoubleColumn' && isMCQType(q.type)) ? 2 : mcqColumns;
               return (
                 <React.Fragment key={q.id}>
                   {showRepeatedStatement && (
@@ -1572,7 +1574,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       )}
                       {/* MCQ options below English question */}
                       {isMCQType(q.type) && (languageMode === 'Bilingual' || languageMode === 'English') && (
-                        <div className="grid mt-1" style={{ gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))`, columnGap: `${verticalSpacing * 2}px`, rowGap: `${verticalSpacing}px` }}>
+                        <div className="grid mt-1" style={{ gridTemplateColumns: `repeat(${effectiveMcqCols}, minmax(0, 1fr))`, columnGap: `${verticalSpacing * 2}px`, rowGap: `${verticalSpacing}px` }}>
                           {getMcqOptions(q).map((_, i) => {
                             const opt = q.options?.[i] || '';
                             const isCorrect = showAnswersInline && opt === q.correctAnswer;
@@ -1597,7 +1599,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                         </span>
                         {/* MCQ Urdu options */}
                         {isMCQType(q.type) && (languageMode === 'Bilingual' || languageMode === 'Urdu') && (
-                          <div dir="rtl" className="grid mt-1" style={{ gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))`, columnGap: `${verticalSpacing * 2}px`, rowGap: `${verticalSpacing}px` }}>
+                          <div dir="rtl" className="grid mt-1" style={{ gridTemplateColumns: `repeat(${effectiveMcqCols}, minmax(0, 1fr))`, columnGap: `${verticalSpacing * 2}px`, rowGap: `${verticalSpacing}px` }}>
                             {getMcqOptions(q).map((_, i) => {
                               const optUrdu = q.optionsUrdu?.[i] || '';
                               const isCorrect = showAnswersInline && optUrdu === q.correctAnswerUrdu && optUrdu !== '';

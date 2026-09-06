@@ -43,6 +43,7 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
    const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
    const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
    const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
+   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
    const [activeSectionId, setActiveSectionId] = useState<string>('');
 
    // New States for Printing Options
@@ -556,333 +557,332 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                      </div>
 
                      {/* EDITABLE SECTION PARAMETERS & FILTERS TOOLBAR */}
-                      <div className="flex flex-wrap items-center gap-3 sm:gap-4 p-3 bg-slate-50 rounded-2xl border border-slate-200 relative">
-                         <div className="flex items-center gap-2">
-                            <label className="text-xs font-bold text-slate-600">Total Questions:</label>
-                            <input
-                               type="number"
-                               min="1"
-                               max="100"
-                               value={sectionConfig.totalCount}
-                               onChange={(e) => {
-                                  const val = Math.max(1, parseInt(e.target.value) || 1);
-                                  updateSectionConfigValues(activeSectionId, { totalCount: val });
-                               }}
-                               className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 text-center outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
-                            />
-                         </div>
+                     <div className="flex flex-wrap items-center gap-3 sm:gap-4 p-3 bg-slate-50 rounded-2xl border border-slate-200 relative">
+                        <div className="flex items-center gap-2">
+                           <label className="text-xs font-bold text-slate-600">Total Questions:</label>
+                           <input
+                              type="number"
+                              min="1"
+                              max="100"
+                              value={sectionConfig.totalCount}
+                              onChange={(e) => {
+                                 const val = Math.max(1, parseInt(e.target.value) || 1);
+                                 updateSectionConfigValues(activeSectionId, { totalCount: val });
+                              }}
+                              className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 text-center outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                           />
+                        </div>
 
-                         <div className="flex items-center gap-2">
-                            <label className="text-xs font-bold text-slate-600">Attempt Question:</label>
-                            <input
-                               type="number"
-                               min="1"
-                               max={sectionConfig.totalCount}
-                               value={sectionConfig.selectCount}
-                               onChange={(e) => {
-                                  const val = Math.max(1, parseInt(e.target.value) || 1);
-                                  updateSectionConfigValues(activeSectionId, { selectCount: val });
-                               }}
-                               className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 text-center outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
-                            />
-                         </div>
+                        <div className="flex items-center gap-2">
+                           <label className="text-xs font-bold text-slate-600">Attempt Question:</label>
+                           <input
+                              type="number"
+                              min="1"
+                              max={sectionConfig.totalCount}
+                              value={sectionConfig.selectCount}
+                              onChange={(e) => {
+                                 const val = Math.max(1, parseInt(e.target.value) || 1);
+                                 updateSectionConfigValues(activeSectionId, { selectCount: val });
+                              }}
+                              className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 text-center outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                           />
+                        </div>
 
-                         <div className="flex items-center gap-2">
-                            <label className="text-xs font-bold text-slate-600">Marks / Question:</label>
-                            <input
-                               type="number"
-                               min="0.5"
-                               step="0.5"
-                               value={sectionConfig.marksPerQuestion}
-                               onChange={(e) => {
-                                  const val = Math.max(0.5, parseFloat(e.target.value) || 1);
-                                  updateSectionConfigValues(activeSectionId, { marksPerQuestion: val });
-                               }}
-                               className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 text-center outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
-                            />
-                         </div>
+                        <div className="flex items-center gap-2">
+                           <label className="text-xs font-bold text-slate-600">Marks / Question:</label>
+                           <input
+                              type="number"
+                              min="0.5"
+                              step="0.5"
+                              value={sectionConfig.marksPerQuestion}
+                              onChange={(e) => {
+                                 const val = Math.max(0.5, parseFloat(e.target.value) || 1);
+                                 updateSectionConfigValues(activeSectionId, { marksPerQuestion: val });
+                              }}
+                              className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 text-center outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                           />
+                        </div>
 
-                         {/* QUESTION TYPES DROPDOWN POPOVER - SINGLE SELECT ONLY */}
-                         <div className="relative">
-                            <button
-                               type="button"
-                               onClick={() => {
-                                  setIsTypeDropdownOpen(!isTypeDropdownOpen);
-                                  setIsSourceDropdownOpen(false);
-                               }}
-                               className="px-3 py-1.5 bg-white border border-slate-300 hover:border-indigo-500 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-2 shadow-2xs transition-all cursor-pointer"
-                            >
-                               <ListFilter size={14} className="text-indigo-600" />
-                               <span>Type: <strong className="text-indigo-600">{activeTypes.length > 0 ? activeTypes[0] : 'All'}</strong></span>
-                               <ChevronDown size={14} className={`text-slate-400 transition-transform ${isTypeDropdownOpen ? 'rotate-180' : ''}`} />
-                            </button>
+                        {/* QUESTION TYPES DROPDOWN POPOVER - SINGLE SELECT ONLY */}
+                        <div className="relative">
+                           <button
+                              type="button"
+                              onClick={() => {
+                                 setIsTypeDropdownOpen(!isTypeDropdownOpen);
+                                 setIsSourceDropdownOpen(false);
+                              }}
+                              className="px-3 py-1.5 bg-white border border-slate-300 hover:border-indigo-500 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-2 shadow-2xs transition-all cursor-pointer"
+                           >
+                              <ListFilter size={14} className="text-indigo-600" />
+                              <span>Type: <strong className="text-indigo-600">{activeTypes.length > 0 ? activeTypes[0] : 'All'}</strong></span>
+                              <ChevronDown size={14} className={`text-slate-400 transition-transform ${isTypeDropdownOpen ? 'rotate-180' : ''}`} />
+                           </button>
 
-                            {isTypeDropdownOpen && (
-                               <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 animate-in fade-in duration-150">
-                                  <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
-                                     <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">Question Type (Single)</span>
-                                     <button
-                                        type="button"
-                                        onClick={() => { setActiveTypes([]); setIsTypeDropdownOpen(false); }}
-                                        className="text-[10px] font-bold text-slate-400 hover:text-indigo-600"
-                                     >
-                                        Any Type
-                                     </button>
-                                  </div>
-                                  <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
-                                     {availableTypesInScope.map(({ type, count }) => {
-                                        const isSelected = activeTypes.includes(type);
-                                        return (
-                                           <label
-                                              key={type}
-                                              onClick={() => {
-                                                 // Single-select: toggle to this type only or unselect if clicked again
-                                                 setActiveTypes(isSelected ? [] : [type]);
-                                                 setIsTypeDropdownOpen(false);
-                                              }}
-                                              className={`flex items-center justify-between cursor-pointer p-1.5 rounded-lg transition-colors ${
-                                                 isSelected ? 'bg-indigo-50 text-indigo-900 font-bold' : 'hover:bg-slate-50 text-slate-700'
-                                              }`}
-                                           >
-                                              <div className="flex items-center gap-2">
-                                                 <input
-                                                    type="radio"
-                                                    name="single_question_type"
-                                                    checked={isSelected}
-                                                    onChange={() => {}}
-                                                    className="w-4 h-4 border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                                                 />
-                                                 <span className="text-xs">{type}</span>
-                                              </div>
-                                              <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md">{count}</span>
-                                           </label>
-                                        );
-                                     })}
-                                  </div>
-                               </div>
-                            )}
-                         </div>
+                           {isTypeDropdownOpen && (
+                              <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 animate-in fade-in duration-150">
+                                 <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                                    <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">Question Type (Single)</span>
+                                    <button
+                                       type="button"
+                                       onClick={() => { setActiveTypes([]); setIsTypeDropdownOpen(false); }}
+                                       className="text-[10px] font-bold text-slate-400 hover:text-indigo-600"
+                                    >
+                                       Any Type
+                                    </button>
+                                 </div>
+                                 <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
+                                    {availableTypesInScope.map(({ type, count }) => {
+                                       const isSelected = activeTypes.includes(type);
+                                       return (
+                                          <label
+                                             key={type}
+                                             onClick={() => {
+                                                // Single-select: toggle to this type only or unselect if clicked again
+                                                setActiveTypes(isSelected ? [] : [type]);
+                                                setIsTypeDropdownOpen(false);
+                                             }}
+                                             className={`flex items-center justify-between cursor-pointer p-1.5 rounded-lg transition-colors ${isSelected ? 'bg-indigo-50 text-indigo-900 font-bold' : 'hover:bg-slate-50 text-slate-700'
+                                                }`}
+                                          >
+                                             <div className="flex items-center gap-2">
+                                                <input
+                                                   type="radio"
+                                                   name="single_question_type"
+                                                   checked={isSelected}
+                                                   onChange={() => { }}
+                                                   className="w-4 h-4 border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                />
+                                                <span className="text-xs">{type}</span>
+                                             </div>
+                                             <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md">{count}</span>
+                                          </label>
+                                       );
+                                    })}
+                                 </div>
+                              </div>
+                           )}
+                        </div>
 
-                         {/* QUESTION SOURCE DROPDOWN POPOVER */}
-                         <div className="relative">
-                            <button
-                               type="button"
-                               onClick={() => {
-                                  setIsSourceDropdownOpen(!isSourceDropdownOpen);
-                                  setIsTypeDropdownOpen(false);
-                               }}
-                               className="px-3 py-1.5 bg-white border border-slate-300 hover:border-indigo-500 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-2 shadow-2xs transition-all cursor-pointer"
-                            >
-                               <Filter size={14} className="text-indigo-600" />
-                               <span>Sources ({activeSources.length > 0 ? activeSources.length : 'All'})</span>
-                               <ChevronDown size={14} className={`text-slate-400 transition-transform ${isSourceDropdownOpen ? 'rotate-180' : ''}`} />
-                            </button>
+                        {/* QUESTION SOURCE DROPDOWN POPOVER */}
+                        <div className="relative">
+                           <button
+                              type="button"
+                              onClick={() => {
+                                 setIsSourceDropdownOpen(!isSourceDropdownOpen);
+                                 setIsTypeDropdownOpen(false);
+                              }}
+                              className="px-3 py-1.5 bg-white border border-slate-300 hover:border-indigo-500 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-2 shadow-2xs transition-all cursor-pointer"
+                           >
+                              <Filter size={14} className="text-indigo-600" />
+                              <span>Sources ({activeSources.length > 0 ? activeSources.length : 'All'})</span>
+                              <ChevronDown size={14} className={`text-slate-400 transition-transform ${isSourceDropdownOpen ? 'rotate-180' : ''}`} />
+                           </button>
 
-                            {isSourceDropdownOpen && (
-                               <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 animate-in fade-in duration-150">
-                                  <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
-                                     <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">Question Source</span>
-                                     <button
-                                        type="button"
-                                        onClick={() => setActiveSources([])}
-                                        className="text-[10px] font-bold text-slate-400 hover:text-indigo-600"
-                                     >
-                                        Select All
-                                     </button>
-                                  </div>
-                                  <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
-                                     {availableSourcesInScope.map(({ source, count }) => (
-                                        <label key={source} className="flex items-center justify-between cursor-pointer p-1.5 rounded-lg hover:bg-slate-50 transition-colors">
-                                           <div className="flex items-center gap-2">
-                                              <input
-                                                 type="checkbox"
-                                                 checked={activeSources.includes(source)}
-                                                 onChange={() => setActiveSources(prev => prev.includes(source) ? prev.filter(s => s !== source) : [...prev, source])}
-                                                 className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                                              />
-                                              <span className="text-xs font-bold text-slate-700">{source}</span>
-                                           </div>
-                                           <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md">{count}</span>
-                                        </label>
-                                     ))}
-                                  </div>
-                               </div>
-                            )}
-                         </div>
+                           {isSourceDropdownOpen && (
+                              <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 animate-in fade-in duration-150">
+                                 <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                                    <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">Question Source</span>
+                                    <button
+                                       type="button"
+                                       onClick={() => setActiveSources([])}
+                                       className="text-[10px] font-bold text-slate-400 hover:text-indigo-600"
+                                    >
+                                       Select All
+                                    </button>
+                                 </div>
+                                 <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
+                                    {availableSourcesInScope.map(({ source, count }) => (
+                                       <label key={source} className="flex items-center justify-between cursor-pointer p-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+                                          <div className="flex items-center gap-2">
+                                             <input
+                                                type="checkbox"
+                                                checked={activeSources.includes(source)}
+                                                onChange={() => setActiveSources(prev => prev.includes(source) ? prev.filter(s => s !== source) : [...prev, source])}
+                                                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                             />
+                                             <span className="text-xs font-bold text-slate-700">{source}</span>
+                                          </div>
+                                          <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md">{count}</span>
+                                       </label>
+                                    ))}
+                                 </div>
+                              </div>
+                           )}
+                        </div>
 
-                         {/* FETCH QUESTIONS BUTTON */}
-                         <button
-                            type="button"
-                            onClick={executeSearch}
-                            disabled={isSearching}
-                            className="px-4 py-1.5 bg-[#1a202c] hover:bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
-                         >
-                            {isSearching ? <RefreshCw className="animate-spin" size={14} /> : <Search size={14} />}
-                            <span>Fetch Questions</span>
-                         </button>
+                        {/* FETCH QUESTIONS BUTTON */}
+                        <button
+                           type="button"
+                           onClick={executeSearch}
+                           disabled={isSearching}
+                           className="px-4 py-1.5 bg-[#1a202c] hover:bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                        >
+                           {isSearching ? <RefreshCw className="animate-spin" size={14} /> : <Search size={14} />}
+                           <span>Fetch Questions</span>
+                        </button>
 
-                         <div className="sm:ml-auto flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
-                            <span>Total Section Marks: {sectionConfig.selectCount * sectionConfig.marksPerQuestion}</span>
-                         </div>
-                      </div>
+                        <div className="sm:ml-auto flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+                           <span>Total Section Marks: {sectionConfig.selectCount * sectionConfig.marksPerQuestion}</span>
+                        </div>
+                     </div>
 
-                      {/* HORIZONTAL ACTIVE SCOPE (Chapters & Topics - TOGGLEABLE / COLLAPSIBLE) */}
-                      <div className="p-3 bg-indigo-50/40 rounded-2xl border border-indigo-100 flex flex-col gap-2">
-                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                               <span className="text-[11px] font-black text-indigo-700 uppercase tracking-widest flex items-center gap-2">
-                                  <BookOpen size={14} /> Active Scope (Chapters & Topics)
-                               </span>
-                               <span className="text-[10px] font-bold text-indigo-800 bg-indigo-100/70 px-2 py-0.5 rounded-md">
-                                  {activeChapters.length} Chapters &bull; {activeTopics.length} Topics Active
-                               </span>
-                            </div>
+                     {/* HORIZONTAL ACTIVE SCOPE (Chapters & Topics - TOGGLEABLE / COLLAPSIBLE) */}
+                     <div className="p-3 bg-indigo-50/40 rounded-2xl border border-indigo-100 flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                           <div className="flex items-center gap-3">
+                              <span className="text-[11px] font-black text-indigo-700 uppercase tracking-widest flex items-center gap-2">
+                                 <BookOpen size={14} /> Active Scope (Chapters & Topics)
+                              </span>
+                              <span className="text-[10px] font-bold text-indigo-800 bg-indigo-100/70 px-2 py-0.5 rounded-md">
+                                 {activeChapters.length} Chapters &bull; {activeTopics.length} Topics Active
+                              </span>
+                           </div>
 
-                            <button
-                               type="button"
-                               onClick={() => setIsScopeExpanded(!isScopeExpanded)}
-                               className="px-3 py-1 bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
-                               title={isScopeExpanded ? 'Reduce Active Scope' : 'Expand Active Scope'}
-                            >
-                               {isScopeExpanded ? (
-                                  <>
-                                     <ChevronUp size={14} /> Reduce Scope
-                                  </>
-                               ) : (
-                                  <>
-                                     <ChevronDown size={14} /> Expand Scope
-                                  </>
-                               )}
-                            </button>
-                         </div>
+                           <button
+                              type="button"
+                              onClick={() => setIsScopeExpanded(!isScopeExpanded)}
+                              className="px-3 py-1 bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+                              title={isScopeExpanded ? 'Reduce Active Scope' : 'Expand Active Scope'}
+                           >
+                              {isScopeExpanded ? (
+                                 <>
+                                    <ChevronUp size={14} /> Reduce Scope
+                                 </>
+                              ) : (
+                                 <>
+                                    <ChevronDown size={14} /> Expand Scope
+                                 </>
+                              )}
+                           </button>
+                        </div>
 
-                         {isScopeExpanded ? (
-                            <div className="flex flex-wrap items-start gap-3 overflow-x-auto custom-scrollbar pb-1 max-h-48 animate-in fade-in duration-200">
-                               {paper.selectedChapters.length > 0 ? (
-                                  paper.selectedChapters.map(chap => {
-                                     const isChapActive = activeChapters.includes(chap);
-                                     const isExpanded = expandedChapters.includes(chap);
-                                     const chapterId = allChapters.find(c => c.name === chap)?.id;
-                                     const topicsInChapter = allTopics.filter(t => t.chapterId === chapterId);
+                        {isScopeExpanded ? (
+                           <div className="flex flex-wrap items-start gap-3 overflow-x-auto custom-scrollbar pb-1 max-h-48 animate-in fade-in duration-200">
+                              {paper.selectedChapters.length > 0 ? (
+                                 paper.selectedChapters.map(chap => {
+                                    const isChapActive = activeChapters.includes(chap);
+                                    const isExpanded = expandedChapters.includes(chap);
+                                    const chapterId = allChapters.find(c => c.name === chap)?.id;
+                                    const topicsInChapter = allTopics.filter(t => t.chapterId === chapterId);
 
-                                     return (
-                                        <div key={chap} className="flex flex-col bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden min-w-[200px] max-w-xs flex-1">
-                                           <div className="flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 border-b border-slate-100">
-                                              <label className="flex items-center gap-2 cursor-pointer group flex-1 min-w-0">
-                                                 <div className="relative flex items-center justify-center shrink-0">
-                                                    <input
-                                                       type="checkbox"
-                                                       checked={isChapActive}
-                                                       onChange={() => {
-                                                          if (isChapActive) {
-                                                             setActiveChapters(prev => prev.filter(c => c !== chap));
-                                                             const topicNames = topicsInChapter.map(t => t.name);
-                                                             setActiveTopics(prev => prev.filter(t => !topicNames.includes(t)));
-                                                          } else {
-                                                             setActiveChapters(prev => [...prev, chap]);
-                                                             setExpandedChapters(prev => Array.from(new Set([...prev, chap])));
-                                                             const topicNames = topicsInChapter.map(t => t.name);
-                                                             setActiveTopics(prev => Array.from(new Set([...prev, ...topicNames])));
-                                                          }
-                                                       }}
-                                                       className="peer appearance-none w-4 h-4 rounded border-2 border-slate-300 checked:bg-indigo-600 checked:border-indigo-600 transition-all cursor-pointer"
-                                                    />
-                                                    <Check className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={4} />
-                                                 </div>
-                                                 <span className={`text-xs font-bold leading-tight truncate ${isChapActive ? 'text-slate-900' : 'text-slate-400'}`}>{chap}</span>
-                                              </label>
+                                    return (
+                                       <div key={chap} className="flex flex-col bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden min-w-[200px] max-w-xs flex-1">
+                                          <div className="flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 border-b border-slate-100">
+                                             <label className="flex items-center gap-2 cursor-pointer group flex-1 min-w-0">
+                                                <div className="relative flex items-center justify-center shrink-0">
+                                                   <input
+                                                      type="checkbox"
+                                                      checked={isChapActive}
+                                                      onChange={() => {
+                                                         if (isChapActive) {
+                                                            setActiveChapters(prev => prev.filter(c => c !== chap));
+                                                            const topicNames = topicsInChapter.map(t => t.name);
+                                                            setActiveTopics(prev => prev.filter(t => !topicNames.includes(t)));
+                                                         } else {
+                                                            setActiveChapters(prev => [...prev, chap]);
+                                                            setExpandedChapters(prev => Array.from(new Set([...prev, chap])));
+                                                            const topicNames = topicsInChapter.map(t => t.name);
+                                                            setActiveTopics(prev => Array.from(new Set([...prev, ...topicNames])));
+                                                         }
+                                                      }}
+                                                      className="peer appearance-none w-4 h-4 rounded border-2 border-slate-300 checked:bg-indigo-600 checked:border-indigo-600 transition-all cursor-pointer"
+                                                   />
+                                                   <Check className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={4} />
+                                                </div>
+                                                <span className={`text-xs font-bold leading-tight truncate ${isChapActive ? 'text-slate-900' : 'text-slate-400'}`}>{chap}</span>
+                                             </label>
 
-                                              <button
-                                                 type="button"
-                                                 onClick={() => {
-                                                    if (isExpanded) setExpandedChapters(prev => prev.filter(c => c !== chap));
-                                                    else setExpandedChapters(prev => Array.from(new Set([...prev, chap])));
-                                                 }}
-                                                 className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 transition-colors shrink-0"
-                                                 title="Toggle topics list"
-                                              >
-                                                 {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                                              </button>
-                                           </div>
+                                             <button
+                                                type="button"
+                                                onClick={() => {
+                                                   if (isExpanded) setExpandedChapters(prev => prev.filter(c => c !== chap));
+                                                   else setExpandedChapters(prev => Array.from(new Set([...prev, chap])));
+                                                }}
+                                                className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 transition-colors shrink-0"
+                                                title="Toggle topics list"
+                                             >
+                                                {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                             </button>
+                                          </div>
 
-                                           {/* HORIZONTAL EXPANDABLE TOPIC BOX */}
-                                           {isExpanded && topicsInChapter.length > 0 && (
-                                              <div className="p-2.5 bg-white space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
-                                                 <div className="flex items-center justify-between border-b border-slate-100 pb-1">
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase">Topics ({topicsInChapter.length})</span>
-                                                    <div className="flex items-center gap-2">
-                                                       <button
-                                                          type="button"
-                                                          onClick={() => {
-                                                             const topicNames = topicsInChapter.map(t => t.name);
-                                                             setActiveTopics(prev => Array.from(new Set([...prev, ...topicNames])));
-                                                          }}
-                                                          className="text-[9px] font-bold text-indigo-600 hover:underline"
-                                                       >
-                                                          All
-                                                       </button>
-                                                       <span className="text-slate-300">|</span>
-                                                       <button
-                                                          type="button"
-                                                          onClick={() => {
-                                                             const topicNames = topicsInChapter.map(t => t.name);
-                                                             setActiveTopics(prev => prev.filter(t => !topicNames.includes(t)));
-                                                          }}
-                                                          className="text-[9px] font-bold text-slate-400 hover:text-red-500"
-                                                       >
-                                                          Clear
-                                                       </button>
-                                                    </div>
-                                                 </div>
+                                          {/* HORIZONTAL EXPANDABLE TOPIC BOX */}
+                                          {isExpanded && topicsInChapter.length > 0 && (
+                                             <div className="p-2.5 bg-white space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
+                                                <div className="flex items-center justify-between border-b border-slate-100 pb-1">
+                                                   <span className="text-[9px] font-bold text-slate-400 uppercase">Topics ({topicsInChapter.length})</span>
+                                                   <div className="flex items-center gap-2">
+                                                      <button
+                                                         type="button"
+                                                         onClick={() => {
+                                                            const topicNames = topicsInChapter.map(t => t.name);
+                                                            setActiveTopics(prev => Array.from(new Set([...prev, ...topicNames])));
+                                                         }}
+                                                         className="text-[9px] font-bold text-indigo-600 hover:underline"
+                                                      >
+                                                         All
+                                                      </button>
+                                                      <span className="text-slate-300">|</span>
+                                                      <button
+                                                         type="button"
+                                                         onClick={() => {
+                                                            const topicNames = topicsInChapter.map(t => t.name);
+                                                            setActiveTopics(prev => prev.filter(t => !topicNames.includes(t)));
+                                                         }}
+                                                         className="text-[9px] font-bold text-slate-400 hover:text-red-500"
+                                                      >
+                                                         Clear
+                                                      </button>
+                                                   </div>
+                                                </div>
 
-                                                 <div className="space-y-1">
-                                                    {topicsInChapter.map(t => {
-                                                       const isTopicActive = activeTopics.includes(t.name);
-                                                       return (
-                                                          <label key={t.id} className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-slate-50 transition-colors">
-                                                             <div className="relative flex items-center justify-center shrink-0">
-                                                                <input
-                                                                   type="checkbox"
-                                                                   checked={isTopicActive}
-                                                                   onChange={() => {
-                                                                      if (isTopicActive) setActiveTopics(prev => prev.filter(top => top !== t.name));
-                                                                      else setActiveTopics(prev => [...prev, t.name]);
-                                                                   }}
-                                                                   className="peer appearance-none w-3.5 h-3.5 rounded border border-slate-300 checked:bg-purple-600 checked:border-purple-600 transition-all cursor-pointer"
-                                                                />
-                                                                <Check className="absolute w-2.5 h-2.5 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={4} />
-                                                             </div>
-                                                             <span className={`text-[11px] font-medium leading-tight truncate ${isTopicActive ? 'text-purple-900 font-bold' : 'text-slate-600'}`}>
-                                                                {t.name}
-                                                             </span>
-                                                          </label>
-                                                       );
-                                                    })}
-                                                 </div>
-                                              </div>
-                                           )}
-                                        </div>
-                                     );
-                                  })
-                               ) : (
-                                  <p className="text-xs text-slate-400 italic">No specific chapters selected.</p>
-                               )}
-                            </div>
-                         ) : (
-                            <div className="flex flex-wrap items-center gap-2 pt-1">
-                               {activeChapters.length > 0 ? (
-                                  activeChapters.map(chap => (
-                                     <span key={chap} className="px-2.5 py-1 bg-white text-indigo-800 rounded-lg text-[11px] font-bold border border-indigo-200 shadow-2xs flex items-center gap-1">
-                                        📖 {chap}
-                                     </span>
-                                  ))
-                               ) : (
-                                  <span className="text-xs text-slate-400 italic">No active scope selected.</span>
-                               )}
-                            </div>
-                         )}
-                      </div>
-                   </div>
+                                                <div className="space-y-1">
+                                                   {topicsInChapter.map(t => {
+                                                      const isTopicActive = activeTopics.includes(t.name);
+                                                      return (
+                                                         <label key={t.id} className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-slate-50 transition-colors">
+                                                            <div className="relative flex items-center justify-center shrink-0">
+                                                               <input
+                                                                  type="checkbox"
+                                                                  checked={isTopicActive}
+                                                                  onChange={() => {
+                                                                     if (isTopicActive) setActiveTopics(prev => prev.filter(top => top !== t.name));
+                                                                     else setActiveTopics(prev => [...prev, t.name]);
+                                                                  }}
+                                                                  className="peer appearance-none w-3.5 h-3.5 rounded border border-slate-300 checked:bg-purple-600 checked:border-purple-600 transition-all cursor-pointer"
+                                                               />
+                                                               <Check className="absolute w-2.5 h-2.5 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={4} />
+                                                            </div>
+                                                            <span className={`text-[11px] font-medium leading-tight truncate ${isTopicActive ? 'text-purple-900 font-bold' : 'text-slate-600'}`}>
+                                                               {t.name}
+                                                            </span>
+                                                         </label>
+                                                      );
+                                                   })}
+                                                </div>
+                                             </div>
+                                          )}
+                                       </div>
+                                    );
+                                 })
+                              ) : (
+                                 <p className="text-xs text-slate-400 italic">No specific chapters selected.</p>
+                              )}
+                           </div>
+                        ) : (
+                           <div className="flex flex-wrap items-center gap-2 pt-1">
+                              {activeChapters.length > 0 ? (
+                                 activeChapters.map(chap => (
+                                    <span key={chap} className="px-2.5 py-1 bg-white text-indigo-800 rounded-lg text-[11px] font-bold border border-indigo-200 shadow-2xs flex items-center gap-1">
+                                       📖 {chap}
+                                    </span>
+                                 ))
+                              ) : (
+                                 <span className="text-xs text-slate-400 italic">No active scope selected.</span>
+                              )}
+                           </div>
+                        )}
+                     </div>
+                  </div>
 
                   <div className="flex-1 flex flex-col overflow-hidden min-h-0">
                      {/* CONTENT AREA - FULL WIDTH WITH DEDICATED VERTICAL SCROLLBAR & SCROLL DOWN */}
@@ -909,16 +909,14 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                           <button
                                              type="button"
                                              onClick={() => setSelectionStatusFilter('all')}
-                                             className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                                                selectionStatusFilter === 'all'
-                                                   ? 'bg-white text-indigo-600 shadow-xs ring-1 ring-slate-200'
-                                                   : 'text-slate-500 hover:text-slate-900'
-                                             }`}
+                                             className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${selectionStatusFilter === 'all'
+                                                ? 'bg-white text-indigo-600 shadow-xs ring-1 ring-slate-200'
+                                                : 'text-slate-500 hover:text-slate-900'
+                                                }`}
                                           >
                                              <span>All Questions</span>
-                                             <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                                                selectionStatusFilter === 'all' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/80 text-slate-600'
-                                             }`}>
+                                             <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${selectionStatusFilter === 'all' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/80 text-slate-600'
+                                                }`}>
                                                 {availableQuestions.length}
                                              </span>
                                           </button>
@@ -926,17 +924,15 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                           <button
                                              type="button"
                                              onClick={() => setSelectionStatusFilter('selected')}
-                                             className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                                                selectionStatusFilter === 'selected'
-                                                   ? 'bg-white text-emerald-700 shadow-xs ring-1 ring-slate-200'
-                                                   : 'text-slate-500 hover:text-slate-900'
-                                             }`}
+                                             className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${selectionStatusFilter === 'selected'
+                                                ? 'bg-white text-emerald-700 shadow-xs ring-1 ring-slate-200'
+                                                : 'text-slate-500 hover:text-slate-900'
+                                                }`}
                                           >
                                              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                                              <span>Selected</span>
-                                             <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                                                selectionStatusFilter === 'selected' ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-200/80 text-slate-600'
-                                             }`}>
+                                             <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${selectionStatusFilter === 'selected' ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-200/80 text-slate-600'
+                                                }`}>
                                                 {availableQuestions.filter(q => currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId === activeSectionId)).length}
                                              </span>
                                           </button>
@@ -944,17 +940,15 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                           <button
                                              type="button"
                                              onClick={() => setSelectionStatusFilter('unselected')}
-                                             className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                                                selectionStatusFilter === 'unselected'
-                                                   ? 'bg-white text-amber-700 shadow-xs ring-1 ring-slate-200'
-                                                   : 'text-slate-500 hover:text-slate-900'
-                                             }`}
+                                             className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${selectionStatusFilter === 'unselected'
+                                                ? 'bg-white text-amber-700 shadow-xs ring-1 ring-slate-200'
+                                                : 'text-slate-500 hover:text-slate-900'
+                                                }`}
                                           >
                                              <span className="w-2 h-2 rounded-full bg-amber-400"></span>
                                              <span>Unselected</span>
-                                             <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                                                selectionStatusFilter === 'unselected' ? 'bg-amber-50 text-amber-800' : 'bg-slate-200/80 text-slate-600'
-                                             }`}>
+                                             <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${selectionStatusFilter === 'unselected' ? 'bg-amber-50 text-amber-800' : 'bg-slate-200/80 text-slate-600'
+                                                }`}>
                                                 {availableQuestions.filter(q => !currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId === activeSectionId)).length}
                                              </span>
                                           </button>
@@ -986,11 +980,10 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                                 key={cols}
                                                 type="button"
                                                 onClick={() => setQuestionGridColumns(cols as any)}
-                                                className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all ${
-                                                   questionGridColumns === cols
-                                                      ? 'bg-white text-indigo-600 shadow-xs ring-1 ring-slate-200'
-                                                      : 'text-slate-500 hover:text-slate-800'
-                                                }`}
+                                                className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all ${questionGridColumns === cols
+                                                   ? 'bg-white text-indigo-600 shadow-xs ring-1 ring-slate-200'
+                                                   : 'text-slate-500 hover:text-slate-800'
+                                                   }`}
                                                 title={`View in ${cols} column${cols > 1 ? 's' : ''}`}
                                              >
                                                 {cols} Col{cols > 1 ? 's' : ''}
@@ -1018,158 +1011,156 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                        </button>
                                     </div>
                                  </div>
-                               </div>
+                              </div>
 
-                               {/* QUESTION LIST IN COLUMNS / GRID VIEW */}
-                               <div className={`grid gap-2.5 ${
-                                  questionGridColumns === 1
-                                     ? 'grid-cols-1'
-                                     : questionGridColumns === 2
-                                     ? 'grid-cols-1 lg:grid-cols-2'
-                                     : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'
-                               }`}>
-                               {displayedMenuQuestions.map((q, idx) => {
-                                 const isSelectedInThisSection = currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId === activeSectionId);
-                                 const isSelectedInOtherSection = currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId !== activeSectionId);
-                                 const isSelected = isSelectedInThisSection || isSelectedInOtherSection;
-                                 const showEnglish = (extractionLanguage === 'Bilingual' || extractionLanguage === 'English') && !!q.text;
-                                 const showUrdu = (extractionLanguage === 'Bilingual' || extractionLanguage === 'Urdu') && !!q.textUrdu;
-                                 const isTwoColumn = showEnglish && showUrdu;
+                              {/* QUESTION LIST IN COLUMNS / GRID VIEW */}
+                              <div className={`grid gap-2.5 ${questionGridColumns === 1
+                                 ? 'grid-cols-1'
+                                 : questionGridColumns === 2
+                                    ? 'grid-cols-1 lg:grid-cols-2'
+                                    : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'
+                                 }`}>
+                                 {displayedMenuQuestions.map((q, idx) => {
+                                    const isSelectedInThisSection = currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId === activeSectionId);
+                                    const isSelectedInOtherSection = currentPaper.questions.some(sq => (sq.id === q.id || sq.id.startsWith(q.id + '_')) && sq.sectionId !== activeSectionId);
+                                    const isSelected = isSelectedInThisSection || isSelectedInOtherSection;
+                                    const showEnglish = (extractionLanguage === 'Bilingual' || extractionLanguage === 'English') && !!q.text;
+                                    const showUrdu = (extractionLanguage === 'Bilingual' || extractionLanguage === 'Urdu') && !!q.textUrdu;
+                                    const isTwoColumn = showEnglish && showUrdu;
 
-                                 return (
-                                    <div key={q.id} onClick={() => toggleQuestionSelection(q)} className={`p-2 sm:p-2.5 rounded-lg border transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between ${isSelectedInThisSection ? 'border-indigo-500 bg-indigo-50/25 shadow-xs ring-1 ring-indigo-400' : isSelectedInOtherSection ? 'border-amber-400 bg-amber-50/15 shadow-2xs' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50/50'}`}>
-                                       {isSelectedInThisSection && <div className="absolute top-0 right-0 w-6 h-6 bg-indigo-600 flex items-center justify-center rounded-bl-md text-white shadow-xs"><Check size={11} strokeWidth={3.5} /></div>}
-                                       <div className="flex gap-2 items-start">
-                                          <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-all font-bold text-[10px] ${isSelectedInThisSection ? 'bg-indigo-600 border-indigo-600 text-white' : isSelectedInOtherSection ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-300 bg-slate-50 text-slate-500'}`}>{idx + 1}</div>
-                                          <div className="flex-1 space-y-1 min-w-0 pr-3">
-                                             {/* CHAPTER, TOPIC, TYPE BADGES & SOURCES (TOP BAR) */}
-                                             <div className="flex flex-wrap items-center justify-between gap-1">
-                                                <div className="flex flex-wrap items-center gap-1">
-                                                   {q.chapter && (
-                                                      <span className="px-1.5 py-0.2 bg-indigo-50 text-indigo-700 rounded text-[9px] font-bold tracking-tight border border-indigo-100 flex items-center gap-0.5">
-                                                         📖 {q.chapter}
+                                    return (
+                                       <div key={q.id} onClick={() => toggleQuestionSelection(q)} className={`p-2 sm:p-2.5 rounded-lg border transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between ${isSelectedInThisSection ? 'border-indigo-500 bg-indigo-50/25 shadow-xs ring-1 ring-indigo-400' : isSelectedInOtherSection ? 'border-amber-400 bg-amber-50/15 shadow-2xs' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50/50'}`}>
+                                          {isSelectedInThisSection && <div className="absolute top-0 right-0 w-6 h-6 bg-indigo-600 flex items-center justify-center rounded-bl-md text-white shadow-xs"><Check size={11} strokeWidth={3.5} /></div>}
+                                          <div className="flex gap-2 items-start">
+                                             <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-all font-bold text-[10px] ${isSelectedInThisSection ? 'bg-indigo-600 border-indigo-600 text-white' : isSelectedInOtherSection ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-300 bg-slate-50 text-slate-500'}`}>{idx + 1}</div>
+                                             <div className="flex-1 space-y-1 min-w-0 pr-3">
+                                                {/* CHAPTER, TOPIC, TYPE BADGES & SOURCES (TOP BAR) */}
+                                                <div className="flex flex-wrap items-center justify-between gap-1">
+                                                   <div className="flex flex-wrap items-center gap-1">
+                                                      {q.chapter && (
+                                                         <span className="px-1.5 py-0.2 bg-indigo-50 text-indigo-700 rounded text-[9px] font-bold tracking-tight border border-indigo-100 flex items-center gap-0.5">
+                                                            📖 {q.chapter}
+                                                         </span>
+                                                      )}
+                                                      {q.topic && (
+                                                         <span className="px-1.5 py-0.2 bg-purple-50 text-purple-700 rounded text-[9px] font-bold tracking-tight border border-purple-100 flex items-center gap-0.5">
+                                                            🏷️ {q.topic}
+                                                         </span>
+                                                      )}
+                                                      <span className="px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 border border-slate-200">
+                                                         {q.type}
                                                       </span>
-                                                   )}
-                                                   {q.topic && (
-                                                      <span className="px-1.5 py-0.2 bg-purple-50 text-purple-700 rounded text-[9px] font-bold tracking-tight border border-purple-100 flex items-center gap-0.5">
-                                                         🏷️ {q.topic}
-                                                      </span>
-                                                   )}
-                                                   <span className="px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 border border-slate-200">
-                                                      {q.type}
-                                                   </span>
-                                                   {isSelectedInThisSection && (
-                                                      <span className="px-1.5 py-0.2 bg-emerald-600 text-white rounded text-[9px] font-bold tracking-tight flex items-center gap-0.5 shadow-2xs">
-                                                         <Check size={8} strokeWidth={3} /> In Section
-                                                      </span>
-                                                   )}
-                                                   {isSelectedInOtherSection && (
-                                                      <span className="px-1.5 py-0.2 bg-amber-500 text-white rounded text-[9px] font-bold tracking-tight flex items-center gap-0.5 shadow-2xs">
-                                                         In Another Section
-                                                      </span>
-                                                   )}
-                                                </div>
-
-                                                <div className="flex flex-wrap items-center gap-1 ml-auto">
-                                                   {q.sources && q.sources.length > 0 ? q.sources.map(s => (
-                                                      <span key={s} className="px-1.5 py-0.2 bg-white text-slate-400 rounded text-[8.5px] font-bold uppercase tracking-wider border border-slate-200 whitespace-nowrap">
-                                                         {s}
-                                                      </span>
-                                                   )) : (
-                                                      <span className="px-1.5 py-0.2 bg-white text-slate-400 rounded text-[8.5px] font-bold uppercase tracking-wider border border-slate-200 whitespace-nowrap">
-                                                         {q.source}
-                                                      </span>
-                                                   )}
-                                                </div>
-                                             </div>
-
-                                             {/* 2-COLUMN SIDE-BY-SIDE STATEMENTS: ENGLISH ON LEFT, URDU ON RIGHT */}
-                                             <div className={`grid ${isTwoColumn ? 'grid-cols-1 md:grid-cols-2 gap-2 md:gap-4' : 'grid-cols-1'} items-start pt-0.5`}>
-                                                {showEnglish && q.text && (
-                                                   <div className="text-left text-xs sm:text-[13px] font-bold text-slate-800 leading-tight">
-                                                      <MathRenderer text={q.text} />
+                                                      {isSelectedInThisSection && (
+                                                         <span className="px-1.5 py-0.2 bg-emerald-600 text-white rounded text-[9px] font-bold tracking-tight flex items-center gap-0.5 shadow-2xs">
+                                                            <Check size={8} strokeWidth={3} /> In Section
+                                                         </span>
+                                                      )}
+                                                      {isSelectedInOtherSection && (
+                                                         <span className="px-1.5 py-0.2 bg-amber-500 text-white rounded text-[9px] font-bold tracking-tight flex items-center gap-0.5 shadow-2xs">
+                                                            In Another Section
+                                                         </span>
+                                                      )}
                                                    </div>
-                                                )}
-                                                {showUrdu && q.textUrdu && (
-                                                   <div className="font-urdu text-[13px] sm:text-[14px] text-slate-700 leading-snug text-right" dir="rtl">
-                                                      <MathRenderer text={q.textUrdu} />
+
+                                                   <div className="flex flex-wrap items-center gap-1 ml-auto">
+                                                      {q.sources && q.sources.length > 0 ? q.sources.map(s => (
+                                                         <span key={s} className="px-1.5 py-0.2 bg-white text-slate-400 rounded text-[8.5px] font-bold uppercase tracking-wider border border-slate-200 whitespace-nowrap">
+                                                            {s}
+                                                         </span>
+                                                      )) : (
+                                                         <span className="px-1.5 py-0.2 bg-white text-slate-400 rounded text-[8.5px] font-bold uppercase tracking-wider border border-slate-200 whitespace-nowrap">
+                                                            {q.source}
+                                                         </span>
+                                                      )}
                                                    </div>
-                                                )}
-                                             </div>
-
-                                             {q.imageUrl && (
-                                                <div className="mt-1 p-0.5 bg-slate-50 rounded border border-slate-100 w-fit">
-                                                   <img src={q.imageUrl} alt="Question Diagram" className="h-10 sm:h-12 w-auto object-contain rounded" />
                                                 </div>
-                                             )}
 
-                                             {/* MCQ OPTIONS WITH COMPACT SIDE-BY-SIDE ENGLISH & URDU */}
-                                             {normalizeType(q.type) === 'mcq' && ((q.options && q.options.length > 0) || (q.optionsUrdu && q.optionsUrdu.length > 0)) && (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-1 pt-1 border-t border-slate-100">
-                                                   {((q.options && q.options.length > 0) ? q.options : (q.optionsUrdu || [])).map((opt: string, i: number) => (
-                                                      <div key={i} className="flex items-center justify-between gap-1.5 px-2 py-0.5 rounded bg-slate-50 border border-slate-100 text-[11px] leading-tight text-slate-700">
-                                                         <div className="flex items-center gap-1 min-w-0">
-                                                            <span className="font-black text-indigo-600 text-[10px]">({String.fromCharCode(65 + i)})</span>
-                                                            <span className="font-medium truncate"><MathRenderer text={opt} inline /></span>
-                                                         </div>
-                                                         {q.optionsUrdu && q.optionsUrdu[i] && (
-                                                            <span className="text-right font-urdu text-[11px] leading-tight text-slate-600 shrink-0 ml-1" dir="rtl">
-                                                               <MathRenderer text={q.optionsUrdu[i]} />
-                                                            </span>
-                                                         )}
+                                                {/* 2-COLUMN SIDE-BY-SIDE STATEMENTS: ENGLISH ON LEFT, URDU ON RIGHT */}
+                                                <div className={`grid ${isTwoColumn ? 'grid-cols-1 md:grid-cols-2 gap-2 md:gap-4' : 'grid-cols-1'} items-start pt-0.5`}>
+                                                   {showEnglish && q.text && (
+                                                      <div className="text-left text-xs sm:text-[13px] font-bold text-slate-800 leading-tight">
+                                                         <MathRenderer text={q.text} />
                                                       </div>
-                                                   ))}
-                                                </div>
-                                             )}
-
-                                             {/* QUESTION CARD ACTION BAR (SELECT / UNSELECT TOGGLE) */}
-                                             <div className="flex items-center justify-between pt-1.5 mt-1 border-t border-slate-100">
-                                                <div className="text-[10px] font-bold text-slate-400">
-                                                   {isSelectedInThisSection ? (
-                                                      <span className="text-emerald-600 flex items-center gap-1 font-black">
-                                                         <Check size={11} strokeWidth={3} /> Currently Selected in this Section
-                                                      </span>
-                                                   ) : isSelectedInOtherSection ? (
-                                                      <span className="text-amber-600 font-bold">Selected in another section</span>
-                                                   ) : (
-                                                      <span>Click anywhere on card or button to select</span>
+                                                   )}
+                                                   {showUrdu && q.textUrdu && (
+                                                      <div className="font-urdu text-[13px] sm:text-[14px] text-slate-700 leading-snug text-right" dir="rtl">
+                                                         <MathRenderer text={q.textUrdu} />
+                                                      </div>
                                                    )}
                                                 </div>
 
-                                                <button
-                                                   type="button"
-                                                   onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      toggleQuestionSelection(q);
-                                                   }}
-                                                   className={`px-3 py-1 rounded-lg text-[11px] font-black transition-all flex items-center gap-1 cursor-pointer active:scale-95 ${
-                                                      isSelectedInThisSection
+                                                {q.imageUrl && (
+                                                   <div className="mt-1 p-0.5 bg-slate-50 rounded border border-slate-100 w-fit">
+                                                      <img src={q.imageUrl} alt="Question Diagram" className="h-10 sm:h-12 w-auto object-contain rounded" />
+                                                   </div>
+                                                )}
+
+                                                {/* MCQ OPTIONS WITH COMPACT SIDE-BY-SIDE ENGLISH & URDU */}
+                                                {normalizeType(q.type) === 'mcq' && ((q.options && q.options.length > 0) || (q.optionsUrdu && q.optionsUrdu.length > 0)) && (
+                                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-1 pt-1 border-t border-slate-100">
+                                                      {((q.options && q.options.length > 0) ? q.options : (q.optionsUrdu || [])).map((opt: string, i: number) => (
+                                                         <div key={i} className="flex items-center justify-between gap-1.5 px-2 py-0.5 rounded bg-slate-50 border border-slate-100 text-[11px] leading-tight text-slate-700">
+                                                            <div className="flex items-center gap-1 min-w-0">
+                                                               <span className="font-black text-indigo-600 text-[10px]">({String.fromCharCode(65 + i)})</span>
+                                                               <span className="font-medium truncate"><MathRenderer text={opt} inline /></span>
+                                                            </div>
+                                                            {q.optionsUrdu && q.optionsUrdu[i] && (
+                                                               <span className="text-right font-urdu text-[11px] leading-tight text-slate-600 shrink-0 ml-1" dir="rtl">
+                                                                  <MathRenderer text={q.optionsUrdu[i]} />
+                                                               </span>
+                                                            )}
+                                                         </div>
+                                                      ))}
+                                                   </div>
+                                                )}
+
+                                                {/* QUESTION CARD ACTION BAR (SELECT / UNSELECT TOGGLE) */}
+                                                <div className="flex items-center justify-between pt-1.5 mt-1 border-t border-slate-100">
+                                                   <div className="text-[10px] font-bold text-slate-400">
+                                                      {isSelectedInThisSection ? (
+                                                         <span className="text-emerald-600 flex items-center gap-1 font-black">
+                                                            <Check size={11} strokeWidth={3} /> Currently Selected in this Section
+                                                         </span>
+                                                      ) : isSelectedInOtherSection ? (
+                                                         <span className="text-amber-600 font-bold">Selected in another section</span>
+                                                      ) : (
+                                                         <span>Click anywhere on card or button to select</span>
+                                                      )}
+                                                   </div>
+
+                                                   <button
+                                                      type="button"
+                                                      onClick={(e) => {
+                                                         e.stopPropagation();
+                                                         toggleQuestionSelection(q);
+                                                      }}
+                                                      className={`px-3 py-1 rounded-lg text-[11px] font-black transition-all flex items-center gap-1 cursor-pointer active:scale-95 ${isSelectedInThisSection
                                                          ? 'bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200'
                                                          : 'bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 border border-indigo-200'
-                                                   }`}
-                                                   title={isSelectedInThisSection ? 'Unselect this question' : 'Select this question'}
-                                                >
-                                                   {isSelectedInThisSection ? (
-                                                      <>
-                                                         <X size={12} strokeWidth={3} /> Unselect
-                                                      </>
-                                                   ) : (
-                                                      <>
-                                                         <Plus size={12} strokeWidth={3} /> Select Question
-                                                      </>
-                                                   )}
-                                                </button>
+                                                         }`}
+                                                      title={isSelectedInThisSection ? 'Unselect this question' : 'Select this question'}
+                                                   >
+                                                      {isSelectedInThisSection ? (
+                                                         <>
+                                                            <X size={12} strokeWidth={3} /> Unselect
+                                                         </>
+                                                      ) : (
+                                                         <>
+                                                            <Plus size={12} strokeWidth={3} /> Select Question
+                                                         </>
+                                                      )}
+                                                   </button>
+                                                </div>
                                              </div>
                                           </div>
                                        </div>
-                                    </div>
-                                 );
-                              })}
-                               </div>
-                            </div>
-                         )}
-                      </main>
-                   </div>
+                                    );
+                                 })}
+                              </div>
+                           </div>
+                        )}
+                     </main>
+                  </div>
 
                   {/* MODAL FOOTER */}
                   <div className="px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-100 bg-white flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 shrink-0 shadow-[0_-6px_20px_rgba(0,0,0,0.02)]">
@@ -1183,28 +1174,28 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                            <span className="text-slate-400 font-black text-2xl sm:text-3xl tracking-tight tabular-nums">{sectionConfig?.totalCount}</span>
                         </div>
                         {(() => {
-                            const cur = getSectionSelectedCount(activeSectionId);
-                            const tot = sectionConfig?.totalCount || 0;
-                            if (cur < tot) {
-                               return (
-                                  <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[11px] font-bold">
-                                     Select {tot - cur} more question{tot - cur > 1 ? 's' : ''} to deploy
-                                  </span>
-                               );
-                            } else if (cur > tot) {
-                               return (
-                                  <span className="px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-md text-[11px] font-bold">
-                                     {cur - tot} question{cur - tot > 1 ? 's' : ''} extra (unselect {cur - tot} to deploy)
-                                  </span>
-                               );
-                            } else {
-                               return (
-                                  <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-[11px] font-bold flex items-center gap-1">
-                                     <Check size={12} strokeWidth={3} /> Exact count matched! Ready to deploy
-                                  </span>
-                               );
-                            }
-                         })()}
+                           const cur = getSectionSelectedCount(activeSectionId);
+                           const tot = sectionConfig?.totalCount || 0;
+                           if (cur < tot) {
+                              return (
+                                 <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[11px] font-bold">
+                                    Select {tot - cur} more question{tot - cur > 1 ? 's' : ''} to deploy
+                                 </span>
+                              );
+                           } else if (cur > tot) {
+                              return (
+                                 <span className="px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-md text-[11px] font-bold">
+                                    {cur - tot} question{cur - tot > 1 ? 's' : ''} extra (unselect {cur - tot} to deploy)
+                                 </span>
+                              );
+                           } else {
+                              return (
+                                 <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-[11px] font-bold flex items-center gap-1">
+                                    <Check size={12} strokeWidth={3} /> Exact count matched! Ready to deploy
+                                 </span>
+                              );
+                           }
+                        })()}
                      </div>
                      <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
                         <button onClick={handleRandomSelect} disabled={availableQuestions.length === 0} className="px-4 sm:px-6 py-2 bg-white border border-slate-300 text-slate-700 font-bold uppercase tracking-wider rounded-xl hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-all text-xs flex items-center gap-2 active:scale-95 cursor-pointer shadow-2xs">
@@ -1224,11 +1215,10 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                     setCurrentPaper({ ...currentPaper, structure: { ...currentPaper.structure, [activeSectionId]: sectionConfig } });
                                     setIsSelectionModalOpen(false);
                                  }}
-                                 className={`px-6 sm:px-8 py-2 font-bold uppercase tracking-wider rounded-xl shadow-md transition-all text-xs active:scale-95 ${
-                                    canDeploy
-                                       ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 cursor-pointer'
-                                       : 'bg-slate-200 text-slate-400 border border-slate-300 shadow-none cursor-not-allowed opacity-80'
-                                 }`}
+                                 className={`px-6 sm:px-8 py-2 font-bold uppercase tracking-wider rounded-xl shadow-md transition-all text-xs active:scale-95 ${canDeploy
+                                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 cursor-pointer'
+                                    : 'bg-slate-200 text-slate-400 border border-slate-300 shadow-none cursor-not-allowed opacity-80'
+                                    }`}
                                  title={
                                     canDeploy
                                        ? 'Deploy selected questions to canvas'
@@ -1382,212 +1372,218 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
          )}
 
          {/* INSTITUTIONAL SIDEBAR */}
-         <aside className="w-80 bg-slate-900 flex flex-col h-full shrink-0 border-r border-slate-800 z-50 print:hidden relative shadow-2xl overflow-y-auto">
-            <div className="p-8 border-b border-slate-800 bg-slate-950/50 flex flex-col items-center">
-               <div className="w-20 h-20 bg-white rounded-2xl p-3 shadow-2xl mb-4 border border-white/10 overflow-hidden">
-                  <img src={currentPaper.headerConfig?.logoUrl || '/logo.png'} className="w-full h-full object-contain" />
-               </div>
-               <h4 className="text-white font-bold text-center text-xs tracking-tight line-clamp-1">{currentPaper.headerConfig?.schoolName || 'Institution Name'}</h4>
-               <div className="flex items-center gap-2 mt-4 px-3 py-1.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
-                  <span className="text-[9px] font-bold text-indigo-100 uppercase tracking-widest">{user.name}</span>
-               </div>
-            </div>
-
-            <div className="flex-1 p-6 space-y-8">
-               {/* TAB SWITCHER */}
-               <div className="flex p-1 bg-slate-800 rounded-xl mb-6 border border-slate-700">
-                  <button onClick={() => setActiveTab('editor')} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${activeTab === 'editor' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}>Editor</button>
-                  <button onClick={() => setActiveTab('preview')} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${activeTab === 'preview' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}>Preview</button>
+         {isSidebarOpen && (
+            <aside className="w-80 bg-slate-900 flex flex-col h-full shrink-0 border-r border-slate-800 z-50 print:hidden relative shadow-2xl overflow-y-auto">
+               <div className="p-8 border-b border-slate-800 bg-slate-950/50 flex flex-col items-center">
+                  <div className="w-20 h-20 bg-white rounded-2xl p-3 shadow-2xl mb-4 border border-white/10 overflow-hidden">
+                     <img src={currentPaper.headerConfig?.logoUrl || '/logo.png'} className="w-full h-full object-contain" />
+                  </div>
+                  <h4 className="text-white font-bold text-center text-xs tracking-tight line-clamp-1">{currentPaper.headerConfig?.schoolName || 'Institution Name'}</h4>
+                  <div className="flex items-center gap-2 mt-4 px-3 py-1.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
+                     <span className="text-[9px] font-bold text-indigo-100 uppercase tracking-widest">{user.name}</span>
+                  </div>
                </div>
 
-               {/* VIEW MODE SETTING */}
-               <div className="space-y-3">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Globe size={14} /> Paper View Mode</p>
-                  <div className="relative">
-                     <select
-                        value={extractionLanguage}
-                        onChange={e => setExtractionLanguage(e.target.value as any)}
-                        className="w-full h-10 px-3 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500 appearance-none transition-all"
+               <div className="flex-1 p-6 space-y-8">
+                  {/* TAB SWITCHER */}
+                  <div className="flex p-1 bg-slate-800 rounded-xl mb-6 border border-slate-700">
+                     <button onClick={() => setActiveTab('editor')} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${activeTab === 'editor' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}>Editor</button>
+                     <button onClick={() => setActiveTab('preview')} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${activeTab === 'preview' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}>Preview</button>
+                  </div>
+
+                  {/* VIEW MODE SETTING */}
+                  <div className="space-y-3">
+                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Globe size={14} /> Paper View Mode</p>
+                     <div className="relative">
+                        <select
+                           value={extractionLanguage}
+                           onChange={e => setExtractionLanguage(e.target.value as any)}
+                           className="w-full h-10 px-3 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500 appearance-none transition-all"
+                        >
+                           <option value="Bilingual">Bilingual (English + Urdu)</option>
+                           <option value="English">Only English</option>
+                           <option value="Urdu">Only Urdu</option>
+                        </select>
+                        <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                     </div>
+                  </div>
+
+                  {/* NEW PRINT CONFIG */}
+                  <div className="space-y-3 pt-6 border-t border-slate-800">
+                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Settings2 size={14} /> Print Options</p>
+                     <button onClick={() => setShowPartHeadings(!showPartHeadings)} className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${showPartHeadings ? 'bg-indigo-600/20 border-indigo-600 text-indigo-300' : 'bg-slate-800/50 border-slate-700 text-slate-400'}`}>
+                        <span className="text-[10px] font-bold uppercase">Show Part Headings</span>
+                        {showPartHeadings ? <Eye size={14} /> : <EyeOff size={14} />}
+                     </button>
+                     <button
+                        onClick={() => setCurrentPaper(prev => ({ ...prev, showQuestionMarks: !(prev.showQuestionMarks ?? true) }))}
+                        className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${(currentPaper.showQuestionMarks ?? true) ? 'bg-indigo-600/20 border-indigo-600 text-indigo-300' : 'bg-slate-800/50 border-slate-700 text-slate-400'}`}
                      >
-                        <option value="Bilingual">Bilingual (English + Urdu)</option>
-                        <option value="English">Only English</option>
-                        <option value="Urdu">Only Urdu</option>
-                     </select>
-                     <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-                  </div>
-               </div>
+                        <span className="text-[10px] font-bold uppercase">Marks on Every Question</span>
+                        {(currentPaper.showQuestionMarks ?? true) ? <Eye size={14} /> : <EyeOff size={14} />}
+                     </button>
 
-               {/* NEW PRINT CONFIG */}
-               <div className="space-y-3 pt-6 border-t border-slate-800">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Settings2 size={14} /> Print Options</p>
-                  <button onClick={() => setShowPartHeadings(!showPartHeadings)} className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${showPartHeadings ? 'bg-indigo-600/20 border-indigo-600 text-indigo-300' : 'bg-slate-800/50 border-slate-700 text-slate-400'}`}>
-                     <span className="text-[10px] font-bold uppercase">Show Part Headings</span>
-                     {showPartHeadings ? <Eye size={14} /> : <EyeOff size={14} />}
-                  </button>
-                  <button
-                     onClick={() => setCurrentPaper(prev => ({ ...prev, showQuestionMarks: !(prev.showQuestionMarks ?? true) }))}
-                     className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${(currentPaper.showQuestionMarks ?? true) ? 'bg-indigo-600/20 border-indigo-600 text-indigo-300' : 'bg-slate-800/50 border-slate-700 text-slate-400'}`}
-                  >
-                     <span className="text-[10px] font-bold uppercase">Marks on Every Question</span>
-                     {(currentPaper.showQuestionMarks ?? true) ? <Eye size={14} /> : <EyeOff size={14} />}
-                  </button>
-
-                  <div className="space-y-2 rounded-lg border border-slate-700 bg-slate-800/50 p-3">
-                     <p className="text-[9px] font-bold text-slate-400 uppercase">Long Question Heading</p>
-                     <input
-                        value={currentPaper.longQuestionHeading ?? ''}
-                        onChange={e => setCurrentPaper(prev => ({ ...prev, longQuestionHeading: e.target.value }))}
-                        placeholder="Subjective Part II"
-                        className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1.5 text-[10px] font-bold text-white outline-none focus:border-indigo-500"
-                     />
-                     <input
-                        dir="rtl"
-                        value={currentPaper.longQuestionHeadingUrdu ?? ''}
-                        onChange={e => setCurrentPaper(prev => ({ ...prev, longQuestionHeadingUrdu: e.target.value }))}
-                        placeholder="حصہ دوم – تفصیلی سوالات"
-                        className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1.5 text-right text-[10px] font-urdu font-bold text-white outline-none focus:border-indigo-500"
-                     />
-                     <textarea
-                        value={currentPaper.longQuestionInstruction ?? ''}
-                        onChange={e => setCurrentPaper(prev => ({ ...prev, longQuestionInstruction: e.target.value }))}
-                        placeholder="Write detailed answers to the following questions."
-                        className="min-h-[58px] w-full resize-none rounded-md border border-slate-600 bg-slate-900 px-2 py-1.5 text-[10px] font-semibold text-white outline-none focus:border-indigo-500"
-                     />
-                     <textarea
-                        dir="rtl"
-                        value={currentPaper.longQuestionInstructionUrdu ?? ''}
-                        onChange={e => setCurrentPaper(prev => ({ ...prev, longQuestionInstructionUrdu: e.target.value }))}
-                        placeholder="درج ذیل سوالات کے تفصیلی جوابات لکھیں۔"
-                        className="min-h-[58px] w-full resize-none rounded-md border border-slate-600 bg-slate-900 px-2 py-1.5 text-right text-[10px] font-urdu font-semibold text-white outline-none focus:border-indigo-500"
-                     />
-                  </div>
-
-                  <div className="space-y-2">
-                     <p className="text-[9px] font-bold text-slate-500 uppercase flex items-center gap-1.5"><Key size={12} /> Answer Display Mode</p>
-                     <div className="flex bg-slate-800 rounded-lg p-1 border border-slate-700">
-                        <button
-                           onClick={() => setAnswerKeyDisplay('none')}
-                           className={`flex-1 py-1.5 text-[9px] font-bold uppercase rounded transition-all ${answerKeyDisplay === 'none' ? 'bg-slate-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
-                        >
-                           Hidden
-                        </button>
-                        <button
-                           onClick={() => setAnswerKeyDisplay('inline')}
-                           className={`flex-1 py-1.5 text-[9px] font-bold uppercase rounded transition-all ${answerKeyDisplay === 'inline' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
-                        >
-                           Inline
-                        </button>
-                        <button
-                           onClick={() => setAnswerKeyDisplay('bottom')}
-                           className={`flex-1 py-1.5 text-[9px] font-bold uppercase rounded transition-all ${answerKeyDisplay === 'bottom' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
-                        >
-                           End
-                        </button>
-                     </div>
-                  </div>
-               </div>
-
-               {/* TYPOGRAPHY & FONT SETTINGS */}
-               <div className="space-y-3 pt-6 border-t border-slate-800">
-                  <div className="flex justify-between items-center">
-                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Tag size={14} /> Typography & Layout</p>
-                     <button onClick={() => { setQuestionFontEn(14); setQuestionFontUr(14); setOptionFontEn(9); setOptionFontUr(6); setMcqColumns(4); }} className="text-[9px] font-bold text-indigo-400 hover:underline">Reset</button>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                     <div className="bg-slate-800/60 p-2 rounded-lg border border-slate-700">
-                        <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Q (English)</span>
-                        <div className="flex items-center justify-between">
-                           <button onClick={() => setQuestionFontEn(p => Math.max(8, p - 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">-</button>
-                           <span className="text-xs font-black text-white">{questionFontEn}px</span>
-                           <button onClick={() => setQuestionFontEn(p => Math.min(32, p + 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">+</button>
-                        </div>
+                     <div className="space-y-2 rounded-lg border border-slate-700 bg-slate-800/50 p-3">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">Long Question Heading</p>
+                        <input
+                           value={currentPaper.longQuestionHeading ?? ''}
+                           onChange={e => setCurrentPaper(prev => ({ ...prev, longQuestionHeading: e.target.value }))}
+                           placeholder="Subjective Part II"
+                           className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1.5 text-[10px] font-bold text-white outline-none focus:border-indigo-500"
+                        />
+                        <input
+                           dir="rtl"
+                           value={currentPaper.longQuestionHeadingUrdu ?? ''}
+                           onChange={e => setCurrentPaper(prev => ({ ...prev, longQuestionHeadingUrdu: e.target.value }))}
+                           placeholder="حصہ دوم – تفصیلی سوالات"
+                           className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1.5 text-right text-[10px] font-urdu font-bold text-white outline-none focus:border-indigo-500"
+                        />
+                        <textarea
+                           value={currentPaper.longQuestionInstruction ?? ''}
+                           onChange={e => setCurrentPaper(prev => ({ ...prev, longQuestionInstruction: e.target.value }))}
+                           placeholder="Write detailed answers to the following questions."
+                           className="min-h-[58px] w-full resize-none rounded-md border border-slate-600 bg-slate-900 px-2 py-1.5 text-[10px] font-semibold text-white outline-none focus:border-indigo-500"
+                        />
+                        <textarea
+                           dir="rtl"
+                           value={currentPaper.longQuestionInstructionUrdu ?? ''}
+                           onChange={e => setCurrentPaper(prev => ({ ...prev, longQuestionInstructionUrdu: e.target.value }))}
+                           placeholder="درج ذیل سوالات کے تفصیلی جوابات لکھیں۔"
+                           className="min-h-[58px] w-full resize-none rounded-md border border-slate-600 bg-slate-900 px-2 py-1.5 text-right text-[10px] font-urdu font-semibold text-white outline-none focus:border-indigo-500"
+                        />
                      </div>
 
-                     <div className="bg-slate-800/60 p-2 rounded-lg border border-slate-700">
-                        <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Q (Urdu)</span>
-                        <div className="flex items-center justify-between">
-                           <button onClick={() => setQuestionFontUr(p => Math.max(8, p - 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">-</button>
-                           <span className="text-xs font-black text-white">{questionFontUr}px</span>
-                           <button onClick={() => setQuestionFontUr(p => Math.min(36, p + 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">+</button>
-                        </div>
-                     </div>
-
-                     <div className="bg-slate-800/60 p-2 rounded-lg border border-slate-700">
-                        <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Opt (English)</span>
-                        <div className="flex items-center justify-between">
-                           <button onClick={() => setOptionFontEn(p => Math.max(6, p - 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">-</button>
-                           <span className="text-xs font-black text-white">{optionFontEn}px</span>
-                           <button onClick={() => setOptionFontEn(p => Math.min(24, p + 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">+</button>
-                        </div>
-                     </div>
-
-                     <div className="bg-slate-800/60 p-2 rounded-lg border border-slate-700">
-                        <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Opt (Urdu)</span>
-                        <div className="flex items-center justify-between">
-                           <button onClick={() => setOptionFontUr(p => Math.max(5, p - 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">-</button>
-                           <span className="text-xs font-black text-white">{optionFontUr}px</span>
-                           <button onClick={() => setOptionFontUr(p => Math.min(24, p + 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">+</button>
-                        </div>
-                     </div>
-                  </div>
-
-                  <div className="space-y-1.5 pt-1">
-                     <span className="text-[8px] font-bold text-slate-400 uppercase block">MCQ Options Columns</span>
-                     <div className="flex gap-1 bg-slate-800 rounded-lg p-1 border border-slate-700">
-                        {[1, 2, 3, 4].map(cols => (
+                     <div className="space-y-2">
+                        <p className="text-[9px] font-bold text-slate-500 uppercase flex items-center gap-1.5"><Key size={12} /> Answer Display Mode</p>
+                        <div className="flex bg-slate-800 rounded-lg p-1 border border-slate-700">
                            <button
-                              key={cols}
-                              onClick={() => setMcqColumns(cols)}
-                              className={`flex-1 py-1 text-[9px] font-black rounded transition-all ${mcqColumns === cols ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                              onClick={() => setAnswerKeyDisplay('none')}
+                              className={`flex-1 py-1.5 text-[9px] font-bold uppercase rounded transition-all ${answerKeyDisplay === 'none' ? 'bg-slate-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
                            >
-                              {cols} Col{cols > 1 ? 's' : ''}
+                              Hidden
+                           </button>
+                           <button
+                              onClick={() => setAnswerKeyDisplay('inline')}
+                              className={`flex-1 py-1.5 text-[9px] font-bold uppercase rounded transition-all ${answerKeyDisplay === 'inline' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                           >
+                              Inline
+                           </button>
+                           <button
+                              onClick={() => setAnswerKeyDisplay('bottom')}
+                              className={`flex-1 py-1.5 text-[9px] font-bold uppercase rounded transition-all ${answerKeyDisplay === 'bottom' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                           >
+                              End
+                           </button>
+                        </div>
+                     </div>
+                  </div>
+
+                  {/* TYPOGRAPHY & FONT SETTINGS */}
+                  <div className="space-y-3 pt-6 border-t border-slate-800">
+                     <div className="flex justify-between items-center">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Tag size={14} /> Typography & Layout</p>
+                        <button onClick={() => { setQuestionFontEn(14); setQuestionFontUr(14); setOptionFontEn(9); setOptionFontUr(6); setMcqColumns(4); }} className="text-[9px] font-bold text-indigo-400 hover:underline">Reset</button>
+                     </div>
+
+                     <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-slate-800/60 p-2 rounded-lg border border-slate-700">
+                           <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Q (English)</span>
+                           <div className="flex items-center justify-between">
+                              <button onClick={() => setQuestionFontEn(p => Math.max(8, p - 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">-</button>
+                              <span className="text-xs font-black text-white">{questionFontEn}px</span>
+                              <button onClick={() => setQuestionFontEn(p => Math.min(32, p + 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">+</button>
+                           </div>
+                        </div>
+
+                        <div className="bg-slate-800/60 p-2 rounded-lg border border-slate-700">
+                           <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Q (Urdu)</span>
+                           <div className="flex items-center justify-between">
+                              <button onClick={() => setQuestionFontUr(p => Math.max(8, p - 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">-</button>
+                              <span className="text-xs font-black text-white">{questionFontUr}px</span>
+                              <button onClick={() => setQuestionFontUr(p => Math.min(36, p + 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">+</button>
+                           </div>
+                        </div>
+
+                        <div className="bg-slate-800/60 p-2 rounded-lg border border-slate-700">
+                           <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Opt (English)</span>
+                           <div className="flex items-center justify-between">
+                              <button onClick={() => setOptionFontEn(p => Math.max(6, p - 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">-</button>
+                              <span className="text-xs font-black text-white">{optionFontEn}px</span>
+                              <button onClick={() => setOptionFontEn(p => Math.min(24, p + 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">+</button>
+                           </div>
+                        </div>
+
+                        <div className="bg-slate-800/60 p-2 rounded-lg border border-slate-700">
+                           <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Opt (Urdu)</span>
+                           <div className="flex items-center justify-between">
+                              <button onClick={() => setOptionFontUr(p => Math.max(5, p - 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">-</button>
+                              <span className="text-xs font-black text-white">{optionFontUr}px</span>
+                              <button onClick={() => setOptionFontUr(p => Math.min(24, p + 1))} className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">+</button>
+                           </div>
+                        </div>
+                     </div>
+
+                     <div className="space-y-1.5 pt-1">
+                        <span className="text-[8px] font-bold text-slate-400 uppercase block">MCQ Options Columns</span>
+                        <div className="flex gap-1 bg-slate-800 rounded-lg p-1 border border-slate-700">
+                           {[1, 2, 3, 4].map(cols => (
+                              <button
+                                 key={cols}
+                                 onClick={() => setMcqColumns(cols)}
+                                 className={`flex-1 py-1 text-[9px] font-black rounded transition-all ${mcqColumns === cols ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                              >
+                                 {cols} Col{cols > 1 ? 's' : ''}
+                              </button>
+                           ))}
+                        </div>
+                     </div>
+                  </div>
+
+                  <div className="space-y-3 pt-6 border-t border-slate-800">
+                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><ListFilter size={14} /> Paper Navigator</p>
+                     <div className="space-y-1">
+                        {(Object.values(currentPaper.structure) as PaperSectionConfig[]).map(sec => (
+                           <button key={sec.id} onClick={() => document.getElementById(`editor-sec-${sec.id}`)?.scrollIntoView({ behavior: 'smooth' })} className="w-full text-left p-2.5 bg-slate-800/50 hover:bg-indigo-600 border border-transparent hover:border-indigo-400 rounded-lg transition-all group">
+                              <div className="flex justify-between items-center">
+                                 <span className="text-xs font-medium text-slate-300 group-hover:text-white line-clamp-1">{sec.title}</span>
+                                 <span className="text-[8px] font-bold text-slate-500 group-hover:text-indigo-200">{getSectionSelectedCount(sec.id)} Qs</span>
+                              </div>
                            </button>
                         ))}
                      </div>
                   </div>
-               </div>
 
-               <div className="space-y-3 pt-6 border-t border-slate-800">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><ListFilter size={14} /> Paper Navigator</p>
-                  <div className="space-y-1">
-                     {(Object.values(currentPaper.structure) as PaperSectionConfig[]).map(sec => (
-                        <button key={sec.id} onClick={() => document.getElementById(`editor-sec-${sec.id}`)?.scrollIntoView({ behavior: 'smooth' })} className="w-full text-left p-2.5 bg-slate-800/50 hover:bg-indigo-600 border border-transparent hover:border-indigo-400 rounded-lg transition-all group">
-                           <div className="flex justify-between items-center">
-                              <span className="text-xs font-medium text-slate-300 group-hover:text-white line-clamp-1">{sec.title}</span>
-                              <span className="text-[8px] font-bold text-slate-500 group-hover:text-indigo-200">{getSectionSelectedCount(sec.id)} Qs</span>
-                           </div>
+                  <div className="space-y-3 pt-6 border-t border-slate-800">
+                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Edit3 size={14} /> Settings</p>
+                     <button onClick={() => setIsManualEditMode(!isManualEditMode)} className={`w-full flex items-center justify-between p-3.5 rounded-xl border-2 transition-all group ${isManualEditMode ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'}`}>
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Manual Mode</span>
+                        <div className={`w-8 h-4 rounded-full relative transition-colors ${isManualEditMode ? 'bg-white/20' : 'bg-slate-700'}`}>
+                           <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${isManualEditMode ? 'right-0.5' : 'left-0.5'}`}></div>
+                        </div>
+                     </button>
+                     {isManualEditMode && (
+                        <button onClick={addNewSection} className="w-full mt-2 py-2 bg-white/5 border border-white/10 text-white text-[9px] font-bold uppercase tracking-widest rounded-lg hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+                           <PlusCircle size={14} /> New Section
                         </button>
-                     ))}
+                     )}
                   </div>
                </div>
 
-               <div className="space-y-3 pt-6 border-t border-slate-800">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Edit3 size={14} /> Settings</p>
-                  <button onClick={() => setIsManualEditMode(!isManualEditMode)} className={`w-full flex items-center justify-between p-3.5 rounded-xl border-2 transition-all group ${isManualEditMode ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'}`}>
-                     <span className="text-[10px] font-bold uppercase tracking-widest">Manual Mode</span>
-                     <div className={`w-8 h-4 rounded-full relative transition-colors ${isManualEditMode ? 'bg-white/20' : 'bg-slate-700'}`}>
-                        <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${isManualEditMode ? 'right-0.5' : 'left-0.5'}`}></div>
-                     </div>
+               <div className="p-6 bg-slate-950 border-t border-slate-800 space-y-3">
+                  <button onClick={() => setActiveTab('preview')} className="w-full py-3.5 bg-brand text-white rounded-xl font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-secondary transition-all text-[10px] shadow-lg">
+                     <Printer size={16} /> Print Paper
                   </button>
-                  {isManualEditMode && (
-                     <button onClick={addNewSection} className="w-full mt-2 py-2 bg-white/5 border border-white/10 text-white text-[9px] font-bold uppercase tracking-widest rounded-lg hover:bg-white/10 transition-all flex items-center justify-center gap-2">
-                        <PlusCircle size={14} /> New Section
-                     </button>
-                  )}
+                  <div className="flex gap-2">
+                     <button onClick={() => setIsSaveModalOpen(true)} className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold uppercase tracking-widest text-[9px] transition-all flex items-center justify-center gap-2"><Save size={12} /> Save</button>
+                     <button onClick={onBack} className="flex-1 py-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg font-bold uppercase tracking-widest text-[9px] transition-all flex items-center justify-center gap-2"><X size={12} /> Exit</button>
+                  </div>
                </div>
-            </div>
-
-            <div className="p-6 bg-slate-950 border-t border-slate-800 space-y-3">
-               <button onClick={() => setActiveTab('preview')} className="w-full py-3.5 bg-brand text-white rounded-xl font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-secondary transition-all text-[10px] shadow-lg">
-                  <Printer size={16} /> Print Paper
-               </button>
-               <div className="flex gap-2">
-                  <button onClick={() => setIsSaveModalOpen(true)} className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold uppercase tracking-widest text-[9px] transition-all flex items-center justify-center gap-2"><Save size={12} /> Save</button>
-                  <button onClick={onBack} className="flex-1 py-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg font-bold uppercase tracking-widest text-[9px] transition-all flex items-center justify-center gap-2"><X size={12} /> Exit</button>
-               </div>
-            </div>
-         </aside>
+               <button onClick={() => setIsSidebarOpen(false)} className="absolute right-2 top-2 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800" title="Close editor sidebar" aria-label="Close editor sidebar"><ChevronRight size={16} /></button>
+            </aside>
+         )}
+         {!isSidebarOpen && (
+            <button onClick={() => setIsSidebarOpen(true)} className="absolute left-2 top-2 z-[60] p-2 rounded-lg bg-slate-900 text-white shadow-lg print:hidden hover:bg-indigo-600" title="Open editor sidebar" aria-label="Open editor sidebar"><ChevronRight size={18} /></button>
+         )}
 
          {/* WORKSPACE CANVAS OR PREVIEW TAB */}
          {activeTab === 'preview' ? (

@@ -229,8 +229,15 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [optionUrduSize, setOptionUrduSize] = useState(12);
 
   // Expanded Font Families
-  const [englishFont, setEnglishFont] = useState("'Inter', sans-serif");
+  const [englishFont, setEnglishFont] = useState("'Times New Roman', serif");
   const [urduFont, setUrduFont] = useState("'Noto Nastaliq Urdu', serif");
+
+  // Heading borders apply consistently to standard and board-format headings.
+  const [headingBorderMode, setHeadingBorderMode] = useState<'subjective' | 'all' | 'none'>('subjective');
+  const headingHasBorder = (category?: string) =>
+    headingBorderMode === 'all' || (headingBorderMode === 'subjective' && category !== 'Objective');
+  const headingBorderClass = (category?: string) =>
+    headingHasBorder(category) ? 'border-b-2 border-black' : 'border-b-0';
 
   // Layout & Density
   const [layoutMode, setLayoutMode] = useState<PaperLayoutMode>(paper.layoutMode);
@@ -604,7 +611,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             {subjectiveShortSections.length > 0 && (
               <div className="subjective-part-1 mb-8">
                 {showPartHeadings && (
-                  <div className={`mb-4 pb-1 border-b-2 border-black px-2 ${languageMode === 'Bilingual' ? 'flex justify-between items-center' : 'text-center'}`}>
+                  <div className={`mb-4 pb-1 ${headingBorderClass('Subjective')} px-2 ${languageMode === 'Bilingual' ? 'flex justify-between items-center' : 'text-center'}`}>
                     {(languageMode === 'Bilingual' || languageMode === 'English') && (
                       <span className="font-black uppercase tracking-widest inline-block" style={{ fontSize: `${sectionHeaderSize}px` }} contentEditable suppressContentEditableWarning>PART I (Short Questions)</span>
                     )}
@@ -629,7 +636,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             {subjectiveLongSections.length > 0 && (
               <div className="subjective-part-2">
                 {showPartHeadings && (
-                  <div className={`mb-2 pb-1 border-b-2 border-black px-2 ${languageMode === 'Bilingual' ? 'flex justify-between items-center' : 'text-center'}`}>
+                  <div className={`mb-2 pb-1 ${headingBorderClass('Subjective')} px-2 ${languageMode === 'Bilingual' ? 'flex justify-between items-center' : 'text-center'}`}>
                     {(languageMode === 'Bilingual' || languageMode === 'English') && (
                       <span className="font-black uppercase tracking-widest inline-block" style={{ fontSize: `${sectionHeaderSize}px` }} contentEditable suppressContentEditableWarning>PART II (Detailed Questions)</span>
                     )}
@@ -839,7 +846,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
         </div>
 
         {/* Row 2: All Controls — wraps into rows, NO scrollbar */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="grid grid-cols-1 xl:grid-cols-2 items-start gap-2 sm:gap-3">
           {/* 1. Language & Layout */}
           <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
             <select value={languageMode} onChange={e => setLanguageMode(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-24">
@@ -927,6 +934,13 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                 <option value="'Noto Nastaliq Urdu', serif">Nastaliq</option>
                 <option value="Arial, sans-serif">Arial</option>
                 <option value="'Jameel Noori Nastaleeq', serif">Jameel Noori</option>
+              </select>
+            </label>
+            <label className="flex items-center gap-1 text-[10px] font-black text-slate-300 uppercase">Heading
+              <select value={headingBorderMode} onChange={e => setHeadingBorderMode(e.target.value as 'subjective' | 'all' | 'none')} className="print-preview-select bg-slate-900 text-white text-xs rounded px-1.5 py-1">
+                <option value="subjective">Subjective only</option>
+                <option value="all">All headings</option>
+                <option value="none">No borders</option>
               </select>
             </label>
             <RangeControl label="Line" value={lineHeight} setValue={setLineHeight} min={1} max={2.5} step={0.1} width="w-14" />
@@ -1183,7 +1197,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               {objectiveSections.length > 0 && (
                 <div className="mb-8">
                   {showPartHeadings && (
-                    <div className="text-center mb-3 pb-1 border-b-2 border-black">
+                    <div className={`text-center mb-3 pb-1 ${headingBorderClass('Objective')}`}>
                       {boardExamFormat ? (
                         <div className="flex justify-between items-center px-2">
                           <span className="font-black uppercase tracking-widest" style={{ fontSize: `${sectionHeaderSize}px` }}>Part I: Objective</span>
@@ -1218,7 +1232,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                   style={separateSubjective ? { pageBreakBefore: 'always' } : {}}
                 >
                   {showPartHeadings && (
-                    <div className="text-center mb-3 pb-1 border-b-2 border-black">
+                    <div className={`text-center mb-3 pb-1 ${headingBorderClass('Subjective')}`}>
                       {boardExamFormat ? (
                         <div className="flex justify-between items-center px-2">
                           <span className="font-black uppercase tracking-widest" style={{ fontSize: `${sectionHeaderSize}px` }}>Subjective</span>
@@ -1403,7 +1417,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
           /* ── Section heading bar (only for short questions / objective) ── */
           <table className="w-full border-collapse mb-1" style={{ fontSize: `${englishFontSize}px` }}>
             <tbody>
-              <tr className="border-t border-b border-black">
+              <tr className={headingHasBorder(sec.category) ? 'border-t border-b border-black' : 'border-t-0 border-b-0'}>
                 {/* Marks column on left */}
                 {showQuestionMarks && (
                   <td className="border-r border-black text-center font-black align-middle py-0.5 pr-2 pl-1" style={{ width: '28px', fontSize: `${sectionHeaderSize}px` }}>
@@ -1596,7 +1610,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
         {showPartHeadings && (
           <>
             {/* ── Section title bar ── */}
-            <div className="flex justify-between items-start gap-4 border-b-2 border-black mb-2 pb-1 relative group break-inside-avoid">
+            <div className={`flex justify-between items-start gap-4 ${headingBorderClass(sec.category)} mb-2 pb-1 relative group break-inside-avoid`}>
               {isManualEdit && <button onClick={() => removeSection(sec.id)} className="absolute -left-8 top-1 p-1 bg-red-500 text-white rounded-md z-20 shadow-lg print:hidden opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all"><Trash2 size={12} /></button>}
 
               {/* Question number and English statement share one heading line. */}

@@ -182,7 +182,14 @@ const ContentManager: React.FC = () => {
 
                  {(activeTab === 'NOTES' || activeTab === 'LESSON_PLANS') && (
                     <>
-                       <input type="text" placeholder="Title" className="w-full p-3 border rounded-xl" value={noteForm.title} onChange={e => setNoteForm({...noteForm, title: e.target.value})} />
+                       <input 
+                         type="text" 
+                         placeholder={activeTab === 'LESSON_PLANS' ? "Lesson Plan Title (e.g. Class 10 Math Chapter 1 Lesson Plan)" : "Note Title (e.g. Class 10 Physics Chapter 1 Notes)"} 
+                         className="w-full p-3 border rounded-xl font-bold text-gray-900" 
+                         value={noteForm.title} 
+                         onChange={e => setNoteForm({...noteForm, title: e.target.value})} 
+                       />
+
                        <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
                             <label className="text-[10px] font-bold text-gray-400 uppercase">Board / Syllabus</label>
@@ -198,13 +205,19 @@ const ContentManager: React.FC = () => {
                           </div>
 
                           <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase">Type</label>
-                            <input type="text" placeholder="Type (e.g. ECAT, NTS, Lesson Plan)" className="w-full p-3 border rounded-xl" value={activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : noteForm.noteType} onChange={e => setNoteForm({...noteForm, noteType: e.target.value})} disabled={activeTab === 'LESSON_PLANS'} />
+                            <label className="text-[10px] font-bold text-gray-400 uppercase">Resource Type</label>
+                            <input 
+                              type="text" 
+                              placeholder="Type (e.g. Book Notes, ECAT, NTS)" 
+                              className="w-full p-3 border rounded-xl" 
+                              value={activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : noteForm.noteType} 
+                              onChange={e => setNoteForm({...noteForm, noteType: e.target.value})} 
+                              disabled={activeTab === 'LESSON_PLANS'} 
+                            />
                           </div>
                        </div>
+
                        <div className="grid grid-cols-2 gap-4">
-                          <input type="text" placeholder="Subject (e.g. Mathematics)" className="w-full p-3 border rounded-xl" value={noteForm.subject} onChange={e => setNoteForm({...noteForm, subject: e.target.value})} />
-                          
                           <div className="space-y-1">
                             <label className="text-[10px] font-bold text-gray-400 uppercase">Grade / Class</label>
                             <select 
@@ -217,20 +230,33 @@ const ContentManager: React.FC = () => {
                             </select>
                             <input type="text" placeholder="Or type Grade manually" className="w-full p-2 border rounded-lg text-xs mt-1" value={noteForm.grade} onChange={e => setNoteForm({...noteForm, grade: e.target.value})} />
                           </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase">Subject</label>
+                            <input type="text" placeholder="Subject (e.g. Mathematics)" className="w-full p-3 border rounded-xl" value={noteForm.subject} onChange={e => setNoteForm({...noteForm, subject: e.target.value})} />
+                          </div>
                        </div>
+
+                       <div className="grid grid-cols-2 gap-4">
+                          <input type="text" placeholder="Book / Textbook Name (optional)" className="w-full p-3 border rounded-xl" value={noteForm.book} onChange={e => setNoteForm({...noteForm, book: e.target.value})} />
+                          <input type="text" placeholder="Author / Publisher (e.g. Punjab Textbook Board)" className="w-full p-3 border rounded-xl" value={noteForm.author} onChange={e => setNoteForm({...noteForm, author: e.target.value})} />
+                       </div>
+
                        <input type="text" placeholder="Resources / Sources (comma-separated, e.g. KIPS, PGC, Star)" className="w-full p-3 border rounded-xl" value={noteForm.resource} onChange={e => setNoteForm({...noteForm, resource: e.target.value})} />
-                       <input type="text" placeholder="Book / Guide Name (optional)" className="w-full p-3 border rounded-xl" value={noteForm.book} onChange={e => setNoteForm({...noteForm, book: e.target.value})} />
-                       <input type="text" placeholder="Author / Publisher" className="w-full p-3 border rounded-xl" value={noteForm.author} onChange={e => setNoteForm({...noteForm, author: e.target.value})} />
-                       <textarea placeholder="Description" className="w-full p-3 border rounded-xl h-24" value={noteForm.description} onChange={e => setNoteForm({...noteForm, description: e.target.value})} />
                        
-                       <div className="space-y-3">
-                         <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-indigo-400 transition-colors" onClick={() => document.getElementById('note-file')?.click()}>
-                            <p className="text-sm font-bold text-gray-600">{noteForm.fileUrl ? `Selected File / Link: ${noteForm.fileUrl.substring(0, 40)}...` : '📄 Click to Upload PDF / Doc file'}</p>
+                       <textarea placeholder="Detailed Description / Summary of the content..." className="w-full p-3 border rounded-xl h-24" value={noteForm.description} onChange={e => setNoteForm({...noteForm, description: e.target.value})} />
+                       
+                       {/* File Upload Zone */}
+                       <div className="space-y-3 pt-2">
+                         <label className="text-[10px] font-bold text-gray-400 uppercase">Upload PDF / Document File or Provide Drive Link</label>
+                         <div className="border-2 border-dashed border-indigo-200 bg-indigo-50/50 rounded-xl p-5 text-center cursor-pointer hover:border-indigo-400 transition-colors" onClick={() => document.getElementById('note-file')?.click()}>
+                            <p className="text-sm font-bold text-indigo-700">{noteForm.fileUrl ? `Selected File / Link: ${noteForm.fileUrl.substring(0, 45)}...` : '📄 Click to Upload PDF / Word File'}</p>
+                            <p className="text-xs text-slate-400 mt-1">Supports PDF, DOC, DOCX up to 10MB</p>
                             <input id="note-file" type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'file')} />
                          </div>
                          <div className="flex items-center gap-2">
                            <span className="text-xs text-gray-400 font-bold uppercase">OR</span>
-                           <input type="url" placeholder="Paste Google Drive / External File Link (https://drive.google.com/...)" className="w-full p-3 border rounded-xl text-sm font-mono" value={noteForm.fileUrl} onChange={e => setNoteForm({...noteForm, fileUrl: e.target.value})} />
+                           <input type="url" placeholder="Paste Google Drive / External File URL (https://drive.google.com/...)" className="w-full p-3 border rounded-xl text-sm font-mono" value={noteForm.fileUrl} onChange={e => setNoteForm({...noteForm, fileUrl: e.target.value})} />
                          </div>
                        </div>
                     </>

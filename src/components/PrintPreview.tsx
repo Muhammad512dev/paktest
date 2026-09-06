@@ -12,11 +12,26 @@ import {
 import { ExamPaper, Question, PaperSectionConfig, WatermarkType, PaperLayoutMode, getDefaultSectionInstruction, getDefaultSectionInstructionUrdu } from '../types';
 import MathRenderer from './MathRenderer';
 
-const ROMAN_NUMS = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', 'xi', 'xii', 'xiii', 'xiv', 'xv'];
+const toRoman = (num: number): string => {
+  const lookup: Array<[number, string]> = [
+    [1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'],
+    [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'],
+    [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']
+  ];
+  let roman = '';
+  let n = num;
+  for (const [val, char] of lookup) {
+    while (n >= val) {
+      roman += char;
+      n -= val;
+    }
+  }
+  return roman || `${num}`;
+};
 
 const getSubQuestionLabel = (idx: number, forceRoman: boolean = false): string => {
   if (forceRoman) {
-    return idx < 15 ? ROMAN_NUMS[idx] : `${idx + 1}`;
+    return toRoman(idx + 1);
   }
   return `${idx + 1}`;
 };
@@ -273,7 +288,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [questionGap, setQuestionGap] = useState<number>(12);
   const [bilingualInline, setBilingualInline] = useState(true);
   const [boardExamFormat, setBoardExamFormat] = useState(true);
-  const [showQuestionMarks, setShowQuestionMarks] = useState(paper.showQuestionMarks ?? true);
+  const [showQuestionMarks, setShowQuestionMarks] = useState(paper.showQuestionMarks ?? false);
   const [printViewMode, setPrintViewMode] = useState<'both' | 'objective' | 'subjective'>('both');
   const [languageMode, setLanguageMode] = useState<'English' | 'Urdu' | 'Bilingual'>(() => {
     const mediums = Object.values(paper.structure || {}).map((s: any) => s.languageMedium).filter(Boolean) as Array<'English' | 'Urdu' | 'Bilingual'>;
@@ -286,7 +301,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const showUrdu = languageMode === 'Bilingual' || languageMode === 'Urdu';
 
   useEffect(() => {
-    setShowQuestionMarks(paper.showQuestionMarks ?? true);
+    setShowQuestionMarks(paper.showQuestionMarks ?? false);
   }, [paper.showQuestionMarks]);
 
   // Printing Options

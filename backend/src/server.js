@@ -839,7 +839,7 @@ app.post('/api/past-papers', authenticate, async (req, res) => {
     try {
         if (req.user.role !== 'SUPER_ADMIN')
             return res.status(403).json({ error: 'Forbidden' });
-        const { title, year, board, level, subject, resource, fileUrl } = req.body;
+        const { title, year, board, level, subject, fileUrl } = req.body;
         if (!title || !board || !level) {
             return res.status(400).json({ error: 'Title, board, and level are required' });
         }
@@ -850,7 +850,6 @@ app.post('/api/past-papers', authenticate, async (req, res) => {
                 board,
                 level,
                 subject: subject || null,
-                resource: resource || null,
                 fileUrl: fileUrl || null
             }
         });

@@ -1045,14 +1045,41 @@ app.get('/api/notes', async (req: any, res: any) => {
     }
 });
 app.post('/api/notes', authenticate, async (req: any, res: any) => {
-    if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
-    const note = await prisma.studyNote.create({ data: req.body });
-    res.json(note);
+    try {
+        if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+        const { title, subject, grade, board, noteType, book, author, fileUrl, description } = req.body;
+        if (!title || !subject || !grade) {
+            return res.status(400).json({ error: 'Title, subject, and grade are required' });
+        }
+        const note = await prisma.studyNote.create({
+            data: {
+                title,
+                subject,
+                grade,
+                board: board || null,
+                noteType: noteType || null,
+                book: book || null,
+                author: author || 'ExamForge',
+                fileUrl: fileUrl || null,
+                description: description || null
+            }
+        });
+        res.json(note);
+    } catch (e: any) {
+        console.error('Error creating note:', e);
+        res.status(500).json({ error: e.message || 'Failed to create note' });
+    }
 });
+
 app.delete('/api/notes/:id', authenticate, async (req: any, res: any) => {
-    if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
-    await prisma.studyNote.delete({ where: { id: req.params.id } });
-    res.json({ success: true });
+    try {
+        if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+        await prisma.studyNote.delete({ where: { id: req.params.id } });
+        res.json({ success: true });
+    } catch (e: any) {
+        console.error('Error deleting note:', e);
+        res.status(500).json({ error: e.message || 'Failed to delete note' });
+    }
 });
 
 app.get('/api/past-papers', async (req: any, res: any) => {
@@ -1103,10 +1130,11 @@ app.get('/api/past-papers', async (req: any, res: any) => {
         res.status(500).json({ error: 'Failed to fetch past papers' });
     }
 });
+
 app.post('/api/past-papers', authenticate, async (req: any, res: any) => {
     try {
         if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
-        const { title, year, board, level, subject, resource, fileUrl } = req.body;
+        const { title, year, board, level, subject, fileUrl } = req.body;
         if (!title || !board || !level) {
             return res.status(400).json({ error: 'Title, board, and level are required' });
         }
@@ -1117,7 +1145,6 @@ app.post('/api/past-papers', authenticate, async (req: any, res: any) => {
                 board,
                 level,
                 subject: subject || null,
-                resource: resource || null,
                 fileUrl: fileUrl || null
             }
         });

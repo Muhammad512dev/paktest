@@ -259,14 +259,30 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [urduFont, setUrduFont] = useState("'Noto Nastaliq Urdu', serif");
 
   // Heading borders apply consistently to standard and board-format headings.
-  const [headingBorderMode, setHeadingBorderMode] = useState<'subjective' | 'all' | 'none'>('subjective');
+  const [headingBorderMode, setHeadingBorderMode] = useState<'subjective' | 'all' | 'none'>('all');
   const headingHasBorder = (category?: string) =>
     headingBorderMode === 'all' || (headingBorderMode === 'subjective' && category !== 'Objective');
   const headingBorderClass = (category?: string) =>
     headingHasBorder(category) ? 'border-b-2 border-black' : 'border-b-0';
 
-  // Layout & Density
-  const [layoutMode, setLayoutMode] = useState<PaperLayoutMode>(paper.layoutMode);
+  // Language mode initialization
+  const [languageMode, setLanguageMode] = useState<'English' | 'Urdu' | 'Bilingual'>(() => {
+    const mediums = Object.values(paper.structure || {}).map((s: any) => s.languageMedium).filter(Boolean) as Array<'English' | 'Urdu' | 'Bilingual'>;
+    if (mediums.length === 0) return 'Bilingual';
+    const first = mediums[0];
+    const allSame = mediums.every(m => m === first);
+    return allSame ? first : 'Bilingual';
+  });
+  const showEnglish = languageMode === 'Bilingual' || languageMode === 'English';
+  const showUrdu = languageMode === 'Bilingual' || languageMode === 'Urdu';
+
+  // Layout & Density: Default to DoubleColumn if single language (English or Urdu only)
+  const [layoutMode, setLayoutMode] = useState<PaperLayoutMode>(() => {
+    if (languageMode === 'English' || languageMode === 'Urdu') {
+      return 'DoubleColumn';
+    }
+    return paper.layoutMode || 'SingleColumn';
+  });
   const [isGridView, setIsGridView] = useState(false);
   const [tableDensity, setTableDensity] = useState(8);
 
@@ -282,26 +298,16 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   // Student Info Style
   const [studentInfoStyle, setStudentInfoStyle] = useState<'Standard' | 'Grid'>('Standard');
 
-  // MCQ Grid Controls
-  const [mcqColumns, setMcqColumns] = useState<number>(4);
+  // MCQ Grid Controls: Default 2 columns for Board format / Bilingual mode, questionGap to 0
+  const [mcqColumns, setMcqColumns] = useState<number>(2);
   const [verticalSpacing, setVerticalSpacing] = useState<number>(2);
-  const [questionGap, setQuestionGap] = useState<number>(12);
+  const [questionGap, setQuestionGap] = useState<number>(0);
   const [bilingualInline, setBilingualInline] = useState(true);
   const [boardExamFormat, setBoardExamFormat] = useState(true);
-  const [showQuestionMarks, setShowQuestionMarks] = useState(paper.showQuestionMarks ?? false);
+  const [showQuestionMarks, setShowQuestionMarks] = useState(paper.showQuestionMarks ?? true);
   const [printViewMode, setPrintViewMode] = useState<'both' | 'objective' | 'subjective'>('both');
-  const [languageMode, setLanguageMode] = useState<'English' | 'Urdu' | 'Bilingual'>(() => {
-    const mediums = Object.values(paper.structure || {}).map((s: any) => s.languageMedium).filter(Boolean) as Array<'English' | 'Urdu' | 'Bilingual'>;
-    if (mediums.length === 0) return 'Bilingual';
-    const first = mediums[0];
-    const allSame = mediums.every(m => m === first);
-    return allSame ? first : 'Bilingual';
-  });
-  const showEnglish = languageMode === 'Bilingual' || languageMode === 'English';
-  const showUrdu = languageMode === 'Bilingual' || languageMode === 'Urdu';
-
   useEffect(() => {
-    setShowQuestionMarks(paper.showQuestionMarks ?? false);
+    setShowQuestionMarks(paper.showQuestionMarks ?? true);
   }, [paper.showQuestionMarks]);
 
   // Printing Options
@@ -1579,38 +1585,12 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       </td>
                     )}
 
-                    {/* Sub-number / part label + English text */}
-                    <td className="pl-1 pr-1 align-top" style={{ paddingTop: '3px' }}>
-                      {showEnglish && subNumEn && <span className="font-black mr-1" style={{ fontSize: `${englishFontSize}px` }}>{subNumEn}</span>}
-                      {showEn && (
-                        <span className="question-content">
-                          {isManualEdit
-                            ? <span contentEditable suppressContentEditableWarning className="outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-0.5">{cleanedTextEn}</span>
-                            : <MathRenderer text={cleanedTextEn} inline className="leading-snug font-bold" />}
-                        </span>
-                      )}
-                      {/* Image (below English text) */}
-                      {q.imageUrl && (
-                        <div className="my-1 flex justify-center">
-                          <ResizableImage src={q.imageUrl} alt="Diagram" initialDims={{ w: (q as any).imageWidth, h: (q as any).imageHeight, x: (q as any).imageX || 0, y: (q as any).imageY || 0 }} isEditing={isManualEdit} onUpdate={d => updateQuestionImageDims(q.id, d)} />
-                        </div>
-                      )}
-                      {/* MCQ options below English question */}
-                      {isMCQType(q.type) && (languageMode === 'Bilingual' || languageMode === 'English') && (
-                        <div className="grid mt-1" style={{ gridTemplateColumns: `repeat(${effectiveMcqCols}, minmax(0, 1fr))`, columnGap: `${verticalSpacing * 2}px`, rowGap: `${verticalSpacing}px` }}>
-                          {getMcqOptions(q).map((_, i) => {
-                            const opt = q.options?.[i] || '';
-                            const isCorrect = showAnswersInline && opt === q.correctAnswer;
-                            return (
-                              <div key={i} className="flex gap-1 items-start min-w-0">
-                                <span style={{ fontSize: `${optionLabelSize}px` }} className={`font-black shrink-0 ${isCorrect ? 'text-green-700' : 'text-slate-500'}`}>({String.fromCharCode(65 + i)})</span>
-                                <MathRenderer text={opt} className={`font-medium whitespace-normal break-words ${isCorrect ? 'font-bold text-green-700' : ''}`} inline />
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </td>
+                    {/* URDU-ONLY MODE: Render Urdu Numbering first (Far Right in RTL) */}
+                    {languageMode === 'Urdu' && (
+                      <td dir="rtl" className="text-right font-black pl-0.5 pr-0.5 align-top font-urdu" style={{ width: '32px', fontSize: `${englishFontSize}px`, paddingTop: '3px' }}>
+                        {subNumUr}
+                      </td>
+                    )}
 
                     {/* Urdu text column */}
                     {showUr && (
@@ -1638,8 +1618,43 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       </td>
                     )}
 
-                    {/* Urdu numbering is kept in its own RTL cell so it cannot appear on the English side. */}
-                    {showUrdu && (
+                    {/* Sub-number / part label + English text (Only if Bilingual or English mode) */}
+                    {languageMode !== 'Urdu' && (
+                      <td className="pl-1 pr-1 align-top" style={{ paddingTop: '3px' }}>
+                        {showEnglish && subNumEn && <span className="font-black mr-1" style={{ fontSize: `${englishFontSize}px` }}>{subNumEn}</span>}
+                        {showEn && (
+                          <span className="question-content">
+                            {isManualEdit
+                              ? <span contentEditable suppressContentEditableWarning className="outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-0.5">{cleanedTextEn}</span>
+                              : <MathRenderer text={cleanedTextEn} inline className="leading-snug font-bold" />}
+                          </span>
+                        )}
+                        {/* Image (below English text) */}
+                        {q.imageUrl && (
+                          <div className="my-1 flex justify-center">
+                            <ResizableImage src={q.imageUrl} alt="Diagram" initialDims={{ w: (q as any).imageWidth, h: (q as any).imageHeight, x: (q as any).imageX || 0, y: (q as any).imageY || 0 }} isEditing={isManualEdit} onUpdate={d => updateQuestionImageDims(q.id, d)} />
+                          </div>
+                        )}
+                        {/* MCQ options below English question */}
+                        {isMCQType(q.type) && (languageMode === 'Bilingual' || languageMode === 'English') && (
+                          <div className="grid mt-1" style={{ gridTemplateColumns: `repeat(${effectiveMcqCols}, minmax(0, 1fr))`, columnGap: `${verticalSpacing * 2}px`, rowGap: `${verticalSpacing}px` }}>
+                            {getMcqOptions(q).map((_, i) => {
+                              const opt = q.options?.[i] || '';
+                              const isCorrect = showAnswersInline && opt === q.correctAnswer;
+                              return (
+                                <div key={i} className="flex gap-1 items-start min-w-0">
+                                  <span style={{ fontSize: `${optionLabelSize}px` }} className={`font-black shrink-0 ${isCorrect ? 'text-green-700' : 'text-slate-500'}`}>({String.fromCharCode(65 + i)})</span>
+                                  <MathRenderer text={opt} className={`font-medium whitespace-normal break-words ${isCorrect ? 'font-bold text-green-700' : ''}`} inline />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </td>
+                    )}
+
+                    {/* Urdu numbering in Bilingual mode (far right cell) */}
+                    {languageMode === 'Bilingual' && (
                       <td dir="rtl" className="text-right font-black pl-0.5 pr-0.5 align-top font-urdu" style={{ width: '32px', fontSize: `${englishFontSize}px`, paddingTop: '3px' }}>
                         {subNumUr}
                       </td>

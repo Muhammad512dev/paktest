@@ -14,6 +14,13 @@ import MathRenderer from './MathRenderer';
 
 const ROMAN_NUMS = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', 'xi', 'xii', 'xiii', 'xiv', 'xv'];
 
+const getSubQuestionLabel = (idx: number, forceRoman: boolean = false): string => {
+  if (forceRoman) {
+    return idx < 15 ? ROMAN_NUMS[idx] : `${idx + 1}`;
+  }
+  return `${idx + 1}`;
+};
+
 interface PrintPreviewProps {
   paper: ExamPaper;
   onClose: () => void;
@@ -1508,9 +1515,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                 }
               } else {
                 const isShortQuestionSection = sec.category !== 'Objective' && !sec.hasParts;
-                const subNum = (sec.subQuestionNumbering === 'Roman' || isShortQuestionSection)
-                  ? `(${romanNums[idx] || idx + 1})`
-                  : `(${idx + 1})`;
+                const isRoman = sec.subQuestionNumbering === 'Roman' || isShortQuestionSection;
+                const subNum = `(${getSubQuestionLabel(idx, isRoman)})`;
                 subNumEn = `${subNum} `;
                 subNumUr = `${subNum} `;
               }
@@ -1698,7 +1704,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               {secQuestions.map((q, idx) => (
                 <tr key={q.id} className="break-inside-avoid relative group/row">
                   <td style={{ padding: `${tableDensity}px` }} className="border-r-2 border-black align-top text-center font-black">
-                    {sec.subQuestionNumbering === 'Roman' ? `(${ROMAN_NUMS[idx] || idx + 1})` : `${idx + 1}.`}
+                    {sec.subQuestionNumbering === 'Roman' ? `(${getSubQuestionLabel(idx, true)})` : `${idx + 1}.`}
                     {isManualEdit && (
                       <button onClick={() => removeQuestion(q.id)} className="absolute -left-10 top-2 p-1 text-red-500 hover:bg-red-50 rounded print:hidden opacity-0 group-row:opacity-100"><Trash2 size={14} /></button>
                     )}
@@ -1818,13 +1824,13 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               const numEn = sec.hasParts
                 ? `${standardMainNumber + partNumber}. ${partLabelEn})`
                 : (sec.subQuestionNumbering === 'Roman'
-                  ? `(${ROMAN_NUMS[idx] || idx + 1})`
+                  ? `(${getSubQuestionLabel(idx, true)})`
                   : `${idx + 1}.`);
 
               const numUr = sec.hasParts
                 ? `${partLabelUr}) ${standardMainNumber + partNumber}.`
                 : (sec.subQuestionNumbering === 'Roman'
-                  ? `(${ROMAN_NUMS[idx] || idx + 1})`
+                  ? `(${getSubQuestionLabel(idx, true)})`
                   : `${idx + 1}.`);
 
               return (

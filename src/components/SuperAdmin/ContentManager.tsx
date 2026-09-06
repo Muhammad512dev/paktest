@@ -9,7 +9,7 @@ import { Plus, Trash2, X, FileText, Upload, BookOpen, Clock, Calendar, CheckSqua
 import { Syllabus, ClassLevel } from '../../types';
 
 const ContentManager: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'BLOG' | 'NOTES' | 'LESSON_PLANS' | 'PAPERS'>('BLOG');
+  const [activeTab, setActiveTab] = useState<'BLOG' | 'NOTES' | 'LESSON_PLANS' | 'BOOKS' | 'PAPERS'>('BLOG');
   const [items, setItems] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [curriculum, setCurriculum] = useState<{ syllabuses: Syllabus[]; classes: ClassLevel[] }>({ syllabuses: [], classes: [] });
@@ -18,6 +18,7 @@ const ContentManager: React.FC = () => {
   const [blogForm, setBlogForm] = useState({ title: '', excerpt: '', content: '', category: 'EdTech', author: '', image: '' });
   const [noteForm, setNoteForm] = useState({ title: '', subject: '', grade: '', board: '', noteType: '', resource: '', book: '', author: '', fileUrl: '', description: '' });
   const [paperForm, setPaperForm] = useState({ title: '', year: new Date().getFullYear(), board: '', level: '', subject: '', resource: '', fileUrl: '' });
+  const [bookForm, setBookForm] = useState({ title: '', board: '', grade: '', subject: '', fileUrl: '', description: '' });
 
   useEffect(() => {
     const loadCurriculum = async () => {
@@ -34,6 +35,7 @@ const ContentManager: React.FC = () => {
     if (activeTab === 'BLOG') data = await getBlogs();
     else if (activeTab === 'NOTES') data = await getNotes();
     else if (activeTab === 'LESSON_PLANS') data = await getNotes({ noteType: 'Lesson Plan' });
+    else if (activeTab === 'BOOKS') data = await getNotes({ noteType: 'Textbook' });
     else if (activeTab === 'PAPERS') data = (await getPastPapers({ pageSize: 1000 })).data;
     setItems(data);
   };
@@ -54,6 +56,18 @@ const ContentManager: React.FC = () => {
          noteType: activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : (noteForm.noteType || 'Book Notes')
        });
        setNoteForm({ title: '', subject: '', grade: '', board: '', noteType: '', resource: '', book: '', author: '', fileUrl: '', description: '' });
+    } else if (activeTab === 'BOOKS') {
+       if (!bookForm.title) return;
+       await addNote({
+         title: bookForm.title,
+         board: bookForm.board,
+         grade: bookForm.grade,
+         subject: bookForm.subject,
+         fileUrl: bookForm.fileUrl,
+         description: bookForm.description,
+         noteType: 'Textbook'
+       });
+       setBookForm({ title: '', board: '', grade: '', subject: '', fileUrl: '', description: '' });
     } else {
        if (!paperForm.title) return;
        const { resource, ...cleanPaperData } = paperForm;
@@ -67,7 +81,7 @@ const ContentManager: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this item?")) return;
     if (activeTab === 'BLOG') await deleteBlog(id);
-    else if (activeTab === 'NOTES' || activeTab === 'LESSON_PLANS') await deleteNote(id);
+    else if (activeTab === 'NOTES' || activeTab === 'LESSON_PLANS' || activeTab === 'BOOKS') await deleteNote(id);
     else await deletePastPaper(id);
     loadData();
   };
@@ -77,6 +91,7 @@ const ContentManager: React.FC = () => {
       try {
         const url = await uploadFile(e.target.files[0]);
         if (activeTab === 'BLOG') setBlogForm({ ...blogForm, image: url });
+        else if (activeTab === 'BOOKS') setBookForm({ ...bookForm, fileUrl: url });
         else if (activeTab === 'NOTES' || activeTab === 'LESSON_PLANS') setNoteForm({ ...noteForm, fileUrl: url });
         else setPaperForm({ ...paperForm, fileUrl: url });
       } catch (err) {
@@ -93,18 +108,18 @@ const ContentManager: React.FC = () => {
           <p className="text-sm text-gray-500 mt-1">Manage public-facing resources</p>
         </div>
         <button onClick={() => setIsModalOpen(true)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2">
-          <Plus size={18} /> Add {activeTab === 'BLOG' ? 'Post' : activeTab === 'NOTES' ? 'Note' : activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : 'Paper'}
+          <Plus size={18} /> Add {activeTab === 'BLOG' ? 'Post' : activeTab === 'NOTES' ? 'Note' : activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : activeTab === 'BOOKS' ? 'Book' : 'Paper'}
         </button>
       </div>
 
-      <div className="flex gap-4 border-b border-gray-200 mb-6">
-        {['BLOG', 'NOTES', 'LESSON_PLANS', 'PAPERS'].map(tab => (
+      <div className="flex gap-4 border-b border-gray-200 mb-6 flex-wrap">
+        {['BLOG', 'NOTES', 'LESSON_PLANS', 'BOOKS', 'PAPERS'].map(tab => (
           <button 
             key={tab} 
             onClick={() => setActiveTab(tab as any)}
             className={`px-6 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === tab ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
           >
-            {tab === 'BLOG' ? 'Blog Posts' : tab === 'NOTES' ? 'Study Notes' : tab === 'LESSON_PLANS' ? 'Lesson Plans' : 'Past Papers'}
+            {tab === 'BLOG' ? 'Blog Posts' : tab === 'NOTES' ? 'Study Notes' : tab === 'LESSON_PLANS' ? 'Lesson Plans' : tab === 'BOOKS' ? 'Textbooks & Key Books' : 'Past Papers'}
           </button>
         ))}
       </div>
@@ -126,14 +141,14 @@ const ContentManager: React.FC = () => {
                 </>
              )}
 
-             {(activeTab === 'NOTES' || activeTab === 'LESSON_PLANS') && (
+             {(activeTab === 'NOTES' || activeTab === 'LESSON_PLANS' || activeTab === 'BOOKS') && (
                 <>
                    <div className="flex items-start justify-between mb-2">
                       <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center"><FileText size={20}/></div>
-                      <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">{item.grade}</span>
+                      <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">{item.grade || item.board || 'All'}</span>
                    </div>
                    <h3 className="font-bold text-gray-900">{item.title}</h3>
-                   <p className="text-xs text-gray-500 mt-1 font-bold uppercase">{item.subject}</p>
+                   <p className="text-xs text-gray-500 mt-1 font-bold uppercase">{item.board || 'Board'} {item.subject ? `• ${item.subject}` : ''}</p>
                    <p className="text-xs text-gray-400 mt-3 line-clamp-2">{item.description}</p>
                 </>
              )}
@@ -159,7 +174,7 @@ const ContentManager: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
               <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                 <h3 className="font-bold text-lg">Add New {activeTab === 'BLOG' ? 'Post' : activeTab === 'NOTES' ? 'Note' : 'Paper'}</h3>
+                 <h3 className="font-bold text-lg">Add New {activeTab === 'BLOG' ? 'Post' : activeTab === 'NOTES' ? 'Note' : activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : activeTab === 'BOOKS' ? 'Book' : 'Paper'}</h3>
                  <button onClick={() => setIsModalOpen(false)}><X size={20}/></button>
               </div>
               
@@ -176,6 +191,63 @@ const ContentManager: React.FC = () => {
                        <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer" onClick={() => document.getElementById('blog-img')?.click()}>
                           <p className="text-sm text-gray-500">{blogForm.image ? 'Image Selected' : 'Click to Upload Cover Image'}</p>
                           <input id="blog-img" type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'image')} />
+                       </div>
+                    </>
+                 )}
+
+                 {activeTab === 'BOOKS' && (
+                    <>
+                       <input 
+                         type="text" 
+                         placeholder="Book Title (e.g. Class 9 Physics Punjab Textbook)" 
+                         className="w-full p-3 border rounded-xl font-bold text-gray-900" 
+                         value={bookForm.title} 
+                         onChange={e => setBookForm({...bookForm, title: e.target.value})} 
+                       />
+
+                       <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                             <label className="text-[10px] font-bold text-gray-400 uppercase">Board / Syllabus</label>
+                             <select 
+                               className="w-full p-3 border rounded-xl bg-white font-medium text-sm"
+                               value={bookForm.board}
+                               onChange={e => setBookForm({...bookForm, board: e.target.value})}
+                             >
+                               <option value="">Select Board / Syllabus...</option>
+                               {curriculum.syllabuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                             </select>
+                             <input type="text" placeholder="Or type Board manually" className="w-full p-2 border rounded-lg text-xs mt-1" value={bookForm.board} onChange={e => setBookForm({...bookForm, board: e.target.value})} />
+                          </div>
+
+                          <div className="space-y-1">
+                             <label className="text-[10px] font-bold text-gray-400 uppercase">Grade / Class (Optional)</label>
+                             <select 
+                               className="w-full p-3 border rounded-xl bg-white font-medium text-sm"
+                               value={bookForm.grade}
+                               onChange={e => setBookForm({...bookForm, grade: e.target.value})}
+                             >
+                               <option value="">Select Grade / Class...</option>
+                               {curriculum.classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                             </select>
+                             <input type="text" placeholder="Or type Grade manually" className="w-full p-2 border rounded-lg text-xs mt-1" value={bookForm.grade} onChange={e => setBookForm({...bookForm, grade: e.target.value})} />
+                          </div>
+                       </div>
+
+                       <input type="text" placeholder="Subject (Optional, e.g. Physics)" className="w-full p-3 border rounded-xl" value={bookForm.subject} onChange={e => setBookForm({...bookForm, subject: e.target.value})} />
+                       
+                       <textarea placeholder="Description / Summary of Book..." className="w-full p-3 border rounded-xl h-24" value={bookForm.description} onChange={e => setBookForm({...bookForm, description: e.target.value})} />
+                       
+                       {/* File Upload Zone */}
+                       <div className="space-y-3 pt-2">
+                         <label className="text-[10px] font-bold text-gray-400 uppercase">Upload PDF Book or Link</label>
+                         <div className="border-2 border-dashed border-indigo-200 bg-indigo-50/50 rounded-xl p-5 text-center cursor-pointer hover:border-indigo-400 transition-colors" onClick={() => document.getElementById('book-file')?.click()}>
+                            <p className="text-sm font-bold text-indigo-700">{bookForm.fileUrl ? `Selected File / Link: ${bookForm.fileUrl.substring(0, 45)}...` : '📄 Click to Upload Book PDF'}</p>
+                            <input id="book-file" type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'file')} />
+                         </div>
+                         <div className="flex items-center gap-2">
+                           <span className="text-xs text-gray-400 font-bold uppercase">OR</span>
+                           <input type="url" placeholder="Paste Google Drive / Book Link (https://drive.google.com/...)" className="w-full p-3 border rounded-xl text-sm font-mono" value={bookForm.fileUrl} onChange={e => setBookForm({...bookForm, fileUrl: e.target.value})} />
+                         </div>
                        </div>
                     </>
                  )}

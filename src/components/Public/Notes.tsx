@@ -56,8 +56,11 @@ const Notes: React.FC = () => {
   const availableBoards = useMemo(() => {
     const list: { id: string; name: string }[] = [];
     notes.forEach(n => {
-      if (n.board && !list.some(b => b.name.toLowerCase() === n.board.toLowerCase() || b.id === n.board)) {
-        list.push({ id: n.board, name: n.board });
+      if (n.board && n.board.trim()) {
+        const trimmed = n.board.trim();
+        if (!list.some(b => b.name.toLowerCase() === trimmed.toLowerCase())) {
+          list.push({ id: trimmed, name: trimmed });
+        }
       }
     });
     return list;
@@ -65,10 +68,14 @@ const Notes: React.FC = () => {
 
   // Dynamic classes strictly extracted from actual existing notes input fields
   const availableClasses = useMemo(() => {
-    const list: { id: string; name: string; syllabusId?: string }[] = [];
+    const list: { id: string; name: string; board?: string }[] = [];
     notes.forEach(n => {
-      if (n.grade && !list.some(c => c.name.toLowerCase() === n.grade.toLowerCase())) {
-        list.push({ id: n.grade, name: n.grade, syllabusId: n.board });
+      if (n.grade && n.grade.trim()) {
+        const trimmedGrade = n.grade.trim();
+        const trimmedBoard = (n.board || '').trim();
+        if (!list.some(c => c.name.toLowerCase() === trimmedGrade.toLowerCase() && (c.board || '').toLowerCase() === trimmedBoard.toLowerCase())) {
+          list.push({ id: trimmedGrade, name: trimmedGrade, board: trimmedBoard });
+        }
       }
     });
     return list;
@@ -102,25 +109,36 @@ const Notes: React.FC = () => {
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [selectedType, setSelectedType] = useState<string>('');
 
-  // Extract available subjects from notes
+  // Extract available subjects from notes for the selected board & class
   const availableSubjects = useMemo(() => {
     const set = new Set<string>();
     notes.forEach(n => {
-      if (n.subject) set.add(n.subject);
+      if (n.subject && n.subject.trim()) {
+        if (selectedBoard && n.board && n.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return;
+        if (selectedClass && n.grade && n.grade.trim().toLowerCase() !== selectedClass.trim().toLowerCase()) return;
+        set.add(n.subject.trim());
+      }
     });
     return Array.from(set);
-  }, [notes]);
+  }, [notes, selectedBoard, selectedClass]);
 
   const stepClasses = useMemo(() => {
-    return availableClasses.filter(c => !selectedBoard || !c.syllabusId || c.syllabusId === selectedBoard);
-  }, [availableClasses, selectedBoard]);
+    const set = new Set<string>();
+    notes.forEach(n => {
+      if (n.grade && n.grade.trim()) {
+        if (selectedBoard && n.board && n.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return;
+        set.add(n.grade.trim());
+      }
+    });
+    return Array.from(set).map(g => ({ id: g, name: g }));
+  }, [notes, selectedBoard]);
 
   const stepNotes = useMemo(() => {
     return notes.filter(n => {
-      if (selectedBoard && n.board && n.board.toLowerCase() !== selectedBoard.toLowerCase()) return false;
-      if (selectedClass && n.grade && n.grade.toLowerCase() !== selectedClass.toLowerCase()) return false;
-      if (selectedSubject && n.subject && n.subject.toLowerCase() !== selectedSubject.toLowerCase()) return false;
-      if (selectedType && n.noteType && n.noteType.toLowerCase() !== selectedType.toLowerCase()) return false;
+      if (selectedBoard && n.board && n.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return false;
+      if (selectedClass && n.grade && n.grade.trim().toLowerCase() !== selectedClass.trim().toLowerCase()) return false;
+      if (selectedSubject && n.subject && n.subject.trim().toLowerCase() !== selectedSubject.trim().toLowerCase()) return false;
+      if (selectedType && n.noteType && n.noteType.trim().toLowerCase() !== selectedType.trim().toLowerCase()) return false;
       if (filters.resource && n.resource) {
         const items = n.resource.split(',').map((s: string) => s.trim().toLowerCase());
         if (!items.includes(filters.resource.toLowerCase())) return false;

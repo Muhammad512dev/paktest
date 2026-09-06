@@ -42,57 +42,61 @@ const LessonPlans: React.FC = () => {
     return () => clearTimeout(t);
   }, [searchTerm, selectedBoard, selectedClass]);
 
-  // Extract boards from curriculum or notes
+  // Extract boards from curriculum or notes (deduplicated)
   const availableBoards = useMemo(() => {
     const list: { id: string; name: string }[] = [];
     if (curriculum.syllabuses.length > 0) {
-      curriculum.syllabuses.forEach(s => list.push({ id: s.name, name: s.name }));
+      curriculum.syllabuses.forEach(s => {
+        if (s.name && !list.some(b => b.name.trim().toLowerCase() === s.name.trim().toLowerCase())) {
+          list.push({ id: s.name.trim(), name: s.name.trim() });
+        }
+      });
     } else {
       notes.forEach(n => {
-        if (n.board && !list.some(b => b.name.toLowerCase() === n.board.toLowerCase())) {
-          list.push({ id: n.board, name: n.board });
+        if (n.board && n.board.trim() && !list.some(b => b.name.toLowerCase() === n.board.trim().toLowerCase())) {
+          list.push({ id: n.board.trim(), name: n.board.trim() });
         }
       });
     }
     return list;
   }, [curriculum.syllabuses, notes]);
 
-  // Extract classes
+  // Extract classes filtered by selected board
   const availableClasses = useMemo(() => {
-    const list: { id: string; name: string }[] = [];
-    if (curriculum.classes.length > 0) {
-      curriculum.classes.forEach(c => {
-        if (!list.some(item => item.name.toLowerCase() === c.name.toLowerCase())) {
-          list.push({ id: c.name, name: c.name });
-        }
-      });
-    } else {
-      notes.forEach(n => {
-        if (n.grade && !list.some(c => c.name.toLowerCase() === n.grade.toLowerCase())) {
-          list.push({ id: n.grade, name: n.grade });
-        }
-      });
+    const set = new Set<string>();
+    notes.forEach(n => {
+      if (n.grade && n.grade.trim()) {
+        if (selectedBoard && n.board && n.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return;
+        set.add(n.grade.trim());
+      }
+    });
+    if (set.size === 0 && curriculum.classes.length > 0) {
+      curriculum.classes.forEach(c => set.add(c.name.trim()));
     }
-    return list;
-  }, [curriculum.classes, notes]);
+    return Array.from(set).map(c => ({ id: c, name: c }));
+  }, [curriculum.classes, notes, selectedBoard]);
 
-  // Extract subjects
+  // Extract subjects filtered by selected board and class
   const availableSubjects = useMemo(() => {
     const set = new Set<string>();
     notes.forEach(n => {
-      if (n.subject) set.add(n.subject);
+      if (n.subject && n.subject.trim()) {
+        if (selectedBoard && n.board && n.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return;
+        if (selectedClass && n.grade && n.grade.trim().toLowerCase() !== selectedClass.trim().toLowerCase()) return;
+        set.add(n.subject.trim());
+      }
     });
     if (set.size === 0) {
       ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'English', 'Urdu', 'Islamiyat'].forEach(s => set.add(s));
     }
     return Array.from(set);
-  }, [notes]);
+  }, [notes, selectedBoard, selectedClass]);
 
   const stepNotes = useMemo(() => {
     return notes.filter(n => {
-      if (selectedBoard && n.board && n.board.toLowerCase() !== selectedBoard.toLowerCase()) return false;
-      if (selectedClass && n.grade && n.grade.toLowerCase() !== selectedClass.toLowerCase()) return false;
-      if (selectedSubject && n.subject && n.subject.toLowerCase() !== selectedSubject.toLowerCase()) return false;
+      if (selectedBoard && n.board && n.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return false;
+      if (selectedClass && n.grade && n.grade.trim().toLowerCase() !== selectedClass.trim().toLowerCase()) return false;
+      if (selectedSubject && n.subject && n.subject.trim().toLowerCase() !== selectedSubject.trim().toLowerCase()) return false;
       return true;
     });
   }, [notes, selectedBoard, selectedClass, selectedSubject]);

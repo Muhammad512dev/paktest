@@ -131,10 +131,10 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
         {children}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-slate-900 text-slate-300 py-12 md:py-16">
+      {/* Compact Footer */}
+      <footer className="bg-slate-900 text-slate-300 py-6 md:py-8">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="col-span-1 md:col-span-1">
               <div className="flex items-center gap-2 mb-6">
                 {logoUrl ? (
@@ -187,7 +187,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
               </div>
             </div>
           </div>
-          <div className="border-t border-slate-800 mt-12 pt-8 text-center text-xs text-slate-500 font-medium">
+          <div className="border-t border-slate-800 mt-6 pt-4 text-center text-xs text-slate-500 font-medium">
             &copy; {new Date().getFullYear()} {systemName}. All rights reserved.
           </div>
         </div>

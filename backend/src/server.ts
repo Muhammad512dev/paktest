@@ -2497,8 +2497,9 @@ app.post('/api/papers', authenticate, async (req: any, res: any) => {
     const targetSchoolId = req.user.role === 'SUPER_ADMIN' ? req.body.schoolId : req.user.schoolId;
     if (!targetSchoolId) return res.status(400).json({ error: "School ID required" });
 
-    const { id, selectedChapters, selectedTopics, dateCreated, author, ...data } = req.body;
-    if (data.examDate) data.examDate = new Date(data.examDate);
+    const data = req.body;
+    let parsedExamDate = null;
+    if (data.examDate) parsedExamDate = new Date(data.examDate);
 
     // Package enforcement: Online papers require Online Test feature in the school's plan
     if (data.isOnline) {
@@ -2511,17 +2512,34 @@ app.post('/api/papers', authenticate, async (req: any, res: any) => {
     try {
         const paper = await prisma.examPaper.create({
             data: {
-                ...data,
+                title: data.title || 'Untitled Exam',
+                subject: data.subject || 'General',
+                classLevel: data.classLevel || 'General',
+                totalMarks: Number(data.totalMarks) || 100,
+                durationMinutes: Number(data.durationMinutes) || 60,
+                questions: data.questions || [],
+                headerConfig: data.headerConfig || {},
+                structure: data.structure || {},
+                watermark: data.watermark || 'None',
+                layoutMode: data.layoutMode || 'Standard',
+                status: data.status || 'Draft',
+                examDate: parsedExamDate,
+                testType: data.testType,
+                isOnline: Boolean(data.isOnline),
+                onlineStartDate: data.onlineStartDate ? new Date(data.onlineStartDate) : null,
+                onlineEndDate: data.onlineEndDate ? new Date(data.onlineEndDate) : null,
+                languageMode: data.languageMode || 'Bilingual',
+                printConfig: data.printConfig || {},
                 schoolId: targetSchoolId,
                 userId: req.user.id,
-                createdBy: req.user.name,
-                questions: data.questions || []
+                createdBy: req.user.name
             }
         });
         await trackActivity(req, 'PAPER', `Generated Exam: ${paper.title}`);
         res.json(paper);
     } catch (e: any) {
-        res.status(500).json({ error: "Failed to save paper." });
+        console.error("POST /api/papers Error:", e);
+        res.status(500).json({ error: "Failed to save paper.", details: e.message });
     }
 });
 

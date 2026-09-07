@@ -15,6 +15,7 @@ const PastPapers: React.FC = () => {
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [error, setError] = useState<string | null>(null);
 
   // Load filter values separately, without downloading the paper archive.
   useEffect(() => {
@@ -31,6 +32,9 @@ const PastPapers: React.FC = () => {
         setPapers(result.data);
         setTotalItems(result.pagination.total || 0);
         setTotalPages(Math.max(1, result.pagination.pages || 1));
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch past papers.');
+        setPapers([]);
       } finally {
         setIsLoading(false);
       }

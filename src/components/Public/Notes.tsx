@@ -17,6 +17,8 @@ const NOTE_TYPES = [
 const Notes: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [notes, setNotes] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [curriculum, setCurriculum] = useState<{ syllabuses: Syllabus[]; classes: ClassLevel[] }>({
     syllabuses: [],
     classes: []
@@ -41,13 +43,22 @@ const Notes: React.FC = () => {
 
   useEffect(() => {
     const t = setTimeout(async () => {
-      const data = await getNotes({
-        search: searchTerm,
-        board: filters.board,
-        grade: filters.grade,
-        noteType: filters.noteType
-      });
-      setNotes(Array.isArray(data) ? data : []);
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await getNotes({
+          search: searchTerm,
+          board: filters.board,
+          grade: filters.grade,
+          noteType: filters.noteType
+        });
+        setNotes(Array.isArray(data) ? data : []);
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch notes. Please try again.');
+        setNotes([]);
+      } finally {
+        setIsLoading(false);
+      }
     }, 250);
     return () => clearTimeout(t);
   }, [searchTerm, filters.board, filters.grade, filters.noteType]);
@@ -530,7 +541,23 @@ const Notes: React.FC = () => {
                 ))}
               </div>
 
-              {stepNotes.length === 0 && (
+              {isLoading && (
+                <div className="flex justify-center items-center py-20">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                </div>
+              )}
+
+              {!isLoading && error && (
+                <div className="text-center py-12 bg-red-50 rounded-xl border border-red-100">
+                  <div className="text-red-500 mb-2 font-semibold">Oops!</div>
+                  <p className="text-red-600">{error}</p>
+                  <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {!isLoading && !error && stepNotes.length === 0 && (
                 <div className="py-16 text-center text-slate-400 bg-white rounded-3xl border border-slate-200">
                   <FileText size={48} className="mx-auto mb-3 opacity-20" />
                   <p className="font-bold text-slate-600">No notes uploaded yet for your selection.</p>

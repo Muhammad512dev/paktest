@@ -71,34 +71,25 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
 
         {/* Decorative Elements */}
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2 z-10 pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-purple-500/20 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2 z-10 pointer-events-none"></div>
-        
         <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-20 text-center">
           {platformConfig.logo && (
-            <div className="flex justify-center mb-8">
-  <div
-    className="
-      w-24 h-24
-      rounded-full
-      bg-white/10 backdrop-blur-md
-      border border-white/10
-      shadow-2xl
-      flex items-center justify-center
-      overflow-hidden
-      transition-all duration-300
-      hover:scale-110
-      hover:shadow-indigo-500/40
-      hover:ring-2 hover:ring-indigo-400/40
-    "
-  >
-    <img
-      src={platformConfig.logo}
-      alt="Platform Logo"
-      className="w-full h-full object-cover"
-    />
-  </div>
-</div>
-
+            <div className="flex justify-center mb-10">
+              <div className="relative group p-2">
+                <img
+                  src={platformConfig.logo}
+                  alt={platformConfig.name || "PakParcha AI"}
+                  className="
+                    h-24 sm:h-32 md:h-40 lg:h-48 
+                    w-auto max-w-[320px] sm:max-w-[480px] md:max-w-[620px] lg:max-w-[760px] 
+                    object-contain 
+                    drop-shadow-[0_20px_40px_rgba(0,0,0,0.6)]
+                    transition-all duration-300
+                    hover:scale-[1.03]
+                    filter brightness-105
+                  "
+                />
+              </div>
+            </div>
           )}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/10 text-xs font-bold uppercase tracking-widest mb-8 animate-in fade-in slide-in-from-bottom-4 backdrop-blur-md">
             <Sparkles size={14} className="text-yellow-400" /> New: AI Auto-Grading Beta

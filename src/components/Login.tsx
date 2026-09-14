@@ -101,17 +101,19 @@ const Login: React.FC<LoginProps> = ({ onLogin, systemConfig, onNavigate }) => {
         {/* Top: Logo */}
         <div className="fade-in" style={{ animationDelay: '0.1s', opacity: 0 }}>
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl" style={{ background: 'linear-gradient(135deg, #00a86b, #005c3b)' }}>
-              {systemConfig.platformLogo ? (
-                <img src={systemConfig.platformLogo} className="w-8 h-8 object-contain" alt="Logo" />
-              ) : (
-                <span className="text-white font-black text-xl">P</span>
-              )}
-            </div>
-            <div>
-              <p className="text-white font-black text-lg tracking-tight">{systemConfig.platformName || 'PakTest'}</p>
-              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#00c87a' }}>Staff Portal</p>
-            </div>
+            {systemConfig.platformLogo ? (
+              <img src={systemConfig.platformLogo} className="h-12 w-auto max-w-[220px] object-contain drop-shadow-lg" alt="PakParcha AI Logo" />
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl" style={{ background: 'linear-gradient(135deg, #00a86b, #005c3b)' }}>
+                  <span className="text-white font-black text-xl">P</span>
+                </div>
+                <div>
+                  <p className="text-white font-black text-lg tracking-tight">{systemConfig.platformName || 'PakParcha AI'}</p>
+                  <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#00c87a' }}>Staff Portal</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

@@ -155,22 +155,24 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onNavigate, onLogou
   return (
     <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0F172A] flex flex-col h-full text-slate-300 border-r border-slate-800 transform transition-transform duration-200 ease-in-out md:relative md:translate-x-0 shadow-xl ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       {/* Header */}
-      <div className="h-24 flex flex-col justify-center px-6 border-b border-slate-800 bg-slate-900/50 shrink-0 relative">
+      <div className="h-24 flex flex-col justify-center px-5 border-b border-slate-800 bg-slate-900/60 shrink-0 relative">
         <div className="flex items-center gap-3 text-white overflow-hidden">
           {displayLogo ? (
-            <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center overflow-hidden shrink-0">
-              <img src={displayLogo} alt="Logo" className="w-full h-full object-contain" />
+            <div className="h-12 w-auto max-w-[180px] flex items-center justify-start overflow-hidden shrink-0">
+              <img src={displayLogo} alt="Logo" className="h-full w-auto max-w-full object-contain drop-shadow" />
             </div>
           ) : (
-            <div className="w-10 h-10 bg-brand rounded-lg flex items-center justify-center shadow-lg shadow-brand/35 shrink-0">
-              <LayoutDashboard size={20} className="text-white" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25 shrink-0">
+                <LayoutDashboard size={20} className="text-white" />
+              </div>
+              <div className="flex flex-col overflow-hidden">
+                <span className="font-bold text-sm tracking-tight truncate leading-tight">{displayTitle}</span>
+                {!isOwner && <span className="text-[10px] text-slate-500 font-medium uppercase tracking-widest truncate">Academic Portal</span>}
+                {isOwner && <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest truncate">Super Admin</span>}
+              </div>
             </div>
           )}
-          <div className="flex flex-col overflow-hidden">
-            <span className="font-bold text-sm tracking-tight truncate leading-tight">{displayTitle}</span>
-            {!isOwner && <span className="text-[10px] text-slate-500 font-medium uppercase tracking-widest truncate">Academic Portal</span>}
-            {isOwner && <span className="text-[10px] text-brand font-bold uppercase tracking-widest truncate">Super Admin</span>}
-          </div>
         </div>
         <button onClick={onClose} className="md:hidden absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors">
           <X size={20} />

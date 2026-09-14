@@ -32,16 +32,22 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
       <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-sm w-full">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
           <div className="flex justify-between items-center h-16 sm:h-20 gap-3">
-            {/* Logo */}
-            <div className="flex items-center gap-2 sm:gap-3 cursor-pointer shrink-0" onClick={() => onNavigate('HOME')}>
+            {/* Logo: Prominent Brand Identity with built-in typography */}
+            <div className="flex items-center cursor-pointer shrink-0 py-1" onClick={() => onNavigate('HOME')}>
               {logoUrl ? (
-                <img src={logoUrl} alt="Logo" className="w-8 h-8 sm:w-9 sm:h-9 object-contain" />
+                <img 
+                  src={logoUrl} 
+                  alt={systemName || "PakParcha AI"} 
+                  className="h-10 sm:h-12 md:h-14 w-auto max-w-[200px] sm:max-w-[240px] md:max-w-[280px] object-contain drop-shadow-sm transition-transform hover:scale-[1.02]" 
+                />
               ) : (
-                <div className="w-8 h-8 sm:w-9 sm:h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-200">
-                  <LayoutDashboard size={18} />
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-emerald-200">
+                    <LayoutDashboard size={20} />
+                  </div>
+                  <span className="font-black text-lg sm:text-xl tracking-tight text-slate-900 whitespace-nowrap">{systemName}</span>
                 </div>
               )}
-              <span className="font-black text-base sm:text-lg tracking-tight text-slate-900 whitespace-nowrap">{systemName}</span>
             </div>
 
             {/* Desktop Nav */}
@@ -141,13 +147,19 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
             <div className="col-span-1 md:col-span-1">
               <div className="flex items-center gap-2 mb-6">
                 {logoUrl ? (
-                  <img src={logoUrl} alt="Logo" className="w-8 h-8 object-contain" />
+                  <img 
+                    src={logoUrl} 
+                    alt={systemName || "PakParcha AI"} 
+                    className="h-10 md:h-12 w-auto max-w-[220px] object-contain brightness-110" 
+                  />
                 ) : (
-                  <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white">
-                    <LayoutDashboard size={16} />
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-white">
+                      <LayoutDashboard size={16} />
+                    </div>
+                    <span className="font-bold text-lg text-white">{systemName}</span>
                   </div>
                 )}
-                <span className="font-bold text-lg text-white">{systemName}</span>
               </div>
               <p className="text-xs leading-relaxed text-slate-400">
                 Empowering academic institutions with AI-driven assessment tools and curriculum management.

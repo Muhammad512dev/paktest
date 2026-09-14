@@ -77,9 +77,10 @@ export const initializeDB = async () => {
 export const getSystemConfig = async () => {
   try {
     const res = await fetch(`${API_URL}/api/public/settings`);
-    return await handleResponse(res);
+    const data = await handleResponse(res);
+    return { ...data, platformLogo: data?.platformLogo || '/logo.png' };
   } catch (e) {
-    return { currencySymbol: '$', platformName: 'PakParcha' };
+    return { currencySymbol: '$', platformName: 'PakParcha AI', platformLogo: '/logo.png' };
   }
 };
 
@@ -97,9 +98,28 @@ export const checkAndTrackAiUsage = async () => {
   return { success: true };
 };
 
+import { optimizeImageFile } from '../utils/imageOptimizer';
+
 export const uploadFile = async (file: File): Promise<string> => {
+  let fileToUpload = file;
+  
+  // Auto-optimize image files (Logos, stamps, avatars) into crisp, light format
+  if (file.type.startsWith('image/') && file.type !== 'image/svg+xml') {
+    try {
+      fileToUpload = await optimizeImageFile(file, {
+        maxWidth: 1200,
+        maxHeight: 1200,
+        quality: 0.92,
+        format: 'image/webp'
+      });
+    } catch (optErr) {
+      console.warn('Image optimization skipped:', optErr);
+      fileToUpload = file;
+    }
+  }
+
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append('file', fileToUpload);
   const token = localStorage.getItem('token');
 
   const res = await fetch(`${API_URL}/api/upload`, {

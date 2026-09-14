@@ -98,6 +98,16 @@ const CurriculumManager: React.FC = () => {
   const [newItemName, setNewItemName] = useState('');
   const [newItemDesc, setNewItemDesc] = useState('');
   const [newItemImage, setNewItemImage] = useState<File | null>(null);
+
+  // Secure Delete Confirmation Modal State
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: 'syllabuses' | 'classes' | 'subjects' | 'chapters' | 'topics' | 'sources';
+    id: string;
+    name: string;
+  } | null>(null);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   
   // Sequential Selection States
   const [selSyllabusId, setSelSyllabusId] = useState('');
@@ -296,18 +306,39 @@ const CurriculumManager: React.FC = () => {
     setIsAddModalOpen(true);
   };
 
-  const handleDeleteItem = async (type: 'syllabuses' | 'classes' | 'subjects' | 'chapters' | 'topics' | 'sources', id: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete "${name}"? This will permanently remove it from the curriculum.`)) return;
+  const handleDeleteItem = (type: 'syllabuses' | 'classes' | 'subjects' | 'chapters' | 'topics' | 'sources', id: string, name: string) => {
+    setDeleteTarget({ type, id, name });
+    setAdminPassword('');
+    setDeleteError(null);
+  };
+
+  const handleConfirmDelete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deleteTarget) return;
+    if (!adminPassword.trim()) {
+      setDeleteError("Please enter your administrator password.");
+      return;
+    }
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
     try {
-      if (type === 'syllabuses') await deleteSyllabus(id);
-      else if (type === 'classes') await deleteClass(id);
-      else if (type === 'subjects') await deleteSubject(id);
-      else if (type === 'chapters') await deleteChapter(id);
-      else if (type === 'topics') await deleteTopic(id);
-      else if (type === 'sources') await deleteSource(id);
+      const { type, id } = deleteTarget;
+      if (type === 'syllabuses') await deleteSyllabus(id, adminPassword);
+      else if (type === 'classes') await deleteClass(id, adminPassword);
+      else if (type === 'subjects') await deleteSubject(id, adminPassword);
+      else if (type === 'chapters') await deleteChapter(id, adminPassword);
+      else if (type === 'topics') await deleteTopic(id, adminPassword);
+      else if (type === 'sources') await deleteSource(id, adminPassword);
+
       await refreshData();
+      setDeleteTarget(null);
+      setAdminPassword('');
     } catch (err: any) {
-      alert(err.message || `Failed to delete ${type}`);
+      setDeleteError(err.message || 'Deletion failed. Please verify your password.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -693,6 +724,72 @@ const CurriculumManager: React.FC = () => {
                  </div>
               </div>
            </div>
+        </div>
+      )}
+
+      {/* SECURE DELETE CONFIRMATION MODAL WITH PASSWORD CHECK */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 border border-red-100 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 mb-5">
+              <Trash2 size={26} />
+            </div>
+
+            <h3 className="font-black text-2xl text-slate-900 tracking-tight">
+              Confirm Permanent Deletion
+            </h3>
+
+            <p className="text-sm text-slate-600 mt-2 leading-relaxed font-medium">
+              You are deleting <span className="font-black text-red-600">{deleteTarget.name}</span> ({deleteTarget.type}).
+            </p>
+
+            <div className="my-4 p-4 rounded-2xl bg-red-50 border border-red-100 text-xs text-red-700 leading-relaxed font-semibold space-y-1">
+              <p>⚠️ <strong>Cascade Deletion Notice:</strong></p>
+              <p>Deleting this {deleteTarget.type === 'syllabuses' ? 'Board' : deleteTarget.type === 'classes' ? 'Grade' : deleteTarget.type === 'subjects' ? 'Subject' : 'Item'} will <strong>permanently remove all attached Questions, Schemes, and Chapters</strong> from the database.</p>
+            </div>
+
+            {deleteError && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-200 text-red-700 rounded-xl text-xs font-bold animate-shake">
+                {deleteError}
+              </div>
+            )}
+
+            <form onSubmit={handleConfirmDelete} className="space-y-4">
+              <div>
+                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">
+                  Administrator Password Required
+                </label>
+                <input
+                  type="password"
+                  required
+                  autoFocus
+                  placeholder="Enter your admin password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:ring-4 focus:ring-red-500/10 focus:border-red-500 transition-all text-slate-800"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setDeleteTarget(null)}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isDeleting}
+                  className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-red-200 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                >
+                  {isDeleting ? <RefreshCw className="animate-spin" size={18} /> : <Trash2 size={18} />}
+                  <span>{isDeleting ? 'Deleting...' : 'Confirm Delete'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

@@ -350,20 +350,21 @@ export const updateChapter = (id: string, item: any) => updateCurriculum('chapte
 export const updateTopic = (id: string, item: any) => updateCurriculum('topics', id, item);
 export const updateSource = (id: string, item: any) => updateCurriculum('sources', id, item);
 
-const deleteCurriculum = async (type: string, id: string) => {
+const deleteCurriculum = async (type: string, id: string, password?: string) => {
   const res = await fetch(`${API_URL}/api/curriculum/${type}/${id}`, {
     method: 'DELETE',
-    headers: getHeaders()
+    headers: getHeaders(),
+    body: JSON.stringify({ password: password || '' })
   });
   return handleResponse(res);
 };
 
-export const deleteSyllabus = (id: string) => deleteCurriculum('syllabuses', id);
-export const deleteClass = (id: string) => deleteCurriculum('classes', id);
-export const deleteSubject = (id: string) => deleteCurriculum('subjects', id);
-export const deleteChapter = (id: string) => deleteCurriculum('chapters', id);
-export const deleteTopic = (id: string) => deleteCurriculum('topics', id);
-export const deleteSource = (id: string) => deleteCurriculum('sources', id);
+export const deleteSyllabus = (id: string, password?: string) => deleteCurriculum('syllabuses', id, password);
+export const deleteClass = (id: string, password?: string) => deleteCurriculum('classes', id, password);
+export const deleteSubject = (id: string, password?: string) => deleteCurriculum('subjects', id, password);
+export const deleteChapter = (id: string, password?: string) => deleteCurriculum('chapters', id, password);
+export const deleteTopic = (id: string, password?: string) => deleteCurriculum('topics', id, password);
+export const deleteSource = (id: string, password?: string) => deleteCurriculum('sources', id, password);
 
 export const ensureCurriculumPath = async (path: any) => {
   const res = await fetch(`${API_URL}/api/curriculum/sync`, {

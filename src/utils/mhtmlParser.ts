@@ -52,11 +52,59 @@ export function parseMhtmlToQuestions(
   mhtmlContent: string,
   defaultMeta: { board?: string; grade?: string; subject?: string } = {}
 ): ParsedMhtmlQuestion[] {
-  const {
-    board = 'Punjab Board',
-    grade = 'Class 9',
-    subject = 'General'
-  } = defaultMeta;
+  let detectedGrade = defaultMeta.grade || '';
+  let detectedSubject = defaultMeta.subject || '';
+  let detectedBoard = defaultMeta.board || '';
+
+  // 1. Try extracting Grade and Subject from modal-title e.g. "Select Your Questions Here.... 9TH - Biology"
+  const modalTitleMatch = mhtmlContent.match(/class=["'][^"']*modal-title[^"']*["'][^>]*>([\s\S]*?)<\/p>/i);
+  if (modalTitleMatch) {
+    const rawModalText = cleanHtmlContent(modalTitleMatch[1]);
+    const pairMatch = rawModalText.match(/(\d+)(?:TH|ST|ND|RD)?\s*[-–—:]\s*([A-Za-z\s]+)/i);
+    if (pairMatch) {
+      if (!detectedGrade || detectedGrade === 'Class 9') {
+        const gradeNum = pairMatch[1].trim();
+        detectedGrade = `Class ${gradeNum}`;
+      }
+      if (!detectedSubject || detectedSubject === 'General' || detectedSubject === 'Biology') {
+        detectedSubject = pairMatch[2].trim();
+      }
+    }
+  }
+
+  // 2. Try extracting from Snapshot-Content-Location e.g. ClassID=9&SubjectID=43
+  if (!detectedGrade || detectedGrade === 'Class 9') {
+    const classIdMatch = mhtmlContent.match(/ClassID=(\d+)/i);
+    if (classIdMatch) {
+      detectedGrade = `Class ${classIdMatch[1].trim()}`;
+    }
+  }
+
+  // 3. Try extracting Board / Curriculum mentions from text (using word boundaries to avoid font class false positives)
+  if (!detectedBoard) {
+    if (/\b(?:federal|fbise)\b/i.test(mhtmlContent)) {
+      detectedBoard = 'Federal Board';
+    } else if (/\b(?:punjab|bise\s*lahore|bise\s*rawalpindi|bise\s*gujranwala|bise\s*multan|bise\s*faisalabad|bise\s*sargodha|bise\s*sahiwal|bise\s*bahawalpur|bise\s*dg\s*khan)\b/i.test(mhtmlContent)) {
+      detectedBoard = 'Punjab Board';
+    } else if (/\b(?:sindh|bise\s*karachi|bise\s*hyderabad|bise\s*sukkur|bise\s*larkana|bise\s*mirpurkhas)\b/i.test(mhtmlContent)) {
+      detectedBoard = 'Sindh Board';
+    } else if (/\b(?:kpk|khyber|bise\s*peshawar|bise\s*mardan|bise\s*abbottabad|bise\s*swat|bise\s*kohat|bise\s*bannu|bise\s*di\s*khan)\b/i.test(mhtmlContent)) {
+      detectedBoard = 'KPK Board';
+    } else if (/\b(?:balochistan|bise\s*quetta)\b/i.test(mhtmlContent)) {
+      detectedBoard = 'Balochistan Board';
+    } else if (/\b(?:cambridge|caie|igcse|o\s*level|a\s*level)\b/i.test(mhtmlContent)) {
+      detectedBoard = 'Cambridge';
+    } else if (/\b(?:oxford)\b/i.test(mhtmlContent)) {
+      detectedBoard = 'Oxford';
+    } else {
+      detectedBoard = defaultMeta.board || 'Punjab Board';
+    }
+  }
+
+  // Fallbacks if still not resolved
+  const finalBoard = detectedBoard || 'Punjab Board';
+  const finalGrade = detectedGrade || 'Class 9';
+  const finalSubject = detectedSubject || 'General';
 
   // Split by topic-heading containers
   const rawBlocks = mhtmlContent.split(/<div[^>]*class=["'][^"']*topic-heading[^"']*["']>/i);
@@ -131,9 +179,9 @@ export function parseMhtmlToQuestions(
       }
 
       questions.push({
-        Board: board,
-        Grade: grade,
-        Subject: subject,
+        Board: finalBoard,
+        Grade: finalGrade,
+        Subject: finalSubject,
         Chapter: currentChapter,
         Topic: currentTopic,
         Type: type,

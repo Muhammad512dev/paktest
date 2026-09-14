@@ -31,21 +31,21 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
       {/* Navbar */}
       <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-sm w-full">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
-          <div className="flex justify-between items-center h-16 sm:h-20 gap-3">
-            {/* Logo: Prominent Brand Identity with built-in typography */}
-            <div className="flex items-center cursor-pointer shrink-0 py-1" onClick={() => onNavigate('HOME')}>
+          <div className="flex justify-between items-center h-20 sm:h-24 md:h-28 gap-4">
+            {/* Logo: Prominent, Large Brand Identity with built-in typography */}
+            <div className="flex items-center cursor-pointer shrink-0 py-2" onClick={() => onNavigate('HOME')}>
               {logoUrl ? (
                 <img 
                   src={logoUrl} 
                   alt={systemName || "PakParcha AI"} 
-                  className="h-10 sm:h-12 md:h-14 w-auto max-w-[200px] sm:max-w-[240px] md:max-w-[280px] object-contain drop-shadow-sm transition-transform hover:scale-[1.02]" 
+                  className="h-14 sm:h-18 md:h-20 w-auto max-w-[260px] sm:max-w-[340px] md:max-w-[400px] object-contain drop-shadow-md transition-transform hover:scale-[1.03]" 
                 />
               ) : (
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-emerald-200">
-                    <LayoutDashboard size={20} />
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-emerald-200">
+                    <LayoutDashboard size={24} />
                   </div>
-                  <span className="font-black text-lg sm:text-xl tracking-tight text-slate-900 whitespace-nowrap">{systemName}</span>
+                  <span className="font-black text-xl sm:text-2xl tracking-tight text-slate-900 whitespace-nowrap">{systemName}</span>
                 </div>
               )}
             </div>

@@ -149,7 +149,8 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onNavigate, onLogou
   else menuItems = schoolMenu;
 
   // Determine Logo and Title based on Role
-  const displayLogo = (!isOwner && school?.logo) ? school.logo : systemConfig.platformLogo;
+  const hasSchoolLogo = !isOwner && !!school?.logo;
+  const displayLogo = hasSchoolLogo ? school?.logo : systemConfig.platformLogo;
   const displayTitle = (!isOwner && school?.name) ? school.name : systemConfig.platformName;
 
   return (
@@ -157,19 +158,38 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onNavigate, onLogou
       {/* Header */}
       <div className="h-24 flex flex-col justify-center px-5 border-b border-slate-800 bg-slate-900/60 shrink-0 relative">
         <div className="flex items-center gap-3 text-white overflow-hidden">
-          {displayLogo ? (
-            <div className="h-12 w-auto max-w-[180px] flex items-center justify-start overflow-hidden shrink-0">
-              <img src={displayLogo} alt="Logo" className="h-full w-auto max-w-full object-contain drop-shadow" />
-            </div>
+          {isOwner ? (
+            /* Super Admin: Full PakParcha Typography Logo */
+            displayLogo ? (
+              <div className="h-14 w-auto max-w-[200px] flex items-center justify-start overflow-hidden shrink-0">
+                <img src={displayLogo} alt="PakParcha Logo" className="h-full w-auto max-w-full object-contain drop-shadow" />
+              </div>
+            ) : (
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25 shrink-0">
+                  <LayoutDashboard size={20} className="text-white" />
+                </div>
+                <div className="flex flex-col overflow-hidden">
+                  <span className="font-bold text-sm tracking-tight truncate leading-tight">{displayTitle}</span>
+                  <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest truncate">Super Admin</span>
+                </div>
+              </div>
+            )
           ) : (
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25 shrink-0">
-                <LayoutDashboard size={20} className="text-white" />
+            /* School Admin, Teacher, Student: Institution Logo & Name Badge */
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="w-11 h-11 rounded-xl bg-white/10 border border-white/15 p-1.5 flex items-center justify-center overflow-hidden shrink-0 shadow-sm backdrop-blur-sm">
+                {displayLogo ? (
+                  <img src={displayLogo} alt="School Logo" className="w-full h-full object-contain" />
+                ) : (
+                  <Building2 size={22} className="text-emerald-400" />
+                )}
               </div>
               <div className="flex flex-col overflow-hidden">
-                <span className="font-bold text-sm tracking-tight truncate leading-tight">{displayTitle}</span>
-                {!isOwner && <span className="text-[10px] text-slate-500 font-medium uppercase tracking-widest truncate">Academic Portal</span>}
-                {isOwner && <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest truncate">Super Admin</span>}
+                <span className="font-bold text-sm tracking-tight text-white truncate leading-tight">{displayTitle}</span>
+                <span className="text-[10px] text-slate-400 font-medium uppercase tracking-widest truncate">
+                  {isTeacher ? 'Teacher Portal' : isStudent ? 'Student Portal' : 'School Admin'}
+                </span>
               </div>
             </div>
           )}

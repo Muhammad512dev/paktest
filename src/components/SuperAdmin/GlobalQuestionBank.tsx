@@ -17,6 +17,7 @@ import { Difficulty, Question, QuestionSource, QuestionType, MatchingPair, Sylla
 import { generateQuestionsAI, translateToUrdu } from '../../services/geminiService';
 import MathRenderer from '../MathRenderer';
 import * as XLSX from 'xlsx';
+import { parseMhtmlToQuestions } from '../../utils/mhtmlParser';
 
 const normalizeQuestionType = (type: string): string => {
   const t = (type || '').toLowerCase().trim();
@@ -294,6 +295,49 @@ const GlobalQuestionBank: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const ext = file.name.toLowerCase();
+
+    // Check if it's an MHTML / MHT file
+    if (ext.endsWith('.mht') || ext.endsWith('.mhtml')) {
+      const reader = new FileReader();
+      reader.readAsText(file, 'utf-8');
+
+      reader.onload = (event) => {
+        try {
+          const rawText = event.target?.result as string;
+          if (!rawText) return;
+
+          // Determine current selected metadata or fallback
+          const defaultBoard = getSyllabusName(selSyllabusId) || 'Punjab Board';
+          const defaultGrade = getClassName(selClassId) || 'Class 9';
+          const defaultSubject = getSubjectName(selSubjectId) || 'Biology';
+
+          const parsedQuestions = parseMhtmlToQuestions(rawText, {
+            board: defaultBoard,
+            grade: defaultGrade,
+            subject: defaultSubject
+          });
+
+          if (parsedQuestions.length === 0) {
+            alert("No question records were found in the uploaded MHTML file.");
+            return;
+          }
+
+          setImportRows(parsedQuestions);
+          setIsImportModalOpen(false);
+          setIsSequenceImportModalOpen(false);
+          setIsSyncScreenOpen(true);
+        } catch (mhtmlErr) {
+          console.error("MHTML Parsing error:", mhtmlErr);
+          alert("Failed to parse MHTML file. Please ensure it is a valid web archive file.");
+        }
+      };
+
+      if (e.target) e.target.value = '';
+      return;
+    }
+
+    // Standard Excel / CSV file handling
     const reader = new FileReader();
     
     // Use ArrayBuffer to properly handle both CSV (via library) and Excel binary formats
@@ -318,7 +362,7 @@ const GlobalQuestionBank: React.FC = () => {
         setIsSyncScreenOpen(true);
       } catch (err) {
         console.error("Import Error:", err);
-        alert("Failed to parse file. Please ensure it is a valid Excel (.xlsx) or CSV file.");
+        alert("Failed to parse file. Please ensure it is a valid Excel (.xlsx), CSV (.csv), or MHTML (.mht) file.");
       }
     };
     
@@ -920,10 +964,10 @@ const GlobalQuestionBank: React.FC = () => {
                           className="border-2 border-dashed border-gray-200 rounded-xl py-10 flex flex-col items-center justify-center text-center bg-gray-50/50 group cursor-pointer hover:border-indigo-300"
                         >
                           <CloudDownload size={32} className="text-gray-300 mb-2 group-hover:text-indigo-400" />
-                          <p className="text-xs font-bold text-gray-700">Choose Excel/CSV File</p>
-                          <p className="text-[9px] text-gray-400 mt-1">.xlsx, .xls, .csv supported</p>
+                          <p className="text-xs font-bold text-gray-700">Choose Excel/CSV/MHTML File</p>
+                          <p className="text-[9px] text-gray-400 mt-1">.xlsx, .csv, .mht, .mhtml supported</p>
                           <button className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-md hover:bg-indigo-700">Browse Files</button>
-                          <input type="file" ref={fileInputRef} className="hidden" accept=".csv, .xlsx, .xls" onChange={handleFileUpload} />
+                          <input type="file" ref={fileInputRef} className="hidden" accept=".csv, .xlsx, .xls, .mht, .mhtml" onChange={handleFileUpload} />
                        </div>
                     </div>
                  </div>
@@ -1093,10 +1137,10 @@ const GlobalQuestionBank: React.FC = () => {
                           className="border-2 border-dashed border-indigo-200 rounded-2xl h-[178px] flex flex-col items-center justify-center text-center bg-indigo-50/10 group cursor-pointer hover:bg-indigo-50/30 transition-colors"
                         >
                           <CloudDownload size={32} className="text-indigo-300 group-hover:scale-110 transition-transform mb-2" />
-                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Drop Excel/CSV File</p>
-                          <p className="text-[8px] text-gray-400 mt-1">.xlsx, .xls, .csv supported</p>
+                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Drop Excel/CSV/MHTML File</p>
+                          <p className="text-[8px] text-gray-400 mt-1">.xlsx, .csv, .mht, .mhtml supported</p>
                           <button className="mt-4 px-8 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold uppercase shadow-sm">Browse</button>
-                          <input type="file" ref={sequenceFileInputRef} className="hidden" accept=".csv, .xlsx, .xls" onChange={handleFileUpload} />
+                          <input type="file" ref={sequenceFileInputRef} className="hidden" accept=".csv, .xlsx, .xls, .mht, .mhtml" onChange={handleFileUpload} />
                        </div>
                     </div>
                  </div>

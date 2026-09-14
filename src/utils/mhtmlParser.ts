@@ -1,0 +1,160 @@
+/**
+ * Parser for MHTML (.mht / .mhtml) files generated from PTS / Web Archives
+ * Converts questions, options, math, and chemistry into structured JSON for Question Bank import.
+ */
+
+export interface ParsedMhtmlQuestion {
+  Board: string;
+  Grade: string;
+  Subject: string;
+  Chapter: string;
+  Topic: string;
+  Type: 'MCQ' | 'Short Question' | 'Long Answer' | 'True/False' | 'Fill in the Blanks' | 'Match Columns';
+  Difficulty: 'Easy' | 'Medium' | 'Hard';
+  Marks: number;
+  QuestionText_EN: string;
+  QuestionText_UR: string;
+  OptionA_EN?: string;
+  OptionB_EN?: string;
+  OptionC_EN?: string;
+  OptionD_EN?: string;
+  OptionA_UR?: string;
+  OptionB_UR?: string;
+  OptionC_UR?: string;
+  OptionD_UR?: string;
+  CorrectAnswer?: string;
+  Sources?: string;
+  ImageURL?: string;
+}
+
+function cleanHtmlContent(str: string): string {
+  if (!str) return '';
+  
+  // Normalize mathematical sub/sup or chemical formulas inside tags
+  let cleaned = str
+    .replace(/<sub[^>]*>(.*?)<\/sub>/gi, '_$1')
+    .replace(/<sup[^>]*>(.*?)<\/sup>/gi, '^$1')
+    .replace(/<br\s*[\/]?>/gi, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return cleaned;
+}
+
+export function parseMhtmlToQuestions(
+  mhtmlContent: string,
+  defaultMeta: { board?: string; grade?: string; subject?: string } = {}
+): ParsedMhtmlQuestion[] {
+  const {
+    board = 'Punjab Board',
+    grade = 'Class 9',
+    subject = 'General'
+  } = defaultMeta;
+
+  // Split by topic-heading containers
+  const rawBlocks = mhtmlContent.split(/<div[^>]*class=["'][^"']*topic-heading[^"']*["']>/i);
+  const questions: ParsedMhtmlQuestion[] = [];
+
+  let currentTopic = 'General Topic';
+  let currentChapter = 'Chapter 1';
+
+  for (let b = 0; b < rawBlocks.length; b++) {
+    const block = rawBlocks[b];
+
+    // Extract topic heading
+    const headingMatch = block.match(/<h5>(.*?)<\/h5>/i);
+    if (headingMatch) {
+      const rawHeading = cleanHtmlContent(headingMatch[1]);
+      currentTopic = rawHeading;
+      // Extract chapter from numbering like "1.1 BIOLOGY..." -> "Chapter 1"
+      const numMatch = rawHeading.match(/^(\d+)\./);
+      if (numMatch) {
+        currentChapter = `Chapter ${numMatch[1]}`;
+      }
+    }
+
+    // Match all question rows inside TableHover
+    const qRows = block.match(/<div[^>]*class=["'][^"']*TableHover[^"']*["'][\s\S]*?(?=<div[^>]*class=["'][^"']*TableHover[^"']*["']|$)/gi) || [];
+
+    for (const qRow of qRows) {
+      const isMcq = /multiple-options-col|class=["']abcd["']/i.test(qRow);
+      const isLong = /Long|تفصیلی/i.test(qRow);
+      const type: ParsedMhtmlQuestion['Type'] = isMcq ? 'MCQ' : isLong ? 'Long Answer' : 'Short Question';
+
+      // Source / Priority
+      const sourceMatch = qRow.match(/<span[^>]*class=["'][^"']*questionperiority[^"']*["']>([\s\S]*?)<\/span>/i);
+      const source = sourceMatch ? cleanHtmlContent(sourceMatch[1]) : 'Exercise';
+
+      // English & Urdu Question Text
+      const engMatch = qRow.match(/<div[^>]*class=["'][^"']*english-col[^"']*["']>([\s\S]*?)<\/div>/i);
+      const urduMatch = qRow.match(/<div[^>]*class=["'][^"']*urdu-col[^"']*["']>([\s\S]*?)<\/div>/i);
+
+      const questionTextEn = engMatch ? cleanHtmlContent(engMatch[1]) : '';
+      const questionTextUr = urduMatch ? cleanHtmlContent(urduMatch[1]) : '';
+
+      if (!questionTextEn && !questionTextUr) continue;
+
+      let optA_EN = '', optB_EN = '', optC_EN = '', optD_EN = '';
+      let optA_UR = '', optB_UR = '', optC_UR = '', optD_UR = '';
+      let correctAnswer = '';
+
+      if (isMcq) {
+        const liMatches = qRow.match(/<li[\s\S]*?<\/li>/gi) || [];
+        const optionLetters = ['A', 'B', 'C', 'D'];
+
+        liMatches.forEach((li, idx) => {
+          if (idx >= 4) return;
+          const letter = optionLetters[idx];
+
+          if (/class=["'][^"']*correctAnswer[^"']*["']/i.test(li)) {
+            correctAnswer = letter;
+          }
+
+          const optUrduMatch = li.match(/<div[^>]*class=["'][^"']*urdu-text[^"']*["']>([\s\S]*?)<\/div>/i);
+          const optEngMatch = li.match(/<div[^>]*class=["'][^"']*english-text[^"']*["']>([\s\S]*?)<\/div>/i);
+
+          const uTxt = optUrduMatch ? cleanHtmlContent(optUrduMatch[1]) : '';
+          const eTxt = optEngMatch ? cleanHtmlContent(optEngMatch[1]) : '';
+
+          if (letter === 'A') { optA_EN = eTxt; optA_UR = uTxt; }
+          if (letter === 'B') { optB_EN = eTxt; optB_UR = uTxt; }
+          if (letter === 'C') { optC_EN = eTxt; optC_UR = uTxt; }
+          if (letter === 'D') { optD_EN = eTxt; optD_UR = uTxt; }
+        });
+      }
+
+      questions.push({
+        Board: board,
+        Grade: grade,
+        Subject: subject,
+        Chapter: currentChapter,
+        Topic: currentTopic,
+        Type: type,
+        Difficulty: 'Medium',
+        Marks: isMcq ? 1 : type === 'Short Question' ? 2 : 4,
+        QuestionText_EN: questionTextEn,
+        QuestionText_UR: questionTextUr,
+        OptionA_EN: optA_EN,
+        OptionB_EN: optB_EN,
+        OptionC_EN: optC_EN,
+        OptionD_EN: optD_EN,
+        OptionA_UR: optA_UR,
+        OptionB_UR: optB_UR,
+        OptionC_UR: optC_UR,
+        OptionD_UR: optD_UR,
+        CorrectAnswer: correctAnswer,
+        Sources: source,
+        ImageURL: ''
+      });
+    }
+  }
+
+  return questions;
+}

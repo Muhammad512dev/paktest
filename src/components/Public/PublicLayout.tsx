@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { LayoutDashboard, Menu, X, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react';
+import CookieConsent from './CookieConsent';
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -208,6 +209,9 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
           </div>
         </div>
       </footer>
+
+      {/* GDPR & Google AdSense Cookie Consent Banner */}
+      <CookieConsent onNavigate={onNavigate} />
     </div>
   );
 };

@@ -184,12 +184,13 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
             </div>
 
             <div>
-              <h4 className="text-sm font-bold text-white uppercase tracking-widest mb-6">Support</h4>
+              <h4 className="text-sm font-bold text-white uppercase tracking-widest mb-6">Support & Legal</h4>
               <ul className="space-y-3 text-sm">
                 <li><button onClick={() => onNavigate('CONTACT')} className="hover:text-indigo-400">Contact Support</button></li>
-                <li><a href="#" className="hover:text-indigo-400">Documentation</a></li>
-                <li><a href="#" className="hover:text-indigo-400">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-indigo-400">Terms of Service</a></li>
+                <li><button onClick={() => onNavigate('PRIVACY')} className="hover:text-indigo-400">Privacy Policy</button></li>
+                <li><button onClick={() => onNavigate('TERMS')} className="hover:text-indigo-400">Terms of Service</button></li>
+                <li><button onClick={() => onNavigate('DISCLAIMER')} className="hover:text-indigo-400">Disclaimer & DMCA</button></li>
+                <li><button onClick={() => onNavigate('REFUND')} className="hover:text-indigo-400">Refund Policy</button></li>
               </ul>
             </div>
 

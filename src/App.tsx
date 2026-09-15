@@ -46,6 +46,10 @@ const Blog = lazy(() => import('./components/Public/Blog'));
 const Pricing = lazy(() => import('./components/Public/Pricing'));
 const LessonPlans = lazy(() => import('./components/Public/LessonPlans'));
 const Books = lazy(() => import('./components/Public/Books'));
+const PrivacyPolicy = lazy(() => import('./components/Public/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./components/Public/TermsOfService'));
+const Disclaimer = lazy(() => import('./components/Public/Disclaimer'));
+const RefundPolicy = lazy(() => import('./components/Public/RefundPolicy'));
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -66,7 +70,7 @@ const App: React.FC = () => {
       } else {
         const parts = path.substring(1).split('/');
         const route = parts[0].toUpperCase();
-        const publicRoutes = ['PRICING', 'ABOUT', 'CONTACT', 'NOTES', 'LESSON_PLANS', 'BOOKS', 'PAST_PAPERS', 'QUIZ', 'BLOG', 'LOGIN', 'STUDENT_LOGIN', 'SIGNUP'];
+        const publicRoutes = ['PRICING', 'ABOUT', 'CONTACT', 'NOTES', 'LESSON_PLANS', 'BOOKS', 'PAST_PAPERS', 'QUIZ', 'BLOG', 'LOGIN', 'STUDENT_LOGIN', 'SIGNUP', 'PRIVACY', 'TERMS', 'DISCLAIMER', 'REFUND'];
         if (publicRoutes.includes(route)) {
           setPublicView(route);
         } else {
@@ -276,6 +280,10 @@ const App: React.FC = () => {
         {publicView === 'PAST_PAPERS' && <PastPapers />}
         {publicView === 'QUIZ' && <Quiz />}
         {publicView === 'BLOG' && <Blog />}
+        {publicView === 'PRIVACY' && <PrivacyPolicy appName={systemConfig.platformName || 'PakParcha'} />}
+        {publicView === 'TERMS' && <TermsOfService appName={systemConfig.platformName || 'PakParcha'} />}
+        {publicView === 'DISCLAIMER' && <Disclaimer appName={systemConfig.platformName || 'PakParcha'} />}
+        {publicView === 'REFUND' && <RefundPolicy appName={systemConfig.platformName || 'PakParcha'} />}
       </PublicLayout>
     );
   }

@@ -284,8 +284,135 @@ export const PRICING_PLANS: SubscriptionPlan[] = [
   }
 ];
 
+export const DEFAULT_BLOG_POSTS = [
+  {
+    id: 'blog_01',
+    title: 'How AI is Revolutionizing Exam Paper Generation in Pakistani Schools',
+    excerpt: 'Discover how automated pairing schemes, bilingual Urdu/English question banks, and AI algorithms are saving teachers 10+ hours every exam season.',
+    category: 'EdTech Innovations',
+    author: 'Editorial Team',
+    role: 'Academic Technology Lead',
+    date: '2025-01-10T10:00:00.000Z',
+    readTime: '6 min read',
+    image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop',
+    featured: true,
+    content: `
+      <h2>The Traditional Challenge of Exam Paper Drafting</h2>
+      <p>Every examination cycle in Pakistani schools presents teachers and academic coordinators with intense workload challenges. Designing high-stakes assessment papers requires strict adherence to official Board pairing schemes (such as BISE Lahore, Rawalpindi, Federal Board FBISE, and Cambridge O/A Levels), maintaining precise chapter marks distributions, generating balanced difficulty curves, and formatting dual-column Urdu and English translations.</p>
+      
+      <p>Traditionally, teachers spent between <strong>6 to 12 hours</strong> manually assembling a single comprehensive matriculation or intermediate test. This tedious workflow often resulted in accidental question repetition, syllabus imbalances, and formatting headaches in Word processors.</p>
+
+      <div class="my-8 p-6 bg-indigo-50 border-l-4 border-indigo-600 rounded-r-2xl">
+        <h4 class="font-bold text-indigo-950 text-lg mb-2">Key Advantages of Automated Exam Systems:</h4>
+        <ul class="list-disc list-inside space-y-1 text-indigo-900 text-sm">
+          <li>100% adherence to official Board Pairing Schemes (SLO-based & Traditional)</li>
+          <li>Instant bilingual typesetting with native Noto Nastaliq Urdu rendering</li>
+          <li>Balanced cognitive levels: Knowledge (50%), Understanding (35%), and Application (15%)</li>
+          <li>Automated answer keys, bubble sheets, and rubrics generated in one click</li>
+        </ul>
+      </div>
+
+      <h2>Smart Pairing Schemes & Chapter Distributions</h2>
+      <p>One of the most powerful capabilities of modern platforms like <strong>PakParcha AI</strong> is its dynamic Pairing Scheme Engine. Whether a school follows the <em>New 2025 Model Papers</em> with sub-parts like (a) and (b) across designated chapters, or customized academy chapter combinations, the algorithm ensures every section satisfies exact mark limits and choice rules.</p>
+
+      <p>Mathematical formulas and scientific notation are typeset via high-performance KaTeX ($E = mc^2$, $\\Delta x \\cdot \\Delta p \\ge \\frac{\\hbar}{2}$), ensuring textbook-grade print readiness.</p>
+
+      <h2>Empowering Teachers to Focus on Pedagogy</h2>
+      <p>By automating the repetitive technical burden of paper setting, teachers regain valuable time to focus on individualized student counseling, conceptual lesson delivery, and remedial guidance. Educational technology does not replace teachers—it empowers them with enterprise-grade tools to achieve academic excellence.</p>
+    `
+  },
+  {
+    id: 'blog_02',
+    title: 'Mastering SLO-Based Examinations: A Practical Guide for Teachers & Academies',
+    excerpt: 'A step-by-step breakdown of Student Learning Outcomes (SLOs), Bloom Taxonomy levels, and constructing balanced cognitive assessment papers.',
+    category: 'Assessment Strategy',
+    author: 'Prof. Tariq Mahmood',
+    role: 'Senior Curriculum Specialist',
+    date: '2025-01-18T14:30:00.000Z',
+    readTime: '8 min read',
+    image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=1200&auto=format&fit=crop',
+    featured: false,
+    content: `
+      <h2>Understanding the Shift to SLO-Based Testing</h2>
+      <p>Educational boards across Pakistan have transitioned towards Student Learning Outcome (SLO) based examinations. The objective is to replace rote memorization (cramming) with deep conceptual understanding, analytical thinking, and practical problem-solving skills.</p>
+
+      <h2>The Three Cognitive Tiers of Modern Assessment</h2>
+      <p>When drafting an SLO-compliant exam paper, questions must be classified across three core cognitive domains:</p>
+
+      <ol class="list-decimal list-inside space-y-3 my-6 font-medium">
+        <li><strong>Knowledge-Based (Recall):</strong> Testing foundational facts, definitions, and direct formulas (Target: ~50% of total marks).</li>
+        <li><strong>Understanding-Based (Comprehension):</strong> Testing explanations, reasoning, comparisons, and conceptual derivations (Target: ~35% of total marks).</li>
+        <li><strong>Application & Analysis (Higher-Order Thinking):</strong> Numerical problems, real-world scenario analysis, and experimental evaluations (Target: ~15% of total marks).</li>
+      </ol>
+
+      <div class="my-8 p-6 bg-slate-900 text-white rounded-3xl shadow-xl">
+        <h4 class="font-bold text-emerald-400 text-base uppercase tracking-wider mb-2">Pro Tip for Paper Setters</h4>
+        <p class="text-sm text-slate-300 leading-relaxed">
+          Always include distinct marks breakdowns for sub-parts in subjective questions. For instance, in an 8-mark question split into Part (a) Theory [4 Marks] and Part (b) Numerical [4 Marks], ensure both concepts test different learning dimensions.
+        </p>
+      </div>
+
+      <h2>Conclusion</h2>
+      <p>Mastering SLO-based paper creation allows academies to boost their board positions by training students throughout the academic session on conceptual problem patterns.</p>
+    `
+  },
+  {
+    id: 'blog_03',
+    title: 'Effective Past Paper Revision Strategies to Score 95%+ in Matric & Inter Boards',
+    excerpt: 'Top study techniques, time management hacks, and systematic past paper analysis methods for high-achieving matric and intermediate students.',
+    category: 'Student Success',
+    author: 'Dr. Ayesha Siddiqa',
+    role: 'Academic Director',
+    date: '2025-02-01T09:15:00.000Z',
+    readTime: '5 min read',
+    image: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=1200&auto=format&fit=crop',
+    featured: false,
+    content: `
+      <h2>Why Past Paper Analysis is the Ultimate Revision Tool</h2>
+      <p>Top-scoring students consistently identify past papers as the single most effective revision methodology in the final 60 days before annual board examinations. Solving authentic 5-year past papers provides familiarity with recurring question patterns, mark allocations, and strict exam hall time constraints.</p>
+
+      <h2>The 3-Phase Revision Framework</h2>
+      <ul>
+        <li><strong>Phase 1: Topical Past Paper Practice:</strong> Immediately after finishing each chapter, solve all MCQs and short questions asked from that topic over the past 5 years.</li>
+        <li><strong>Phase 2: Timed Mock Sessions:</strong> Sit in an isolated environment without books, set a timer for 2.5 or 3 hours, and solve a complete unseen model paper.</li>
+        <li><strong>Phase 3: Self-Evaluation & Margin Improvement:</strong> Grade your paper against official marking schemes and focus revision on identified weak areas.</li>
+      </ul>
+
+      <p>Explore our free public Past Papers and Study Notes libraries on PakParcha AI to access chapter-wise categorized resources anytime.</p>
+    `
+  },
+  {
+    id: 'blog_04',
+    title: 'School Management Best Practices: Standardizing Quality Assessments Across All Campuses',
+    excerpt: 'How school networks and multi-branch academies can maintain consistent question standards, prevent paper leaks, and track teacher workload.',
+    category: 'School Administration',
+    author: 'Imran Bashir',
+    role: 'Institutional Growth Consultant',
+    date: '2025-02-12T11:00:00.000Z',
+    readTime: '7 min read',
+    image: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=1200&auto=format&fit=crop',
+    featured: false,
+    content: `
+      <h2>The Challenge of Multi-Branch Assessment Quality</h2>
+      <p>For school chains operating multiple branches, ensuring identical teaching quality and standard examination difficulty across all campuses is a major administrative hurdle. When each branch head sets independent test papers, variance in grading standards leads to inconsistent student performance metrics.</p>
+
+      <h2>Centralized Digital Question Banking</h2>
+      <p>Centralized cloud assessment systems enable school principals to establish an approved institutional repository of vetted questions. Key advantages include:</p>
+      <ul class="list-disc list-inside space-y-2 text-slate-700 my-4">
+        <li>Uniform exam papers printed across all branches on scheduled test dates</li>
+        <li>Role-based access security preventing unauthorized paper leaks</li>
+        <li>Automated watermarking with school crest, monogram, and custom branch headers</li>
+        <li>Real-time analytics on syllabus completion and student test grading</li>
+      </ul>
+
+      <p>Adopting unified digital workflows elevates school reputation, builds parental trust, and prepares students for competitive academic challenges.</p>
+    `
+  }
+];
+
 export const FAQS = [
   { question: "How do I add a new teacher?", answer: "Go to the Staff & Teachers module and click the 'Add Staff' button." },
   { question: "Can I customize the school logo?", answer: "Yes, navigate to Settings > Branding to upload your school logo." },
   { question: "Is bilingual generation supported?", answer: "Yes, our AI model generates high-quality Urdu (Nastaliq) and English content simultaneously." }
 ];
+

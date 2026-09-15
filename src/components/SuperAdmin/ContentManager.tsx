@@ -187,11 +187,29 @@ const ContentManager: React.FC = () => {
                           <input type="text" placeholder="Author Name" className="w-full p-3 border rounded-xl" value={blogForm.author} onChange={e => setBlogForm({...blogForm, author: e.target.value})} />
                        </div>
                        <textarea placeholder="Short Excerpt" className="w-full p-3 border rounded-xl h-20" value={blogForm.excerpt} onChange={e => setBlogForm({...blogForm, excerpt: e.target.value})} />
-                       <textarea placeholder="Full Content (HTML allowed)" className="w-full p-3 border rounded-xl h-40 font-mono text-sm" value={blogForm.content} onChange={e => setBlogForm({...blogForm, content: e.target.value})} />
-                       <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer" onClick={() => document.getElementById('blog-img')?.click()}>
-                          <p className="text-sm text-gray-500">{blogForm.image ? 'Image Selected' : 'Click to Upload Cover Image'}</p>
-                          <input id="blog-img" type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'image')} />
-                       </div>
+                        
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Full Content (HTML & Math Allowed)</label>
+                            <div className="flex gap-1 text-[10px] font-bold text-indigo-600">
+                              <span className="px-2 py-0.5 bg-indigo-50 rounded cursor-pointer hover:bg-indigo-100" onClick={() => setBlogForm(p => ({ ...p, content: p.content + '<h2>Subheading</h2>\n<p>Your paragraph text...</p>\n' }))}>+ Section</span>
+                              <span className="px-2 py-0.5 bg-indigo-50 rounded cursor-pointer hover:bg-indigo-100" onClick={() => setBlogForm(p => ({ ...p, content: p.content + '<img src="https://..." alt="Diagram" class="rounded-2xl my-6 w-full shadow-md" />\n' }))}>+ Image Tag</span>
+                              <span className="px-2 py-0.5 bg-indigo-50 rounded cursor-pointer hover:bg-indigo-100" onClick={() => setBlogForm(p => ({ ...p, content: p.content + '<ul class="list-disc list-inside space-y-1 my-4">\n  <li>Point 1</li>\n  <li>Point 2</li>\n</ul>\n' }))}>+ List</span>
+                            </div>
+                          </div>
+                          <textarea placeholder="<h2>Section Title</h2><p>Article content here...</p>" className="w-full p-3 border rounded-xl h-44 font-mono text-xs leading-relaxed" value={blogForm.content} onChange={e => setBlogForm({...blogForm, content: e.target.value})} />
+                        </div>
+
+                        <div className="space-y-2">
+                           <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-indigo-400 transition-colors" onClick={() => document.getElementById('blog-img')?.click()}>
+                              <p className="text-sm font-medium text-gray-600">{blogForm.image ? `Cover Image Selected: ${blogForm.image.substring(0, 35)}...` : '📁 Click to Upload Cover Image'}</p>
+                              <input id="blog-img" type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'image')} />
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <span className="text-xs text-gray-400 font-bold uppercase">OR</span>
+                             <input type="url" placeholder="Paste Image URL (https://images.unsplash.com/...)" className="w-full p-2.5 border rounded-xl text-xs font-mono" value={blogForm.image} onChange={e => setBlogForm({...blogForm, image: e.target.value})} />
+                           </div>
+                        </div>
                     </>
                  )}
 

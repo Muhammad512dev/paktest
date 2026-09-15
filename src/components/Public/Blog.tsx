@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Calendar, Clock, User, ArrowRight, Tag, ChevronLeft, Share2, Bookmark, Facebook, Twitter, Linkedin, ChevronRight as ChevronRightIcon, Sparkles as SparklesIcon } from 'lucide-react';
 import { getBlogs } from '../../services/dataService';
+import { DEFAULT_BLOG_POSTS } from '../../constants';
 import renderMathInElement from 'katex/dist/contrib/auto-render';
 import 'katex/dist/contrib/mhchem';
 
@@ -9,7 +10,7 @@ const createSlug = (title: string) => title.toLowerCase().replace(/[^a-z0-9]+/g,
 const Blog: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-  const [blogPosts, setBlogPosts] = useState<any[]>([]);
+  const [blogPosts, setBlogPosts] = useState<any[]>(DEFAULT_BLOG_POSTS);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -17,15 +18,27 @@ const Blog: React.FC = () => {
 
   useEffect(() => {
     const fetchBlogs = async () => {
-      const posts = await getBlogs();
-      setBlogPosts(posts);
-
-      // Check initial URL for a slug
-      const pathParts = window.location.pathname.split('/');
-      if (pathParts[1] === 'blog' && pathParts[2]) {
-        const slug = pathParts[2];
-        const post = posts.find((p: any) => createSlug(p.title) === slug);
-        if (post) setSelectedPostId(post.id);
+      try {
+        const posts = await getBlogs();
+        if (Array.isArray(posts) && posts.length > 0) {
+          setBlogPosts(posts);
+          const pathParts = window.location.pathname.split('/');
+          if (pathParts[1] === 'blog' && pathParts[2]) {
+            const slug = pathParts[2];
+            const post = posts.find((p: any) => createSlug(p.title) === slug);
+            if (post) setSelectedPostId(post.id);
+          }
+        } else {
+          setBlogPosts(DEFAULT_BLOG_POSTS);
+          const pathParts = window.location.pathname.split('/');
+          if (pathParts[1] === 'blog' && pathParts[2]) {
+            const slug = pathParts[2];
+            const post = DEFAULT_BLOG_POSTS.find((p: any) => createSlug(p.title) === slug);
+            if (post) setSelectedPostId(post.id);
+          }
+        }
+      } catch (e) {
+        setBlogPosts(DEFAULT_BLOG_POSTS);
       }
     };
     fetchBlogs();

@@ -39,6 +39,14 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
                 <img 
                   src={logoUrl} 
                   alt={systemName || "PakParcha AI"} 
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (target.src.endsWith('.webp')) {
+                      target.src = '/logo.png';
+                    } else if (target.src.endsWith('.png')) {
+                      target.src = '/favicon.svg';
+                    }
+                  }}
                   className="h-10 sm:h-14 md:h-18 lg:h-20 w-auto max-w-[170px] xs:max-w-[210px] sm:max-w-[300px] md:max-w-[380px] object-contain drop-shadow-md transition-transform hover:scale-[1.03]" 
                 />
               ) : (

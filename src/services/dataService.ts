@@ -75,12 +75,13 @@ export const initializeDB = async () => {
 };
 
 export const getSystemConfig = async () => {
+  const defaultLogo = '/logo.webp';
   try {
     const res = await fetch(`${API_URL}/api/public/settings`);
     const data = await handleResponse(res);
-    return { ...data, platformLogo: data?.platformLogo || '/logo.png' };
+    return { ...data, platformLogo: data?.platformLogo || defaultLogo };
   } catch (e) {
-    return { currencySymbol: '$', platformName: 'PakParcha AI', platformLogo: '/logo.png' };
+    return { currencySymbol: '$', platformName: 'PakParcha AI', platformLogo: defaultLogo };
   }
 };
 

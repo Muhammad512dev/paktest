@@ -114,7 +114,7 @@ const App: React.FC = () => {
     currencyCode: 'USD',
     currencySymbol: '$',
     platformName: 'PakParcha AI',
-    platformLogo: '/logo.png'
+    platformLogo: '/logo.webp'
   });
 
   useEffect(() => {

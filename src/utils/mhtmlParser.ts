@@ -56,35 +56,58 @@ export function parseMhtmlToQuestions(
   let detectedSubject = defaultMeta.subject || '';
   let detectedBoard = defaultMeta.board || '';
 
-  // 1. Try extracting Grade and Subject from modal-title e.g. "Select Your Questions Here.... 9TH - Biology"
-  const modalTitleMatch = mhtmlContent.match(/class=["'][^"']*modal-title[^"']*["'][^>]*>([\s\S]*?)<\/p>/i);
-  if (modalTitleMatch) {
-    const rawModalText = cleanHtmlContent(modalTitleMatch[1]);
-    const pairMatch = rawModalText.match(/(\d+)(?:TH|ST|ND|RD)?\s*[-–—:]\s*([A-Za-z\s]+)/i);
-    if (pairMatch) {
-      if (!detectedGrade || detectedGrade === 'Class 9') {
-        const gradeNum = pairMatch[1].trim();
-        detectedGrade = `Class ${gradeNum}`;
-      }
-      if (!detectedSubject || detectedSubject === 'General' || detectedSubject === 'Biology') {
-        detectedSubject = pairMatch[2].trim();
+  // 1. Try extracting Grade and Subject from modal-title, header, or page titles
+  // Matches e.g. "Select Your Questions Here.... 9TH - Biology", "10TH - Physics", "Class 9 - Chemistry", "9th Grade - Math"
+  if (!detectedGrade || !detectedSubject) {
+    const titleTags = mhtmlContent.match(/<(?:p|h\d|div|span)[^>]*class=["'][^"']*(?:modal-title|card-title|title|header|heading)[^"']*["'][^>]*>([\s\S]*?)<\/(?:p|h\d|div|span)>/gi) || [];
+    for (const tag of titleTags) {
+      const cleaned = cleanHtmlContent(tag);
+      const pairMatch = cleaned.match(/(?:Class|Grade)?\s*(\d{1,2})(?:TH|ST|ND|RD)?\s*(?:Class|Grade)?\s*[-–—:]\s*([A-Za-z\s]+)/i);
+      if (pairMatch) {
+        if (!detectedGrade) {
+          detectedGrade = `Class ${pairMatch[1].trim()}`;
+        }
+        if (!detectedSubject) {
+          const sub = pairMatch[2].trim();
+          if (sub && !/select|question|paper/i.test(sub)) {
+            detectedSubject = sub;
+          }
+        }
+        break;
       }
     }
   }
 
+  // 1b. Broad document search for patterns like "9TH - Biology" or "Class 10 - Physics"
+  if (!detectedGrade || !detectedSubject) {
+    const broadMatch = mhtmlContent.match(/\b(?:Class\s*)?(\d{1,2})(?:TH|ST|ND|RD)\s*[-–—]\s*([A-Za-z]+)\b/i);
+    if (broadMatch) {
+      if (!detectedGrade) detectedGrade = `Class ${broadMatch[1].trim()}`;
+      if (!detectedSubject) detectedSubject = broadMatch[2].trim();
+    }
+  }
+
   // 2. Try extracting from Snapshot-Content-Location e.g. ClassID=9&SubjectID=43
-  if (!detectedGrade || detectedGrade === 'Class 9') {
+  if (!detectedGrade) {
     const classIdMatch = mhtmlContent.match(/ClassID=(\d+)/i);
     if (classIdMatch) {
       detectedGrade = `Class ${classIdMatch[1].trim()}`;
     }
   }
 
-  // 3. Try extracting Board / Curriculum mentions from text (using word boundaries to avoid font class false positives)
+  // 2b. If Subject is still empty, look for Subject= or SubjectName= in URL/forms
+  if (!detectedSubject) {
+    const subjNameMatch = mhtmlContent.match(/SubjectName=([A-Za-z]+)/i) || mhtmlContent.match(/Subject=([A-Za-z]+)/i);
+    if (subjNameMatch) {
+      detectedSubject = subjNameMatch[1].trim();
+    }
+  }
+
+  // 3. Try extracting Board / Curriculum mentions from text
   if (!detectedBoard) {
     if (/\b(?:federal|fbise)\b/i.test(mhtmlContent)) {
       detectedBoard = 'Federal Board';
-    } else if (/\b(?:punjab|bise\s*lahore|bise\s*rawalpindi|bise\s*gujranwala|bise\s*multan|bise\s*faisalabad|bise\s*sargodha|bise\s*sahiwal|bise\s*bahawalpur|bise\s*dg\s*khan)\b/i.test(mhtmlContent)) {
+    } else if (/\b(?:punjab|bise\s*lahore|bise\s*rawalpindi|bise\s*gujranwala|bise\s*multan|bise\s*faisalabad|bise\s*sargodha|bise\s*sahiwal|bise\s*bahawalpur|bise\s*dg\s*khan|nankana|sheikhupura|sialkot|kasur|gujrat)\b/i.test(mhtmlContent)) {
       detectedBoard = 'Punjab Board';
     } else if (/\b(?:sindh|bise\s*karachi|bise\s*hyderabad|bise\s*sukkur|bise\s*larkana|bise\s*mirpurkhas)\b/i.test(mhtmlContent)) {
       detectedBoard = 'Sindh Board';

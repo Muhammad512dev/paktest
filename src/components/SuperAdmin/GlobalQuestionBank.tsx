@@ -307,15 +307,15 @@ const GlobalQuestionBank: React.FC = () => {
           const rawText = event.target?.result as string;
           if (!rawText) return;
 
-          // Determine current selected metadata or fallback
-          const defaultBoard = getSyllabusName(selSyllabusId) || 'Punjab Board';
-          const defaultGrade = getClassName(selClassId) || 'Class 9';
-          const defaultSubject = getSubjectName(selSubjectId) || 'Biology';
+          // Determine current selected metadata (only if selected by user, else leave empty for auto-detection)
+          const explicitBoard = selSyllabusId ? getSyllabusName(selSyllabusId) : '';
+          const explicitGrade = selClassId ? getClassName(selClassId) : '';
+          const explicitSubject = selSubjectId ? getSubjectName(selSubjectId) : '';
 
           const parsedQuestions = parseMhtmlToQuestions(rawText, {
-            board: defaultBoard,
-            grade: defaultGrade,
-            subject: defaultSubject
+            board: (explicitBoard && explicitBoard !== 'N/A') ? explicitBoard : undefined,
+            grade: (explicitGrade && explicitGrade !== 'N/A') ? explicitGrade : undefined,
+            subject: (explicitSubject && explicitSubject !== 'N/A') ? explicitSubject : undefined
           });
 
           if (parsedQuestions.length === 0) {

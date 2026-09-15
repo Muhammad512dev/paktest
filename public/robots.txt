@@ -1,0 +1,41 @@
+User-agent: *
+Allow: /
+Allow: /about
+Allow: /pricing
+Allow: /blog
+Allow: /notes
+Allow: /books
+Allow: /past_papers
+Allow: /lesson_plans
+Allow: /quiz
+Allow: /contact
+Allow: /privacy
+Allow: /terms
+Allow: /disclaimer
+Allow: /refund
+
+# Disallow administrative and private panels
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /generate
+Disallow: /grading
+Disallow: /results
+Disallow: /settings
+Disallow: /schools
+Disallow: /curriculum
+Disallow: /questions
+Disallow: /users
+Disallow: /revenue
+Disallow: /plans
+Disallow: /schemes
+Disallow: /saved
+Disallow: /staff
+Disallow: /students
+Disallow: /analytics
+Disallow: /billing
+
+# Crawl-delay for optimal server load
+Crawl-delay: 1
+
+# Sitemap URL (Replace your-domain.com with your actual public domain)
+Sitemap: https://pakparcha.com/sitemap.xml

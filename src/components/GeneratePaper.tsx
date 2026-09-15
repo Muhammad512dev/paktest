@@ -110,7 +110,6 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
             getChapters().catch(() => []),
             getTopics().catch(() => []),
             getQuestionTypes().catch(() => []),
-            getQuestions({ pageSize: 1000, maxPages: 50 }).catch(() => []),
             getSchemes({ includeGlobal: true }).catch(() => [])
          ]);
 
@@ -120,12 +119,8 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
          const chs = results[3].status === 'fulfilled' ? (results[3].value || []) : [];
          const tops = results[4].status === 'fulfilled' ? (results[4].value || []) : [];
          const types = results[5].status === 'fulfilled' ? (results[5].value || []) : [];
-         const qs = results[6].status === 'fulfilled' ? (results[6].value || []) : [];
-         const scs = results[7].status === 'fulfilled' ? (results[7].value || []) : [];
+         const scs = results[6].status === 'fulfilled' ? (results[6].value || []) : [];
 
-         // Ensure repository questions are unique by ID to prevent duplication during shuffling
-         const uniqueQs = Array.from(new Map((qs as any[]).map(q => [q.id, q])).values());
-         setRepoQuestions(uniqueQs);
          setAllSchemes(scs as any[]);
 
          let brandingData: School | null = null;
@@ -172,6 +167,34 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
       };
       loadAllData();
    }, [user.schoolId, user.role]);
+
+   // Fetch questions dynamically ONLY for the selected subject and class (fast & lightweight)
+   useEffect(() => {
+      const fetchSubjectQuestions = async () => {
+         if (!state.selectedSubject) {
+            setRepoQuestions([]);
+            return;
+         }
+         const subName = subjects.find(s => s.id === state.selectedSubject)?.name;
+         const clsName = classes.find(c => c.id === state.selectedClass)?.name;
+         if (!subName) return;
+
+         try {
+            const qs = await getQuestions({
+               subject: subName,
+               classLevel: clsName || undefined,
+               pageSize: 1000,
+               maxPages: 10
+            });
+            const uniqueQs = Array.from(new Map((qs || []).map(q => [q.id, q])).values());
+            setRepoQuestions(uniqueQs);
+         } catch (e) {
+            console.error("Failed to load questions for subject", e);
+            setRepoQuestions([]);
+         }
+      };
+      fetchSubjectQuestions();
+   }, [state.selectedSubject, state.selectedClass, subjects, classes]);
 
    // Filtering Logic for Wizard
    const filteredClasses = useMemo(() => classes.filter(c => c.syllabusId === state.selectedSyllabus), [classes, state.selectedSyllabus]);

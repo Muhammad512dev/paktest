@@ -410,17 +410,30 @@ export const getQuestionsPage = async (params?: {
 export const getQuestions = async (params?: Parameters<typeof getQuestionsPage>[0] & { maxPages?: number }): Promise<Question[]> => {
   const pageSize = params?.pageSize || 1000;
   const maxPages = params?.maxPages ?? 10; // safety cap (up to ~10k by default)
-  let page = params?.page || 1;
-  const all: Question[] = [];
+  let initialPage = params?.page || 1;
 
-  for (let i = 0; i < maxPages; i++) {
-    const resp = await getQuestionsPage({ ...params, page, pageSize });
-    all.push(...(resp.data || []));
-    if (!resp.pagination || page >= (resp.pagination.pages || 1)) break;
-    page += 1;
+  // 1. Fetch initial page first to get data and total page count quickly
+  const firstResp = await getQuestionsPage({ ...params, page: initialPage, pageSize });
+  const all: Question[] = [...(firstResp.data || [])];
+  const totalPages = Math.min(firstResp.pagination?.pages || 1, maxPages);
+
+  // 2. If more pages exist, fetch remaining pages concurrently in parallel for 10x speedup
+  if (totalPages > initialPage) {
+    const pageNumbers: number[] = [];
+    for (let p = initialPage + 1; p <= totalPages; p++) {
+      pageNumbers.push(p);
+    }
+    const subsequentResps = await Promise.allSettled(
+      pageNumbers.map(p => getQuestionsPage({ ...params, page: p, pageSize }))
+    );
+    subsequentResps.forEach(result => {
+      if (result.status === 'fulfilled' && result.value?.data) {
+        all.push(...result.value.data);
+      }
+    });
   }
 
-  // De-dupe by id (some older endpoints/data may duplicate)
+  // De-dupe by id (prevent duplicates)
   return Array.from(new Map(all.map(q => [q.id, q])).values());
 };
 

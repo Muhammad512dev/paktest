@@ -54,7 +54,7 @@ const GlobalQuestionBank: React.FC = () => {
   /* Load data asynchronously on mount */
   const loadAllData = async () => {
     const [qs, syls, clss, subs, chs, tops] = await Promise.all([
-      getQuestions({ pageSize: 1000, maxPages: 50 }),
+      getQuestions({ pageSize: 1000, maxPages: 10 }),
       getSyllabuses(),
       getClasses(),
       getSubjects(),

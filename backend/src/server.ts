@@ -110,6 +110,14 @@ app.use(((req: any, res: any, next: any) => {
     next();
 }) as any);
 
+// Health Check Endpoints (For UptimeRobot / Ping Services to keep Render awake 24/7)
+app.get('/health', (_req: any, res: any) => {
+    res.status(200).json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
+app.get('/api/health', (_req: any, res: any) => {
+    res.status(200).json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
+
 // Serve Uploads Static Folder
 // Fixed: Cast to any to avoid overload mismatches
 app.use('/uploads', express.static(uploadDir) as any);

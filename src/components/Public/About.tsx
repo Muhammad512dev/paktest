@@ -1,17 +1,129 @@
 
-import React from 'react';
-import { Target, Eye, Award, Linkedin, Instagram, Phone, Users, ShieldCheck, Languages, BarChart3, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Target, Eye, Award, Linkedin, Instagram, Phone, Users, ShieldCheck, Languages, BarChart3, CheckCircle2, Play, Sparkles } from 'lucide-react';
 
-const About: React.FC<{ appName: string }> = ({ appName }) => {
+interface AboutProps {
+  appName: string;
+  videoUrl?: string;
+}
+
+const getYouTubeEmbedUrl = (url?: string): string | null => {
+  if (!url) return null;
+  const cleanUrl = url.trim();
+  if (!cleanUrl) return null;
+
+  // If already an embed URL
+  if (cleanUrl.includes('youtube.com/embed/')) return cleanUrl;
+
+  // Handle standard youtube.com/watch?v=ID
+  const watchMatch = cleanUrl.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+  if (watchMatch && watchMatch[1]) {
+    return `https://www.youtube.com/embed/${watchMatch[1]}?autoplay=1&rel=0`;
+  }
+
+  // Handle youtu.be/ID
+  const shortMatch = cleanUrl.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+  if (shortMatch && shortMatch[1]) {
+    return `https://www.youtube.com/embed/${shortMatch[1]}?autoplay=1&rel=0`;
+  }
+
+  // Handle youtube.com/shorts/ID
+  const shortsMatch = cleanUrl.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
+  if (shortsMatch && shortsMatch[1]) {
+    return `https://www.youtube.com/embed/${shortsMatch[1]}?autoplay=1&rel=0`;
+  }
+
+  return cleanUrl;
+};
+
+const About: React.FC<AboutProps> = ({ appName, videoUrl }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const embedUrl = getYouTubeEmbedUrl(videoUrl);
+
   return (
     <div className="py-20 max-w-7xl mx-auto px-6 lg:px-8">
       {/* Page Header */}
-      <div className="text-center mb-20">
-        <h1 className="text-4xl font-black text-slate-900 mb-6">About {appName}</h1>
+      <div className="text-center mb-16">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-4">
+          <Sparkles size={14} /> Discover Our Platform
+        </div>
+        <h1 className="text-4xl sm:text-5xl font-black text-slate-900 mb-6 tracking-tight">About {appName}</h1>
         <p className="text-slate-500 max-w-2xl mx-auto text-lg leading-relaxed">
           We are on a mission to modernize education through intelligent technology, developed with passion and precision.
         </p>
       </div>
+
+      {/* Video Walkthrough Section */}
+      <section className="mb-24">
+        <div className="bg-gradient-to-b from-slate-900 to-slate-950 rounded-[2.5rem] p-6 sm:p-10 md:p-12 shadow-2xl border border-slate-800 text-white relative overflow-hidden">
+          <div className="absolute top-0 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
+          <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none" />
+
+          <div className="max-w-3xl mx-auto text-center mb-8 relative z-10">
+            <span className="text-xs font-black uppercase tracking-[0.25em] text-indigo-400">Interactive Walkthrough</span>
+            <h2 className="mt-2 text-3xl sm:text-4xl font-black tracking-tight text-white">See {appName} In Action</h2>
+            <p className="mt-3 text-slate-400 text-sm sm:text-base leading-relaxed">
+              Watch a full comprehensive demonstration showing how fast teachers generate bilingual exam papers, organize question banks, and conduct online assessments.
+            </p>
+          </div>
+
+          <div className="relative z-10 max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-slate-950 aspect-video group">
+            {embedUrl ? (
+              isPlaying ? (
+                <iframe
+                  src={embedUrl}
+                  title={`${appName} Platform Walkthrough`}
+                  className="w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              ) : (
+                <div 
+                  onClick={() => setIsPlaying(true)}
+                  className="relative w-full h-full cursor-pointer flex items-center justify-center bg-slate-900 group"
+                >
+                  <img 
+                    src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80" 
+                    alt="Platform Video Preview" 
+                    className="w-full h-full object-cover opacity-40 group-hover:opacity-50 transition-opacity duration-500 scale-100 group-hover:scale-105 transition-transform"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
+                  
+                  <div className="relative flex flex-col items-center gap-4 text-center p-6">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-indigo-600/90 text-white flex items-center justify-center shadow-xl shadow-indigo-600/50 group-hover:bg-indigo-500 group-hover:scale-110 transition-all duration-300 ring-8 ring-indigo-500/20">
+                      <Play size={36} className="ml-1 fill-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Click to Play Video</h3>
+                      <p className="text-xs text-slate-300 mt-1">Full Detailed Platform Walkthrough & Features</p>
+                    </div>
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="relative w-full h-full flex flex-col items-center justify-center bg-slate-900/90 p-8 text-center">
+                <img 
+                  src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80" 
+                  alt="Platform Walkthrough Coming Soon" 
+                  className="absolute inset-0 w-full h-full object-cover opacity-20"
+                />
+                <div className="relative z-10 max-w-md">
+                  <div className="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 mx-auto flex items-center justify-center mb-4 shadow-inner">
+                    <Play size={28} className="ml-1" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Video Walkthrough Coming Soon</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed mb-4">
+                    We are currently recording an in-depth video guide on how to utilize AI-powered paper generation, question bank management, and grading.
+                  </p>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-slate-300 text-xs font-semibold">
+                    <Sparkles size={12} className="text-amber-400" /> Upload link anytime in Super Admin Settings
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
 
       {/* Platform Story */}
       <section className="mb-24 grid lg:grid-cols-2 gap-10 items-center">

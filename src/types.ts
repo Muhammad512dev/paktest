@@ -488,6 +488,7 @@ export interface SystemConfig {
   platformAddress?: string;
   platformContact?: string;
   platformLogo?: string;
+  aboutVideoUrl?: string;
   branding?: SchoolBranding;
 }
 

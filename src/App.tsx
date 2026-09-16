@@ -272,7 +272,7 @@ const App: React.FC = () => {
       >
         {publicView === 'HOME' && <Home onNavigate={setPublicView} />}
         {publicView === 'PRICING' && <Pricing onNavigate={setPublicView} />}
-        {publicView === 'ABOUT' && <About appName={systemConfig.platformName || 'PakParcha'} />}
+        {publicView === 'ABOUT' && <About appName={systemConfig.platformName || 'PakParcha'} videoUrl={systemConfig.aboutVideoUrl} />}
         {publicView === 'CONTACT' && <Contact />}
         {publicView === 'NOTES' && <Notes />}
         {publicView === 'LESSON_PLANS' && <LessonPlans />}

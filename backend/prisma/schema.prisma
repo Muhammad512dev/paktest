@@ -248,6 +248,7 @@ model SystemSetting {
   platformEmail   String?
   platformAddress String?
   platformLogo    String?
+  aboutVideoUrl   String?
   branding        Json?
   updatedAt       DateTime @updatedAt
   platformContact String?

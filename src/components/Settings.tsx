@@ -459,6 +459,20 @@ const Settings: React.FC<SettingsProps> = ({ userRole, onConfigUpdate, onUserUpd
                         </div>
 
                         <div className="md:col-span-2">
+                            <label className="block text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Platform Walkthrough Video URL (YouTube)</label>
+                            <div className="relative">
+                               <input 
+                                  type="url" 
+                                  value={systemConfig.aboutVideoUrl || ''}
+                                  onChange={(e) => setSystemConfigState({...systemConfig, aboutVideoUrl: e.target.value})}
+                                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-brand/5 focus:border-brand outline-none transition-all font-bold text-gray-700"
+                                  placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
+                               />
+                            </div>
+                            <p className="text-[11px] text-gray-400 mt-2 font-medium">Paste your YouTube or video link here to display an interactive video player on the About page.</p>
+                         </div>
+
+                        <div className="md:col-span-2">
                            <label className="block text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">System Logo</label>
                            <div className="flex items-center gap-6 p-4 border border-gray-200 rounded-2xl bg-gray-50/50">
                               <div className="w-20 h-20 bg-white rounded-xl border border-gray-200 flex items-center justify-center p-2">

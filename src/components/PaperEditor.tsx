@@ -195,8 +195,8 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
 
    const handleOpenSelection = (sectionId: string) => {
       setActiveSectionId(sectionId);
-      setSectionConfig(currentPaper.structure[sectionId]);
-      setAvailableQuestions([]);
+      const targetSec = currentPaper.structure[sectionId];
+      setSectionConfig(targetSec);
 
       // Reset Active Scope to Paper Defaults when opening modal
       setActiveChapters(paper.selectedChapters);
@@ -205,8 +205,27 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
 
       // Reset filters
       setActiveSources([]);
-      setActiveTypes([currentPaper.structure[sectionId].questionType]); // Default to section type
+      const targetType = targetSec.questionType;
+      setActiveTypes([targetType]); // Default to section type
 
+      // Immediately populate availableQuestions matching this section's scope and type
+      const normalizedTargetType = normalizeType(targetType);
+      const initialFiltered = repoQuestions.filter(q => {
+         const matchSub = q.subject?.toLowerCase() === paper.subject?.toLowerCase();
+         const matchCls = !q.classLevel || q.classLevel?.toLowerCase() === paper.classLevel?.toLowerCase();
+         const matchChap = paper.selectedChapters.length === 0 || paper.selectedChapters.some(c => c.toLowerCase() === q.chapter?.toLowerCase());
+         const matchTopic = paper.selectedTopics.length === 0 || paper.selectedTopics.some(t => t.toLowerCase() === q.topic?.toLowerCase());
+         const matchType = !targetType || normalizeType(q.type) === normalizedTargetType;
+
+         let matchesLanguage = true;
+         if (extractionLanguage === 'English') matchesLanguage = !!q.text;
+         if (extractionLanguage === 'Urdu') matchesLanguage = !!q.textUrdu;
+         if (extractionLanguage === 'Bilingual') matchesLanguage = !!q.text && !!q.textUrdu;
+
+         return matchSub && matchCls && matchChap && matchTopic && matchType && matchesLanguage;
+      });
+
+      setAvailableQuestions(initialFiltered.length > 0 ? initialFiltered : repoQuestions.filter(q => q.subject?.toLowerCase() === paper.subject?.toLowerCase()));
       setIsSelectionModalOpen(true);
    };
 
@@ -244,27 +263,60 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
       }, 400);
    };
 
-   const handleRandomSelect = () => {
-      if (!sectionConfig || availableQuestions.length === 0) return;
-      const count = sectionConfig.totalCount;
+   // Reusable core auto-selector that picks questions matching active chapters/topics/scope
+   const getSmartAutoSelectedQuestions = (
+      secId: string, 
+      sec: PaperSectionConfig, 
+      customScopeChapters: string[] = activeChapters,
+      customScopeTopics: string[] = activeTopics,
+      poolQuestions: Question[] = (availableQuestions.length > 0 ? availableQuestions : repoQuestions)
+   ): Question[] => {
+      const targetType = normalizeType(sec.questionType);
+      
+      // Filter the question pool by section type and scope
+      let candidates = poolQuestions.filter(q => {
+         const matchSub = !q.subject || q.subject.toLowerCase() === paper.subject.toLowerCase();
+         const matchType = !sec.questionType || normalizeType(q.type) === targetType;
+         const matchChap = customScopeChapters.length === 0 || customScopeChapters.some(c => c.toLowerCase() === q.chapter?.toLowerCase());
+         const matchTopic = customScopeTopics.length === 0 || customScopeTopics.some(t => t.toLowerCase() === q.topic?.toLowerCase());
+         
+         let matchesLanguage = true;
+         if (extractionLanguage === 'English') matchesLanguage = !!q.text;
+         if (extractionLanguage === 'Urdu') matchesLanguage = !!q.textUrdu;
+         if (extractionLanguage === 'Bilingual') matchesLanguage = !!q.text && !!q.textUrdu;
 
-      // Group available questions by chapter to enable balanced/equal distribution
+         return matchSub && matchType && matchChap && matchTopic && matchesLanguage;
+      });
+
+      // Fallback if scope is too restrictive: allow broader subject/type questions
+      if (candidates.length === 0) {
+         candidates = repoQuestions.filter(q => {
+            const matchSub = !q.subject || q.subject.toLowerCase() === paper.subject.toLowerCase();
+            const matchType = !sec.questionType || normalizeType(q.type) === targetType;
+            return matchSub && matchType;
+         });
+      }
+
+      if (candidates.length === 0) return [];
+
+      const count = sec.totalCount || 1;
+
+      // Group by chapter for balanced round-robin selection
       const chapterMap: Record<string, Question[]> = {};
-      availableQuestions.forEach(q => {
+      candidates.forEach(q => {
          const chap = q.chapter || 'Other';
          if (!chapterMap[chap]) chapterMap[chap] = [];
          chapterMap[chap].push(q);
       });
 
-      // Shuffle each chapter's questions
+      // Random shuffle per chapter
       Object.keys(chapterMap).forEach(chap => {
          chapterMap[chap].sort(() => 0.5 - Math.random());
       });
 
-      // Determine chapters list: prioritize activeChapters, then whatever chapters exist in availableQuestions
       const uniqueChaps = Object.keys(chapterMap).sort((a, b) => {
-         const aActive = activeChapters.includes(a);
-         const bActive = activeChapters.includes(b);
+         const aActive = customScopeChapters.includes(a);
+         const bActive = customScopeChapters.includes(b);
          if (aActive && !bActive) return -1;
          if (!aActive && bActive) return 1;
          return 0;
@@ -273,7 +325,6 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
       const selected: Question[] = [];
       const selectedIds = new Set<string>();
 
-      // Round-robin equal distribution across chapters
       let addedInRound = true;
       while (selected.length < count && addedInRound) {
          addedInRound = false;
@@ -291,9 +342,9 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
          }
       }
 
-      // If still need more questions (unlikely), fill from remaining available questions
+      // If still need more questions, pull from remaining shuffled candidates
       if (selected.length < count) {
-         const remaining = availableQuestions.filter(q => !selectedIds.has(q.id)).sort(() => 0.5 - Math.random());
+         const remaining = candidates.filter(q => !selectedIds.has(q.id)).sort(() => 0.5 - Math.random());
          for (const q of remaining) {
             if (selected.length >= count) break;
             selected.push(q);
@@ -301,9 +352,105 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
          }
       }
 
+      return selected.map(q => ({
+         ...q,
+         sectionId: secId,
+         marks: sec.marksPerQuestion
+      }));
+   };
+
+   // Auto select / Re-select for Modal
+   const handleRandomSelect = () => {
+      if (!sectionConfig) return;
+      const newQuestions = getSmartAutoSelectedQuestions(activeSectionId, sectionConfig, activeChapters, activeTopics, availableQuestions);
+      if (newQuestions.length === 0) {
+         alert('No questions found in repository matching the selected chapters, topics, and type.');
+         return;
+      }
       const otherQuestions = currentPaper.questions.filter(q => q.sectionId !== activeSectionId);
-      const newQuestions = selected.map(q => ({ ...q, sectionId: activeSectionId, marks: sectionConfig.marksPerQuestion }));
       setCurrentPaper(prev => ({ ...prev, questions: [...otherQuestions, ...newQuestions] }));
+   };
+
+   // Auto select / Re-select a specific section directly from Canvas
+   const handleAutoSelectSection = (secId: string) => {
+      const sec = currentPaper.structure[secId];
+      if (!sec) return;
+      const newQuestions = getSmartAutoSelectedQuestions(secId, sec, paper.selectedChapters, paper.selectedTopics, repoQuestions);
+      if (newQuestions.length === 0) {
+         alert(`No questions found in repository for section "${sec.title}".`);
+         return;
+      }
+      const otherQuestions = currentPaper.questions.filter(q => q.sectionId !== secId);
+      setCurrentPaper(prev => ({ ...prev, questions: [...otherQuestions, ...newQuestions] }));
+   };
+
+   // Swap / replace a single question with another random question from same chapter/topics/type
+   const handleReplaceSingleQuestion = (currentQ: Question, secId: string) => {
+      const sec = currentPaper.structure[secId];
+      const targetType = normalizeType(currentQ.type || sec?.questionType || '');
+
+      // Find candidates excluding currently used questions in paper
+      const usedIds = new Set(currentPaper.questions.map(q => q.id));
+      let candidates = repoQuestions.filter(q => {
+         if (usedIds.has(q.id)) return false;
+         const matchSub = !q.subject || q.subject.toLowerCase() === paper.subject.toLowerCase();
+         const matchType = normalizeType(q.type) === targetType;
+         
+         // Match same chapter if available, or selected paper chapters
+         const matchChap = currentQ.chapter 
+            ? q.chapter?.toLowerCase() === currentQ.chapter.toLowerCase()
+            : (paper.selectedChapters.length === 0 || paper.selectedChapters.some(c => c.toLowerCase() === q.chapter?.toLowerCase()));
+
+         return matchSub && matchType && matchChap;
+      });
+
+      // If no same-chapter replacement found, relax chapter constraint
+      if (candidates.length === 0) {
+         candidates = repoQuestions.filter(q => {
+            if (usedIds.has(q.id)) return false;
+            const matchSub = !q.subject || q.subject.toLowerCase() === paper.subject.toLowerCase();
+            return matchSub && normalizeType(q.type) === targetType;
+         });
+      }
+
+      if (candidates.length === 0) {
+         alert('No alternative question found in repository to swap with.');
+         return;
+      }
+
+      // Pick a random alternative
+      const replacement = candidates[Math.floor(Math.random() * candidates.length)];
+      const updatedReplacement = {
+         ...replacement,
+         sectionId: secId,
+         marks: currentQ.marks || sec?.marksPerQuestion || 1
+      };
+
+      setCurrentPaper(prev => ({
+         ...prev,
+         questions: prev.questions.map(q => q.id === currentQ.id ? updatedReplacement : q)
+      }));
+   };
+
+   // Auto select questions for ALL sections of the entire paper in 1 click
+   const handleAutoSelectEntirePaper = () => {
+      let allNewQuestions: Question[] = [];
+      const sections = Object.values(currentPaper.structure) as PaperSectionConfig[];
+
+      sections.forEach(sec => {
+         const secQuestions = getSmartAutoSelectedQuestions(sec.id, sec, paper.selectedChapters, paper.selectedTopics, repoQuestions);
+         allNewQuestions = [...allNewQuestions, ...secQuestions];
+      });
+
+      if (allNewQuestions.length === 0) {
+         alert('No questions found to auto-populate the paper.');
+         return;
+      }
+
+      setCurrentPaper(prev => ({
+         ...prev,
+         questions: allNewQuestions
+      }));
    };
 
    const clearSectionSelection = () => {
@@ -1198,8 +1345,15 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                         })()}
                      </div>
                      <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
-                        <button onClick={handleRandomSelect} disabled={availableQuestions.length === 0} className="px-4 sm:px-6 py-2 bg-white border border-slate-300 text-slate-700 font-bold uppercase tracking-wider rounded-xl hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-all text-xs flex items-center gap-2 active:scale-95 cursor-pointer shadow-2xs">
-                           <Sparkles size={14} /> SMART RANDOM
+                        <button 
+                           type="button"
+                           onClick={handleRandomSelect} 
+                           disabled={availableQuestions.length === 0 && repoQuestions.length === 0} 
+                           className="px-4 sm:px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-wider rounded-xl hover:from-indigo-700 hover:to-purple-700 shadow-md shadow-indigo-100 transition-all text-xs flex items-center gap-2 active:scale-95 cursor-pointer disabled:opacity-50"
+                           title="Click once to auto-select questions. Click again anytime to shuffle and pick different questions!"
+                        >
+                           <Sparkles size={14} className="text-amber-300 animate-pulse" />
+                           <span>Auto-Select Questions (Click to Shuffle)</span>
                         </button>
                         {(() => {
                            const cur = getSectionSelectedCount(activeSectionId);
@@ -1539,6 +1693,21 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                      </div>
                   </div>
 
+                  {/* AUTO POPULATE WHOLE PAPER */}
+                  <div className="space-y-3 pt-6 border-t border-slate-800">
+                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Sparkles size={14} className="text-amber-400" /> Auto-Select Paper</p>
+                     <button 
+                        type="button"
+                        onClick={handleAutoSelectEntirePaper}
+                        className="w-full p-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
+                        title="Auto-select all questions across all sections. Click again anytime to shuffle!"
+                     >
+                        <Sparkles size={14} className="text-amber-300 animate-pulse" />
+                        <span>Auto-Select Whole Paper</span>
+                     </button>
+                     <p className="text-[9px] text-slate-400 text-center leading-relaxed">Picks balanced questions from topics. Click again anytime to re-shuffle different questions.</p>
+                  </div>
+
                   <div className="space-y-3 pt-6 border-t border-slate-800">
                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><ListFilter size={14} /> Paper Navigator</p>
                      <div className="space-y-1">
@@ -1626,9 +1795,14 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                     <section key={sec.id} id={`editor-sec-${sec.id}`} className="relative group break-inside-avoid scroll-mt-20">
                                        <div className="absolute -left-12 top-0 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-all print:hidden">
                                           {!isManualEditMode && (
-                                             <button onClick={() => handleOpenSelection(sec.id)} className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all">
-                                                <Plus size={20} strokeWidth={3} />
-                                             </button>
+                                             <>
+                                                <button onClick={() => handleOpenSelection(sec.id)} className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all" title="Open question selection bank">
+                                                   <Plus size={20} strokeWidth={3} />
+                                                </button>
+                                                <button onClick={() => handleAutoSelectSection(sec.id)} className="w-10 h-10 bg-gradient-to-tr from-purple-600 to-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all" title="Auto Select / Shuffle questions for this section (Click again for different questions)">
+                                                   <Sparkles size={18} className="text-amber-300" />
+                                                </button>
+                                             </>
                                           )}
                                           {isManualEditMode && (
                                              <>
@@ -1641,26 +1815,47 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                              </>
                                           )}
                                           {!isManualEditMode && (
-                                             <button onClick={() => handleOpenConfig(sec.id)} className="w-8 h-8 bg-white border border-slate-200 text-slate-500 rounded-lg flex items-center justify-center shadow-sm hover:text-indigo-600 transition-all">
+                                             <button onClick={() => handleOpenConfig(sec.id)} className="w-8 h-8 bg-white border border-slate-200 text-slate-500 rounded-lg flex items-center justify-center shadow-sm hover:text-indigo-600 transition-all" title="Configure section">
                                                 <Settings2 size={14} />
                                              </button>
                                           )}
                                        </div>
-                                       <div className="mb-4">
-                                          <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">{sec.title}</h3>
-                                          <div className="flex flex-wrap gap-2 mt-2">
-                                             <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200">
-                                                Required: {sec.selectCount}
-                                             </span>
-                                             <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-100">
-                                                Choice: {sec.totalCount - sec.selectCount}
-                                             </span>
-                                             <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
-                                                {sec.marksPerQuestion} Mark{sec.marksPerQuestion !== 1 ? 's' : ''} each
-                                             </span>
-                                             <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
-                                                Total: {sec.selectCount * sec.marksPerQuestion} Marks
-                                             </span>
+                                       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                          <div>
+                                             <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">{sec.title}</h3>
+                                             <div className="flex flex-wrap gap-2 mt-2">
+                                                <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200">
+                                                   Required: {sec.selectCount}
+                                                </span>
+                                                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-100">
+                                                   Choice: {sec.totalCount - sec.selectCount}
+                                                </span>
+                                                <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
+                                                   {sec.marksPerQuestion} Mark{sec.marksPerQuestion !== 1 ? 's' : ''} each
+                                                </span>
+                                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
+                                                   Total: {sec.selectCount * sec.marksPerQuestion} Marks
+                                                </span>
+                                             </div>
+                                          </div>
+                                          <div className="print:hidden flex items-center gap-2">
+                                             <button 
+                                                type="button" 
+                                                onClick={() => handleAutoSelectSection(sec.id)}
+                                                className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white border border-indigo-200 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-2xs active:scale-95 cursor-pointer"
+                                                title="Click once to auto-select. Click again anytime to select different questions!"
+                                             >
+                                                <Sparkles size={14} className="text-amber-500" />
+                                                <span>Auto-Select / Shuffle</span>
+                                             </button>
+                                             <button 
+                                                type="button" 
+                                                onClick={() => handleOpenSelection(sec.id)}
+                                                className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs active:scale-95 cursor-pointer"
+                                             >
+                                                <Plus size={14} />
+                                                <span>Manual Pick</span>
+                                             </button>
                                           </div>
                                        </div>
                                        <div className={`space-y-4 ${sec.questionsPerLine ? 'grid grid-cols-2 gap-x-8 gap-y-4 space-y-0' : ''}`}>
@@ -1687,9 +1882,19 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                                                   <MathRenderer text={q.text} inline />
                                                                </div>
                                                             )}
-                                                            {(currentPaper.showQuestionMarks ?? true) && (
-                                                               <span className="text-[10px] font-black text-slate-400 pt-0.5 whitespace-nowrap">[{q.marks}]</span>
-                                                            )}
+                                                            <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                                                               <button
+                                                                  type="button"
+                                                                  onClick={() => handleReplaceSingleQuestion(q, sec.id)}
+                                                                  className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md border border-transparent hover:border-indigo-100 transition-all opacity-0 group-hover/q:opacity-100 print:hidden"
+                                                                  title="Auto-replace this single question with another matching question (Click again to shuffle)"
+                                                               >
+                                                                  <RefreshCw size={12} className="hover:rotate-180 transition-transform duration-300" />
+                                                               </button>
+                                                               {(currentPaper.showQuestionMarks ?? true) && (
+                                                                  <span className="text-[10px] font-black text-slate-400 whitespace-nowrap">[{q.marks}]</span>
+                                                               )}
+                                                            </div>
                                                          </div>
                                                          {(extractionLanguage === 'Bilingual' || extractionLanguage === 'Urdu') && q.textUrdu && (
                                                             <div dir="rtl" style={{ fontSize: `${questionFontUr}px` }} className="text-right font-urdu text-slate-700 leading-relaxed">
@@ -1745,9 +1950,14 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                     <section key={sec.id} id={`editor-sec-${sec.id}`} className="relative group break-inside-avoid scroll-mt-20">
                                        <div className="absolute -left-12 top-0 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-all print:hidden">
                                           {!isManualEditMode && (
-                                             <button onClick={() => handleOpenSelection(sec.id)} className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all">
-                                                <Plus size={20} strokeWidth={3} />
-                                             </button>
+                                             <>
+                                                <button onClick={() => handleOpenSelection(sec.id)} className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all" title="Open question selection bank">
+                                                   <Plus size={20} strokeWidth={3} />
+                                                </button>
+                                                <button onClick={() => handleAutoSelectSection(sec.id)} className="w-10 h-10 bg-gradient-to-tr from-purple-600 to-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all" title="Auto Select / Shuffle questions for this section (Click again for different questions)">
+                                                   <Sparkles size={18} className="text-amber-300" />
+                                                </button>
+                                             </>
                                           )}
                                           {isManualEditMode && (
                                              <>
@@ -1760,26 +1970,47 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                              </>
                                           )}
                                           {!isManualEditMode && (
-                                             <button onClick={() => handleOpenConfig(sec.id)} className="w-8 h-8 bg-white border border-slate-200 text-slate-500 rounded-lg flex items-center justify-center shadow-sm hover:text-indigo-600 transition-all">
+                                             <button onClick={() => handleOpenConfig(sec.id)} className="w-8 h-8 bg-white border border-slate-200 text-slate-500 rounded-lg flex items-center justify-center shadow-sm hover:text-indigo-600 transition-all" title="Configure section">
                                                 <Settings2 size={14} />
                                              </button>
                                           )}
                                        </div>
-                                       <div className="mb-4">
-                                          <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">{sec.title}</h3>
-                                          <div className="flex flex-wrap gap-2 mt-2">
-                                             <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200">
-                                                Required: {sec.selectCount}
-                                             </span>
-                                             <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-100">
-                                                Choice: {sec.totalCount - sec.selectCount}
-                                             </span>
-                                             <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
-                                                {sec.marksPerQuestion} Mark{sec.marksPerQuestion !== 1 ? 's' : ''} each
-                                             </span>
-                                             <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
-                                                Total: {sec.selectCount * sec.marksPerQuestion} Marks
-                                             </span>
+                                       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                          <div>
+                                             <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">{sec.title}</h3>
+                                             <div className="flex flex-wrap gap-2 mt-2">
+                                                <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200">
+                                                   Required: {sec.selectCount}
+                                                </span>
+                                                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-100">
+                                                   Choice: {sec.totalCount - sec.selectCount}
+                                                </span>
+                                                <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
+                                                   {sec.marksPerQuestion} Mark{sec.marksPerQuestion !== 1 ? 's' : ''} each
+                                                </span>
+                                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
+                                                   Total: {sec.selectCount * sec.marksPerQuestion} Marks
+                                                </span>
+                                             </div>
+                                          </div>
+                                          <div className="print:hidden flex items-center gap-2">
+                                             <button 
+                                                type="button" 
+                                                onClick={() => handleAutoSelectSection(sec.id)}
+                                                className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white border border-indigo-200 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-2xs active:scale-95 cursor-pointer"
+                                                title="Click once to auto-select. Click again anytime to select different questions!"
+                                             >
+                                                <Sparkles size={14} className="text-amber-500" />
+                                                <span>Auto-Select / Shuffle</span>
+                                             </button>
+                                             <button 
+                                                type="button" 
+                                                onClick={() => handleOpenSelection(sec.id)}
+                                                className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs active:scale-95 cursor-pointer"
+                                             >
+                                                <Plus size={14} />
+                                                <span>Manual Pick</span>
+                                             </button>
                                           </div>
                                        </div>
                                        <div className="space-y-6">
@@ -1806,9 +2037,19 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                                                   <MathRenderer text={q.text} inline />
                                                                </div>
                                                             )}
-                                                            {(currentPaper.showQuestionMarks ?? true) && (
-                                                               <span className="text-[10px] font-black text-slate-400 pt-0.5 whitespace-nowrap">[{q.marks}]</span>
-                                                            )}
+                                                            <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                                                               <button
+                                                                  type="button"
+                                                                  onClick={() => handleReplaceSingleQuestion(q, sec.id)}
+                                                                  className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md border border-transparent hover:border-indigo-100 transition-all opacity-0 group-hover/q:opacity-100 print:hidden"
+                                                                  title="Auto-replace this single question with another matching question (Click again to shuffle)"
+                                                               >
+                                                                  <RefreshCw size={12} className="hover:rotate-180 transition-transform duration-300" />
+                                                               </button>
+                                                               {(currentPaper.showQuestionMarks ?? true) && (
+                                                                  <span className="text-[10px] font-black text-slate-400 whitespace-nowrap">[{q.marks}]</span>
+                                                               )}
+                                                            </div>
                                                          </div>
                                                          {(extractionLanguage === 'Bilingual' || extractionLanguage === 'Urdu') && q.textUrdu && (
                                                             <div dir="rtl" style={{ fontSize: `${questionFontUr}px` }} className="text-right font-urdu text-slate-700 leading-relaxed">

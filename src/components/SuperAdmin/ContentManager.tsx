@@ -1,17 +1,33 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   getBlogs, addBlog, deleteBlog,
   getNotes, addNote, deleteNote,
   getPastPapers, addPastPaper, deletePastPaper, uploadFile,
   getPublicCurriculum
 } from '../../services/dataService';
-import { Plus, Trash2, X, FileText, Upload, BookOpen, Clock, Calendar, CheckSquare, Image as ImageIcon } from 'lucide-react';
+import { 
+  Plus, Trash2, X, FileText, Upload, BookOpen, Clock, 
+  Calendar, CheckSquare, Image as ImageIcon, Download, 
+  FileSpreadsheet, AlertTriangle, CheckCircle, HelpCircle 
+} from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { Syllabus, ClassLevel } from '../../types';
 
 const ContentManager: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'BLOG' | 'NOTES' | 'LESSON_PLANS' | 'BOOKS' | 'PAPERS'>('BLOG');
   const [items, setItems] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importReport, setImportReport] = useState<{
+    total: number;
+    success: number;
+    failed: number;
+    missingClasses: string[];
+    errors: string[];
+  } | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [curriculum, setCurriculum] = useState<{ syllabuses: Syllabus[]; classes: ClassLevel[] }>({ syllabuses: [], classes: [] });
   
   // Forms State
@@ -100,23 +116,252 @@ const ContentManager: React.FC = () => {
     }
   };
 
+  // ─── CSV / EXCEL TEMPLATE GENERATION ─────────────────────────────────────────
+  const handleDownloadTemplate = () => {
+    let template: any[] = [];
+    let filename = `Import_${activeTab}_Template.xlsx`;
+
+    if (activeTab === 'BOOKS') {
+      template = [
+        {
+          "Title": "Mathematics 9 (EM)",
+          "Subject": "Mathematics",
+          "Grade": "9",
+          "Board": "PCTB (Punjab Curriculum & Textbook Board)",
+          "FileURL": "https://drive.google.com/file/d/1uB6C5v9C4x2P7b2yY7T1a5qZ1wV5c7e/preview",
+          "Description": "Official PCTB Mathematics 9 (Science Group - English Medium) Textbook."
+        },
+        {
+          "Title": "Physics 9 (EM)",
+          "Subject": "Physics",
+          "Grade": "9",
+          "Board": "PCTB (Punjab Curriculum & Textbook Board)",
+          "FileURL": "https://drive.google.com/file/d/1zG1H0v4C9x7P2b7yD2T6a0qZ6wV0c2e/preview",
+          "Description": "Official PCTB Physics 9 (English Medium) Textbook."
+        }
+      ];
+    } else if (activeTab === 'NOTES' || activeTab === 'LESSON_PLANS') {
+      template = [
+        {
+          "Title": "Chapter 1 Physical Quantities Notes",
+          "Subject": "Physics",
+          "Grade": "9",
+          "Board": "Punjab Board",
+          "NoteType": activeTab === 'LESSON_PLANS' ? "Lesson Plan" : "Book Notes",
+          "FileURL": "https://drive.google.com/file/d/.../preview",
+          "Description": "Complete solved short questions and numerical problems."
+        }
+      ];
+    } else if (activeTab === 'PAPERS') {
+      template = [
+        {
+          "Title": "Physics 9th Annual Group 1 2024",
+          "Subject": "Physics",
+          "Level": "9",
+          "Board": "BISE Lahore",
+          "Year": 2024,
+          "FileURL": "https://drive.google.com/file/d/.../preview"
+        }
+      ];
+    } else if (activeTab === 'BLOG') {
+      template = [
+        {
+          "Title": "Top Study Tips for Board Exam Preparation 2026",
+          "Category": "EdTech",
+          "Author": "PakParcha AI Team",
+          "Excerpt": "Discover proven strategies to ace your annual matric & inter exams.",
+          "Content": "<h2>Introduction</h2><p>Here are effective tips...</p>",
+          "Image": "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800"
+        }
+      ];
+    }
+
+    const ws = XLSX.utils.json_to_sheet(template);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+
+    // Optional reference sheet with existing system classes & boards
+    if (curriculum.classes.length > 0 || curriculum.syllabuses.length > 0) {
+      const refData = curriculum.classes.map(c => ({
+        "Available Grade / Class": c.name,
+        "System ID": c.id
+      }));
+      const wsRef = XLSX.utils.json_to_sheet(refData);
+      XLSX.utils.book_append_sheet(wb, wsRef, "Classes_Reference");
+    }
+
+    XLSX.writeFile(wb, filename);
+  };
+
+  // ─── CSV / EXCEL IMPORT HANDLER ─────────────────────────────────────────────
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      setIsImporting(true);
+      setImportReport(null);
+
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const rows: any[] = XLSX.utils.sheet_to_json(ws);
+
+        if (!rows || rows.length === 0) {
+          alert("The uploaded file is empty!");
+          setIsImporting(false);
+          return;
+        }
+
+        let successCount = 0;
+        let failCount = 0;
+        const missingClassSet = new Set<string>();
+        const errorList: string[] = [];
+
+        // Known classes in database for verification
+        const validClassNames = new Set(
+          curriculum.classes.map(c => c.name.trim().toLowerCase().replace(/^(class|grade)\s*/i, ''))
+        );
+
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          const rowNum = i + 2; // considering 1-based index + header
+
+          // Extract standard column names (case-insensitive & flexible)
+          const title = row.Title || row.title || row.Name || row.name;
+          const subject = row.Subject || row.subject || '';
+          const grade = String(row.Grade || row.grade || row.Class || row.class || row.Level || row.level || '').trim();
+          const board = row.Board || row.board || row.Syllabus || row.syllabus || 'PCTB (Punjab Curriculum & Textbook Board)';
+          const fileUrl = row.FileURL || row.FileUrl || row.fileUrl || row.Link || row.link || row.URL || row.url || '';
+          const description = row.Description || row.description || row.Excerpt || row.excerpt || '';
+          const noteType = row.NoteType || row.noteType || (activeTab === 'BOOKS' ? 'Textbook' : activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : 'Book Notes');
+          const year = parseInt(row.Year || row.year || new Date().getFullYear());
+
+          if (!title) {
+            failCount++;
+            errorList.push(`Row #${rowNum}: Title is missing.`);
+            continue;
+          }
+
+          // Check if Class / Grade is valid or missing in curriculum
+          if (grade) {
+            const cleanGrade = grade.toLowerCase().replace(/^(class|grade)\s*/i, '');
+            if (curriculum.classes.length > 0 && !validClassNames.has(cleanGrade) && !validClassNames.has(grade.toLowerCase())) {
+              missingClassSet.add(grade);
+            }
+          }
+
+          try {
+            if (activeTab === 'BLOG') {
+              await addBlog({
+                title,
+                category: row.Category || row.category || 'General',
+                author: row.Author || row.author || 'Admin',
+                excerpt: description,
+                content: row.Content || row.content || description || `<p>${title}</p>`,
+                image: row.Image || row.image || fileUrl,
+                date: new Date(),
+                readTime: '5 min read'
+              });
+            } else if (activeTab === 'PAPERS') {
+              await addPastPaper({
+                title,
+                subject,
+                level: grade,
+                board,
+                year: isNaN(year) ? new Date().getFullYear() : year,
+                fileUrl
+              });
+            } else {
+              // BOOKS, NOTES, LESSON_PLANS
+              await addNote({
+                title,
+                subject,
+                grade: grade || '9',
+                board,
+                noteType: activeTab === 'BOOKS' ? 'Textbook' : activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : noteType,
+                fileUrl,
+                description,
+                book: title,
+                author: board
+              });
+            }
+            successCount++;
+          } catch (itemErr: any) {
+            failCount++;
+            errorList.push(`Row #${rowNum} ("${title}"): ${itemErr.message || 'Failed to insert'}`);
+          }
+        }
+
+        setImportReport({
+          total: rows.length,
+          success: successCount,
+          failed: failCount,
+          missingClasses: Array.from(missingClassSet),
+          errors: errorList.slice(0, 10) // Show top 10 errors
+        });
+
+        await loadData();
+      } catch (parseErr: any) {
+        alert(`Failed to parse file: ${parseErr.message}`);
+      } finally {
+        setIsImporting(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+
+    reader.readAsBinaryString(file);
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
-      <div className="flex justify-between items-center border-b border-gray-200 pb-6">
+      {/* Header with Add & Excel/CSV Import Buttons */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-200 pb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Content CMS</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage public-facing resources</p>
+          <p className="text-sm text-gray-500 mt-1">Manage public-facing resources & bulk upload data</p>
         </div>
-        <button onClick={() => setIsModalOpen(true)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2">
-          <Plus size={18} /> Add {activeTab === 'BLOG' ? 'Post' : activeTab === 'NOTES' ? 'Note' : activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : activeTab === 'BOOKS' ? 'Book' : 'Paper'}
-        </button>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Download Excel / CSV Template */}
+          <button 
+            onClick={handleDownloadTemplate} 
+            className="bg-white border border-gray-300 text-gray-700 px-3.5 py-2 rounded-xl font-bold hover:bg-gray-50 hover:border-gray-400 flex items-center gap-2 text-sm shadow-sm transition-all"
+            title="Download formatted Excel template"
+          >
+            <Download size={16} className="text-gray-500" /> Download Template
+          </button>
+
+          {/* Import Excel / CSV Button */}
+          <button 
+            onClick={() => setIsImportModalOpen(true)} 
+            className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-emerald-700 flex items-center gap-2 text-sm shadow-sm shadow-emerald-200 transition-all"
+          >
+            <FileSpreadsheet size={16} /> Import Excel / CSV
+          </button>
+
+          {/* Add Single Item Modal */}
+          <button 
+            onClick={() => setIsModalOpen(true)} 
+            className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-indigo-700 flex items-center gap-2 text-sm shadow-sm shadow-indigo-200 transition-all"
+          >
+            <Plus size={18} /> Add {activeTab === 'BLOG' ? 'Post' : activeTab === 'NOTES' ? 'Note' : activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : activeTab === 'BOOKS' ? 'Book' : 'Paper'}
+          </button>
+        </div>
       </div>
 
+      {/* Tabs */}
       <div className="flex gap-4 border-b border-gray-200 mb-6 flex-wrap">
         {['BLOG', 'NOTES', 'LESSON_PLANS', 'BOOKS', 'PAPERS'].map(tab => (
           <button 
             key={tab} 
-            onClick={() => setActiveTab(tab as any)}
+            onClick={() => {
+              setActiveTab(tab as any);
+              setImportReport(null);
+            }}
             className={`px-6 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === tab ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
           >
             {tab === 'BLOG' ? 'Blog Posts' : tab === 'NOTES' ? 'Study Notes' : tab === 'LESSON_PLANS' ? 'Lesson Plans' : tab === 'BOOKS' ? 'Textbooks & Key Books' : 'Past Papers'}
@@ -124,6 +369,7 @@ const ContentManager: React.FC = () => {
         ))}
       </div>
 
+      {/* Grid of Items */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {items.map((item: any) => (
           <div key={item.id} className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all relative group">
@@ -150,6 +396,11 @@ const ContentManager: React.FC = () => {
                    <h3 className="font-bold text-gray-900">{item.title}</h3>
                    <p className="text-xs text-gray-500 mt-1 font-bold uppercase">{item.board || 'Board'} {item.subject ? `• ${item.subject}` : ''}</p>
                    <p className="text-xs text-gray-400 mt-3 line-clamp-2">{item.description}</p>
+                   {item.fileUrl && (
+                     <a href={item.fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 mt-3">
+                       View / Read Link →
+                     </a>
+                   )}
                 </>
              )}
 
@@ -170,6 +421,114 @@ const ContentManager: React.FC = () => {
         ))}
       </div>
 
+      {/* ─── BULK IMPORT MODAL ──────────────────────────────────────────────── */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-emerald-50 to-white">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <FileSpreadsheet size={18} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-gray-900">Import {activeTab === 'BOOKS' ? 'Textbooks' : activeTab === 'NOTES' ? 'Study Notes' : activeTab === 'LESSON_PLANS' ? 'Lesson Plans' : activeTab === 'PAPERS' ? 'Past Papers' : 'Blog Posts'}</h3>
+                  <p className="text-xs text-gray-500">Upload CSV or Excel (.xlsx / .xls)</p>
+                </div>
+              </div>
+              <button onClick={() => { setIsImportModalOpen(false); setImportReport(null); }} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-5">
+              {/* Step 1: Download Template */}
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold text-gray-800">1. Download sample Excel template</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Use our standard format with pre-filled columns</p>
+                </div>
+                <button 
+                  onClick={handleDownloadTemplate} 
+                  className="bg-white border border-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-100 flex items-center gap-1.5 shadow-sm"
+                >
+                  <Download size={14} /> Download (.xlsx)
+                </button>
+              </div>
+
+              {/* Step 2: Upload Dropzone */}
+              <div 
+                onClick={() => fileInputRef.current?.click()} 
+                className="border-2 border-dashed border-emerald-300 hover:border-emerald-500 bg-emerald-50/40 hover:bg-emerald-50/70 rounded-2xl p-8 text-center cursor-pointer transition-all"
+              >
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  accept=".xlsx, .xls, .csv" 
+                  className="hidden" 
+                  onChange={handleImportFile} 
+                />
+                <div className="w-12 h-12 bg-white text-emerald-600 rounded-2xl mx-auto flex items-center justify-center shadow-sm mb-3">
+                  <Upload size={24} />
+                </div>
+                <p className="font-bold text-sm text-gray-800">
+                  {isImporting ? 'Processing & uploading data to database...' : 'Click to select Excel (.xlsx / .xls) or CSV file'}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Supports bulk upload of unlimited rows at once</p>
+              </div>
+
+              {/* Import Feedback / Missing Class Report */}
+              {importReport && (
+                <div className="space-y-3 pt-2">
+                  <div className={`p-4 rounded-xl border ${importReport.failed === 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-amber-50 border-amber-200 text-amber-900'}`}>
+                    <div className="flex items-center gap-2 font-bold text-sm">
+                      {importReport.failed === 0 ? <CheckCircle size={18} className="text-emerald-600" /> : <AlertTriangle size={18} className="text-amber-600" />}
+                      Import Result: {importReport.success} of {importReport.total} items added successfully
+                    </div>
+                  </div>
+
+                  {/* Missing Classes Notice */}
+                  {importReport.missingClasses.length > 0 && (
+                    <div className="p-4 rounded-xl bg-orange-50 border border-orange-200 text-orange-900 space-y-1">
+                      <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wide text-orange-700">
+                        <AlertTriangle size={15} /> Class / Grade Notice:
+                      </div>
+                      <p className="text-xs">
+                        The following classes from your file were added but are not yet registered in your master Class list:
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {importReport.missingClasses.map((cls, idx) => (
+                          <span key={idx} className="bg-white border border-orange-300 text-orange-800 text-[11px] font-bold px-2 py-0.5 rounded">
+                            {cls}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Errors List */}
+                  {importReport.errors.length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 space-y-1">
+                      <p className="font-bold">Errors encountered:</p>
+                      <ul className="list-disc list-inside space-y-0.5">
+                        {importReport.errors.map((err, idx) => <li key={idx}>{err}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+              <button 
+                onClick={() => { setIsImportModalOpen(false); setImportReport(null); }} 
+                className="px-5 py-2 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-800"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── ADD SINGLE ITEM MODAL ────────────────────────────────────────── */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -251,166 +610,91 @@ const ContentManager: React.FC = () => {
                           </div>
                        </div>
 
-                       <input type="text" placeholder="Subject (Optional, e.g. Physics)" className="w-full p-3 border rounded-xl" value={bookForm.subject} onChange={e => setBookForm({...bookForm, subject: e.target.value})} />
-                       
-                       <textarea placeholder="Description / Summary of Book..." className="w-full p-3 border rounded-xl h-24" value={bookForm.description} onChange={e => setBookForm({...bookForm, description: e.target.value})} />
-                       
-                       {/* File Upload Zone */}
-                       <div className="space-y-3 pt-2">
-                         <label className="text-[10px] font-bold text-gray-400 uppercase">Upload PDF Book or Link</label>
-                         <div className="border-2 border-dashed border-indigo-200 bg-indigo-50/50 rounded-xl p-5 text-center cursor-pointer hover:border-indigo-400 transition-colors" onClick={() => document.getElementById('book-file')?.click()}>
-                            <p className="text-sm font-bold text-indigo-700">{bookForm.fileUrl ? `Selected File / Link: ${bookForm.fileUrl.substring(0, 45)}...` : '📄 Click to Upload Book PDF'}</p>
-                            <input id="book-file" type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'file')} />
-                         </div>
-                         <div className="flex items-center gap-2">
-                           <span className="text-xs text-gray-400 font-bold uppercase">OR</span>
-                           <input type="url" placeholder="Paste Google Drive / Book Link (https://drive.google.com/...)" className="w-full p-3 border rounded-xl text-sm font-mono" value={bookForm.fileUrl} onChange={e => setBookForm({...bookForm, fileUrl: e.target.value})} />
-                         </div>
+                       <input 
+                         type="text" 
+                         placeholder="Subject (e.g. Physics, Mathematics, Biology)" 
+                         className="w-full p-3 border rounded-xl" 
+                         value={bookForm.subject} 
+                         onChange={e => setBookForm({...bookForm, subject: e.target.value})} 
+                       />
+
+                       <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Book PDF Link / Google Drive View URL</label>
+                          <input 
+                            type="url" 
+                            placeholder="https://drive.google.com/file/d/.../preview OR direct PDF link" 
+                            className="w-full p-3 border rounded-xl font-mono text-xs" 
+                            value={bookForm.fileUrl} 
+                            onChange={e => setBookForm({...bookForm, fileUrl: e.target.value})} 
+                          />
+                          <div className="flex items-center gap-2">
+                             <span className="text-xs text-gray-400 font-bold uppercase">OR Upload PDF</span>
+                             <input type="file" accept=".pdf" className="text-xs text-gray-500" onChange={(e) => handleFileUpload(e, 'file')} />
+                          </div>
                        </div>
+
+                       <textarea 
+                         placeholder="Book Description & details..." 
+                         className="w-full p-3 border rounded-xl h-24 text-sm" 
+                         value={bookForm.description} 
+                         onChange={e => setBookForm({...bookForm, description: e.target.value})} 
+                       />
                     </>
                  )}
 
                  {(activeTab === 'NOTES' || activeTab === 'LESSON_PLANS') && (
                     <>
-                       <input 
-                         type="text" 
-                         placeholder={activeTab === 'LESSON_PLANS' ? "Lesson Plan Title (e.g. Class 10 Math Chapter 1 Lesson Plan)" : "Note Title (e.g. Class 10 Physics Chapter 1 Notes)"} 
-                         className="w-full p-3 border rounded-xl font-bold text-gray-900" 
-                         value={noteForm.title} 
-                         onChange={e => setNoteForm({...noteForm, title: e.target.value})} 
-                       />
-
-                       <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase">Board / Syllabus</label>
-                            <select 
-                              className="w-full p-3 border rounded-xl bg-white font-medium text-sm"
-                              value={noteForm.board}
-                              onChange={e => setNoteForm({...noteForm, board: e.target.value})}
-                            >
-                              <option value="">Select Board / Syllabus...</option>
-                              {curriculum.syllabuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                            </select>
-                            <input type="text" placeholder="Or type Board manually" className="w-full p-2 border rounded-lg text-xs mt-1" value={noteForm.board} onChange={e => setNoteForm({...noteForm, board: e.target.value})} />
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase">Resource Type</label>
-                            <input 
-                              type="text" 
-                              placeholder="Type (e.g. Book Notes, ECAT, NTS)" 
-                              className="w-full p-3 border rounded-xl" 
-                              value={activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : noteForm.noteType} 
-                              onChange={e => setNoteForm({...noteForm, noteType: e.target.value})} 
-                              disabled={activeTab === 'LESSON_PLANS'} 
-                            />
-                          </div>
-                       </div>
-
-                       <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase">Grade / Class</label>
-                            <select 
-                              className="w-full p-3 border rounded-xl bg-white font-medium text-sm"
-                              value={noteForm.grade}
-                              onChange={e => setNoteForm({...noteForm, grade: e.target.value})}
-                            >
-                              <option value="">Select Grade / Class...</option>
-                              {curriculum.classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                            </select>
-                            <input type="text" placeholder="Or type Grade manually" className="w-full p-2 border rounded-lg text-xs mt-1" value={noteForm.grade} onChange={e => setNoteForm({...noteForm, grade: e.target.value})} />
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase">Subject</label>
-                            <input type="text" placeholder="Subject (e.g. Mathematics)" className="w-full p-3 border rounded-xl" value={noteForm.subject} onChange={e => setNoteForm({...noteForm, subject: e.target.value})} />
-                          </div>
-                       </div>
-
-                       <div className="grid grid-cols-2 gap-4">
-                          <input type="text" placeholder="Book / Textbook Name (optional)" className="w-full p-3 border rounded-xl" value={noteForm.book} onChange={e => setNoteForm({...noteForm, book: e.target.value})} />
-                          <input type="text" placeholder="Author / Publisher (e.g. Punjab Textbook Board)" className="w-full p-3 border rounded-xl" value={noteForm.author} onChange={e => setNoteForm({...noteForm, author: e.target.value})} />
-                       </div>
-
-                       <input type="text" placeholder="Resources / Sources (comma-separated, e.g. KIPS, PGC, Star)" className="w-full p-3 border rounded-xl" value={noteForm.resource} onChange={e => setNoteForm({...noteForm, resource: e.target.value})} />
+                       <input type="text" placeholder="Title" className="w-full p-3 border rounded-xl font-bold" value={noteForm.title} onChange={e => setNoteForm({...noteForm, title: e.target.value})} />
                        
-                       <textarea placeholder="Detailed Description / Summary of the content..." className="w-full p-3 border rounded-xl h-24" value={noteForm.description} onChange={e => setNoteForm({...noteForm, description: e.target.value})} />
-                       
-                       {/* File Upload Zone */}
-                       <div className="space-y-3 pt-2">
-                         <label className="text-[10px] font-bold text-gray-400 uppercase">Upload PDF / Document File or Provide Drive Link</label>
-                         <div className="border-2 border-dashed border-indigo-200 bg-indigo-50/50 rounded-xl p-5 text-center cursor-pointer hover:border-indigo-400 transition-colors" onClick={() => document.getElementById('note-file')?.click()}>
-                            <p className="text-sm font-bold text-indigo-700">{noteForm.fileUrl ? `Selected File / Link: ${noteForm.fileUrl.substring(0, 45)}...` : '📄 Click to Upload PDF / Word File'}</p>
-                            <p className="text-xs text-slate-400 mt-1">Supports PDF, DOC, DOCX up to 10MB</p>
-                            <input id="note-file" type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'file')} />
-                         </div>
-                         <div className="flex items-center gap-2">
-                           <span className="text-xs text-gray-400 font-bold uppercase">OR</span>
-                           <input type="url" placeholder="Paste Google Drive / External File URL (https://drive.google.com/...)" className="w-full p-3 border rounded-xl text-sm font-mono" value={noteForm.fileUrl} onChange={e => setNoteForm({...noteForm, fileUrl: e.target.value})} />
-                         </div>
+                       <div className="grid grid-cols-2 gap-4">
+                          <input type="text" placeholder="Subject" className="w-full p-3 border rounded-xl" value={noteForm.subject} onChange={e => setNoteForm({...noteForm, subject: e.target.value})} />
+                          <input type="text" placeholder="Grade/Class (e.g. 9, 10, 11)" className="w-full p-3 border rounded-xl" value={noteForm.grade} onChange={e => setNoteForm({...noteForm, grade: e.target.value})} />
                        </div>
+
+                       <div className="grid grid-cols-2 gap-4">
+                          <input type="text" placeholder="Board / Syllabus" className="w-full p-3 border rounded-xl" value={noteForm.board} onChange={e => setNoteForm({...noteForm, board: e.target.value})} />
+                          <input type="text" placeholder="Note Type (e.g. Book Notes, Solved Exercise)" className="w-full p-3 border rounded-xl" value={noteForm.noteType} onChange={e => setNoteForm({...noteForm, noteType: e.target.value})} />
+                       </div>
+
+                       <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase">PDF / Document Link</label>
+                          <input type="url" placeholder="https://drive.google.com/.../preview or PDF URL" className="w-full p-3 border rounded-xl text-xs font-mono" value={noteForm.fileUrl} onChange={e => setNoteForm({...noteForm, fileUrl: e.target.value})} />
+                          <div className="flex items-center gap-2">
+                             <span className="text-xs text-gray-400 font-bold uppercase">OR</span>
+                             <input type="file" accept=".pdf,.doc,.docx" className="text-xs text-gray-500" onChange={(e) => handleFileUpload(e, 'file')} />
+                          </div>
+                       </div>
+
+                       <textarea placeholder="Description" className="w-full p-3 border rounded-xl h-24 text-sm" value={noteForm.description} onChange={e => setNoteForm({...noteForm, description: e.target.value})} />
                     </>
                  )}
 
                  {activeTab === 'PAPERS' && (
                     <>
-                       <input type="text" placeholder="Paper Title" className="w-full p-3 border rounded-xl" value={paperForm.title} onChange={e => setPaperForm({...paperForm, title: e.target.value})} />
+                       <input type="text" placeholder="Paper Title (e.g. Physics 9th 2024 Group 1)" className="w-full p-3 border rounded-xl font-bold" value={paperForm.title} onChange={e => setPaperForm({...paperForm, title: e.target.value})} />
                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase">Board / Syllabus</label>
-                            <select 
-                              className="w-full p-3 border rounded-xl bg-white font-medium text-sm"
-                              value={paperForm.board}
-                              onChange={e => setPaperForm({...paperForm, board: e.target.value})}
-                            >
-                              <option value="">Select Board / Syllabus...</option>
-                              {curriculum.syllabuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                            </select>
-                            <input type="text" placeholder="Or type Board manually" className="w-full p-2 border rounded-lg text-xs mt-1" value={paperForm.board} onChange={e => setPaperForm({...paperForm, board: e.target.value})} />
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase">Year</label>
-                            <input type="number" placeholder="Year" className="w-full p-3 border rounded-xl" value={paperForm.year} onChange={e => setPaperForm({...paperForm, year: parseInt(e.target.value)})} />
-                          </div>
+                          <input type="text" placeholder="Subject" className="w-full p-3 border rounded-xl" value={paperForm.subject} onChange={e => setPaperForm({...paperForm, subject: e.target.value})} />
+                          <input type="number" placeholder="Year" className="w-full p-3 border rounded-xl" value={paperForm.year} onChange={e => setPaperForm({...paperForm, year: parseInt(e.target.value) || 2024})} />
                        </div>
                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase">Level / Grade</label>
-                            <select 
-                              className="w-full p-3 border rounded-xl bg-white font-medium text-sm"
-                              value={paperForm.level}
-                              onChange={e => setPaperForm({...paperForm, level: e.target.value})}
-                            >
-                              <option value="">Select Level / Grade...</option>
-                              {curriculum.classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                            </select>
-                            <input type="text" placeholder="Or type Level manually" className="w-full p-2 border rounded-lg text-xs mt-1" value={paperForm.level} onChange={e => setPaperForm({...paperForm, level: e.target.value})} />
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase">Subject</label>
-                            <input type="text" placeholder="Subject" className="w-full p-3 border rounded-xl" value={paperForm.subject} onChange={e => setPaperForm({...paperForm, subject: e.target.value})} />
-                          </div>
+                          <input type="text" placeholder="Board (e.g. BISE Lahore)" className="w-full p-3 border rounded-xl" value={paperForm.board} onChange={e => setPaperForm({...paperForm, board: e.target.value})} />
+                          <input type="text" placeholder="Class / Level (e.g. 9, 10)" className="w-full p-3 border rounded-xl" value={paperForm.level} onChange={e => setPaperForm({...paperForm, level: e.target.value})} />
                        </div>
-                       
-                       <div className="space-y-3">
-                         <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-indigo-400 transition-colors" onClick={() => document.getElementById('paper-file')?.click()}>
-                            <p className="text-sm font-bold text-gray-600">{paperForm.fileUrl ? `Selected File / Link: ${paperForm.fileUrl.substring(0, 40)}...` : '📄 Click to Upload Past Paper PDF'}</p>
-                            <input id="paper-file" type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'file')} />
-                         </div>
-                         <div className="flex items-center gap-2">
-                           <span className="text-xs text-gray-400 font-bold uppercase">OR</span>
-                           <input type="url" placeholder="Paste Google Drive / External PDF Link (https://drive.google.com/...)" className="w-full p-3 border rounded-xl text-sm font-mono" value={paperForm.fileUrl} onChange={e => setPaperForm({...paperForm, fileUrl: e.target.value})} />
-                         </div>
+                       <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase">Past Paper PDF Link</label>
+                          <input type="url" placeholder="https://drive.google.com/.../preview or PDF URL" className="w-full p-3 border rounded-xl text-xs font-mono" value={paperForm.fileUrl} onChange={e => setPaperForm({...paperForm, fileUrl: e.target.value})} />
+                          <div className="flex items-center gap-2">
+                             <span className="text-xs text-gray-400 font-bold uppercase">OR</span>
+                             <input type="file" accept=".pdf" className="text-xs text-gray-500" onChange={(e) => handleFileUpload(e, 'file')} />
+                          </div>
                        </div>
                     </>
                  )}
               </div>
 
-              <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
-                 <button onClick={() => setIsModalOpen(false)} className="px-6 py-2 text-gray-500 font-bold hover:bg-gray-200 rounded-lg">Cancel</button>
-                 <button onClick={handleSave} className="px-8 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shadow-lg">Save to Library</button>
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50">
+                 <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 border rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-100">Cancel</button>
+                 <button onClick={handleSave} className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700">Save</button>
               </div>
            </div>
         </div>

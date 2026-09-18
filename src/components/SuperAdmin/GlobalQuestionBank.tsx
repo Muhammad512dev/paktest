@@ -83,6 +83,8 @@ const GlobalQuestionBank: React.FC = () => {
   const [isSequenceImportModalOpen, setIsSequenceImportModalOpen] = useState(false);
   const [isSourceDropdownOpen, setIsSourceDropdownOpen] = useState(false);
   const [importRows, setImportRows] = useState<any[]>([]);
+  const [batchBoardOverride, setBatchBoardOverride] = useState<string>('');
+  const [batchClassOverride, setBatchClassOverride] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sequenceFileInputRef = useRef<HTMLInputElement>(null);
   const diagramFileInputRef = useRef<HTMLInputElement>(null);
@@ -427,8 +429,8 @@ const GlobalQuestionBank: React.FC = () => {
 
     for (let i = 0; i < importRows.length; i++) {
       const row = importRows[i];
-      const board = row.Board || getSyllabusName(selSyllabusId) || 'General';
-      const grade = String(row.Grade || getClassName(selClassId) || 'General');
+      const board = row.Board || (batchBoardOverride && batchBoardOverride !== '__AUTO__' ? batchBoardOverride : undefined) || getSyllabusName(selSyllabusId) || 'General';
+      const grade = String(row.Grade || (batchClassOverride && batchClassOverride !== '__AUTO__' ? batchClassOverride : undefined) || getClassName(selClassId) || 'General');
       const subject = row.Subject || getSubjectName(selSubjectId) || 'General';
       const chapter = row.Chapter || getChapterName(selChapterId) || 'General';
       const topic = row.Topic || newQuestion.topic || 'General';
@@ -982,25 +984,81 @@ const GlobalQuestionBank: React.FC = () => {
       {/* Synchronization Screen */}
       {isSyncScreenOpen && (
         <div className="fixed inset-0 z-[70] bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4">
-           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden">
-              <div className="px-8 py-5 border-b border-gray-200 flex justify-between items-center bg-indigo-600 text-white">
+           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[88vh] flex flex-col overflow-hidden">
+              <div className="px-8 py-4 border-b border-gray-200 flex justify-between items-center bg-indigo-600 text-white">
                  <div>
-                    <h3 className="font-bold text-xl flex items-center gap-2 tracking-tight"><RefreshCw size={24} className={isSyncing ? "animate-spin" : ""}/> Data Synchronization Engine</h3>
-                    <p className="text-xs text-indigo-100 font-medium uppercase tracking-widest mt-1">Reviewing {importRows.length} items for curriculum alignment</p>
+                    <h3 className="font-bold text-xl flex items-center gap-2 tracking-tight"><RefreshCw size={24} className={isSyncing ? "animate-spin" : ""}/> Question Import & Curriculum Mapping</h3>
+                    <p className="text-xs text-indigo-100 font-medium mt-0.5">Review, edit Board/Class names, or map to existing curriculum</p>
                  </div>
                  <button onClick={() => setIsSyncScreenOpen(false)} className="p-2 hover:bg-white/20 rounded-full transition-colors"><X size={24}/></button>
               </div>
 
+              {/* Quick Batch Mapping Toolbar */}
+              <div className="bg-slate-50 border-b border-slate-200 px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+                 <div className="flex flex-wrap items-center gap-4">
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                       <Filter size={14} className="text-indigo-600" /> Batch Assign:
+                    </span>
+                    
+                    {/* Batch Board Selection */}
+                    <div className="flex items-center gap-2">
+                       <label className="text-xs font-medium text-slate-500">Board / Syllabus:</label>
+                       <select
+                          value={batchBoardOverride}
+                          onChange={(e) => {
+                             const val = e.target.value;
+                             setBatchBoardOverride(val);
+                             if (val && val !== '__AUTO__') {
+                                setImportRows(prev => prev.map(r => ({ ...r, Board: val })));
+                             }
+                          }}
+                          className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                       >
+                          <option value="">Keep From File / Individual</option>
+                          <optgroup label="Select from System Curriculum">
+                             {syllabuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                          </optgroup>
+                       </select>
+                    </div>
+
+                    {/* Batch Class Selection */}
+                    <div className="flex items-center gap-2">
+                       <label className="text-xs font-medium text-slate-500">Class / Grade:</label>
+                       <select
+                          value={batchClassOverride}
+                          onChange={(e) => {
+                             const val = e.target.value;
+                             setBatchClassOverride(val);
+                             if (val && val !== '__AUTO__') {
+                                setImportRows(prev => prev.map(r => ({ ...r, Grade: val })));
+                             }
+                          }}
+                          className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                       >
+                          <option value="">Keep From File / Individual</option>
+                          <optgroup label="Select from System Classes">
+                             {Array.from(new Set(classes.map(c => c.name))).map(cName => <option key={cName} value={cName}>{cName}</option>)}
+                          </optgroup>
+                       </select>
+                    </div>
+                 </div>
+
+                 <span className="text-xs text-slate-500 font-bold bg-white px-3 py-1 rounded-full border border-slate-200">
+                    {importRows.length} Questions Ready
+                 </span>
+              </div>
+
               <div className="flex-1 overflow-auto p-0">
                  <table className="w-full text-left border-collapse min-w-[1200px]">
-                    <thead className="bg-slate-50 border-b border-gray-200 sticky top-0 z-10">
+                    <thead className="bg-slate-100 border-b border-gray-200 sticky top-0 z-10">
                        <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                          <th className="px-6 py-4 border-r border-gray-200">Status</th>
-                          <th className="px-6 py-4 border-r border-gray-200">Question Content</th>
-                          <th className="px-6 py-4 border-r border-gray-200">Board/Grade</th>
-                          <th className="px-6 py-4 border-r border-gray-200">Subject</th>
-                          <th className="px-6 py-4 border-r border-gray-200">Chapter/Topic</th>
-                          <th className="px-6 py-4">Marks/Diff</th>
+                          <th className="px-5 py-3 border-r border-gray-200 w-28">Status</th>
+                          <th className="px-5 py-3 border-r border-gray-200">Question Content</th>
+                          <th className="px-5 py-3 border-r border-gray-200 w-64">Board / Syllabus (Click to Edit)</th>
+                          <th className="px-5 py-3 border-r border-gray-200 w-44">Class / Grade</th>
+                          <th className="px-5 py-3 border-r border-gray-200">Subject</th>
+                          <th className="px-5 py-3 border-r border-gray-200">Chapter/Topic</th>
+                          <th className="px-5 py-3 w-28">Marks/Diff</th>
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -1013,36 +1071,124 @@ const GlobalQuestionBank: React.FC = () => {
 
                           return (
                              <tr key={i} className="hover:bg-slate-50 transition-colors">
-                                <td className="px-6 py-4 border-r border-gray-100 whitespace-nowrap">
+                                <td className="px-5 py-3 border-r border-gray-100 whitespace-nowrap">
                                    {allValid ? (
                                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 text-green-700 text-[10px] font-bold border border-green-200 uppercase">
-                                         <CheckCircle size={12} /> Map Ready
+                                         <CheckCircle size={12} /> Matched
                                       </span>
                                    ) : (
-                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-200 uppercase">
+                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-200 uppercase">
                                          <Database size={12} /> Auto-Create
                                       </span>
                                    )}
                                 </td>
-                                <td className="px-6 py-4 border-r border-gray-100 max-w-md">
-                                   <p className="text-sm font-semibold text-gray-900 truncate">{row.QuestionText_EN || row.Question}</p>
-                                   <p className="text-xs text-gray-500 mt-0.5 uppercase font-bold tracking-tighter">{row.Type}</p>
+                                <td className="px-5 py-3 border-r border-gray-100 max-w-md">
+                                   <p className="text-sm font-semibold text-gray-900 truncate">{row.QuestionText_EN || row.Question || row.QuestionText_UR || row.QuestionUrdu}</p>
+                                   <p className="text-xs text-gray-500 mt-0.5 uppercase font-bold tracking-tighter">{row.Type || 'MCQ'}</p>
                                 </td>
-                                <td className="px-6 py-4 border-r border-gray-100 whitespace-nowrap">
-                                   <p className={`text-sm font-bold ${sylExists ? 'text-gray-900' : 'text-indigo-600 underline decoration-dotted underline-offset-4'}`}>{row.Board || 'Default'}</p>
-                                   <p className={`text-xs ${clsExists ? 'text-gray-500' : 'text-indigo-400 italic'}`}>{row.Grade || 'General'}</p>
+                                
+                                {/* Editable Board Field */}
+                                <td className="px-5 py-3 border-r border-gray-100">
+                                   <div className="space-y-1">
+                                      <input 
+                                         type="text" 
+                                         value={row.Board || ''} 
+                                         onChange={(e) => {
+                                            const val = e.target.value;
+                                            setImportRows(prev => {
+                                               const next = [...prev];
+                                               next[i] = { ...next[i], Board: val };
+                                               return next;
+                                            });
+                                         }}
+                                         placeholder="e.g. PCTB / Punjab Board"
+                                         className="w-full bg-white border border-slate-200 hover:border-slate-300 focus:border-indigo-500 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 outline-none shadow-sm"
+                                      />
+                                      {syllabuses.length > 0 && !sylExists && (
+                                         <select
+                                            className="w-full bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-[10px] text-slate-500"
+                                            onChange={(e) => {
+                                               if (e.target.value) {
+                                                  const val = e.target.value;
+                                                  setImportRows(prev => {
+                                                     const next = [...prev];
+                                                     next[i] = { ...next[i], Board: val };
+                                                     return next;
+                                                  });
+                                               }
+                                            }}
+                                         >
+                                            <option value="">Or map to Curriculum Board...</option>
+                                            {syllabuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                                         </select>
+                                      )}
+                                   </div>
                                 </td>
-                                <td className="px-6 py-4 border-r border-gray-100 whitespace-nowrap">
-                                   <p className={`text-sm font-bold ${subExists ? 'text-gray-900' : 'text-indigo-600 underline decoration-dotted underline-offset-4'}`}>{row.Subject || 'General'}</p>
+
+                                {/* Editable Class / Grade Field */}
+                                <td className="px-5 py-3 border-r border-gray-100">
+                                   <div className="space-y-1">
+                                      <input 
+                                         type="text" 
+                                         value={row.Grade || ''} 
+                                         onChange={(e) => {
+                                            const val = e.target.value;
+                                            setImportRows(prev => {
+                                               const next = [...prev];
+                                               next[i] = { ...next[i], Grade: val };
+                                               return next;
+                                            });
+                                         }}
+                                         placeholder="e.g. 9 / Class 9"
+                                         className="w-full bg-white border border-slate-200 hover:border-slate-300 focus:border-indigo-500 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 outline-none shadow-sm"
+                                      />
+                                      {classes.length > 0 && !clsExists && (
+                                         <select
+                                            className="w-full bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-[10px] text-slate-500"
+                                            onChange={(e) => {
+                                               if (e.target.value) {
+                                                  const val = e.target.value;
+                                                  setImportRows(prev => {
+                                                     const next = [...prev];
+                                                     next[i] = { ...next[i], Grade: val };
+                                                     return next;
+                                                  });
+                                               }
+                                            }}
+                                         >
+                                            <option value="">Map to Class...</option>
+                                            {Array.from(new Set(classes.map(c => c.name))).map(cName => <option key={cName} value={cName}>{cName}</option>)}
+                                         </select>
+                                      )}
+                                   </div>
                                 </td>
-                                <td className="px-6 py-4 border-r border-gray-100 whitespace-nowrap">
-                                   <p className="text-sm font-medium text-gray-700">{row.Chapter || 'N/A'}</p>
-                                   <p className="text-xs text-gray-400 mt-0.5">{row.Topic || 'N/A'}</p>
+
+                                <td className="px-5 py-3 border-r border-gray-100 whitespace-nowrap">
+                                   <input 
+                                      type="text" 
+                                      value={row.Subject || ''} 
+                                      onChange={(e) => {
+                                         const val = e.target.value;
+                                         setImportRows(prev => {
+                                            const next = [...prev];
+                                            next[i] = { ...next[i], Subject: val };
+                                            return next;
+                                         });
+                                      }}
+                                      placeholder="Subject"
+                                      className="w-full bg-white border border-slate-200 hover:border-slate-300 focus:border-indigo-500 rounded-lg px-2.5 py-1 text-xs font-medium text-slate-800 outline-none"
+                                   />
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                   <div className="flex gap-2">
-                                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold border border-slate-200">{row.Marks}M</span>
-                                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold border border-slate-200 uppercase">{row.Difficulty}</span>
+                                
+                                <td className="px-5 py-3 border-r border-gray-100 whitespace-nowrap">
+                                   <p className="text-xs font-medium text-gray-700">{row.Chapter || 'N/A'}</p>
+                                   <p className="text-[10px] text-gray-400 mt-0.5">{row.Topic || 'N/A'}</p>
+                                </td>
+                                
+                                <td className="px-5 py-3 whitespace-nowrap">
+                                   <div className="flex gap-1.5">
+                                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold border border-slate-200">{row.Marks || 1}M</span>
+                                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold border border-slate-200 uppercase">{row.Difficulty || 'Medium'}</span>
                                    </div>
                                 </td>
                              </tr>
@@ -1052,24 +1198,24 @@ const GlobalQuestionBank: React.FC = () => {
                  </table>
               </div>
 
-              <div className="p-6 border-t border-gray-200 bg-slate-50 flex flex-col md:flex-row justify-between items-center gap-4">
+              <div className="p-5 border-t border-gray-200 bg-slate-50 flex flex-col md:flex-row justify-between items-center gap-4">
                  <div className="flex items-start gap-3 max-w-xl">
-                    <Info size={20} className="text-indigo-500 shrink-0 mt-0.5" />
+                    <Info size={18} className="text-indigo-500 shrink-0 mt-0.5" />
                     <p className="text-xs text-slate-600 leading-relaxed">
-                       <strong>Curriculum Sync Engine:</strong> Items marked with <span className="text-indigo-600 font-bold">Auto-Create</span> will automatically generate new Board, Grade, Subject, or Chapter nodes in your database. This ensures every question is properly categorized and accessible via the Generator Wizard.
+                       <strong>Curriculum Sync:</strong> You can edit shortcut Board names (e.g. PTB → PCTB) or map them directly to existing curriculum boards and classes above. Any new boards or classes will be safely auto-created in your curriculum.
                     </p>
                  </div>
                  <div className="flex gap-3 shrink-0">
-                    <button onClick={() => setIsSyncScreenOpen(false)} className="px-6 py-3 text-sm font-bold text-gray-500 hover:bg-gray-200 rounded-xl transition-colors">Discard Batch</button>
+                    <button onClick={() => setIsSyncScreenOpen(false)} className="px-5 py-2.5 text-xs font-bold text-gray-500 hover:bg-gray-200 rounded-xl transition-colors">Discard Batch</button>
                     <button 
                        disabled={isSyncing}
                        onClick={executeSynchronization}
-                       className="px-10 py-3 bg-indigo-600 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all disabled:opacity-50"
+                       className="px-8 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all disabled:opacity-50"
                     >
                        {isSyncing ? (
-                          <><Loader2 className="animate-spin" size={20}/> Synchronizing ({syncProgress}%)...</>
+                          <><Loader2 className="animate-spin" size={18}/> Synchronizing ({syncProgress}%)...</>
                        ) : (
-                          <><FileCheck size={20}/> Sync & Save to Repository</>
+                          <><FileCheck size={18}/> Sync & Save to Repository</>
                        )}
                     </button>
                  </div>

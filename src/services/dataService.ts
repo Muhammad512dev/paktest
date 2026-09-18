@@ -543,6 +543,14 @@ export const addBlog = async (data: any) => {
   });
   return handleResponse(res);
 };
+export const updateBlog = async (id: string, data: any) => {
+  const res = await fetch(`${API_URL}/api/blogs/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(data)
+  });
+  return handleResponse(res);
+};
 export const deleteBlog = async (id: string) => {
   const res = await fetch(`${API_URL}/api/blogs/${id}`, {
     method: 'DELETE',
@@ -566,6 +574,14 @@ export const getNotes = async (params?: { search?: string; subject?: string; gra
 export const addNote = async (data: any) => {
   const res = await fetch(`${API_URL}/api/notes`, {
     method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(data)
+  });
+  return handleResponse(res);
+};
+export const updateNote = async (id: string, data: any) => {
+  const res = await fetch(`${API_URL}/api/notes/${id}`, {
+    method: 'PUT',
     headers: getHeaders(),
     body: JSON.stringify(data)
   });
@@ -595,6 +611,14 @@ export const getPastPaperFilters = async (): Promise<{ boards: string[]; levels:
 export const addPastPaper = async (data: any) => {
   const res = await fetch(`${API_URL}/api/past-papers`, {
     method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(data)
+  });
+  return handleResponse(res);
+};
+export const updatePastPaper = async (id: string, data: any) => {
+  const res = await fetch(`${API_URL}/api/past-papers/${id}`, {
+    method: 'PUT',
     headers: getHeaders(),
     body: JSON.stringify(data)
   });

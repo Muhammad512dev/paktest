@@ -1022,6 +1022,20 @@ app.delete('/api/blogs/:id', authenticate, async (req: any, res: any) => {
     await prisma.blogPost.delete({ where: { id: req.params.id } });
     res.json({ success: true });
 });
+app.put('/api/blogs/:id', authenticate, async (req: any, res: any) => {
+    try {
+        if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+        const { id, createdAt, updatedAt, ...updateData } = req.body;
+        const updated = await prisma.blogPost.update({
+            where: { id: req.params.id },
+            data: updateData
+        });
+        res.json(updated);
+    } catch (e: any) {
+        console.error('Error updating blog:', e);
+        res.status(500).json({ error: e.message || 'Failed to update blog post' });
+    }
+});
 
 app.get('/api/notes', async (req: any, res: any) => {
     try {
@@ -1087,6 +1101,20 @@ app.delete('/api/notes/:id', authenticate, async (req: any, res: any) => {
     } catch (e: any) {
         console.error('Error deleting note:', e);
         res.status(500).json({ error: e.message || 'Failed to delete note' });
+    }
+});
+app.put('/api/notes/:id', authenticate, async (req: any, res: any) => {
+    try {
+        if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+        const { id, createdAt, updatedAt, ...updateData } = req.body;
+        const updated = await prisma.studyNote.update({
+            where: { id: req.params.id },
+            data: updateData
+        });
+        res.json(updated);
+    } catch (e: any) {
+        console.error('Error updating note:', e);
+        res.status(500).json({ error: e.message || 'Failed to update note' });
     }
 });
 
@@ -1171,6 +1199,21 @@ app.delete('/api/past-papers/:id', authenticate, async (req: any, res: any) => {
     } catch (e: any) {
         console.error('Error deleting past paper:', e);
         res.status(500).json({ error: e.message || 'Failed to delete past paper' });
+    }
+});
+app.put('/api/past-papers/:id', authenticate, async (req: any, res: any) => {
+    try {
+        if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+        const { id, createdAt, updatedAt, ...updateData } = req.body;
+        if (updateData.year) updateData.year = Number(updateData.year);
+        const updated = await prisma.pastPaper.update({
+            where: { id: req.params.id },
+            data: updateData
+        });
+        res.json(updated);
+    } catch (e: any) {
+        console.error('Error updating past paper:', e);
+        res.status(500).json({ error: e.message || 'Failed to update past paper' });
     }
 });
 

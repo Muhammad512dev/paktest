@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Search, BookOpen, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Search, BookOpen, ExternalLink, ChevronDown, Check, Filter, Layers, X } from 'lucide-react';
 import { getNotes, getPublicCurriculum } from '../../services/dataService';
 import { Syllabus, ClassLevel } from '../../types';
 
@@ -14,7 +14,21 @@ const Books: React.FC = () => {
   });
 
   const [selectedBoard, setSelectedBoard] = useState<string>('');
+  const [selectedGrade, setSelectedGrade] = useState<string>('');
+  const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
   const [selectedBookModal, setSelectedBookModal] = useState<any | null>(null);
+  const classDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (classDropdownRef.current && !classDropdownRef.current.contains(e.target as Node)) {
+        setIsClassDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -36,6 +50,7 @@ const Books: React.FC = () => {
         const data = await getNotes({
           search: searchTerm,
           board: selectedBoard,
+          grade: selectedGrade,
           noteType: 'Textbook'
         });
         setBooks(Array.isArray(data) ? data : []);
@@ -47,7 +62,7 @@ const Books: React.FC = () => {
       }
     }, 250);
     return () => clearTimeout(t);
-  }, [searchTerm, selectedBoard]);
+  }, [searchTerm, selectedBoard, selectedGrade]);
 
   // Extract deduplicated boards
   const availableBoards = useMemo(() => {
@@ -67,14 +82,52 @@ const Books: React.FC = () => {
     return list;
   }, [curriculum.syllabuses, books]);
 
+  // Extract deduplicated and sorted classes
+  const availableClasses = useMemo(() => {
+    const classSet = new Set<string>();
+
+    // From database books
+    books.forEach(b => {
+      if (b.grade && String(b.grade).trim()) {
+        classSet.add(String(b.grade).trim());
+      }
+    });
+
+    // From curriculum setup
+    if (curriculum.classes.length > 0) {
+      curriculum.classes.forEach(c => {
+        if (c.name && c.name.trim()) {
+          classSet.add(c.name.trim());
+        }
+      });
+    }
+
+    // Default common Pakistani classes if list is empty
+    if (classSet.size === 0) {
+      ['Pre-1', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '9-10', '11-12'].forEach(c => classSet.add(c));
+    }
+
+    // Custom sort: Pre-1, 1..12, compound
+    return Array.from(classSet).sort((a, b) => {
+      const numA = parseInt(a.replace(/[^0-9]/g, '')) || 0;
+      const numB = parseInt(b.replace(/[^0-9]/g, '')) || 0;
+      if (a.toLowerCase().includes('pre')) return -1;
+      if (b.toLowerCase().includes('pre')) return 1;
+      if (numA !== numB) return numA - numB;
+      return a.localeCompare(b);
+    });
+  }, [curriculum.classes, books]);
+
   // Dynamic URL Sync effect for Books
   useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
       const board = params.get('board') || '';
+      const grade = params.get('grade') || '';
       const bookId = params.get('bookId');
 
       setSelectedBoard(board);
+      setSelectedGrade(grade);
 
       if (bookId && books.length > 0) {
         const found = books.find(b => String(b.id) === String(bookId));
@@ -89,11 +142,13 @@ const Books: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [books]);
 
-  const updateRouteUrl = (newBoard: string, bookId?: string) => {
+  const updateRouteUrl = (newBoard: string, newGrade: string = selectedGrade, bookId?: string) => {
     setSelectedBoard(newBoard);
+    setSelectedGrade(newGrade);
 
     const params = new URLSearchParams();
     if (newBoard) params.set('board', newBoard);
+    if (newGrade) params.set('grade', newGrade);
     if (bookId) params.set('bookId', bookId);
 
     const queryString = params.toString();
@@ -105,43 +160,58 @@ const Books: React.FC = () => {
     if (openInNewTab) {
       const params = new URLSearchParams();
       if (book.board) params.set('board', book.board);
+      if (book.grade) params.set('grade', book.grade);
       params.set('bookId', book.id);
       window.open(`/books?${params.toString()}`, '_blank');
     } else {
       setSelectedBookModal(book);
-      updateRouteUrl(selectedBoard, book.id);
+      updateRouteUrl(selectedBoard, selectedGrade, book.id);
     }
   };
 
   const closeBookModal = () => {
     setSelectedBookModal(null);
-    updateRouteUrl(selectedBoard);
+    updateRouteUrl(selectedBoard, selectedGrade);
   };
 
   const filteredBooks = useMemo(() => {
     return books.filter(b => {
       if (selectedBoard && b.board && b.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return false;
+      if (selectedGrade && b.grade) {
+        const bg = String(b.grade).trim().toLowerCase();
+        const sg = selectedGrade.trim().toLowerCase();
+        if (bg !== sg && !bg.includes(sg)) return false;
+      }
       return true;
     });
-  }, [books, selectedBoard]);
+  }, [books, selectedBoard, selectedGrade]);
 
   return (
     <div className="py-6 sm:py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
       {/* Breadcrumb Navigation */}
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-          <span className="cursor-pointer hover:text-indigo-600" onClick={() => updateRouteUrl('')}>Books & Key Books</span>
+          <span className="cursor-pointer hover:text-indigo-600" onClick={() => updateRouteUrl('', '')}>Books & Key Books</span>
           {selectedBoard && <span>/</span>}
           {selectedBoard && <span className="text-slate-900 font-bold">{selectedBoard}</span>}
+          {selectedGrade && <span>/</span>}
+          {selectedGrade && <span className="text-indigo-600 font-bold">Class {selectedGrade}</span>}
           {selectedBookModal && <span>/</span>}
           {selectedBookModal && <span className="text-indigo-600 font-bold line-clamp-1">{selectedBookModal.title}</span>}
         </div>
 
         {selectedBookModal ? (
           <div>
-            <span className="text-xs font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
-              {selectedBookModal.board || 'TEXTBOOK'}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+                {selectedBookModal.board || 'TEXTBOOK'}
+              </span>
+              {selectedBookModal.grade && (
+                <span className="text-xs font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                  Class {selectedBookModal.grade}
+                </span>
+              )}
+            </div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2 leading-tight">
               {selectedBookModal.title}
             </h1>
@@ -215,54 +285,140 @@ const Books: React.FC = () => {
           )}
         </div>
       ) : (
-        /* Books Catalog & Board Selection */
+        /* Books Catalog, Board Selection & Class Dropdown Menu */
         <div className="space-y-6">
-          {/* Board Selector */}
-          <div className="space-y-3">
-            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500">Filter by Educational Board / Syllabus:</h2>
-            <div className="flex flex-wrap gap-2.5 sm:gap-3">
-              <button
-                onClick={() => updateRouteUrl('')}
-                className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-sm ${
-                  !selectedBoard ? 'bg-indigo-600 text-white shadow-indigo-200 scale-105' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                ALL BOARDS
-              </button>
-              {availableBoards.map(board => (
+          {/* Top Bar: Board Selector & Class Filter Menu */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-50/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm">
+            {/* Board Selector */}
+            <div className="space-y-2 flex-1">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">Board / Syllabus:</h2>
+              <div className="flex flex-wrap gap-2">
                 <button
-                  key={board.id}
-                  onClick={() => updateRouteUrl(board.name)}
-                  className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-sm ${
-                    selectedBoard.toLowerCase() === board.name.toLowerCase() ? 'bg-indigo-600 text-white shadow-indigo-200 scale-105' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  onClick={() => updateRouteUrl('')}
+                  className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all shadow-sm ${
+                    !selectedBoard ? 'bg-indigo-600 text-white shadow-indigo-200 scale-105' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
                   }`}
                 >
-                  {board.name}
+                  ALL BOARDS
                 </button>
-              ))}
+                {availableBoards.map(board => (
+                  <button
+                    key={board.id}
+                    onClick={() => updateRouteUrl(board.name)}
+                    className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all shadow-sm ${
+                      selectedBoard.toLowerCase() === board.name.toLowerCase() ? 'bg-indigo-600 text-white shadow-indigo-200 scale-105' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    {board.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Class Filter Dropdown Menu */}
+            <div className="relative shrink-0" ref={classDropdownRef}>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Filter By Class:</h2>
+              <button
+                type="button"
+                onClick={() => setIsClassDropdownOpen(!isClassDropdownOpen)}
+                className={`w-full sm:w-56 flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all shadow-sm ${
+                  selectedGrade 
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-emerald-100' 
+                    : 'bg-white text-slate-700 border-slate-300 hover:border-slate-400'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Layers size={15} />
+                  <span>{selectedGrade ? `Class: ${selectedGrade}` : 'All Classes / Grades'}</span>
+                </div>
+                <ChevronDown size={16} className={`transition-transform duration-200 ${isClassDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Class Dropdown Menu Modal / Panel */}
+              {isClassDropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 p-3 space-y-2 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 px-1">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">Select Class</span>
+                    {selectedGrade && (
+                      <button 
+                        onClick={() => { updateRouteUrl(selectedBoard, ''); setIsClassDropdownOpen(false); }}
+                        className="text-[11px] font-bold text-red-500 hover:text-red-700"
+                      >
+                        Clear Filter
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-60 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                    <button
+                      onClick={() => { updateRouteUrl(selectedBoard, ''); setIsClassDropdownOpen(false); }}
+                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                        !selectedGrade ? 'bg-indigo-50 text-indigo-700 font-black' : 'text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>All Classes</span>
+                      {!selectedGrade && <Check size={14} className="text-indigo-600" />}
+                    </button>
+
+                    {availableClasses.map(cls => (
+                      <button
+                        key={cls}
+                        onClick={() => { updateRouteUrl(selectedBoard, cls); setIsClassDropdownOpen(false); }}
+                        className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                          selectedGrade.toLowerCase() === cls.toLowerCase() 
+                            ? 'bg-emerald-50 text-emerald-700 font-black' 
+                            : 'text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span>Class {cls}</span>
+                        {selectedGrade.toLowerCase() === cls.toLowerCase() && (
+                          <Check size={14} className="text-emerald-600" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Search bar */}
+          {/* Search bar & Active Filter Badges */}
           <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-3 justify-between items-center">
             <div className="relative flex-1 w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
                 type="text" 
-                placeholder="Search books by title..." 
+                placeholder="Search books by title, subject, or author..." 
                 className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
-            {selectedBoard && (
-              <button 
-                onClick={() => updateRouteUrl('')} 
-                className="w-full sm:w-auto px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
-              >
-                Clear Board Filter
-              </button>
-            )}
+
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              {selectedBoard && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold">
+                  <span>Board: {selectedBoard}</span>
+                  <X size={13} className="cursor-pointer hover:text-indigo-900" onClick={() => updateRouteUrl('', selectedGrade)} />
+                </span>
+              )}
+
+              {selectedGrade && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold">
+                  <span>Class {selectedGrade}</span>
+                  <X size={13} className="cursor-pointer hover:text-emerald-900" onClick={() => updateRouteUrl(selectedBoard, '')} />
+                </span>
+              )}
+
+              {(selectedBoard || selectedGrade || searchTerm) && (
+                <button 
+                  onClick={() => { setSearchTerm(''); updateRouteUrl('', ''); }} 
+                  className="w-full sm:w-auto px-3.5 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
+                >
+                  Reset Filters
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Book Cards Grid */}
@@ -280,11 +436,20 @@ const Books: React.FC = () => {
                   <h3 className="font-bold text-slate-900 text-base group-hover:text-indigo-600 transition-colors line-clamp-2">
                     {book.title}
                   </h3>
-                  {book.board && (
-                    <span className="inline-block mt-2 text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md">
-                      {book.board}
-                    </span>
-                  )}
+
+                  <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2">
+                    {book.grade && (
+                      <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md">
+                        Class {book.grade}
+                      </span>
+                    )}
+                    {book.board && (
+                      <span className="text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
+                        {book.board}
+                      </span>
+                    )}
+                  </div>
+
                   {book.description && (
                     <p className="text-xs text-slate-400 mt-2 line-clamp-2 font-medium">
                       {book.description}
@@ -332,8 +497,8 @@ const Books: React.FC = () => {
           {!isLoading && !error && filteredBooks.length === 0 && (
             <div className="py-16 text-center text-slate-400 bg-white rounded-3xl border border-slate-200">
               <BookOpen size={48} className="mx-auto mb-3 opacity-20" />
-              <p className="font-bold text-slate-600">No books uploaded yet for this selection.</p>
-              <button onClick={() => updateRouteUrl('')} className="mt-4 text-xs font-bold text-indigo-600 hover:underline">
+              <p className="font-bold text-slate-600">No books found for this class or board filter.</p>
+              <button onClick={() => updateRouteUrl('', '')} className="mt-4 text-xs font-bold text-indigo-600 hover:underline">
                 View all books
               </button>
             </div>

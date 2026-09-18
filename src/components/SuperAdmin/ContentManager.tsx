@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  getBlogs, addBlog, deleteBlog,
-  getNotes, addNote, deleteNote,
-  getPastPapers, addPastPaper, deletePastPaper, uploadFile,
+  getBlogs, addBlog, updateBlog, deleteBlog,
+  getNotes, addNote, updateNote, deleteNote,
+  getPastPapers, addPastPaper, updatePastPaper, deletePastPaper, uploadFile,
   getPublicCurriculum
 } from '../../services/dataService';
 import { 
-  Plus, Trash2, X, FileText, Upload, BookOpen, Clock, 
+  Plus, Trash2, Edit2, X, FileText, Upload, BookOpen, Clock, 
   Calendar, CheckSquare, Image as ImageIcon, Download, 
-  FileSpreadsheet, AlertTriangle, CheckCircle, HelpCircle 
+  FileSpreadsheet, AlertTriangle, CheckCircle, HelpCircle, Layers, ExternalLink
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Syllabus, ClassLevel } from '../../types';
@@ -17,6 +17,8 @@ const ContentManager: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'BLOG' | 'NOTES' | 'LESSON_PLANS' | 'BOOKS' | 'PAPERS'>('BLOG');
   const [items, setItems] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any | null>(null);
+  
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importReport, setImportReport] = useState<{
     total: number;
@@ -60,42 +62,122 @@ const ContentManager: React.FC = () => {
     loadData();
   }, [activeTab]);
 
-  const handleSave = async () => {
+  const handleOpenAddModal = () => {
+    setEditingItem(null);
+    setBlogForm({ title: '', excerpt: '', content: '', category: 'EdTech', author: '', image: '' });
+    setNoteForm({ title: '', subject: '', grade: '', board: '', noteType: '', resource: '', book: '', author: '', fileUrl: '', description: '' });
+    setBookForm({ title: '', board: '', grade: '', subject: '', fileUrl: '', description: '' });
+    setPaperForm({ title: '', year: new Date().getFullYear(), board: '', level: '', subject: '', resource: '', fileUrl: '' });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (item: any) => {
+    setEditingItem(item);
     if (activeTab === 'BLOG') {
-       if (!blogForm.title) return;
-       await addBlog({ ...blogForm, date: new Date(), readTime: '5 min read' });
-       setBlogForm({ title: '', excerpt: '', content: '', category: 'EdTech', author: '', image: '' });
-    } else if (activeTab === 'NOTES' || activeTab === 'LESSON_PLANS') {
-       if (!noteForm.title) return;
-       await addNote({
-         ...noteForm,
-         noteType: activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : (noteForm.noteType || 'Book Notes')
-       });
-       setNoteForm({ title: '', subject: '', grade: '', board: '', noteType: '', resource: '', book: '', author: '', fileUrl: '', description: '' });
+      setBlogForm({
+        title: item.title || '',
+        excerpt: item.excerpt || '',
+        content: item.content || '',
+        category: item.category || 'EdTech',
+        author: item.author || '',
+        image: item.image || ''
+      });
     } else if (activeTab === 'BOOKS') {
-       if (!bookForm.title) return;
-       await addNote({
-         title: bookForm.title,
-         board: bookForm.board,
-         grade: bookForm.grade,
-         subject: bookForm.subject,
-         fileUrl: bookForm.fileUrl,
-         description: bookForm.description,
-         noteType: 'Textbook'
-       });
-       setBookForm({ title: '', board: '', grade: '', subject: '', fileUrl: '', description: '' });
-    } else {
-       if (!paperForm.title) return;
-       const { resource, ...cleanPaperData } = paperForm;
-       await addPastPaper({ ...cleanPaperData, year: parseInt(paperForm.year as any) });
-       setPaperForm({ title: '', year: new Date().getFullYear(), board: '', level: '', subject: '', resource: '', fileUrl: '' });
+      setBookForm({
+        title: item.title || '',
+        board: item.board || '',
+        grade: item.grade || '',
+        subject: item.subject || '',
+        fileUrl: item.fileUrl || '',
+        description: item.description || ''
+      });
+    } else if (activeTab === 'NOTES' || activeTab === 'LESSON_PLANS') {
+      setNoteForm({
+        title: item.title || '',
+        subject: item.subject || '',
+        grade: item.grade || '',
+        board: item.board || '',
+        noteType: item.noteType || (activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : 'Book Notes'),
+        resource: item.resource || '',
+        book: item.book || '',
+        author: item.author || '',
+        fileUrl: item.fileUrl || '',
+        description: item.description || ''
+      });
+    } else if (activeTab === 'PAPERS') {
+      setPaperForm({
+        title: item.title || '',
+        year: item.year || new Date().getFullYear(),
+        board: item.board || '',
+        level: item.level || '',
+        subject: item.subject || '',
+        resource: item.resource || '',
+        fileUrl: item.fileUrl || ''
+      });
     }
-    setIsModalOpen(false);
-    loadData();
+    setIsModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    try {
+      if (activeTab === 'BLOG') {
+         if (!blogForm.title) return alert("Title is required");
+         if (editingItem) {
+           await updateBlog(editingItem.id, { ...blogForm });
+         } else {
+           await addBlog({ ...blogForm, date: new Date(), readTime: '5 min read' });
+         }
+         setBlogForm({ title: '', excerpt: '', content: '', category: 'EdTech', author: '', image: '' });
+      } else if (activeTab === 'NOTES' || activeTab === 'LESSON_PLANS') {
+         if (!noteForm.title) return alert("Title is required");
+         const payload = {
+           ...noteForm,
+           noteType: activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : (noteForm.noteType || 'Book Notes')
+         };
+         if (editingItem) {
+           await updateNote(editingItem.id, payload);
+         } else {
+           await addNote(payload);
+         }
+         setNoteForm({ title: '', subject: '', grade: '', board: '', noteType: '', resource: '', book: '', author: '', fileUrl: '', description: '' });
+      } else if (activeTab === 'BOOKS') {
+         if (!bookForm.title) return alert("Book title is required");
+         const payload = {
+           title: bookForm.title,
+           board: bookForm.board,
+           grade: bookForm.grade,
+           subject: bookForm.subject,
+           fileUrl: bookForm.fileUrl,
+           description: bookForm.description,
+           noteType: 'Textbook'
+         };
+         if (editingItem) {
+           await updateNote(editingItem.id, payload);
+         } else {
+           await addNote(payload);
+         }
+         setBookForm({ title: '', board: '', grade: '', subject: '', fileUrl: '', description: '' });
+      } else {
+         if (!paperForm.title) return alert("Paper title is required");
+         const { resource, ...cleanPaperData } = paperForm;
+         const payload = { ...cleanPaperData, year: parseInt(paperForm.year as any) };
+         if (editingItem) {
+           await updatePastPaper(editingItem.id, payload);
+         } else {
+           await addPastPaper(payload);
+         }
+         setPaperForm({ title: '', year: new Date().getFullYear(), board: '', level: '', subject: '', resource: '', fileUrl: '' });
+      }
+      setIsModalOpen(false);
+      setEditingItem(null);
+      await loadData();
+    } catch (err: any) {
+      alert(`Failed to save: ${err.message || 'Unknown error'}`);
+    }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this item?")) return;
+    if (!confirm("Are you sure you want to delete this item?")) return;
     if (activeTab === 'BLOG') await deleteBlog(id);
     else if (activeTab === 'NOTES' || activeTab === 'LESSON_PLANS' || activeTab === 'BOOKS') await deleteNote(id);
     else await deletePastPaper(id);
@@ -180,7 +262,6 @@ const ContentManager: React.FC = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Template");
 
-    // Optional reference sheet with existing system classes & boards
     if (curriculum.classes.length > 0 || curriculum.syllabuses.length > 0) {
       const refData = curriculum.classes.map(c => ({
         "Available Grade / Class": c.name,
@@ -221,16 +302,14 @@ const ContentManager: React.FC = () => {
         const missingClassSet = new Set<string>();
         const errorList: string[] = [];
 
-        // Known classes in database for verification
         const validClassNames = new Set(
           curriculum.classes.map(c => c.name.trim().toLowerCase().replace(/^(class|grade)\s*/i, ''))
         );
 
         for (let i = 0; i < rows.length; i++) {
           const row = rows[i];
-          const rowNum = i + 2; // considering 1-based index + header
+          const rowNum = i + 2;
 
-          // Extract standard column names (case-insensitive & flexible)
           const title = row.Title || row.title || row.Name || row.name;
           const subject = row.Subject || row.subject || '';
           const grade = String(row.Grade || row.grade || row.Class || row.class || row.Level || row.level || '').trim();
@@ -246,7 +325,6 @@ const ContentManager: React.FC = () => {
             continue;
           }
 
-          // Check if Class / Grade is valid or missing in curriculum
           if (grade) {
             const cleanGrade = grade.toLowerCase().replace(/^(class|grade)\s*/i, '');
             if (curriculum.classes.length > 0 && !validClassNames.has(cleanGrade) && !validClassNames.has(grade.toLowerCase())) {
@@ -276,7 +354,6 @@ const ContentManager: React.FC = () => {
                 fileUrl
               });
             } else {
-              // BOOKS, NOTES, LESSON_PLANS
               await addNote({
                 title,
                 subject,
@@ -301,7 +378,7 @@ const ContentManager: React.FC = () => {
           success: successCount,
           failed: failCount,
           missingClasses: Array.from(missingClassSet),
-          errors: errorList.slice(0, 10) // Show top 10 errors
+          errors: errorList.slice(0, 10)
         });
 
         await loadData();
@@ -322,7 +399,7 @@ const ContentManager: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-200 pb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Content CMS</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage public-facing resources & bulk upload data</p>
+          <p className="text-sm text-gray-500 mt-1">Manage public-facing resources, edit items & bulk upload data</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -345,7 +422,7 @@ const ContentManager: React.FC = () => {
 
           {/* Add Single Item Modal */}
           <button 
-            onClick={() => setIsModalOpen(true)} 
+            onClick={handleOpenAddModal} 
             className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-indigo-700 flex items-center gap-2 text-sm shadow-sm shadow-indigo-200 transition-all"
           >
             <Plus size={18} /> Add {activeTab === 'BLOG' ? 'Post' : activeTab === 'NOTES' ? 'Note' : activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : activeTab === 'BOOKS' ? 'Book' : 'Paper'}
@@ -369,54 +446,101 @@ const ContentManager: React.FC = () => {
         ))}
       </div>
 
-      {/* Grid of Items */}
+      {/* Grid of Items with Edit & Delete Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {items.map((item: any) => (
-          <div key={item.id} className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all relative group">
-             <button onClick={() => handleDelete(item.id)} className="absolute top-4 right-4 p-2 bg-white text-red-500 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50"><Trash2 size={16}/></button>
+          <div key={item.id} className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all relative group flex flex-col justify-between">
+             {/* Edit & Delete Action Buttons */}
+             <div className="absolute top-4 right-4 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all z-10">
+               <button 
+                 onClick={() => handleOpenEditModal(item)} 
+                 className="p-2 bg-white text-indigo-600 hover:bg-indigo-50 rounded-lg shadow-sm border border-gray-200 transition-all"
+                 title="Edit this item"
+               >
+                 <Edit2 size={15}/>
+               </button>
+               <button 
+                 onClick={() => handleDelete(item.id)} 
+                 className="p-2 bg-white text-red-500 hover:bg-red-50 rounded-lg shadow-sm border border-gray-200 transition-all"
+                 title="Delete this item"
+               >
+                 <Trash2 size={15}/>
+               </button>
+             </div>
              
              {activeTab === 'BLOG' && (
-                <>
+                <div>
                    {item.image && <img src={item.image} className="w-full h-40 object-cover rounded-xl mb-4" />}
                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded uppercase">{item.category}</span>
-                   <h3 className="font-bold text-lg mt-2 line-clamp-2">{item.title}</h3>
+                   <h3 className="font-bold text-lg mt-2 line-clamp-2 text-gray-900">{item.title}</h3>
                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.excerpt}</p>
                    <div className="flex items-center gap-2 mt-4 text-xs text-gray-400 font-medium">
                       <span>{item.author}</span> • <span>{new Date(item.date).toLocaleDateString()}</span>
                    </div>
-                </>
+                </div>
              )}
 
              {(activeTab === 'NOTES' || activeTab === 'LESSON_PLANS' || activeTab === 'BOOKS') && (
-                <>
+                <div>
                    <div className="flex items-start justify-between mb-2">
-                      <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center"><FileText size={20}/></div>
-                      <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">{item.grade || item.board || 'All'}</span>
+                      <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center font-bold">
+                        {activeTab === 'BOOKS' ? <BookOpen size={20}/> : <FileText size={20}/>}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {item.grade && (
+                          <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                            Class {item.grade}
+                          </span>
+                        )}
+                        {item.board && (
+                          <span className="text-[10px] font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded line-clamp-1 max-w-[120px]">
+                            {item.board}
+                          </span>
+                        )}
+                      </div>
                    </div>
-                   <h3 className="font-bold text-gray-900">{item.title}</h3>
-                   <p className="text-xs text-gray-500 mt-1 font-bold uppercase">{item.board || 'Board'} {item.subject ? `• ${item.subject}` : ''}</p>
-                   <p className="text-xs text-gray-400 mt-3 line-clamp-2">{item.description}</p>
+                   <h3 className="font-bold text-gray-900 text-base">{item.title}</h3>
+                   <p className="text-xs text-gray-500 mt-1 font-bold uppercase">{item.subject || 'General'} {item.noteType ? `• ${item.noteType}` : ''}</p>
+                   <p className="text-xs text-gray-400 mt-2 line-clamp-2">{item.description}</p>
                    {item.fileUrl && (
                      <a href={item.fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 mt-3">
-                       View / Read Link →
+                       <span>View / Read Link</span>
+                       <ExternalLink size={12} />
                      </a>
                    )}
-                </>
+                </div>
              )}
 
              {activeTab === 'PAPERS' && (
-                <>
+                <div>
                    <div className="flex items-start justify-between mb-2">
-                      <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center"><Clock size={20}/></div>
-                      <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">{item.year}</span>
+                      <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center font-bold"><Clock size={20}/></div>
+                      <span className="text-[10px] font-black text-gray-700 bg-gray-100 px-2.5 py-1 rounded-md">{item.year}</span>
                    </div>
                    <h3 className="font-bold text-gray-900">{item.title}</h3>
                    <div className="flex flex-wrap gap-2 mt-3">
                       <span className="text-[10px] font-bold bg-gray-50 border border-gray-200 px-2 py-1 rounded text-gray-600">{item.board}</span>
-                      <span className="text-[10px] font-bold bg-gray-50 border border-gray-200 px-2 py-1 rounded text-gray-600">{item.level}</span>
+                      <span className="text-[10px] font-bold bg-gray-50 border border-gray-200 px-2 py-1 rounded text-gray-600">{item.level ? `Class ${item.level}` : 'General'}</span>
                    </div>
-                </>
+                   {item.fileUrl && (
+                     <a href={item.fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 mt-3">
+                       <span>View PDF</span>
+                       <ExternalLink size={12} />
+                     </a>
+                   )}
+                </div>
              )}
+
+             {/* Bottom Card Footer with Quick Edit button for convenience */}
+             <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center text-xs">
+               <span className="text-gray-400 font-mono text-[10px]">ID: {String(item.id).substring(0, 10)}...</span>
+               <button 
+                 onClick={() => handleOpenEditModal(item)}
+                 className="inline-flex items-center gap-1 text-indigo-600 font-bold hover:text-indigo-800"
+               >
+                 <Edit2 size={12}/> Edit
+               </button>
+             </div>
           </div>
         ))}
       </div>
@@ -528,19 +652,21 @@ const ContentManager: React.FC = () => {
         </div>
       )}
 
-      {/* ─── ADD SINGLE ITEM MODAL ────────────────────────────────────────── */}
+      {/* ─── ADD / EDIT SINGLE ITEM MODAL ──────────────────────────────────── */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
               <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                 <h3 className="font-bold text-lg">Add New {activeTab === 'BLOG' ? 'Post' : activeTab === 'NOTES' ? 'Note' : activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : activeTab === 'BOOKS' ? 'Book' : 'Paper'}</h3>
-                 <button onClick={() => setIsModalOpen(false)}><X size={20}/></button>
+                 <h3 className="font-bold text-lg">
+                   {editingItem ? 'Edit' : 'Add New'} {activeTab === 'BLOG' ? 'Post' : activeTab === 'NOTES' ? 'Note' : activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : activeTab === 'BOOKS' ? 'Book' : 'Paper'}
+                 </h3>
+                 <button onClick={() => { setIsModalOpen(false); setEditingItem(null); }}><X size={20}/></button>
               </div>
               
               <div className="p-6 overflow-y-auto space-y-4">
                  {activeTab === 'BLOG' && (
                     <>
-                       <input type="text" placeholder="Title" className="w-full p-3 border rounded-xl" value={blogForm.title} onChange={e => setBlogForm({...blogForm, title: e.target.value})} />
+                       <input type="text" placeholder="Title" className="w-full p-3 border rounded-xl font-bold" value={blogForm.title} onChange={e => setBlogForm({...blogForm, title: e.target.value})} />
                        <div className="grid grid-cols-2 gap-4">
                           <input type="text" placeholder="Category" className="w-full p-3 border rounded-xl" value={blogForm.category} onChange={e => setBlogForm({...blogForm, category: e.target.value})} />
                           <input type="text" placeholder="Author Name" className="w-full p-3 border rounded-xl" value={blogForm.author} onChange={e => setBlogForm({...blogForm, author: e.target.value})} />
@@ -561,7 +687,7 @@ const ContentManager: React.FC = () => {
 
                         <div className="space-y-2">
                            <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-indigo-400 transition-colors" onClick={() => document.getElementById('blog-img')?.click()}>
-                              <p className="text-sm font-medium text-gray-600">{blogForm.image ? `Cover Image Selected: ${blogForm.image.substring(0, 35)}...` : '📁 Click to Upload Cover Image'}</p>
+                              <p className="text-sm font-medium text-gray-600">{blogForm.image ? `Cover Image: ${blogForm.image.substring(0, 35)}...` : '📁 Click to Upload Cover Image'}</p>
                               <input id="blog-img" type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'image')} />
                            </div>
                            <div className="flex items-center gap-2">
@@ -606,7 +732,7 @@ const ContentManager: React.FC = () => {
                                <option value="">Select Grade / Class...</option>
                                {curriculum.classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                              </select>
-                             <input type="text" placeholder="Or type Grade manually" className="w-full p-2 border rounded-lg text-xs mt-1" value={bookForm.grade} onChange={e => setBookForm({...bookForm, grade: e.target.value})} />
+                             <input type="text" placeholder="Or type Grade manually (e.g. 9, 10, 11)" className="w-full p-2 border rounded-lg text-xs mt-1" value={bookForm.grade} onChange={e => setBookForm({...bookForm, grade: e.target.value})} />
                           </div>
                        </div>
 
@@ -693,8 +819,10 @@ const ContentManager: React.FC = () => {
               </div>
 
               <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50">
-                 <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 border rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-100">Cancel</button>
-                 <button onClick={handleSave} className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700">Save</button>
+                 <button onClick={() => { setIsModalOpen(false); setEditingItem(null); }} className="px-4 py-2 border rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-100">Cancel</button>
+                 <button onClick={handleSave} className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700">
+                   {editingItem ? 'Update Changes' : 'Save'}
+                 </button>
               </div>
            </div>
         </div>

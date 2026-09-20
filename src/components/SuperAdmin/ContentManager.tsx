@@ -9,7 +9,7 @@ import {
   Plus, Trash2, Edit2, X, FileText, Upload, BookOpen, Clock, 
   Calendar, CheckSquare, Image as ImageIcon, Download, 
   FileSpreadsheet, AlertTriangle, CheckCircle, HelpCircle, Layers, ExternalLink,
-  Search, ChevronLeft, ChevronRight
+  Search, ChevronLeft, ChevronRight, Sparkles
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Syllabus, ClassLevel } from '../../types';
@@ -42,7 +42,20 @@ const ContentManager: React.FC = () => {
   
   // Forms State
   const [blogForm, setBlogForm] = useState({ title: '', excerpt: '', content: '', category: 'EdTech', author: '', image: '' });
-  const [noteForm, setNoteForm] = useState({ title: '', subject: '', grade: '', board: '', noteType: '', resource: '', book: '', author: '', fileUrl: '', description: '' });
+  const [noteForm, setNoteForm] = useState({ 
+    title: '', 
+    subject: '', 
+    grade: '', 
+    board: '', 
+    noteType: 'Chapter Questions', 
+    scope: 'CHAPTER_WISE', // 'CHAPTER_WISE' | 'FULL_BOOK'
+    unit: '1', 
+    resource: '', 
+    book: '', 
+    author: '', 
+    fileUrl: '', 
+    description: '' 
+  });
   const [paperForm, setPaperForm] = useState({ title: '', year: new Date().getFullYear(), board: '', level: '', subject: '', resource: '', fileUrl: '' });
   const [bookForm, setBookForm] = useState({ title: '', board: '', grade: '', subject: '', fileUrl: '', description: '' });
 
@@ -139,9 +152,22 @@ const ContentManager: React.FC = () => {
   const handleOpenAddModal = () => {
     setEditingItem(null);
     setBlogForm({ title: '', excerpt: '', content: '', category: 'EdTech', author: '', image: '' });
-    setNoteForm({ title: '', subject: '', grade: '', board: '', noteType: '', resource: '', book: '', author: '', fileUrl: '', description: '' });
-    setBookForm({ title: '', board: '', grade: '', subject: '', fileUrl: '', description: '' });
-    setPaperForm({ title: '', year: new Date().getFullYear(), board: '', level: '', subject: '', resource: '', fileUrl: '' });
+    setNoteForm({ 
+      title: '', 
+      subject: '', 
+      grade: '', 
+      board: 'PCTB (Punjab Curriculum & Textbook Board)', 
+      noteType: 'Chapter Questions', 
+      scope: 'CHAPTER_WISE', 
+      unit: '1', 
+      resource: '', 
+      book: '', 
+      author: '', 
+      fileUrl: '', 
+      description: '' 
+    });
+    setBookForm({ title: '', board: 'PCTB (Punjab Curriculum & Textbook Board)', grade: '', subject: '', fileUrl: '', description: '' });
+    setPaperForm({ title: '', year: new Date().getFullYear(), board: 'BISE Lahore', level: '', subject: '', resource: '', fileUrl: '' });
     setIsModalOpen(true);
   };
 
@@ -171,7 +197,9 @@ const ContentManager: React.FC = () => {
         subject: item.subject || '',
         grade: item.grade || '',
         board: item.board || '',
-        noteType: item.noteType || (activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : 'Book Notes'),
+        noteType: item.noteType || (activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : 'Chapter Questions'),
+        scope: item.scope || (item.unit || /chapter|unit|ch\s*\d/i.test(item.title) ? 'CHAPTER_WISE' : 'FULL_BOOK'),
+        unit: item.unit || '1',
         resource: item.resource || '',
         book: item.book || '',
         author: item.author || '',
@@ -213,7 +241,7 @@ const ContentManager: React.FC = () => {
          } else {
            await addNote(payload);
          }
-         setNoteForm({ title: '', subject: '', grade: '', board: '', noteType: '', resource: '', book: '', author: '', fileUrl: '', description: '' });
+         setNoteForm({ title: '', subject: '', grade: '', board: '', noteType: '', scope: 'CHAPTER_WISE', unit: '1', resource: '', book: '', author: '', fileUrl: '', description: '' });
       } else if (activeTab === 'BOOKS') {
          if (!bookForm.title) return alert("Book title is required");
          const payload = {
@@ -272,6 +300,52 @@ const ContentManager: React.FC = () => {
     }
   };
 
+  // ─── INSERT TALEEMCITY STYLE DESCRIPTION TEMPLATE ────────────────────────────
+  const insertTaleemCityNoteTemplate = () => {
+    const sub = noteForm.subject || 'Subject';
+    const gr = noteForm.grade || '9';
+    const isChapter = noteForm.scope === 'CHAPTER_WISE';
+    const unitText = isChapter ? `Unit ${noteForm.unit || '1'}` : 'Complete Syllabus';
+    
+    const template = `### Comprehensive ${sub} Class ${gr} (${unitText}) Notes & Solutions
+
+These ${sub} notes for Class ${gr} are prepared strictly according to the latest National Curriculum and Single National Curriculum (SNC 2025-2026). Ideal for scoring maximum marks in annual board examinations.
+
+#### 📌 Included In This Resource:
+1. **Multiple Choice Questions (MCQs):** Comprehensive textbook and conceptual MCQs with verified answer keys.
+2. **Short Questions & Answers:** Concise, exam-focused answers highlighting crucial definitions and laws.
+3. **Long & Detailed Questions:** Point-by-point explanations with derivations, formulas, and board-standard headings.
+4. **Solved Textbook Exercises & Numericals:** Complete solved exercise numericals with given data, step-by-step formula substitutions, and final answers.
+
+#### 🏛️ Board Compatibility:
+- **Punjab Boards:** Lahore, Rawalpindi, Gujranwala, Faisalabad, Multan, Sargodha, Sahiwal, Bahawalpur, DG Khan.
+- **Federal Board (FBISE):** Islamabad & Overseas Institutions.
+- **KPK & Sindh Boards:** Aligned with Single National Curriculum standards.
+
+#### 💡 Study & Revision Tips:
+- Practice solved numericals and derivations regularly.
+- Memorize bold definitions and key formulas.
+- Review past 5-year board questions included at the end of each topic.`;
+
+    setNoteForm(prev => ({ ...prev, description: template }));
+  };
+
+  const insertTaleemCityBookTemplate = () => {
+    const sub = bookForm.subject || 'Subject';
+    const gr = bookForm.grade || '9';
+    const template = `### Official ${sub} Class ${gr} Textbook (New Syllabus)
+
+Official Punjab Curriculum and Textbook Board (PCTB) digital edition for Class ${gr}. Fully updated with single national curriculum learning standards.
+
+#### 📚 Textbook Features:
+- Complete chapters with high-resolution diagrams and illustrations.
+- Conceptual learning objectives at the start of each unit.
+- Comprehensive end-of-chapter exercises, review questions, and activities.
+- Authorized publication for all Punjab and Federal educational institutions.`;
+
+    setBookForm(prev => ({ ...prev, description: template }));
+  };
+
   // ─── CSV / EXCEL TEMPLATE GENERATION ─────────────────────────────────────────
   const handleDownloadTemplate = () => {
     let template: any[] = [];
@@ -299,13 +373,28 @@ const ContentManager: React.FC = () => {
     } else if (activeTab === 'NOTES' || activeTab === 'LESSON_PLANS') {
       template = [
         {
-          "Title": "Chapter 1 Physical Quantities Notes",
+          "Title": "Physics Class 9 Chapter 1 Solved Short & Long Q/A",
           "Subject": "Physics",
           "Grade": "9",
-          "Board": "Punjab Board",
-          "NoteType": activeTab === 'LESSON_PLANS' ? "Lesson Plan" : "Book Notes",
+          "Board": "PCTB (Punjab Board)",
+          "Scope": "CHAPTER_WISE",
+          "Unit": "1",
+          "NoteType": "Chapter Questions",
+          "Author": "Prof. Tariq",
           "FileURL": "https://drive.google.com/file/d/.../preview",
-          "Description": "Complete solved short questions and numerical problems."
+          "Description": "Complete solved MCQs, short questions, and numerical problems for Unit 1."
+        },
+        {
+          "Title": "Chemistry Class 9 Full Book Complete Notes",
+          "Subject": "Chemistry",
+          "Grade": "9",
+          "Board": "PCTB (Punjab Board)",
+          "Scope": "FULL_BOOK",
+          "Unit": "",
+          "NoteType": "Full Book Complete",
+          "Author": "TaleemCity",
+          "FileURL": "https://drive.google.com/file/d/.../preview",
+          "Description": "All chapters comprehensive notes with exercise solutions and past board questions."
         }
       ];
     } else if (activeTab === 'PAPERS') {
@@ -390,7 +479,10 @@ const ContentManager: React.FC = () => {
           const board = row.Board || row.board || row.Syllabus || row.syllabus || 'PCTB (Punjab Curriculum & Textbook Board)';
           const fileUrl = row.FileURL || row.FileUrl || row.fileUrl || row.Link || row.link || row.URL || row.url || '';
           const description = row.Description || row.description || row.Excerpt || row.excerpt || '';
-          const noteType = row.NoteType || row.noteType || (activeTab === 'BOOKS' ? 'Textbook' : activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : 'Book Notes');
+          const noteType = row.NoteType || row.noteType || (activeTab === 'BOOKS' ? 'Textbook' : activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : 'Chapter Questions');
+          const scope = row.Scope || row.scope || (row.Unit || /chapter|unit|ch\s*\d/i.test(title) ? 'CHAPTER_WISE' : 'FULL_BOOK');
+          const unit = row.Unit || row.unit || '';
+          const author = row.Author || row.author || board;
           const year = parseInt(row.Year || row.year || new Date().getFullYear());
 
           if (!title) {
@@ -411,7 +503,7 @@ const ContentManager: React.FC = () => {
               await addBlog({
                 title,
                 category: row.Category || row.category || 'General',
-                author: row.Author || row.author || 'Admin',
+                author: author || 'Admin',
                 excerpt: description,
                 content: row.Content || row.content || description || `<p>${title}</p>`,
                 image: row.Image || row.image || fileUrl,
@@ -434,10 +526,12 @@ const ContentManager: React.FC = () => {
                 grade: grade || '9',
                 board,
                 noteType: activeTab === 'BOOKS' ? 'Textbook' : activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : noteType,
+                scope,
+                unit,
                 fileUrl,
                 description,
                 book: title,
-                author: board
+                author
               });
             }
             successCount++;
@@ -452,31 +546,35 @@ const ContentManager: React.FC = () => {
           success: successCount,
           failed: failCount,
           missingClasses: Array.from(missingClassSet),
-          errors: errorList.slice(0, 10)
+          errors: errorList
         });
 
         await loadData();
-      } catch (parseErr: any) {
-        alert(`Failed to parse file: ${parseErr.message}`);
+      } catch (err: any) {
+        alert(`Failed to parse file: ${err.message || 'Corrupt format'}`);
       } finally {
         setIsImporting(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
     };
-
     reader.readAsBinaryString(file);
   };
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
-      {/* Header with Add & Excel/CSV Import Buttons */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-200 pb-6">
+      {/* Header & Action Bar */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Content CMS</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage public-facing resources, edit items & bulk upload data</p>
+          <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+            <BookOpen className="text-indigo-600" />
+            Content & Study Resource Manager
+          </h1>
+          <p className="text-xs text-gray-500 mt-1">
+            Manage textbooks, solved chapter questions, full book notes, past papers, and blog articles.
+          </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           {/* Download Excel / CSV Template */}
           <button 
             onClick={handleDownloadTemplate} 
@@ -791,7 +889,7 @@ const ContentManager: React.FC = () => {
               <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-bold text-gray-800">1. Download sample Excel template</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Use our standard format with pre-filled columns</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Pre-filled headers with scope, unit, and details</p>
                 </div>
                 <button 
                   onClick={handleDownloadTemplate} 
@@ -882,7 +980,7 @@ const ContentManager: React.FC = () => {
            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
               <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
                  <h3 className="font-bold text-lg">
-                   {editingItem ? 'Edit' : 'Add New'} {activeTab === 'BLOG' ? 'Post' : activeTab === 'NOTES' ? 'Note' : activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : activeTab === 'BOOKS' ? 'Book' : 'Paper'}
+                   {editingItem ? 'Edit' : 'Add New'} {activeTab === 'BLOG' ? 'Post' : activeTab === 'NOTES' ? 'Note / Chapter Question' : activeTab === 'LESSON_PLANS' ? 'Lesson Plan' : activeTab === 'BOOKS' ? 'Textbook' : 'Past Paper'}
                  </h3>
                  <button onClick={() => { setIsModalOpen(false); setEditingItem(null); }}><X size={20}/></button>
               </div>
@@ -983,27 +1081,69 @@ const ContentManager: React.FC = () => {
                           </div>
                        </div>
 
-                       <textarea 
-                         placeholder="Book Description & details..." 
-                         className="w-full p-3 border rounded-xl h-24 text-sm" 
-                         value={bookForm.description} 
-                         onChange={e => setBookForm({...bookForm, description: e.target.value})} 
-                       />
+                       <div className="space-y-1">
+                         <div className="flex justify-between items-center">
+                           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Book Description</label>
+                           <button
+                             type="button"
+                             onClick={insertTaleemCityBookTemplate}
+                             className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded flex items-center gap-1"
+                           >
+                             <Sparkles size={11} /> + TaleemCity Overview
+                           </button>
+                         </div>
+                         <textarea 
+                           placeholder="Book Description & details..." 
+                           className="w-full p-3 border rounded-xl h-24 text-sm font-mono leading-relaxed" 
+                           value={bookForm.description} 
+                           onChange={e => setBookForm({...bookForm, description: e.target.value})} 
+                         />
+                       </div>
                     </>
                  )}
 
                  {(activeTab === 'NOTES' || activeTab === 'LESSON_PLANS') && (
                     <>
-                       <input type="text" placeholder="Title" className="w-full p-3 border rounded-xl font-bold" value={noteForm.title} onChange={e => setNoteForm({...noteForm, title: e.target.value})} />
+                       {/* Scope Selector: Chapter-Wise vs Full Book */}
+                       <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-1">
+                         <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Resource Scope</label>
+                         <div className="grid grid-cols-2 gap-2">
+                           <button
+                             type="button"
+                             onClick={() => setNoteForm(p => ({ ...p, scope: 'CHAPTER_WISE', noteType: 'Chapter Questions' }))}
+                             className={`p-2 rounded-lg border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                               noteForm.scope === 'CHAPTER_WISE' 
+                                 ? 'bg-indigo-600 text-white border-indigo-600' 
+                                 : 'bg-white text-gray-700 border-gray-200'
+                             }`}
+                           >
+                             <BookOpen size={14} /> Chapter-Wise Solutions
+                           </button>
+                           <button
+                             type="button"
+                             onClick={() => setNoteForm(p => ({ ...p, scope: 'FULL_BOOK', noteType: 'Full Book Complete' }))}
+                             className={`p-2 rounded-lg border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                               noteForm.scope === 'FULL_BOOK' 
+                                 ? 'bg-indigo-600 text-white border-indigo-600' 
+                                 : 'bg-white text-gray-700 border-gray-200'
+                             }`}
+                           >
+                             <Layers size={14} /> Full Book Complete
+                           </button>
+                         </div>
+                       </div>
+
+                       <input type="text" placeholder="Title (e.g. Physics Class 9 Chapter 1 Notes)" className="w-full p-3 border rounded-xl font-bold" value={noteForm.title} onChange={e => setNoteForm({...noteForm, title: e.target.value})} />
                        
-                       <div className="grid grid-cols-2 gap-4">
-                          <input type="text" placeholder="Subject" className="w-full p-3 border rounded-xl" value={noteForm.subject} onChange={e => setNoteForm({...noteForm, subject: e.target.value})} />
-                          <input type="text" placeholder="Grade/Class (e.g. 9, 10, 11)" className="w-full p-3 border rounded-xl" value={noteForm.grade} onChange={e => setNoteForm({...noteForm, grade: e.target.value})} />
+                       <div className="grid grid-cols-3 gap-3">
+                          <input type="text" placeholder="Subject (e.g. Physics)" className="w-full p-3 border rounded-xl text-sm font-bold" value={noteForm.subject} onChange={e => setNoteForm({...noteForm, subject: e.target.value})} />
+                          <input type="text" placeholder="Grade/Class (e.g. 9)" className="w-full p-3 border rounded-xl text-sm font-bold" value={noteForm.grade} onChange={e => setNoteForm({...noteForm, grade: e.target.value})} />
+                          <input type="text" placeholder={noteForm.scope === 'CHAPTER_WISE' ? 'Unit/Chapter #' : 'Unit (Optional)'} className="w-full p-3 border rounded-xl text-sm" value={noteForm.unit} onChange={e => setNoteForm({...noteForm, unit: e.target.value})} />
                        </div>
 
                        <div className="grid grid-cols-2 gap-4">
-                          <input type="text" placeholder="Board / Syllabus" className="w-full p-3 border rounded-xl" value={noteForm.board} onChange={e => setNoteForm({...noteForm, board: e.target.value})} />
-                          <input type="text" placeholder="Note Type (e.g. Book Notes, Solved Exercise)" className="w-full p-3 border rounded-xl" value={noteForm.noteType} onChange={e => setNoteForm({...noteForm, noteType: e.target.value})} />
+                          <input type="text" placeholder="Board / Syllabus" className="w-full p-3 border rounded-xl text-sm" value={noteForm.board} onChange={e => setNoteForm({...noteForm, board: e.target.value})} />
+                          <input type="text" placeholder="Note Type (e.g. Chapter Questions, Solved Numericals)" className="w-full p-3 border rounded-xl text-sm" value={noteForm.noteType} onChange={e => setNoteForm({...noteForm, noteType: e.target.value})} />
                        </div>
 
                        <div className="space-y-2">
@@ -1015,7 +1155,19 @@ const ContentManager: React.FC = () => {
                           </div>
                        </div>
 
-                       <textarea placeholder="Description" className="w-full p-3 border rounded-xl h-24 text-sm" value={noteForm.description} onChange={e => setNoteForm({...noteForm, description: e.target.value})} />
+                       <div className="space-y-1">
+                         <div className="flex justify-between items-center">
+                           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Detailed Description (TaleemCity Style)</label>
+                           <button
+                             type="button"
+                             onClick={insertTaleemCityNoteTemplate}
+                             className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded flex items-center gap-1"
+                           >
+                             <Sparkles size={11} /> + TaleemCity Structure
+                           </button>
+                         </div>
+                         <textarea placeholder="Comprehensive breakdown of MCQs, Short & Long Q/A, solved exercises..." className="w-full p-3 border rounded-xl h-28 text-xs font-mono leading-relaxed" value={noteForm.description} onChange={e => setNoteForm({...noteForm, description: e.target.value})} />
+                       </div>
                     </>
                  )}
 

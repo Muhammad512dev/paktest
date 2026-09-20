@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pak Parcha AI - Universal Notes Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-background"></div>
+  
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand-group">
+        <div class="brand-logo-glow">
+          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+            <path d="M6 6h10"></path>
+            <path d="M6 10h10"></path>
+            <path d="M6 14h6"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">Pak Parcha <span class="gradient-text">AI Notes Hub</span></h1>
+          <p class="brand-subtitle">Multi-Class Automated High-Speed Notes Downloader (Class 9, 10, 11, 12)</p>
+        </div>
+      </div>
+      <div class="header-status">
+        <span class="status-pill active" id="system-status">
+          <span class="pulse-dot"></span> Ready
+        </span>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <main class="main-grid">
+      
+      <!-- Left Column: Selection Controls -->
+      <section class="controls-card">
+        
+        <!-- Step 1: Classes Selection -->
+        <div class="section-block">
+          <div class="section-header">
+            <div class="step-badge">1</div>
+            <div>
+              <h2 class="section-title">Select Target Classes</h2>
+              <p class="section-desc">Choose one or multiple classes to download simultaneously</p>
+            </div>
+            <button type="button" class="btn-ghost" id="btn-toggle-all-classes">Select All</button>
+          </div>
+
+          <div class="class-grid" id="class-container">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Step 2: Subject Selection -->
+        <div class="section-block">
+          <div class="section-header">
+            <div class="step-badge">2</div>
+            <div>
+              <h2 class="section-title">Select Subjects</h2>
+              <p class="section-desc">Pick specific subjects or download the complete curriculum</p>
+            </div>
+            <div class="btn-group-sm">
+              <button type="button" class="btn-ghost" id="btn-select-all-subjects">All</button>
+              <button type="button" class="btn-ghost" id="btn-clear-subjects">Clear</button>
+            </div>
+          </div>
+
+          <div class="subject-chips" id="subject-container">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Step 3: Destination Folder -->
+        <div class="section-block">
+          <div class="section-header">
+            <div class="step-badge">3</div>
+            <div>
+              <h2 class="section-title">Save Location</h2>
+              <p class="section-desc">Files will be sorted cleanly into Subject folders</p>
+            </div>
+          </div>
+
+          <div class="folder-input-group">
+            <input type="text" id="download-path-input" class="text-input" placeholder="C:\Users\...\Downloads\PakParcha_Class_Notes" />
+            <button type="button" class="btn-secondary" id="btn-open-folder" title="Open Folder in File Explorer">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+              Open
+            </button>
+          </div>
+        </div>
+
+        <!-- Action Button -->
+        <div class="action-footer">
+          <button type="button" class="btn-primary" id="btn-start-download">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Start Download
+          </button>
+          <button type="button" class="btn-danger hidden" id="btn-stop-download">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            </svg>
+            Cancel Download
+          </button>
+        </div>
+
+      </section>
+
+      <!-- Right Column: Live Download Dashboard -->
+      <section class="dashboard-card">
+        <div class="dashboard-header">
+          <h2 class="section-title">Live Activity Dashboard</h2>
+          <div class="stats-summary">
+            <div class="stat-badge">
+              <span class="stat-label">Total Queue</span>
+              <span class="stat-val" id="stat-total">0</span>
+            </div>
+            <div class="stat-badge success">
+              <span class="stat-label">Downloaded</span>
+              <span class="stat-val" id="stat-completed">0</span>
+            </div>
+            <div class="stat-badge warning">
+              <span class="stat-label">Skipped</span>
+              <span class="stat-val" id="stat-skipped">0</span>
+            </div>
+            <div class="stat-badge danger">
+              <span class="stat-label">Failed</span>
+              <span class="stat-val" id="stat-failed">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress Tracker -->
+        <div class="progress-container">
+          <div class="progress-info">
+            <span class="progress-title" id="active-file-text">Waiting to start...</span>
+            <span class="progress-percent" id="progress-percent">0%</span>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progress-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Live Terminal Stream -->
+        <div class="terminal-container">
+          <div class="terminal-bar">
+            <div class="terminal-dots">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <span class="terminal-title">DOWNLOAD LOGS STREAM</span>
+            <button type="button" class="btn-ghost-sm" id="btn-clear-logs">Clear</button>
+          </div>
+          <div class="terminal-body" id="terminal-body">
+            <div class="log-entry log-info"><span class="log-time">--:--:--</span> Universal Notes Hub initialized. Ready to download.</div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

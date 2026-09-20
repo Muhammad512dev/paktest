@@ -1,10 +1,18 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, FileText, Download, Filter, ChevronLeft, ChevronRight, GraduationCap, Layers, Tag } from 'lucide-react';
-import { getNotes, getPublicCurriculum } from '../../services/dataService';
+import { 
+  Search, FileText, Download, Filter, ChevronLeft, ChevronRight, 
+  GraduationCap, Layers, Tag, Upload, BookOpen, CheckCircle, 
+  HelpCircle, ExternalLink, Plus, X, Sparkles, CheckSquare, Eye, ShieldCheck, Share2, Printer
+} from 'lucide-react';
+import { getNotes, addNote, uploadFile, getPublicCurriculum } from '../../services/dataService';
 import { Syllabus, ClassLevel } from '../../types';
 
 const NOTE_TYPES = [
+  'Chapter Questions',
+  'Full Book Complete',
+  'Solved MCQs',
+  'Short & Long Q&A',
+  'Solved Numericals',
   'Book Notes',
   'Class Notes',
   'ECAT/Entry Test',
@@ -25,10 +33,40 @@ const Notes: React.FC = () => {
   });
   const [filters, setFilters] = useState({ board: '', grade: '', noteType: '', resource: '' });
   
+  // Scope Filter: 'ALL' | 'CHAPTER_WISE' | 'FULL_BOOK' | 'PAST_PAPERS'
+  const [scopeFilter, setScopeFilter] = useState<'ALL' | 'CHAPTER_WISE' | 'FULL_BOOK' | 'PAST_PAPERS'>('ALL');
+  
+  // Public Upload Modal State
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadSuccessMsg, setUploadSuccessMsg] = useState('');
+  const [uploadForm, setUploadForm] = useState({
+    title: '',
+    subject: '',
+    grade: '',
+    board: 'PCTB (Punjab Board)',
+    noteType: 'Chapter Questions',
+    scope: 'CHAPTER_WISE', // 'CHAPTER_WISE' | 'FULL_BOOK'
+    unit: '1',
+    author: '',
+    fileUrl: '',
+    description: ''
+  });
+
+  // Selected Note Modal State
+  const [selectedNoteModal, setSelectedNoteModal] = useState<any | null>(null);
+
   // Pagination State (20, 40, 100, 'all')
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<string>('20');
   const [userCustomLimit, setUserCustomLimit] = useState<boolean>(false);
+
+  // Step Navigation state: 1 = Syllabus/Board, 2 = Class, 3 = Subject, 4 = Notes/PDF View
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [selectedBoard, setSelectedBoard] = useState<string>('');
+  const [selectedClass, setSelectedClass] = useState<string>('');
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [selectedType, setSelectedType] = useState<string>('');
 
   useEffect(() => {
     const load = async () => {
@@ -93,34 +131,6 @@ const Notes: React.FC = () => {
     return list;
   }, [notes]);
 
-  // Dynamic note types strictly extracted from actual existing notes
-  const availableNoteTypes = useMemo(() => {
-    const set = new Set<string>();
-    notes.forEach(n => {
-      if (n.noteType) set.add(n.noteType);
-    });
-    return Array.from(set);
-  }, [notes]);
-
-  // Dynamic resources strictly extracted from comma-separated resource inputs in notes
-  const availableResources = useMemo(() => {
-    const set = new Set<string>();
-    notes.forEach(n => {
-      const raw = n.resource || n.source || n.book || '';
-      if (raw) {
-        raw.split(',').map((s: string) => s.trim()).filter(Boolean).forEach((r: string) => set.add(r));
-      }
-    });
-    return Array.from(set);
-  }, [notes]);
-
-  // Step Navigation state: 1 = Syllabus/Board, 2 = Class, 3 = Subject/NoteType, 4 = Notes/PDF View
-  const [currentStep, setCurrentStep] = useState<number>(1);
-  const [selectedBoard, setSelectedBoard] = useState<string>('');
-  const [selectedClass, setSelectedClass] = useState<string>('');
-  const [selectedSubject, setSelectedSubject] = useState<string>('');
-  const [selectedType, setSelectedType] = useState<string>('');
-
   // Extract available subjects from notes for the selected board & class
   const availableSubjects = useMemo(() => {
     const set = new Set<string>();
@@ -151,13 +161,26 @@ const Notes: React.FC = () => {
       if (selectedClass && n.grade && n.grade.trim().toLowerCase() !== selectedClass.trim().toLowerCase()) return false;
       if (selectedSubject && n.subject && n.subject.trim().toLowerCase() !== selectedSubject.trim().toLowerCase()) return false;
       if (selectedType && n.noteType && n.noteType.trim().toLowerCase() !== selectedType.trim().toLowerCase()) return false;
+      
+      // Scope Filter: 'ALL' | 'CHAPTER_WISE' | 'FULL_BOOK' | 'PAST_PAPERS'
+      if (scopeFilter === 'CHAPTER_WISE') {
+        const isChapter = n.scope === 'CHAPTER_WISE' || n.unit || n.noteType === 'Chapter Questions' || (n.title && /chapter|unit|ch\s*\d|exercise/i.test(n.title));
+        if (!isChapter) return false;
+      } else if (scopeFilter === 'FULL_BOOK') {
+        const isFull = n.scope === 'FULL_BOOK' || n.noteType === 'Full Book Complete' || n.noteType === 'Book Notes' || (n.title && /full\s*book|complete|master/i.test(n.title));
+        if (!isFull) return false;
+      } else if (scopeFilter === 'PAST_PAPERS') {
+        const isPaper = n.noteType === 'Past Paper' || (n.title && /past\s*paper|annual/i.test(n.title));
+        if (!isPaper) return false;
+      }
+
       if (filters.resource && n.resource) {
         const items = n.resource.split(',').map((s: string) => s.trim().toLowerCase());
         if (!items.includes(filters.resource.toLowerCase())) return false;
       }
       return true;
     });
-  }, [notes, selectedBoard, selectedClass, selectedSubject, selectedType, filters.resource]);
+  }, [notes, selectedBoard, selectedClass, selectedSubject, selectedType, scopeFilter, filters.resource]);
 
   // Dynamic URL Sync effect for step wizard navigation and note view
   useEffect(() => {
@@ -231,13 +254,14 @@ const Notes: React.FC = () => {
     setSelectedSubject('');
     setSelectedType('');
     setFilters({ board: '', grade: '', noteType: '', resource: '' });
+    setScopeFilter('ALL');
     setCurrentStep(1);
     setSelectedNoteModal(null);
     setUserCustomLimit(false);
     window.history.pushState(null, '', '/notes');
   };
 
-  const isFiltered = Boolean(selectedBoard || selectedClass || selectedSubject || selectedType || searchTerm || filters.resource);
+  const isFiltered = Boolean(selectedBoard || selectedClass || selectedSubject || selectedType || scopeFilter !== 'ALL' || searchTerm || filters.resource);
 
   // Sync limit if filter is active
   useEffect(() => {
@@ -249,7 +273,7 @@ const Notes: React.FC = () => {
       }
     }
     setCurrentPage(1);
-  }, [searchTerm, selectedBoard, selectedClass, selectedSubject, selectedType, filters.resource, isFiltered, userCustomLimit]);
+  }, [searchTerm, selectedBoard, selectedClass, selectedSubject, selectedType, scopeFilter, filters.resource, isFiltered, userCustomLimit]);
 
   const totalFilteredCount = stepNotes.length;
   const numericLimit = pageSize === 'all' ? totalFilteredCount : parseInt(pageSize, 10);
@@ -267,9 +291,7 @@ const Notes: React.FC = () => {
     setCurrentPage(1);
   };
 
-  const recentFiveNotes = useMemo(() => stepNotes.slice(0, 5), [stepNotes]);
-
-  // Colors for class/subject pill buttons like screenshot
+  // Colors for class/subject pill buttons
   const pillColors = [
     'from-sky-400 to-blue-500 text-white shadow-sky-200',
     'from-emerald-400 to-green-600 text-white shadow-emerald-200',
@@ -281,28 +303,138 @@ const Notes: React.FC = () => {
     'from-emerald-500 to-teal-600 text-white shadow-emerald-200'
   ];
 
-  // Selected Note Modal State
-  const [selectedNoteModal, setSelectedNoteModal] = useState<any | null>(null);
+  // Upload Note Submission Handler
+  const handleUploadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadForm.title.trim() || !uploadForm.subject.trim()) {
+      alert("Please enter a title and subject.");
+      return;
+    }
+    setIsUploading(true);
+    setUploadSuccessMsg('');
+    try {
+      await addNote({
+        title: uploadForm.title,
+        subject: uploadForm.subject,
+        grade: uploadForm.grade || selectedClass || '9',
+        board: uploadForm.board || selectedBoard || 'PCTB (Punjab Board)',
+        noteType: uploadForm.noteType,
+        scope: uploadForm.scope,
+        unit: uploadForm.unit,
+        author: uploadForm.author || 'Contributor',
+        fileUrl: uploadForm.fileUrl,
+        description: uploadForm.description
+      });
+      setUploadSuccessMsg('🎉 Notes submitted successfully! It is now available in the study directory.');
+      setTimeout(() => {
+        setIsUploadModalOpen(false);
+        setUploadSuccessMsg('');
+        // Reload notes
+        getNotes().then(data => setNotes(Array.isArray(data) ? data : []));
+      }, 1500);
+    } catch (err: any) {
+      alert(`Upload failed: ${err.message || 'Server error'}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      try {
+        setIsUploading(true);
+        const url = await uploadFile(e.target.files[0]);
+        setUploadForm(prev => ({ ...prev, fileUrl: url }));
+      } catch (err) {
+        alert("File upload failed. Please use a direct PDF URL or Google Drive link.");
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
+
+  // Helper to insert TaleemCity style description template
+  const insertTaleemCityTemplate = () => {
+    const sub = uploadForm.subject || selectedSubject || 'Subject';
+    const gr = uploadForm.grade || selectedClass || '9';
+    const isChapter = uploadForm.scope === 'CHAPTER_WISE';
+    const unitText = isChapter ? `Unit ${uploadForm.unit || '1'}` : 'Complete Syllabus';
+    
+    const template = `### Comprehensive ${sub} Class ${gr} (${unitText}) Notes & Solutions
+
+These ${sub} notes for Class ${gr} are prepared strictly according to the latest National Curriculum and Single National Curriculum (SNC 2025-2026). Ideal for scoring maximum marks in annual board examinations.
+
+#### 📌 Included In This Resource:
+1. **Multiple Choice Questions (MCQs):** Comprehensive textbook and conceptual MCQs with verified answer keys.
+2. **Short Questions & Answers:** Concise, exam-focused answers highlighting crucial definitions and laws.
+3. **Long & Detailed Questions:** Point-by-point explanations with derivations, formulas, and board-standard headings.
+4. **Solved Textbook Exercises & Numericals:** Complete solved exercise numericals with given data, step-by-step formula substitutions, and final answers.
+
+#### 🏛️ Board Compatibility:
+- **Punjab Boards:** Lahore, Rawalpindi, Gujranwala, Faisalabad, Multan, Sargodha, Sahiwal, Bahawalpur, DG Khan.
+- **Federal Board (FBISE):** Islamabad & Overseas Institutions.
+- **KPK & Sindh Boards:** Aligned with Single National Curriculum standards.
+
+#### 💡 Study & Revision Tips:
+- Practice solved numericals and derivations regularly.
+- Memorize bold definitions and key formulas.
+- Review past 5-year board questions included at the end of each topic.`;
+
+    setUploadForm(prev => ({ ...prev, description: template }));
+  };
 
   return (
     <div className="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-      {/* Dynamic Header & Breadcrumbs matching screenshot 2 */}
+      {/* Dynamic Header & Breadcrumbs matching screenshot */}
       <div className="space-y-3">
-        <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-          <span className="cursor-pointer hover:text-indigo-600" onClick={resetStepWizard}>Notes & Key Books</span>
-          {selectedBoard && <span>/</span>}
-          {selectedBoard && <span className="cursor-pointer hover:text-indigo-600" onClick={() => updateRouteUrl(selectedBoard, '', '', 1)}>{selectedBoard}</span>}
-          {selectedClass && <span>/</span>}
-          {selectedClass && <span className="cursor-pointer hover:text-indigo-600" onClick={() => updateRouteUrl(selectedBoard, selectedClass, '', 2)}>{selectedClass} Notes</span>}
-          {selectedSubject && <span>/</span>}
-          {selectedSubject && <span className="text-slate-800 font-bold">{selectedSubject}</span>}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <span className="cursor-pointer hover:text-indigo-600" onClick={resetStepWizard}>Notes & Key Books</span>
+            {selectedBoard && <span>/</span>}
+            {selectedBoard && <span className="cursor-pointer hover:text-indigo-600" onClick={() => updateRouteUrl(selectedBoard, '', '', 1)}>{selectedBoard}</span>}
+            {selectedClass && <span>/</span>}
+            {selectedClass && <span className="cursor-pointer hover:text-indigo-600" onClick={() => updateRouteUrl(selectedBoard, selectedClass, '', 2)}>{selectedClass} Notes</span>}
+            {selectedSubject && <span>/</span>}
+            {selectedSubject && <span className="text-slate-800 font-bold">{selectedSubject}</span>}
+          </div>
+
+          {/* Upload Notes Action Button */}
+          <button
+            onClick={() => {
+              setUploadForm({
+                title: selectedSubject ? `${selectedSubject} Class ${selectedClass || '9'} Unit 1 Solved Notes` : '',
+                subject: selectedSubject || '',
+                grade: selectedClass || '9',
+                board: selectedBoard || 'PCTB (Punjab Board)',
+                noteType: 'Chapter Questions',
+                scope: 'CHAPTER_WISE',
+                unit: '1',
+                author: '',
+                fileUrl: '',
+                description: ''
+              });
+              setIsUploadModalOpen(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-200 transition-all hover:scale-105"
+          >
+            <Upload size={15} />
+            <span>Upload Notes / Chapter Questions</span>
+          </button>
         </div>
 
         {selectedNoteModal ? (
           <div>
-            <span className="text-xs font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
-              {selectedNoteModal.grade || selectedClass || 'CLASS'} NOTES
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+                {selectedNoteModal.grade || selectedClass || 'CLASS'} NOTES
+              </span>
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
+                <Sparkles size={13} /> SNC 2025–2026 Syllabus Aligned
+              </span>
+              <span className="text-xs font-bold text-sky-700 bg-sky-50 px-3 py-1 rounded-full border border-sky-200">
+                {selectedNoteModal.scope === 'FULL_BOOK' || selectedNoteModal.noteType === 'Full Book Complete' ? '📚 Full Book Master Notes' : '📖 Chapter-Wise Question Solutions'}
+              </span>
+            </div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2 leading-tight">
               {selectedNoteModal.title || `${selectedNoteModal.subject} Notes (${selectedNoteModal.grade || 'General'})`}
             </h1>
@@ -313,8 +445,11 @@ const Notes: React.FC = () => {
         ) : (
           <div className="text-center py-4">
             <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 inline-block relative">
-              <span className="text-amber-500 border-b-4 border-amber-500 pb-1">Study</span> Notes
+              <span className="text-amber-500 border-b-4 border-amber-500 pb-1">Study</span> Notes & Chapter Solutions
             </h1>
+            <p className="text-slate-500 text-sm mt-2 max-w-2xl mx-auto">
+              Comprehensive chapter-wise solved questions, MCQs with answer keys, numericals, and full book complete notes for matric & intermediate exams.
+            </p>
             {(selectedBoard || selectedClass || selectedSubject) && (
               <div className="mt-4 flex items-center justify-center gap-2 text-sm font-black uppercase text-slate-700 tracking-wider">
                 {selectedBoard && <span>🏛️ {selectedBoard}</span>}
@@ -329,26 +464,124 @@ const Notes: React.FC = () => {
         )}
       </div>
 
-      {/* DEDICATED ACTIVE NOTE PAGE VIEW (Matching screenshot layout) */}
+      {/* DEDICATED ACTIVE NOTE PAGE VIEW (TaleemCity Style High-Impact Layout) */}
       {selectedNoteModal ? (
         <div className="space-y-8">
-          {/* TOP SECTION: Detailed Resource Description Box */}
-          <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Resource Details & Overview</h3>
+          
+          {/* TOP SECTION: Detailed TaleemCity-Style Resource Description & Features Card */}
+          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <BookOpen className="text-indigo-600" size={18} />
+                  Comprehensive Study Guide & Syllabus Overview
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">Aligned with latest PCTB, Federal FBISE, and National Curriculum standards</p>
+              </div>
               <button 
                 onClick={closeNoteModal}
-                className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-all"
+                className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all"
               >
                 ← Back to Note List
               </button>
             </div>
-            <p className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-line font-medium">
-              {selectedNoteModal.description || selectedNoteModal.content || `Complete study notes and reference material for ${selectedNoteModal.subject || 'this course'} (${selectedNoteModal.grade || 'General'}). Curated for exam preparation according to the ${selectedNoteModal.board || 'standard educational board'} syllabus.`}
-            </p>
+
+            {/* Key Features Grid (TaleemCity style) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-100 flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold flex-shrink-0">
+                  <CheckSquare size={16} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-indigo-950 uppercase">Solved MCQs</h4>
+                  <p className="text-[11px] text-indigo-800/80 mt-0.5">Chapter-wise textbook & conceptual MCQs with correct answers.</p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-100 flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold flex-shrink-0">
+                  <FileText size={16} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-emerald-950 uppercase">Short & Long Q&A</h4>
+                  <p className="text-[11px] text-emerald-800/80 mt-0.5">Precise pointwise answers for maximum exam scoring.</p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-sky-50/60 rounded-2xl border border-sky-100 flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-sky-600 text-white flex items-center justify-center font-bold flex-shrink-0">
+                  <Sparkles size={16} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-sky-950 uppercase">Exercise Solutions</h4>
+                  <p className="text-[11px] text-sky-800/80 mt-0.5">Complete textbook exercise questions and solved numericals.</p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-amber-50/60 rounded-2xl border border-amber-100 flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-600 text-white flex items-center justify-center font-bold flex-shrink-0">
+                  <ShieldCheck size={16} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-amber-950 uppercase">Board Compatibility</h4>
+                  <p className="text-[11px] text-amber-800/80 mt-0.5">Valid for all Punjab, Federal, Sindh, and KPK BISE Boards.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Rich Large Description Body */}
+            <div className="prose prose-slate max-w-none text-slate-700 text-sm leading-relaxed whitespace-pre-line bg-slate-50 p-6 rounded-2xl border border-slate-200">
+              {selectedNoteModal.description || selectedNoteModal.content || `
+### Detailed Course Overview:
+These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${selectedNoteModal.grade || selectedClass || '9/10/11/12'})** provide a complete revision and practice pack tailored specifically to help students excel in their annual board examinations.
+
+#### What is Included in this Document:
+1. **Multiple Choice Questions (MCQs):** Carefully curated objective questions from textbook lines and previous 5 years' board papers.
+2. **Short Answer Questions:** Precise, high-scoring answers highlighting core concepts, definitions, and formulas.
+3. **Extensive Long Questions:** Detailed step-by-step answers with diagrams, derivations, and headings matching board exam marking criteria.
+4. **Solved Numericals / Exercises:** Complete numerical problems solved with given data, formula substitution, and final units.
+
+#### Applicable Educational Boards:
+- **Punjab Boards:** BISE Lahore, BISE Rawalpindi, BISE Faisalabad, BISE Gujranwala, BISE Multan, BISE Sahiwal, BISE Sargodha, BISE Bahawalpur, BISE DG Khan.
+- **Federal Board (FBISE):** Islamabad & Cantonment Colleges.
+- **Other Boards:** KPK, Sindh, and AJK Boards adhering to the National Curriculum.
+              `}
+            </div>
+
+            {/* Action Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+              <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
+                <span className="flex items-center gap-1"><ShieldCheck size={14} className="text-emerald-600" /> Verified Content</span>
+                <span>•</span>
+                <span>PDF Format</span>
+                <span>•</span>
+                <span>High Resolution</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+                >
+                  <Printer size={15} />
+                  <span>Print Note</span>
+                </button>
+                {selectedNoteModal.fileUrl && (
+                  <a
+                    href={selectedNoteModal.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2"
+                  >
+                    <Download size={15} />
+                    <span>Download PDF / Drive</span>
+                  </a>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* CENTER SECTION: Embedded PDF Frame with Arrow to Drive */}
+          {/* CENTER SECTION: Embedded PDF Frame */}
           {selectedNoteModal.fileUrl ? (
             <div className="bg-slate-900 rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-800 space-y-4">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-800/80 p-4 rounded-2xl border border-slate-700">
@@ -362,20 +595,19 @@ const Notes: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* Arrow Launch Button to Google Drive / Link */}
                 <a
                   href={selectedNoteModal.fileUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg hover:scale-105"
                 >
-                  <span>Open PDF Drive Link</span>
-                  <span className="text-base">➔</span>
+                  <span>Open Full PDF</span>
+                  <ExternalLink size={15} />
                 </a>
               </div>
 
               {/* Large Center PDF Frame */}
-              <div className="w-full h-[650px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800">
+              <div className="w-full h-[680px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800">
                 <iframe
                   src={selectedNoteModal.fileUrl?.includes('drive.google.com') ? selectedNoteModal.fileUrl.replace('/view', '/preview') : selectedNoteModal.fileUrl}
                   className="w-full h-full border-0"
@@ -389,7 +621,7 @@ const Notes: React.FC = () => {
             </div>
           )}
 
-          {/* BOTTOM SECTION: Discover More & Other Filtered Notes Recommendations */}
+          {/* BOTTOM SECTION: Related Notes & Recommendations */}
           <div className="pt-8 border-t border-slate-200 space-y-6">
             <div className="bg-sky-50/80 p-5 rounded-2xl border border-sky-100 flex justify-between items-center">
               <div>
@@ -515,41 +747,67 @@ const Notes: React.FC = () => {
           {/* STEP 4 / PDF Notes Cards View */}
           {(currentStep === 4 || (selectedBoard && selectedClass && selectedSubject)) && (
             <div className="space-y-6 mt-4">
-              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
-                <div className="relative flex-1 w-full md:max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                  <input 
-                    type="text" 
-                    placeholder="Search notes by title, subject or author..." 
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                
-                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                  {/* Limit selector dropdown */}
-                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold text-slate-700">
-                    <span className="text-slate-400 font-semibold">Show:</span>
-                    <select
-                      value={pageSize}
-                      onChange={(e) => handlePageSizeChange(e.target.value)}
-                      className="bg-transparent font-black text-indigo-600 focus:outline-none cursor-pointer"
-                    >
-                      <option value="20">20</option>
-                      <option value="40">40</option>
-                      <option value="100">100</option>
-                      <option value="all">All</option>
-                    </select>
+              {/* Search and Scope Filter Toolbar */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+                  <div className="relative flex-1 w-full md:max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                    <input 
+                      type="text" 
+                      placeholder="Search notes by title, subject or author..." 
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      value={searchTerm}
+                      onChange={e => setSearchTerm(e.target.value)}
+                    />
                   </div>
+                  
+                  <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    {/* Limit selector dropdown */}
+                    <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold text-slate-700">
+                      <span className="text-slate-400 font-semibold">Show:</span>
+                      <select
+                        value={pageSize}
+                        onChange={(e) => handlePageSizeChange(e.target.value)}
+                        className="bg-transparent font-black text-indigo-600 focus:outline-none cursor-pointer"
+                      >
+                        <option value="20">20</option>
+                        <option value="40">40</option>
+                        <option value="100">100</option>
+                        <option value="all">All</option>
+                      </select>
+                    </div>
 
-                  <button onClick={resetStepWizard} className="px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-all">
-                    Change Selection
-                  </button>
+                    <button onClick={resetStepWizard} className="px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-all">
+                      Change Selection
+                    </button>
+                  </div>
+                </div>
+
+                {/* Scope Filters (All Notes, Chapter-Wise, Full Book, Past Papers) */}
+                <div className="flex items-center gap-2 pt-2 border-t border-slate-100 overflow-x-auto pb-1">
+                  <span className="text-xs font-bold text-slate-400 uppercase mr-1">Filter Scope:</span>
+                  {[
+                    { id: 'ALL', label: 'All Resources' },
+                    { id: 'CHAPTER_WISE', label: '📖 Chapter-Wise Solutions' },
+                    { id: 'FULL_BOOK', label: '📚 Full Book Master Notes' },
+                    { id: 'PAST_PAPERS', label: '📝 Past Papers' }
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setScopeFilter(tab.id as any)}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                        scopeFilter === tab.id
+                          ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200 scale-105'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Results Summary Bar & Display Limit Pills */}
+              {/* Results Summary Bar */}
               {!isLoading && totalFilteredCount > 0 && (
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-2 px-1 text-xs text-slate-500 font-semibold">
                   <div>
@@ -580,6 +838,7 @@ const Notes: React.FC = () => {
                 </div>
               )}
 
+              {/* Notes Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                 {paginatedNotes.map(note => (
                   <div
@@ -699,11 +958,254 @@ const Notes: React.FC = () => {
           )}
         </>
       )}
+
+      {/* ─── PUBLIC UPLOAD MODAL (Chapter-Wise Questions & Full Book) ───────────── */}
+      {isUploadModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh] border border-slate-100">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-indigo-50/80 via-white to-violet-50/80">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-200">
+                  <Upload size={20} />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-slate-900">Upload Study Notes & Question Solutions</h3>
+                  <p className="text-xs text-slate-500">Share chapter-wise solved questions or complete full book notes</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsUploadModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Form Content */}
+            <form onSubmit={handleUploadSubmit} className="p-6 overflow-y-auto space-y-4">
+              {uploadSuccessMsg && (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-xs font-bold flex items-center gap-2">
+                  <CheckCircle size={18} className="text-emerald-600" />
+                  {uploadSuccessMsg}
+                </div>
+              )}
+
+              {/* Scope Selector: Chapter-Wise vs Full Book */}
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                <label className="text-xs font-black text-slate-700 uppercase tracking-wider block">1. Select Note Scope</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setUploadForm(p => ({ ...p, scope: 'CHAPTER_WISE', noteType: 'Chapter Questions' }))}
+                    className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                      uploadForm.scope === 'CHAPTER_WISE'
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <BookOpen size={16} />
+                    <span>Chapter-Wise Questions & Solutions</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setUploadForm(p => ({ ...p, scope: 'FULL_BOOK', noteType: 'Full Book Complete' }))}
+                    className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                      uploadForm.scope === 'FULL_BOOK'
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Layers size={16} />
+                    <span>Full Book Master Notes</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Title & Subject */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-600">Note Title *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Physics Chapter 1 Solved Short & Long Q/A"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                    value={uploadForm.title}
+                    onChange={e => setUploadForm(p => ({ ...p, title: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-600">Subject *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Physics, Math, Chemistry, Computer..."
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                    value={uploadForm.subject}
+                    onChange={e => setUploadForm(p => ({ ...p, subject: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              {/* Class, Board, Unit / Chapter Number */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-600">Class / Grade</label>
+                  <select
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                    value={uploadForm.grade}
+                    onChange={e => setUploadForm(p => ({ ...p, grade: e.target.value }))}
+                  >
+                    <option value="9">Class 9 (9th Matric)</option>
+                    <option value="10">Class 10 (10th Matric)</option>
+                    <option value="11">Class 11 (1st Year Inter)</option>
+                    <option value="12">Class 12 (2nd Year Inter)</option>
+                    <option value="Entry Test">Entry Test / MDCAT / ECAT</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-600">Board / Syllabus</label>
+                  <select
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                    value={uploadForm.board}
+                    onChange={e => setUploadForm(p => ({ ...p, board: e.target.value }))}
+                  >
+                    <option value="PCTB (Punjab Board)">PCTB (Punjab Board)</option>
+                    <option value="Federal FBISE (Islamabad)">Federal FBISE (Islamabad)</option>
+                    <option value="Sindh Textbook Board">Sindh Textbook Board</option>
+                    <option value="KPK Textbook Board">KPK Textbook Board</option>
+                    <option value="Balochistan Board">Balochistan Board</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-600">
+                    {uploadForm.scope === 'CHAPTER_WISE' ? 'Chapter / Unit #' : 'Syllabus Type'}
+                  </label>
+                  {uploadForm.scope === 'CHAPTER_WISE' ? (
+                    <input
+                      type="text"
+                      placeholder="e.g. Unit 1, Chapter 3, Ch 5"
+                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                      value={uploadForm.unit}
+                      onChange={e => setUploadForm(p => ({ ...p, unit: e.target.value }))}
+                    />
+                  ) : (
+                    <select
+                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                      value={uploadForm.noteType}
+                      onChange={e => setUploadForm(p => ({ ...p, noteType: e.target.value }))}
+                    >
+                      <option value="Full Book Complete">Full Book Complete</option>
+                      <option value="Book Notes">Comprehensive Key Book</option>
+                      <option value="Past Paper">Solved Past Papers</option>
+                    </select>
+                  )}
+                </div>
+              </div>
+
+              {/* Author / Source & PDF Link */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-600">Author / Teacher / Academy Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Prof. Tariq, TaleemCity, FreeILM"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 outline-none"
+                    value={uploadForm.author}
+                    onChange={e => setUploadForm(p => ({ ...p, author: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-600">Google Drive / Direct PDF URL</label>
+                  <input
+                    type="url"
+                    placeholder="https://drive.google.com/file/d/.../preview"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none"
+                    value={uploadForm.fileUrl}
+                    onChange={e => setUploadForm(p => ({ ...p, fileUrl: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              {/* Direct PDF File Upload */}
+              <div className="p-3 bg-slate-50 rounded-2xl border border-dashed border-slate-300 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-slate-700">Or Upload PDF Document Directly:</span>
+                  <p className="text-[11px] text-slate-400">PDF documents up to 50MB</p>
+                </div>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileUpload}
+                  className="text-xs text-slate-600"
+                />
+              </div>
+
+              {/* Large TaleemCity Style Description */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                    Detailed Resource Description (TaleemCity Style)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={insertTaleemCityTemplate}
+                    className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1"
+                  >
+                    <Sparkles size={12} />
+                    <span>Auto-Fill TaleemCity Template</span>
+                  </button>
+                </div>
+
+                <textarea
+                  rows={6}
+                  placeholder="Provide comprehensive details about covered MCQs, short answers, long questions, numerical solutions, board compatibility..."
+                  className="w-full p-3 rounded-2xl border border-slate-200 text-xs font-mono leading-relaxed focus:ring-2 focus:ring-indigo-500 outline-none"
+                  value={uploadForm.description}
+                  onChange={e => setUploadForm(p => ({ ...p, description: e.target.value }))}
+                />
+              </div>
+
+              {/* Modal Actions */}
+              <div className="pt-3 border-t border-slate-100 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsUploadModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isUploading}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-indigo-200 transition-all flex items-center gap-2"
+                >
+                  {isUploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Submitting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={14} />
+                      <span>Submit Notes</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default Notes;
-
-
-

@@ -1,26 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Search, FileText, Download, Filter, ChevronLeft, ChevronRight, 
-  GraduationCap, Layers, Tag, Upload, BookOpen, CheckCircle, 
-  HelpCircle, ExternalLink, Plus, X, Sparkles, CheckSquare, Eye, ShieldCheck, Share2, Printer
+  Search, FileText, Download, ChevronLeft, ChevronRight, 
+  BookOpen, Sparkles, CheckSquare, ShieldCheck, Printer, ExternalLink
 } from 'lucide-react';
-import { getNotes, addNote, uploadFile, getPublicCurriculum } from '../../services/dataService';
+import { getNotes, getPublicCurriculum } from '../../services/dataService';
 import { Syllabus, ClassLevel } from '../../types';
-
-const NOTE_TYPES = [
-  'Chapter Questions',
-  'Full Book Complete',
-  'Solved MCQs',
-  'Short & Long Q&A',
-  'Solved Numericals',
-  'Book Notes',
-  'Class Notes',
-  'ECAT/Entry Test',
-  'NTS',
-  'MDCAT',
-  'Past Paper',
-  'Other'
-];
 
 const Notes: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,25 +19,8 @@ const Notes: React.FC = () => {
   
   // Scope Filter: 'ALL' | 'CHAPTER_WISE' | 'FULL_BOOK' | 'PAST_PAPERS'
   const [scopeFilter, setScopeFilter] = useState<'ALL' | 'CHAPTER_WISE' | 'FULL_BOOK' | 'PAST_PAPERS'>('ALL');
-  
-  // Public Upload Modal State
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadSuccessMsg, setUploadSuccessMsg] = useState('');
-  const [uploadForm, setUploadForm] = useState({
-    title: '',
-    subject: '',
-    grade: '',
-    board: 'PCTB (Punjab Board)',
-    noteType: 'Chapter Questions',
-    scope: 'CHAPTER_WISE', // 'CHAPTER_WISE' | 'FULL_BOOK'
-    unit: '1',
-    author: '',
-    fileUrl: '',
-    description: ''
-  });
 
-  // Selected Note Modal State
+  // Selected Note Detail View State
   const [selectedNoteModal, setSelectedNoteModal] = useState<any | null>(null);
 
   // Pagination State (20, 40, 100, 'all')
@@ -303,123 +270,18 @@ const Notes: React.FC = () => {
     'from-emerald-500 to-teal-600 text-white shadow-emerald-200'
   ];
 
-  // Upload Note Submission Handler
-  const handleUploadSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!uploadForm.title.trim() || !uploadForm.subject.trim()) {
-      alert("Please enter a title and subject.");
-      return;
-    }
-    setIsUploading(true);
-    setUploadSuccessMsg('');
-    try {
-      await addNote({
-        title: uploadForm.title,
-        subject: uploadForm.subject,
-        grade: uploadForm.grade || selectedClass || '9',
-        board: uploadForm.board || selectedBoard || 'PCTB (Punjab Board)',
-        noteType: uploadForm.noteType,
-        scope: uploadForm.scope,
-        unit: uploadForm.unit,
-        author: uploadForm.author || 'Contributor',
-        fileUrl: uploadForm.fileUrl,
-        description: uploadForm.description
-      });
-      setUploadSuccessMsg('🎉 Notes submitted successfully! It is now available in the study directory.');
-      setTimeout(() => {
-        setIsUploadModalOpen(false);
-        setUploadSuccessMsg('');
-        // Reload notes
-        getNotes().then(data => setNotes(Array.isArray(data) ? data : []));
-      }, 1500);
-    } catch (err: any) {
-      alert(`Upload failed: ${err.message || 'Server error'}`);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      try {
-        setIsUploading(true);
-        const url = await uploadFile(e.target.files[0]);
-        setUploadForm(prev => ({ ...prev, fileUrl: url }));
-      } catch (err) {
-        alert("File upload failed. Please use a direct PDF URL or Google Drive link.");
-      } finally {
-        setIsUploading(false);
-      }
-    }
-  };
-
-  // Helper to insert TaleemCity style description template
-  const insertTaleemCityTemplate = () => {
-    const sub = uploadForm.subject || selectedSubject || 'Subject';
-    const gr = uploadForm.grade || selectedClass || '9';
-    const isChapter = uploadForm.scope === 'CHAPTER_WISE';
-    const unitText = isChapter ? `Unit ${uploadForm.unit || '1'}` : 'Complete Syllabus';
-    
-    const template = `### Comprehensive ${sub} Class ${gr} (${unitText}) Notes & Solutions
-
-These ${sub} notes for Class ${gr} are prepared strictly according to the latest National Curriculum and Single National Curriculum (SNC 2025-2026). Ideal for scoring maximum marks in annual board examinations.
-
-#### 📌 Included In This Resource:
-1. **Multiple Choice Questions (MCQs):** Comprehensive textbook and conceptual MCQs with verified answer keys.
-2. **Short Questions & Answers:** Concise, exam-focused answers highlighting crucial definitions and laws.
-3. **Long & Detailed Questions:** Point-by-point explanations with derivations, formulas, and board-standard headings.
-4. **Solved Textbook Exercises & Numericals:** Complete solved exercise numericals with given data, step-by-step formula substitutions, and final answers.
-
-#### 🏛️ Board Compatibility:
-- **Punjab Boards:** Lahore, Rawalpindi, Gujranwala, Faisalabad, Multan, Sargodha, Sahiwal, Bahawalpur, DG Khan.
-- **Federal Board (FBISE):** Islamabad & Overseas Institutions.
-- **KPK & Sindh Boards:** Aligned with Single National Curriculum standards.
-
-#### 💡 Study & Revision Tips:
-- Practice solved numericals and derivations regularly.
-- Memorize bold definitions and key formulas.
-- Review past 5-year board questions included at the end of each topic.`;
-
-    setUploadForm(prev => ({ ...prev, description: template }));
-  };
-
   return (
     <div className="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
       {/* Dynamic Header & Breadcrumbs matching screenshot */}
       <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            <span className="cursor-pointer hover:text-indigo-600" onClick={resetStepWizard}>Notes & Key Books</span>
-            {selectedBoard && <span>/</span>}
-            {selectedBoard && <span className="cursor-pointer hover:text-indigo-600" onClick={() => updateRouteUrl(selectedBoard, '', '', 1)}>{selectedBoard}</span>}
-            {selectedClass && <span>/</span>}
-            {selectedClass && <span className="cursor-pointer hover:text-indigo-600" onClick={() => updateRouteUrl(selectedBoard, selectedClass, '', 2)}>{selectedClass} Notes</span>}
-            {selectedSubject && <span>/</span>}
-            {selectedSubject && <span className="text-slate-800 font-bold">{selectedSubject}</span>}
-          </div>
-
-          {/* Upload Notes Action Button */}
-          <button
-            onClick={() => {
-              setUploadForm({
-                title: selectedSubject ? `${selectedSubject} Class ${selectedClass || '9'} Unit 1 Solved Notes` : '',
-                subject: selectedSubject || '',
-                grade: selectedClass || '9',
-                board: selectedBoard || 'PCTB (Punjab Board)',
-                noteType: 'Chapter Questions',
-                scope: 'CHAPTER_WISE',
-                unit: '1',
-                author: '',
-                fileUrl: '',
-                description: ''
-              });
-              setIsUploadModalOpen(true);
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-200 transition-all hover:scale-105"
-          >
-            <Upload size={15} />
-            <span>Upload Notes / Chapter Questions</span>
-          </button>
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <span className="cursor-pointer hover:text-indigo-600" onClick={resetStepWizard}>Notes & Key Books</span>
+          {selectedBoard && <span>/</span>}
+          {selectedBoard && <span className="cursor-pointer hover:text-indigo-600" onClick={() => updateRouteUrl(selectedBoard, '', '', 1)}>{selectedBoard}</span>}
+          {selectedClass && <span>/</span>}
+          {selectedClass && <span className="cursor-pointer hover:text-indigo-600" onClick={() => updateRouteUrl(selectedBoard, selectedClass, '', 2)}>{selectedClass} Notes</span>}
+          {selectedSubject && <span>/</span>}
+          {selectedSubject && <span className="text-slate-800 font-bold">{selectedSubject}</span>}
         </div>
 
         {selectedNoteModal ? (
@@ -957,252 +819,6 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
             </div>
           )}
         </>
-      )}
-
-      {/* ─── PUBLIC UPLOAD MODAL (Chapter-Wise Questions & Full Book) ───────────── */}
-      {isUploadModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh] border border-slate-100">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-indigo-50/80 via-white to-violet-50/80">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-200">
-                  <Upload size={20} />
-                </div>
-                <div>
-                  <h3 className="font-black text-base text-slate-900">Upload Study Notes & Question Solutions</h3>
-                  <p className="text-xs text-slate-500">Share chapter-wise solved questions or complete full book notes</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsUploadModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-all"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Modal Form Content */}
-            <form onSubmit={handleUploadSubmit} className="p-6 overflow-y-auto space-y-4">
-              {uploadSuccessMsg && (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-xs font-bold flex items-center gap-2">
-                  <CheckCircle size={18} className="text-emerald-600" />
-                  {uploadSuccessMsg}
-                </div>
-              )}
-
-              {/* Scope Selector: Chapter-Wise vs Full Book */}
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-                <label className="text-xs font-black text-slate-700 uppercase tracking-wider block">1. Select Note Scope</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setUploadForm(p => ({ ...p, scope: 'CHAPTER_WISE', noteType: 'Chapter Questions' }))}
-                    className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                      uploadForm.scope === 'CHAPTER_WISE'
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <BookOpen size={16} />
-                    <span>Chapter-Wise Questions & Solutions</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setUploadForm(p => ({ ...p, scope: 'FULL_BOOK', noteType: 'Full Book Complete' }))}
-                    className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                      uploadForm.scope === 'FULL_BOOK'
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Layers size={16} />
-                    <span>Full Book Master Notes</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Title & Subject */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-600">Note Title *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Physics Chapter 1 Solved Short & Long Q/A"
-                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
-                    value={uploadForm.title}
-                    onChange={e => setUploadForm(p => ({ ...p, title: e.target.value }))}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-600">Subject *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Physics, Math, Chemistry, Computer..."
-                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
-                    value={uploadForm.subject}
-                    onChange={e => setUploadForm(p => ({ ...p, subject: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              {/* Class, Board, Unit / Chapter Number */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-600">Class / Grade</label>
-                  <select
-                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                    value={uploadForm.grade}
-                    onChange={e => setUploadForm(p => ({ ...p, grade: e.target.value }))}
-                  >
-                    <option value="9">Class 9 (9th Matric)</option>
-                    <option value="10">Class 10 (10th Matric)</option>
-                    <option value="11">Class 11 (1st Year Inter)</option>
-                    <option value="12">Class 12 (2nd Year Inter)</option>
-                    <option value="Entry Test">Entry Test / MDCAT / ECAT</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-600">Board / Syllabus</label>
-                  <select
-                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                    value={uploadForm.board}
-                    onChange={e => setUploadForm(p => ({ ...p, board: e.target.value }))}
-                  >
-                    <option value="PCTB (Punjab Board)">PCTB (Punjab Board)</option>
-                    <option value="Federal FBISE (Islamabad)">Federal FBISE (Islamabad)</option>
-                    <option value="Sindh Textbook Board">Sindh Textbook Board</option>
-                    <option value="KPK Textbook Board">KPK Textbook Board</option>
-                    <option value="Balochistan Board">Balochistan Board</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-600">
-                    {uploadForm.scope === 'CHAPTER_WISE' ? 'Chapter / Unit #' : 'Syllabus Type'}
-                  </label>
-                  {uploadForm.scope === 'CHAPTER_WISE' ? (
-                    <input
-                      type="text"
-                      placeholder="e.g. Unit 1, Chapter 3, Ch 5"
-                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
-                      value={uploadForm.unit}
-                      onChange={e => setUploadForm(p => ({ ...p, unit: e.target.value }))}
-                    />
-                  ) : (
-                    <select
-                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                      value={uploadForm.noteType}
-                      onChange={e => setUploadForm(p => ({ ...p, noteType: e.target.value }))}
-                    >
-                      <option value="Full Book Complete">Full Book Complete</option>
-                      <option value="Book Notes">Comprehensive Key Book</option>
-                      <option value="Past Paper">Solved Past Papers</option>
-                    </select>
-                  )}
-                </div>
-              </div>
-
-              {/* Author / Source & PDF Link */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-600">Author / Teacher / Academy Name</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Prof. Tariq, TaleemCity, FreeILM"
-                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 outline-none"
-                    value={uploadForm.author}
-                    onChange={e => setUploadForm(p => ({ ...p, author: e.target.value }))}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-600">Google Drive / Direct PDF URL</label>
-                  <input
-                    type="url"
-                    placeholder="https://drive.google.com/file/d/.../preview"
-                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none"
-                    value={uploadForm.fileUrl}
-                    onChange={e => setUploadForm(p => ({ ...p, fileUrl: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              {/* Direct PDF File Upload */}
-              <div className="p-3 bg-slate-50 rounded-2xl border border-dashed border-slate-300 flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-bold text-slate-700">Or Upload PDF Document Directly:</span>
-                  <p className="text-[11px] text-slate-400">PDF documents up to 50MB</p>
-                </div>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleFileUpload}
-                  className="text-xs text-slate-600"
-                />
-              </div>
-
-              {/* Large TaleemCity Style Description */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                    Detailed Resource Description (TaleemCity Style)
-                  </label>
-                  <button
-                    type="button"
-                    onClick={insertTaleemCityTemplate}
-                    className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1"
-                  >
-                    <Sparkles size={12} />
-                    <span>Auto-Fill TaleemCity Template</span>
-                  </button>
-                </div>
-
-                <textarea
-                  rows={6}
-                  placeholder="Provide comprehensive details about covered MCQs, short answers, long questions, numerical solutions, board compatibility..."
-                  className="w-full p-3 rounded-2xl border border-slate-200 text-xs font-mono leading-relaxed focus:ring-2 focus:ring-indigo-500 outline-none"
-                  value={uploadForm.description}
-                  onChange={e => setUploadForm(p => ({ ...p, description: e.target.value }))}
-                />
-              </div>
-
-              {/* Modal Actions */}
-              <div className="pt-3 border-t border-slate-100 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsUploadModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={isUploading}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-indigo-200 transition-all flex items-center gap-2"
-                >
-                  {isUploading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Submitting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Upload size={14} />
-                      <span>Submit Notes</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
       )}
     </div>
   );

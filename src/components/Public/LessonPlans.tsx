@@ -31,52 +31,65 @@ const LessonPlans: React.FC = () => {
   const [pageSize, setPageSize] = useState<string>('20');
   const [userCustomLimit, setUserCustomLimit] = useState<boolean>(false);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await getPublicCurriculum();
-        setCurriculum({ syllabuses: data?.syllabuses || [], classes: data?.classes || [] });
-      } catch {
-        setCurriculum({ syllabuses: [], classes: [] });
-      }
-    };
-    load();
-  }, []);
+  // Helper functions to normalize strings for robust comparison
+  const normalizeNum = (str: string) => String(str || '').replace(/[^0-9]/g, '');
+  const normalizeText = (str: string) => String(str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
-  // Lazy Fetching: Only fetch lesson plans when in Step 4 or when Subject is selected or Search is active
+  // Initial Load: Fetch Curriculum and all Lesson Plans from database
   useEffect(() => {
-    const shouldFetch = currentStep === 4 || selectedSubject || searchTerm;
-    if (!shouldFetch) {
-      setNotes([]);
-      setIsLoading(false);
-      return;
-    }
-
-    const t = setTimeout(async () => {
+    let isMounted = true;
+    const loadAll = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const data = await getNotes({
-          search: searchTerm,
-          board: selectedBoard,
-          grade: selectedClass,
-          subject: selectedSubject,
-          noteType: 'Lesson Plan'
-        });
-        setNotes(Array.isArray(data) ? data : []);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch lesson plans. Please try again.');
-        setNotes([]);
-      } finally {
-        setIsLoading(false);
-      }
-    }, 200);
-    return () => clearTimeout(t);
-  }, [currentStep, searchTerm, selectedBoard, selectedClass, selectedSubject]);
+        const [currData, plansData] = await Promise.all([
+          getPublicCurriculum().catch(() => ({ syllabuses: [], classes: [] })),
+          getNotes({ noteType: 'Lesson Plan' }).catch(() => [])
+        ]);
+        let finalPlans = Array.isArray(plansData) ? plansData : [];
+        if (finalPlans.length === 0) {
+          const allNotes = await getNotes().catch(() => []);
+          if (Array.isArray(allNotes) && allNotes.length > 0) {
+            finalPlans = allNotes.filter(n => 
+              (n.noteType && /lesson\s*plan|plan/i.test(n.noteType)) || 
+              (n.title && /lesson\s*plan|lp\b/i.test(n.title))
+            );
+            if (finalPlans.length === 0) finalPlans = allNotes;
+          }
+        }
 
-  // Extract boards from curriculum or defaults
+        if (isMounted) {
+          setCurriculum({ syllabuses: currData?.syllabuses || [], classes: currData?.classes || [] });
+          setNotes(finalPlans);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err.message || 'Failed to fetch lesson plans. Please try again.');
+          setNotes([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+    loadAll();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Extract boards from uploaded plans or curriculum
   const availableBoards = useMemo(() => {
     const list: { id: string; name: string }[] = [];
+    
+    notes.forEach(n => {
+      if (n.board && n.board.trim()) {
+        const trimmed = n.board.trim();
+        if (!list.some(b => b.name.toLowerCase() === trimmed.toLowerCase())) {
+          list.push({ id: trimmed, name: trimmed });
+        }
+      }
+    });
+
     if (curriculum.syllabuses.length > 0) {
       curriculum.syllabuses.forEach(s => {
         if (s.name && !list.some(b => b.name.trim().toLowerCase() === s.name.trim().toLowerCase())) {
@@ -84,57 +97,115 @@ const LessonPlans: React.FC = () => {
         }
       });
     }
-    if (!list.some(b => b.name.includes('Punjab') || b.name.includes('PCTB'))) {
-      list.unshift({ id: 'PCTB (Punjab Curriculum & Textbook Board)', name: 'PCTB (Punjab Board)' });
+
+    if (list.length === 0) {
+      list.push({ id: 'PCTB (Punjab Curriculum & Textbook Board)', name: 'PCTB (Punjab Board)' });
       list.push({ id: 'Federal Board (FBISE)', name: 'Federal Board (FBISE)' });
       list.push({ id: 'KPK Board', name: 'KPK Board' });
       list.push({ id: 'Sindh Board', name: 'Sindh Board' });
     }
     return list;
-  }, [curriculum.syllabuses]);
+  }, [curriculum.syllabuses, notes]);
 
-  // Extract classes from curriculum
+  // Extract classes from uploaded plans or curriculum
   const availableClasses = useMemo(() => {
     const classSet = new Set<string>();
+
+    notes.forEach(n => {
+      if (n.grade && String(n.grade).trim()) {
+        if (selectedBoard && n.board) {
+          const nb = normalizeText(n.board);
+          const sb = normalizeText(selectedBoard);
+          if (nb && sb && !nb.includes(sb) && !sb.includes(nb)) return;
+        }
+        let g = String(n.grade).trim();
+        if (/^\d+$/.test(g)) g = `Class ${g}`;
+        classSet.add(g);
+      }
+    });
+
     if (curriculum.classes.length > 0) {
       curriculum.classes.forEach(c => {
         if (c.name && c.name.trim()) classSet.add(c.name.trim());
       });
     }
-    ['Class 9', 'Class 10', 'Class 11', 'Class 12'].forEach(c => classSet.add(c));
-    return Array.from(classSet).map(c => ({ id: c, name: c }));
-  }, [curriculum.classes]);
 
-  // Extract subjects
-  const availableSubjects: string[] = useMemo(() => {
-    const foundClass: any = (curriculum.classes as any[]).find((c: any) => 
-      c.name && (
-        c.name.trim().toLowerCase() === selectedClass.trim().toLowerCase() ||
-        c.name.replace(/class\s*/i, '').trim() === selectedClass.replace(/class\s*/i, '').trim()
-      )
-    );
-
-    if (foundClass && Array.isArray(foundClass.subjects) && foundClass.subjects.length > 0) {
-      return foundClass.subjects;
+    if (classSet.size === 0) {
+      ['Class 9', 'Class 10', 'Class 11', 'Class 12'].forEach(c => classSet.add(c));
     }
 
-    return [
-      'Mathematics',
-      'Physics',
-      'Chemistry',
-      'Biology',
-      'Computer Science',
-      'English',
-      'Islamiat',
-      'Urdu',
-      'Pakistan Studies'
-    ];
-  }, [curriculum.classes, selectedClass]);
+    return Array.from(classSet).sort((a, b) => {
+      const numA = parseInt(a.replace(/[^0-9]/g, '')) || 0;
+      const numB = parseInt(b.replace(/[^0-9]/g, '')) || 0;
+      if (numA !== numB) return numA - numB;
+      return a.localeCompare(b);
+    }).map(c => ({ id: c, name: c }));
+  }, [notes, curriculum.classes, selectedBoard]);
+
+  // Extract subjects for selected class and board
+  const availableSubjects: string[] = useMemo(() => {
+    const subSet = new Set<string>();
+
+    notes.forEach(n => {
+      if (n.subject && String(n.subject).trim()) {
+        if (selectedClass && n.grade) {
+          const ng = normalizeNum(n.grade);
+          const sg = normalizeNum(selectedClass);
+          if (ng && sg && ng !== sg) return;
+        }
+        if (selectedBoard && n.board) {
+          const nb = normalizeText(n.board);
+          const sb = normalizeText(selectedBoard);
+          if (nb && sb && !nb.includes(sb) && !sb.includes(nb)) return;
+        }
+        subSet.add(String(n.subject).trim());
+      }
+    });
+
+    if (subSet.size === 0) {
+      const foundClass: any = (curriculum.classes as any[]).find((c: any) => 
+        c.name && (
+          c.name.trim().toLowerCase() === selectedClass.trim().toLowerCase() ||
+          normalizeNum(c.name) === normalizeNum(selectedClass)
+        )
+      );
+
+      if (foundClass && Array.isArray(foundClass.subjects) && foundClass.subjects.length > 0) {
+        foundClass.subjects.forEach((s: string) => subSet.add(s));
+      } else {
+        [
+          'Mathematics',
+          'Physics',
+          'Chemistry',
+          'Biology',
+          'Computer Science',
+          'English',
+          'Islamiat',
+          'Urdu',
+          'Pakistan Studies',
+          'Tarjuma-tul-Quran'
+        ].forEach(s => subSet.add(s));
+      }
+    }
+
+    return Array.from(subSet).sort();
+  }, [notes, curriculum.classes, selectedClass, selectedBoard]);
 
   // Extract Chapters / Units
   const availableUnits = useMemo(() => {
     const unitMap = new Map<string, { unit: string; label: string; count: number }>();
     notes.forEach(n => {
+      if (selectedClass && n.grade) {
+        const ng = normalizeNum(n.grade);
+        const sg = normalizeNum(selectedClass);
+        if (ng && sg && ng !== sg) return;
+      }
+      if (selectedSubject && n.subject) {
+        const ns = normalizeText(n.subject);
+        const ss = normalizeText(selectedSubject);
+        if (ns && ss && !ns.includes(ss) && !ss.includes(ns)) return;
+      }
+
       let unitNum = '';
       if (n.unit) {
         unitNum = String(n.unit).trim();
@@ -158,10 +229,42 @@ const LessonPlans: React.FC = () => {
       if (!isNaN(na) && !isNaN(nb)) return na - nb;
       return a.unit.localeCompare(b.unit);
     });
-  }, [notes]);
+  }, [notes, selectedClass, selectedSubject]);
 
   const stepNotes = useMemo(() => {
     return notes.filter(n => {
+      // Board Filter
+      if (selectedBoard && n.board) {
+        const nb = normalizeText(n.board);
+        const sb = normalizeText(selectedBoard);
+        if (nb && sb && !nb.includes(sb) && !sb.includes(nb)) return false;
+      }
+
+      // Class Filter
+      if (selectedClass && n.grade) {
+        const ng = normalizeNum(n.grade);
+        const sg = normalizeNum(selectedClass);
+        if (ng && sg && ng !== sg) return false;
+      }
+
+      // Subject Filter
+      if (selectedSubject && n.subject) {
+        const ns = normalizeText(n.subject);
+        const ss = normalizeText(selectedSubject);
+        if (ns && ss && !ns.includes(ss) && !ss.includes(ns)) return false;
+      }
+
+      // Search Filter
+      if (searchTerm.trim()) {
+        const q = searchTerm.toLowerCase();
+        const t = String(n.title || '').toLowerCase();
+        const s = String(n.subject || '').toLowerCase();
+        const a = String(n.author || '').toLowerCase();
+        const d = String(n.description || '').toLowerCase();
+        if (!t.includes(q) && !s.includes(q) && !a.includes(q) && !d.includes(q)) return false;
+      }
+
+      // Chapter / Unit Filter
       if (selectedUnit !== 'ALL') {
         const cleanTargetUnit = selectedUnit.replace(/^0+/, '');
         const noteUnit = (n.unit || '').toString().replace(/^0+/, '');
@@ -172,7 +275,7 @@ const LessonPlans: React.FC = () => {
       }
       return true;
     });
-  }, [notes, selectedUnit]);
+  }, [notes, selectedBoard, selectedClass, selectedSubject, searchTerm, selectedUnit]);
 
   const isFiltered = Boolean(selectedBoard || selectedClass || selectedSubject || selectedUnit !== 'ALL' || searchTerm);
 
@@ -302,7 +405,6 @@ const LessonPlans: React.FC = () => {
     setSelectedPlanModal(null);
     setUserCustomLimit(false);
     setVisibleCount(20);
-    setNotes([]);
     window.history.pushState(null, '', '/lesson-plans');
   };
 

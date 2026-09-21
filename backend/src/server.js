@@ -751,20 +751,58 @@ app.get('/api/notes', async (req, res) => {
         const where = {};
         if (subject)
             where.subject = { contains: subject, mode: 'insensitive' };
-        if (grade)
-            where.grade = { equals: grade, mode: 'insensitive' };
-        if (board)
-            where.board = { equals: board, mode: 'insensitive' };
-        if (noteType)
-            where.noteType = { equals: noteType, mode: 'insensitive' };
+        if (grade) {
+            const rawNum = grade.replace(/[^0-9]/g, '');
+            if (rawNum) {
+                where.OR = [
+                    { grade: { equals: grade, mode: 'insensitive' } },
+                    { grade: { equals: rawNum, mode: 'insensitive' } },
+                    { grade: { contains: `Class ${rawNum}`, mode: 'insensitive' } },
+                    { grade: { contains: `Grade ${rawNum}`, mode: 'insensitive' } }
+                ];
+            } else {
+                where.grade = { contains: grade, mode: 'insensitive' };
+            }
+        }
+        if (board) {
+            const boardKeyword = board.split('(')[0].trim() || board.trim();
+            where.board = { contains: boardKeyword, mode: 'insensitive' };
+        }
+        if (noteType) {
+            if (noteType.toLowerCase() === 'textbook' || noteType.toLowerCase() === 'book') {
+                const bookOr = [
+                    { noteType: { contains: 'Textbook', mode: 'insensitive' } },
+                    { noteType: { contains: 'Book', mode: 'insensitive' } }
+                ];
+                if (where.OR) {
+                    where.AND = [{ OR: where.OR }, { OR: bookOr }];
+                    delete where.OR;
+                } else {
+                    where.OR = bookOr;
+                }
+            } else {
+                where.noteType = { contains: noteType, mode: 'insensitive' };
+            }
+        }
         if (search) {
-            where.OR = [
+            const searchOr = [
                 { title: { contains: search, mode: 'insensitive' } },
                 { subject: { contains: search, mode: 'insensitive' } },
                 { author: { contains: search, mode: 'insensitive' } },
                 { book: { contains: search, mode: 'insensitive' } },
                 { description: { contains: search, mode: 'insensitive' } }
             ];
+            if (where.AND) {
+                where.AND.push({ OR: searchOr });
+            } else if (where.OR) {
+                where.AND = [
+                    { OR: where.OR },
+                    { OR: searchOr }
+                ];
+                delete where.OR;
+            } else {
+                where.OR = searchOr;
+            }
         }
         const notes = await prisma.studyNote.findMany({ where, orderBy: { createdAt: 'desc' } });
         res.json(notes);

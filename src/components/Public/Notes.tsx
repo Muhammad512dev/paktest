@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { 
   Search, FileText, Download, ChevronLeft, ChevronRight, 
   BookOpen, Sparkles, CheckSquare, ShieldCheck, Printer, ExternalLink,
-  Layers, Filter, ArrowDownCircle, CheckCircle2
+  Layers, Filter, ArrowDownCircle, CheckCircle2, Loader2
 } from 'lucide-react';
 import { getNotes, getPublicCurriculum } from '../../services/dataService';
 import { Syllabus, ClassLevel } from '../../types';
@@ -10,13 +10,13 @@ import { Syllabus, ClassLevel } from '../../types';
 const Notes: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [notes, setNotes] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [curriculum, setCurriculum] = useState<{ syllabuses: Syllabus[]; classes: ClassLevel[] }>({
     syllabuses: [],
     classes: []
   });
-  const [filters, setFilters] = useState({ board: '', grade: '', noteType: '', resource: '' });
   
   // Scope Filter: 'ALL' | 'CHAPTER_WISE' | 'FULL_BOOK' | 'PAST_PAPERS'
   const [scopeFilter, setScopeFilter] = useState<'ALL' | 'CHAPTER_WISE' | 'FULL_BOOK' | 'PAST_PAPERS'>('ALL');
@@ -49,6 +49,7 @@ const Notes: React.FC = () => {
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<string>('');
 
+  // Initial Load: Curriculum / Boards Only
   useEffect(() => {
     const load = async () => {
       try {
@@ -61,16 +62,24 @@ const Notes: React.FC = () => {
     load();
   }, []);
 
+  // Lazy Fetching: Only fetch notes when in Step 4 or when Subject is selected or Search is active
   useEffect(() => {
+    const shouldFetch = currentStep === 4 || selectedSubject || searchTerm;
+    if (!shouldFetch) {
+      setNotes([]);
+      setIsLoading(false);
+      return;
+    }
+
     const t = setTimeout(async () => {
       setIsLoading(true);
       setError(null);
       try {
         const data = await getNotes({
           search: searchTerm,
-          board: filters.board,
-          grade: filters.grade,
-          noteType: filters.noteType
+          board: selectedBoard,
+          grade: selectedClass,
+          subject: selectedSubject
         });
         setNotes(Array.isArray(data) ? data : []);
       } catch (err: any) {
@@ -78,59 +87,79 @@ const Notes: React.FC = () => {
         setNotes([]);
       } finally {
         setIsLoading(false);
+        setIsNavigating(false);
       }
-    }, 250);
-    return () => clearTimeout(t);
-  }, [searchTerm, filters.board, filters.grade, filters.noteType]);
+    }, 200);
 
-  // Dynamic boards strictly extracted from actual existing notes input fields
+    return () => clearTimeout(t);
+  }, [currentStep, selectedBoard, selectedClass, selectedSubject, searchTerm]);
+
+  // Available Boards from curriculum and defaults
   const availableBoards = useMemo(() => {
     const list: { id: string; name: string }[] = [];
-    notes.forEach(n => {
-      if (n.board && n.board.trim()) {
-        const trimmed = n.board.trim();
-        if (!list.some(b => b.name.toLowerCase() === trimmed.toLowerCase())) {
-          list.push({ id: trimmed, name: trimmed });
+    if (curriculum.syllabuses.length > 0) {
+      curriculum.syllabuses.forEach(s => {
+        if (s.name && !list.some(b => b.name.trim().toLowerCase() === s.name.trim().toLowerCase())) {
+          list.push({ id: s.name.trim(), name: s.name.trim() });
         }
-      }
-    });
+      });
+    }
+    if (!list.some(b => b.name.includes('Punjab') || b.name.includes('PCTB'))) {
+      list.unshift({ id: 'PCTB (Punjab Curriculum & Textbook Board)', name: 'PCTB (Punjab Board)' });
+      list.push({ id: 'Federal Board (FBISE)', name: 'Federal Board (FBISE)' });
+      list.push({ id: 'KPK Board', name: 'KPK Board' });
+      list.push({ id: 'Sindh Board', name: 'Sindh Board' });
+    }
     return list;
-  }, [notes]);
+  }, [curriculum.syllabuses]);
 
-  // Extract available subjects from notes for the selected board & class
-  const availableSubjects = useMemo(() => {
-    const set = new Set<string>();
-    notes.forEach(n => {
-      if (n.subject && n.subject.trim()) {
-        if (selectedBoard && n.board && n.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return;
-        if (selectedClass && n.grade && n.grade.trim().toLowerCase() !== selectedClass.trim().toLowerCase()) return;
-        set.add(n.subject.trim());
-      }
-    });
-    return Array.from(set);
-  }, [notes, selectedBoard, selectedClass]);
-
+  // Available Classes
   const stepClasses = useMemo(() => {
-    const set = new Set<string>();
-    notes.forEach(n => {
-      if (n.grade && n.grade.trim()) {
-        if (selectedBoard && n.board && n.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return;
-        set.add(n.grade.trim());
-      }
-    });
-    return Array.from(set).map(g => ({ id: g, name: g }));
-  }, [notes, selectedBoard]);
+    const classSet = new Set<string>();
+    if (curriculum.classes.length > 0) {
+      curriculum.classes.forEach(c => {
+        if (c.name && c.name.trim()) classSet.add(c.name.trim());
+      });
+    }
+    // Default standard classes
+    ['Class 9', 'Class 10', 'Class 11', 'Class 12'].forEach(c => classSet.add(c));
 
-  // Extract available Chapters / Units dynamically for currently active Board, Class & Subject
+    return Array.from(classSet).map(g => ({ id: g, name: g }));
+  }, [curriculum.classes]);
+
+  // Available Subjects for selected Class
+  const availableSubjects: string[] = useMemo(() => {
+    const foundClass: any = (curriculum.classes as any[]).find((c: any) => 
+      c.name && (
+        c.name.trim().toLowerCase() === selectedClass.trim().toLowerCase() ||
+        c.name.replace(/class\s*/i, '').trim() === selectedClass.replace(/class\s*/i, '').trim()
+      )
+    );
+
+    if (foundClass && Array.isArray(foundClass.subjects) && foundClass.subjects.length > 0) {
+      return foundClass.subjects;
+    }
+
+    // Default rich curriculum subjects for Matric & Inter
+    return [
+      'Mathematics',
+      'Physics',
+      'Chemistry',
+      'Biology',
+      'Computer Science',
+      'English',
+      'Islamiat',
+      'Urdu',
+      'Pakistan Studies',
+      'Tarjuma-tul-Quran'
+    ];
+  }, [curriculum.classes, selectedClass]);
+
+  // Extract available Chapters / Units dynamically from fetched notes
   const availableUnits = useMemo(() => {
     const unitMap = new Map<string, { unit: string; label: string; count: number }>();
     
     notes.forEach(n => {
-      if (selectedBoard && n.board && n.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return;
-      if (selectedClass && n.grade && n.grade.trim().toLowerCase() !== selectedClass.trim().toLowerCase()) return;
-      if (selectedSubject && n.subject && n.subject.trim().toLowerCase() !== selectedSubject.trim().toLowerCase()) return;
-
-      // Check unit property or parse from title
       let unitNum = '';
       if (n.unit) {
         unitNum = String(n.unit).trim();
@@ -149,36 +178,27 @@ const Notes: React.FC = () => {
       }
     });
 
-    // Sort numerically
     return Array.from(unitMap.values()).sort((a, b) => {
       const na = parseInt(a.unit, 10);
       const nb = parseInt(b.unit, 10);
       if (!isNaN(na) && !isNaN(nb)) return na - nb;
       return a.unit.localeCompare(b.unit);
     });
-  }, [notes, selectedBoard, selectedClass, selectedSubject]);
+  }, [notes]);
 
-  // Extract available Note Types dynamically for currently active filters
+  // Extract available Note Types dynamically
   const availableNoteTypes = useMemo(() => {
     const typeSet = new Map<string, number>();
     notes.forEach(n => {
-      if (selectedBoard && n.board && n.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return;
-      if (selectedClass && n.grade && n.grade.trim().toLowerCase() !== selectedClass.trim().toLowerCase()) return;
-      if (selectedSubject && n.subject && n.subject.trim().toLowerCase() !== selectedSubject.trim().toLowerCase()) return;
-      
       const t = n.noteType || 'Chapter Questions';
       typeSet.set(t, (typeSet.get(t) || 0) + 1);
     });
     return Array.from(typeSet.entries()).map(([type, count]) => ({ type, count }));
-  }, [notes, selectedBoard, selectedClass, selectedSubject]);
+  }, [notes]);
 
   // Filtered Notes List
   const stepNotes = useMemo(() => {
     return notes.filter(n => {
-      if (selectedBoard && n.board && n.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return false;
-      if (selectedClass && n.grade && n.grade.trim().toLowerCase() !== selectedClass.trim().toLowerCase()) return false;
-      if (selectedSubject && n.subject && n.subject.trim().toLowerCase() !== selectedSubject.trim().toLowerCase()) return false;
-      
       // NoteType Filter
       if (selectedNoteType !== 'ALL' && n.noteType && n.noteType.trim().toLowerCase() !== selectedNoteType.trim().toLowerCase()) {
         return false;
@@ -195,7 +215,7 @@ const Notes: React.FC = () => {
         if (noteUnit !== cleanTargetUnit && !inTitle) return false;
       }
       
-      // Scope Filter: 'ALL' | 'CHAPTER_WISE' | 'FULL_BOOK' | 'PAST_PAPERS'
+      // Scope Filter
       if (scopeFilter === 'CHAPTER_WISE') {
         const isChapter = n.scope === 'CHAPTER_WISE' || n.unit || n.noteType === 'Chapter Questions' || (n.title && /chapter|unit|ch\s*\d|exercise/i.test(n.title));
         if (!isChapter) return false;
@@ -207,13 +227,9 @@ const Notes: React.FC = () => {
         if (!isPaper) return false;
       }
 
-      if (filters.resource && n.resource) {
-        const items = n.resource.split(',').map((s: string) => s.trim().toLowerCase());
-        if (!items.includes(filters.resource.toLowerCase())) return false;
-      }
       return true;
     });
-  }, [notes, selectedBoard, selectedClass, selectedSubject, selectedNoteType, selectedUnit, scopeFilter, filters.resource]);
+  }, [notes, selectedNoteType, selectedUnit, scopeFilter]);
 
   // Reset pagination & visible count when filters change
   useEffect(() => {
@@ -250,7 +266,7 @@ const Notes: React.FC = () => {
     return () => observer.disconnect();
   }, [viewMode, visibleCount, stepNotes.length, handleLoadMore]);
 
-  // Dynamic URL Sync effect for step wizard navigation and note view
+  // Dynamic URL Sync effect
   useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
@@ -281,6 +297,7 @@ const Notes: React.FC = () => {
   }, [notes]);
 
   const updateRouteUrl = (newBoard: string, newClass: string, newSubject: string, newStep: number, noteId?: string, unit = selectedUnit) => {
+    setIsNavigating(true);
     setSelectedBoard(newBoard);
     setSelectedClass(newClass);
     setSelectedSubject(newSubject);
@@ -327,16 +344,16 @@ const Notes: React.FC = () => {
     setSelectedSubject('');
     setSelectedUnit('ALL');
     setSelectedNoteType('ALL');
-    setFilters({ board: '', grade: '', noteType: '', resource: '' });
     setScopeFilter('ALL');
     setCurrentStep(1);
     setSelectedNoteModal(null);
     setUserCustomLimit(false);
     setVisibleCount(20);
+    setNotes([]);
     window.history.pushState(null, '', '/notes');
   };
 
-  const isFiltered = Boolean(selectedBoard || selectedClass || selectedSubject || selectedUnit !== 'ALL' || selectedNoteType !== 'ALL' || scopeFilter !== 'ALL' || searchTerm || filters.resource);
+  const isFiltered = Boolean(selectedBoard || selectedClass || selectedSubject || selectedUnit !== 'ALL' || selectedNoteType !== 'ALL' || scopeFilter !== 'ALL' || searchTerm);
 
   const totalFilteredCount = stepNotes.length;
   const numericLimit = pageSize === 'all' ? totalFilteredCount : parseInt(pageSize, 10);
@@ -372,7 +389,7 @@ const Notes: React.FC = () => {
 
   return (
     <div className="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-      {/* Dynamic Header & Breadcrumbs matching screenshot */}
+      {/* Header & Breadcrumbs */}
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
           <span className="cursor-pointer hover:text-indigo-600" onClick={resetStepWizard}>Notes & Key Books</span>
@@ -435,11 +452,9 @@ const Notes: React.FC = () => {
         )}
       </div>
 
-      {/* DEDICATED ACTIVE NOTE PAGE VIEW (TaleemCity Style High-Impact Layout) */}
+      {/* ACTIVE NOTE DETAIL VIEW */}
       {selectedNoteModal ? (
         <div className="space-y-8">
-          
-          {/* TOP SECTION: Detailed TaleemCity-Style Resource Description & Features Card */}
           <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
             <div className="flex justify-between items-center border-b border-slate-100 pb-4">
               <div>
@@ -457,7 +472,7 @@ const Notes: React.FC = () => {
               </button>
             </div>
 
-            {/* Key Features Grid (TaleemCity style) */}
+            {/* Features Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-100 flex items-start gap-3">
                 <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold flex-shrink-0">
@@ -500,33 +515,20 @@ const Notes: React.FC = () => {
               </div>
             </div>
 
-            {/* Rich Large Description Body */}
+            {/* Description */}
             <div className="prose prose-slate max-w-none text-slate-700 text-sm leading-relaxed whitespace-pre-line bg-slate-50 p-6 rounded-2xl border border-slate-200">
               {selectedNoteModal.description || selectedNoteModal.content || `
 ### Detailed Course Overview:
 These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${selectedNoteModal.grade || selectedClass || '9/10/11/12'})** provide a complete revision and practice pack tailored specifically to help students excel in their annual board examinations.
-
-#### What is Included in this Document:
-1. **Multiple Choice Questions (MCQs):** Carefully curated objective questions from textbook lines and previous 5 years' board papers.
-2. **Short Answer Questions:** Precise, high-scoring answers highlighting core concepts, definitions, and formulas.
-3. **Extensive Long Questions:** Detailed step-by-step answers with diagrams, derivations, and headings matching board exam marking criteria.
-4. **Solved Numericals / Exercises:** Complete numerical problems solved with given data, formula substitution, and final units.
-
-#### Applicable Educational Boards:
-- **Punjab Boards:** BISE Lahore, BISE Rawalpindi, BISE Faisalabad, BISE Gujranwala, BISE Multan, BISE Sahiwal, BISE Sargodha, BISE Bahawalpur, BISE DG Khan.
-- **Federal Board (FBISE):** Islamabad & Cantonment Colleges.
-- **Other Boards:** KPK, Sindh, and AJK Boards adhering to the National Curriculum.
               `}
             </div>
 
-            {/* Action Bar */}
+            {/* Actions */}
             <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
               <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
                 <span className="flex items-center gap-1"><ShieldCheck size={14} className="text-emerald-600" /> Verified Content</span>
                 <span>•</span>
                 <span>PDF Format</span>
-                <span>•</span>
-                <span>High Resolution</span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -552,7 +554,7 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
             </div>
           </div>
 
-          {/* CENTER SECTION: Embedded PDF Frame */}
+          {/* PDF Frame */}
           {selectedNoteModal.fileUrl ? (
             <div className="bg-slate-900 rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-800 space-y-4">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-800/80 p-4 rounded-2xl border border-slate-700">
@@ -577,7 +579,6 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
                 </a>
               </div>
 
-              {/* Large Center PDF Frame */}
               <div className="w-full h-[680px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800">
                 <iframe
                   src={selectedNoteModal.fileUrl?.includes('drive.google.com') ? selectedNoteModal.fileUrl.replace('/view', '/preview') : selectedNoteModal.fileUrl}
@@ -588,61 +589,12 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
             </div>
           ) : (
             <div className="p-12 text-center bg-amber-50 border border-amber-200 text-amber-800 rounded-3xl font-bold">
-              PDF preview link unavailable for this note. Please refer to the text description above.
+              PDF preview link unavailable for this note.
             </div>
           )}
-
-          {/* BOTTOM SECTION: Related Notes & Recommendations */}
-          <div className="pt-8 border-t border-slate-200 space-y-6">
-            <div className="bg-sky-50/80 p-5 rounded-2xl border border-sky-100 flex justify-between items-center">
-              <div>
-                <h4 className="font-bold text-sky-900 text-base">Discover More Notes & Textbooks</h4>
-                <p className="text-xs text-sky-700 mt-0.5">Explore related study materials for {selectedClass || 'your class'} and {selectedSubject || 'subjects'}</p>
-              </div>
-              <button 
-                onClick={closeNoteModal}
-                className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-xl transition-all shadow-md"
-              >
-                View All {selectedClass} Notes
-              </button>
-            </div>
-
-            <h3 className="text-lg font-black text-slate-800">Other Related Notes</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-              {stepNotes.filter(n => n.id !== selectedNoteModal.id).slice(0, 4).map(note => (
-                <div
-                  key={note.id}
-                  onClick={() => handleOpenNote(note, false)}
-                  className="p-5 bg-white rounded-2xl border border-slate-200 hover:border-indigo-400 shadow-sm hover:shadow-xl transition-all flex flex-col items-center justify-center text-center group cursor-pointer relative"
-                >
-                  <div className="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                    <FileText size={22} />
-                  </div>
-                  <h4 className="font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors line-clamp-2">{note.title || `${note.subject} Notes`}</h4>
-                  <p className="text-[11px] text-slate-400 font-semibold uppercase mt-1 tracking-wider">{note.grade || selectedClass} • {note.subject}</p>
-                  <div className="mt-3 flex items-center justify-center gap-2">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleOpenNote(note, false); }}
-                      className="inline-flex items-center gap-1 text-[11px] font-black text-indigo-600 hover:underline"
-                    >
-                      <span>View Note</span>
-                    </button>
-                    <span className="text-slate-300">•</span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleOpenNote(note, true); }}
-                      className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-600 hover:underline"
-                    >
-                      <span>New Tab</span>
-                      <span>↗</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       ) : (
-        /* WIZARD SELECTION STEPS WHEN NO SINGLE ACTIVE NOTE IS FOCUSED */
+        /* CASCADING ON-DEMAND STEP DRILLDOWN */
         <>
           {/* STEP 1: Select Syllabus / Board */}
           {currentStep === 1 && (
@@ -650,6 +602,7 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
               <div className="text-center mb-6">
                 <span className="text-xs font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">Step 1</span>
                 <h2 className="text-xl font-bold text-slate-800 mt-2">Select Educational Board / Syllabus</h2>
+                <p className="text-xs text-slate-400 mt-1">Pick a curriculum board to view available classes</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
                 <button
@@ -706,29 +659,29 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
                   <button
                     key={sub}
                     onClick={() => updateRouteUrl(selectedBoard, selectedClass, sub, 4, undefined, 'ALL')}
-                    className={`p-5 rounded-2xl bg-gradient-to-r ${pillColors[idx % pillColors.length]} font-black text-base tracking-wide shadow-md hover:scale-105 transition-all text-center uppercase`}
+                    className={`p-5 rounded-2xl bg-gradient-to-r ${pillColors[idx % pillColors.length]} font-black text-base tracking-wide shadow-md hover:scale-105 transition-all text-center uppercase flex items-center justify-center gap-2`}
                   >
-                    {sub}
+                    <span>{sub}</span>
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* STEP 4 / PDF Notes Cards View */}
+          {/* STEP 4: Lazy Loaded Subject Notes Grid with Chapter & Type Filters */}
           {(currentStep === 4 || (selectedBoard && selectedClass && selectedSubject)) && (
             <div className="space-y-6 mt-4">
               
-              {/* Top Control Toolbar (Search, View Mode & Selection Controls) */}
+              {/* Filter Toolbar */}
               <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4">
                 
-                {/* Search Bar + Navigation Actions */}
+                {/* Search Bar + Navigation */}
                 <div className="flex flex-col md:flex-row gap-3 justify-between items-center">
                   <div className="relative flex-1 w-full">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input 
                       type="text" 
-                      placeholder="Search within this subject (e.g. MCQs, Numericals, Unit 5, Exercise 2.1)..." 
+                      placeholder={`Search ${selectedSubject || ''} notes (e.g. Unit 1, MCQs, Numericals)...`} 
                       className="w-full pl-10 pr-4 py-2.5 bg-slate-50 rounded-2xl border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition-all"
                       value={searchTerm}
                       onChange={e => setSearchTerm(e.target.value)}
@@ -765,15 +718,15 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
                     </div>
 
                     <button 
-                      onClick={resetStepWizard} 
+                      onClick={() => updateRouteUrl(selectedBoard, selectedClass, '', 3)} 
                       className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all"
                     >
-                      ← Back
+                      ← Change Subject
                     </button>
                   </div>
                 </div>
 
-                {/* 1. Primary Scope Filter (All, Chapter-Wise, Full Book, Past Papers) */}
+                {/* 1. Scope Filter */}
                 <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
                   <span className="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mr-1">
                     <Filter size={13} /> Scope:
@@ -801,7 +754,7 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
                   ))}
                 </div>
 
-                {/* 2. Interactive CHAPTER / UNIT Quick Selector (Pill Chips) */}
+                {/* 2. Interactive Chapter / Unit Filter */}
                 {availableUnits.length > 0 && scopeFilter !== 'FULL_BOOK' && (
                   <div className="pt-2 border-t border-slate-100 space-y-2">
                     <div className="flex items-center justify-between">
@@ -852,7 +805,7 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
                   </div>
                 )}
 
-                {/* 3. Note Type Sub-Filter (Solved MCQs, Short Questions, Long Questions, Solved Numericals) */}
+                {/* 3. Note Type Sub-Filter */}
                 {availableNoteTypes.length > 1 && (
                   <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
                     <span className="text-[11px] font-bold text-slate-400 uppercase mr-1">Type:</span>
@@ -884,7 +837,7 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
                 )}
               </div>
 
-              {/* Status and Active Filter Chips */}
+              {/* Status Header */}
               {!isLoading && (
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 px-1 text-xs text-slate-500 font-semibold">
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -924,16 +877,25 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
                 </div>
               )}
 
-              {/* Loading Skeletons */}
+              {/* LOADING INDICATOR ON DEMAND */}
               {isLoading && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="p-6 bg-white rounded-3xl border border-slate-200 animate-pulse space-y-4">
-                      <div className="w-12 h-12 bg-slate-100 rounded-2xl mx-auto" />
-                      <div className="h-4 bg-slate-100 rounded-md w-3/4 mx-auto" />
-                      <div className="h-3 bg-slate-100 rounded-md w-1/2 mx-auto" />
-                    </div>
-                  ))}
+                <div className="py-20 flex flex-col items-center justify-center space-y-4">
+                  <div className="relative">
+                    <Loader2 size={40} className="text-indigo-600 animate-spin" />
+                    <Sparkles size={16} className="text-amber-500 absolute -top-1 -right-1 animate-pulse" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-700 animate-pulse">
+                    Loading {selectedSubject || 'Study'} Notes for {selectedClass || 'your class'}...
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 w-full pt-4">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div key={i} className="p-6 bg-white rounded-3xl border border-slate-200 animate-pulse space-y-4">
+                        <div className="w-12 h-12 bg-slate-100 rounded-2xl mx-auto" />
+                        <div className="h-4 bg-slate-100 rounded-md w-3/4 mx-auto" />
+                        <div className="h-3 bg-slate-100 rounded-md w-1/2 mx-auto" />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -999,7 +961,7 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
                 </div>
               )}
 
-              {/* INFINITE SCROLL / LOAD MORE SENTINEL */}
+              {/* INFINITE SCROLL / LOAD MORE */}
               {!isLoading && viewMode === 'INFINITE' && visibleCount < totalFilteredCount && (
                 <div ref={loadMoreRef} className="py-8 text-center">
                   <button
@@ -1030,7 +992,7 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
                 </div>
               )}
 
-              {/* TRADITIONAL PAGINATION CONTROLS */}
+              {/* TRADITIONAL PAGINATION */}
               {!isLoading && viewMode === 'PAGINATED' && pageSize !== 'all' && totalPages > 1 && (
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200">
                   <span className="text-xs font-bold text-slate-500">
@@ -1102,7 +1064,7 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
               {!isLoading && !error && stepNotes.length === 0 && (
                 <div className="py-16 text-center text-slate-400 bg-white rounded-3xl border border-slate-200">
                   <FileText size={48} className="mx-auto mb-3 opacity-20" />
-                  <p className="font-bold text-slate-600">No notes found matching your selection.</p>
+                  <p className="font-bold text-slate-600">No notes found for {selectedSubject || 'this subject'}.</p>
                   <button onClick={resetStepWizard} className="mt-4 text-xs font-bold text-indigo-600 hover:underline">Reset filters and start over</button>
                 </div>
               )}

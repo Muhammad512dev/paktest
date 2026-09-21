@@ -1,40 +1,44 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, BookOpen, ExternalLink, ChevronDown, ChevronLeft, ChevronRight, Check, Filter, Layers, X } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { 
+  Search, BookOpen, ExternalLink, ChevronLeft, ChevronRight, 
+  Layers, Filter, ArrowDownCircle, CheckCircle2, Loader2, Sparkles, X
+} from 'lucide-react';
 import { getNotes, getPublicCurriculum } from '../../services/dataService';
 import { Syllabus, ClassLevel } from '../../types';
 
 const Books: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [books, setBooks] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [curriculum, setCurriculum] = useState<{ syllabuses: Syllabus[]; classes: ClassLevel[] }>({
     syllabuses: [],
     classes: []
   });
 
+  // Step Navigation state: 1 = Board/Syllabus, 2 = Class, 3 = Subject, 4 = Books Grid
+  const [currentStep, setCurrentStep] = useState<number>(1);
   const [selectedBoard, setSelectedBoard] = useState<string>('');
-  const [selectedGrade, setSelectedGrade] = useState<string>('');
-  const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
-  const [selectedBookModal, setSelectedBookModal] = useState<any | null>(null);
-  const classDropdownRef = useRef<HTMLDivElement>(null);
+  const [selectedClass, setSelectedClass] = useState<string>('');
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [selectedUnit, setSelectedUnit] = useState<string>('ALL');
 
-  // Pagination & Display limit options (20, 40, 100, 'all')
-  const [pageSize, setPageSize] = useState<string>('20');
+  // Selected Book Modal Viewer
+  const [selectedBookModal, setSelectedBookModal] = useState<any | null>(null);
+
+  // View Mode: 'INFINITE' vs 'PAGINATED'
+  const [viewMode, setViewMode] = useState<'INFINITE' | 'PAGINATED'>('INFINITE');
+  const [visibleCount, setVisibleCount] = useState<number>(20);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  // Pagination & Display Limit
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<string>('20');
   const [userCustomLimit, setUserCustomLimit] = useState<boolean>(false);
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (classDropdownRef.current && !classDropdownRef.current.contains(e.target as Node)) {
-        setIsClassDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
+  // Initial Load: Curriculum & Syllabus Only
   useEffect(() => {
     const load = async () => {
       try {
@@ -47,7 +51,15 @@ const Books: React.FC = () => {
     load();
   }, []);
 
+  // Lazy Cascading Fetch: Only fetch books when in Step 4 or when Subject is selected or Search is active
   useEffect(() => {
+    const shouldFetch = currentStep === 4 || selectedSubject || searchTerm;
+    if (!shouldFetch) {
+      setBooks([]);
+      setIsLoading(false);
+      return;
+    }
+
     const t = setTimeout(async () => {
       setIsLoading(true);
       setError(null);
@@ -55,19 +67,22 @@ const Books: React.FC = () => {
         const data = await getNotes({
           search: searchTerm,
           board: selectedBoard,
-          grade: selectedGrade,
+          grade: selectedClass,
+          subject: selectedSubject,
           noteType: 'Textbook'
         });
         setBooks(Array.isArray(data) ? data : []);
       } catch (err: any) {
-        setError(err.message || 'Failed to fetch books. Please try again.');
+        setError(err.message || 'Failed to fetch textbooks. Please try again.');
         setBooks([]);
       } finally {
         setIsLoading(false);
+        setIsNavigating(false);
       }
-    }, 250);
+    }, 200);
+
     return () => clearTimeout(t);
-  }, [searchTerm, selectedBoard, selectedGrade]);
+  }, [currentStep, selectedBoard, selectedClass, selectedSubject, searchTerm]);
 
   // Extract deduplicated boards
   const availableBoards = useMemo(() => {
@@ -79,60 +94,149 @@ const Books: React.FC = () => {
         }
       });
     }
-    books.forEach(b => {
-      if (b.board && b.board.trim() && !list.some(item => item.name.toLowerCase() === b.board.trim().toLowerCase())) {
-        list.push({ id: b.board.trim(), name: b.board.trim() });
-      }
-    });
+    if (!list.some(b => b.name.includes('Punjab') || b.name.includes('PCTB'))) {
+      list.unshift({ id: 'PCTB (Punjab Curriculum & Textbook Board)', name: 'PCTB (Punjab Board)' });
+      list.push({ id: 'Federal Board (FBISE)', name: 'Federal Board (FBISE)' });
+      list.push({ id: 'KPK Board', name: 'KPK Board' });
+      list.push({ id: 'Sindh Board', name: 'Sindh Board' });
+    }
     return list;
-  }, [curriculum.syllabuses, books]);
+  }, [curriculum.syllabuses]);
 
   // Extract deduplicated and sorted classes
-  const availableClasses = useMemo(() => {
+  const stepClasses = useMemo(() => {
     const classSet = new Set<string>();
+    if (curriculum.classes.length > 0) {
+      curriculum.classes.forEach(c => {
+        if (c.name && c.name.trim()) classSet.add(c.name.trim());
+      });
+    }
+    ['Class 9', 'Class 10', 'Class 11', 'Class 12'].forEach(c => classSet.add(c));
+    return Array.from(classSet).map(g => ({ id: g, name: g }));
+  }, [curriculum.classes]);
 
-    // From database books
+  // Available subjects
+  const availableSubjects: string[] = useMemo(() => {
+    const foundClass: any = (curriculum.classes as any[]).find((c: any) => 
+      c.name && (
+        c.name.trim().toLowerCase() === selectedClass.trim().toLowerCase() ||
+        c.name.replace(/class\s*/i, '').trim() === selectedClass.replace(/class\s*/i, '').trim()
+      )
+    );
+
+    if (foundClass && Array.isArray(foundClass.subjects) && foundClass.subjects.length > 0) {
+      return foundClass.subjects;
+    }
+
+    return [
+      'Mathematics',
+      'Physics',
+      'Chemistry',
+      'Biology',
+      'Computer Science',
+      'English',
+      'Islamiat',
+      'Urdu',
+      'Pakistan Studies'
+    ];
+  }, [curriculum.classes, selectedClass]);
+
+  // Extract Chapter / Unit filter chips
+  const availableUnits = useMemo(() => {
+    const unitMap = new Map<string, { unit: string; label: string; count: number }>();
     books.forEach(b => {
-      if (b.grade && String(b.grade).trim()) {
-        classSet.add(String(b.grade).trim());
+      let unitNum = '';
+      if (b.unit) {
+        unitNum = String(b.unit).trim();
+      } else if (b.title) {
+        const m = b.title.match(/(?:unit|chapter|ch)\s*0?(\d+)/i);
+        if (m) unitNum = m[1];
+      }
+      if (unitNum) {
+        const cleanUnit = unitNum.replace(/^0+/, '');
+        if (cleanUnit) {
+          const current = unitMap.get(cleanUnit) || { unit: cleanUnit, label: `Unit ${cleanUnit}`, count: 0 };
+          current.count += 1;
+          unitMap.set(cleanUnit, current);
+        }
       }
     });
 
-    // From curriculum setup
-    if (curriculum.classes.length > 0) {
-      curriculum.classes.forEach(c => {
-        if (c.name && c.name.trim()) {
-          classSet.add(c.name.trim());
-        }
-      });
-    }
-
-    // Default common Pakistani classes if list is empty
-    if (classSet.size === 0) {
-      ['Pre-1', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '9-10', '11-12'].forEach(c => classSet.add(c));
-    }
-
-    // Custom sort: Pre-1, 1..12, compound
-    return Array.from(classSet).sort((a, b) => {
-      const numA = parseInt(a.replace(/[^0-9]/g, '')) || 0;
-      const numB = parseInt(b.replace(/[^0-9]/g, '')) || 0;
-      if (a.toLowerCase().includes('pre')) return -1;
-      if (b.toLowerCase().includes('pre')) return 1;
-      if (numA !== numB) return numA - numB;
-      return a.localeCompare(b);
+    return Array.from(unitMap.values()).sort((a, b) => {
+      const na = parseInt(a.unit, 10);
+      const nb = parseInt(b.unit, 10);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      return a.unit.localeCompare(b.unit);
     });
-  }, [curriculum.classes, books]);
+  }, [books]);
 
-  // Dynamic URL Sync effect for Books
+  // Filtered books based on search, board, class, subject & unit
+  const stepBooks = useMemo(() => {
+    return books.filter(b => {
+      if (selectedUnit !== 'ALL') {
+        const cleanTargetUnit = selectedUnit.replace(/^0+/, '');
+        const bookUnit = (b.unit || '').toString().replace(/^0+/, '');
+        const inTitle = b.title && (
+          new RegExp(`(?:unit|chapter|ch)\\s*0?${cleanTargetUnit}\\b`, 'i').test(b.title)
+        );
+        if (bookUnit !== cleanTargetUnit && !inTitle) return false;
+      }
+      return true;
+    });
+  }, [books, selectedUnit]);
+
+  const isFiltered = Boolean(selectedBoard || selectedClass || selectedSubject || selectedUnit !== 'ALL' || searchTerm);
+
+  useEffect(() => {
+    setVisibleCount(20);
+    setCurrentPage(1);
+  }, [selectedBoard, selectedClass, selectedSubject, selectedUnit, searchTerm]);
+
+  // Infinite Scroll Intersection Observer
+  const handleLoadMore = useCallback(() => {
+    if (visibleCount < stepBooks.length && !isLoadingMore) {
+      setIsLoadingMore(true);
+      setTimeout(() => {
+        setVisibleCount(prev => Math.min(prev + 20, stepBooks.length));
+        setIsLoadingMore(false);
+      }, 150);
+    }
+  }, [visibleCount, stepBooks.length, isLoadingMore]);
+
+  useEffect(() => {
+    if (viewMode !== 'INFINITE') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visibleCount < stepBooks.length) {
+          handleLoadMore();
+        }
+      },
+      { threshold: 0.1, rootMargin: '200px' }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [viewMode, visibleCount, stepBooks.length, handleLoadMore]);
+
+  // Dynamic URL Sync
   useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
       const board = params.get('board') || '';
-      const grade = params.get('grade') || '';
+      const cls = params.get('class') || '';
+      const subject = params.get('subject') || '';
+      const unit = params.get('unit') || 'ALL';
+      const step = parseInt(params.get('step') || '1', 10);
       const bookId = params.get('bookId');
 
       setSelectedBoard(board);
-      setSelectedGrade(grade);
+      setSelectedClass(cls);
+      setSelectedSubject(subject);
+      setSelectedUnit(unit);
+      setCurrentStep(step);
 
       if (bookId && books.length > 0) {
         const found = books.find(b => String(b.id) === String(bookId));
@@ -147,13 +251,20 @@ const Books: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [books]);
 
-  const updateRouteUrl = (newBoard: string, newGrade: string = selectedGrade, bookId?: string) => {
+  const updateRouteUrl = (newBoard: string, newClass: string, newSubject: string, newStep: number, bookId?: string, unit = selectedUnit) => {
+    setIsNavigating(true);
     setSelectedBoard(newBoard);
-    setSelectedGrade(newGrade);
+    setSelectedClass(newClass);
+    setSelectedSubject(newSubject);
+    setCurrentStep(newStep);
+    if (unit) setSelectedUnit(unit);
 
     const params = new URLSearchParams();
     if (newBoard) params.set('board', newBoard);
-    if (newGrade) params.set('grade', newGrade);
+    if (newClass) params.set('class', newClass);
+    if (newSubject) params.set('subject', newSubject);
+    if (unit && unit !== 'ALL') params.set('unit', unit);
+    if (newStep > 1) params.set('step', newStep.toString());
     if (bookId) params.set('bookId', bookId);
 
     const queryString = params.toString();
@@ -165,55 +276,47 @@ const Books: React.FC = () => {
     if (openInNewTab) {
       const params = new URLSearchParams();
       if (book.board) params.set('board', book.board);
-      if (book.grade) params.set('grade', book.grade);
+      if (book.grade) params.set('class', book.grade);
+      if (book.subject) params.set('subject', book.subject);
+      params.set('step', '4');
       params.set('bookId', book.id);
       window.open(`/books?${params.toString()}`, '_blank');
     } else {
       setSelectedBookModal(book);
-      updateRouteUrl(selectedBoard, selectedGrade, book.id);
+      updateRouteUrl(selectedBoard, selectedClass, selectedSubject, currentStep, book.id);
     }
   };
 
   const closeBookModal = () => {
     setSelectedBookModal(null);
-    updateRouteUrl(selectedBoard, selectedGrade);
+    updateRouteUrl(selectedBoard, selectedClass, selectedSubject, currentStep);
   };
 
-  const filteredBooks = useMemo(() => {
-    return books.filter(b => {
-      if (selectedBoard && b.board && b.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return false;
-      if (selectedGrade && b.grade) {
-        const bg = String(b.grade).trim().toLowerCase();
-        const sg = selectedGrade.trim().toLowerCase();
-        if (bg !== sg && !bg.includes(sg)) return false;
-      }
-      return true;
-    });
-  }, [books, selectedBoard, selectedGrade]);
+  const resetStepWizard = () => {
+    setSelectedBoard('');
+    setSelectedClass('');
+    setSelectedSubject('');
+    setSelectedUnit('ALL');
+    setCurrentStep(1);
+    setSelectedBookModal(null);
+    setUserCustomLimit(false);
+    setVisibleCount(20);
+    setBooks([]);
+    window.history.pushState(null, '', '/books');
+  };
 
-  const isFiltered = Boolean(selectedBoard || selectedGrade || searchTerm);
-
-  // Default to showing 20 by default. If a filter is applied, automatically show all related items unless user explicitly changes the limit.
-  useEffect(() => {
-    if (!userCustomLimit) {
-      if (isFiltered) {
-        setPageSize('all');
-      } else {
-        setPageSize('20');
-      }
-    }
-    setCurrentPage(1);
-  }, [selectedBoard, selectedGrade, searchTerm, isFiltered, userCustomLimit]);
-
-  const totalFilteredCount = filteredBooks.length;
+  const totalFilteredCount = stepBooks.length;
   const numericLimit = pageSize === 'all' ? totalFilteredCount : parseInt(pageSize, 10);
   const totalPages = Math.max(1, Math.ceil(totalFilteredCount / (numericLimit || 20)));
 
-  const paginatedBooks = useMemo(() => {
-    if (pageSize === 'all') return filteredBooks;
+  const displayedBooks = useMemo(() => {
+    if (viewMode === 'INFINITE') {
+      return stepBooks.slice(0, visibleCount);
+    }
+    if (pageSize === 'all') return stepBooks;
     const start = (currentPage - 1) * numericLimit;
-    return filteredBooks.slice(start, start + numericLimit);
-  }, [filteredBooks, pageSize, currentPage, numericLimit]);
+    return stepBooks.slice(start, start + numericLimit);
+  }, [stepBooks, viewMode, visibleCount, pageSize, currentPage, numericLimit]);
 
   const handlePageSizeChange = (val: string) => {
     setPageSize(val);
@@ -221,16 +324,53 @@ const Books: React.FC = () => {
     setCurrentPage(1);
   };
 
+  const pillColors = [
+    'from-indigo-600 to-blue-600 text-white shadow-indigo-200',
+    'from-emerald-500 to-teal-600 text-white shadow-emerald-200',
+    'from-purple-600 to-pink-600 text-white shadow-purple-200',
+    'from-amber-500 to-orange-500 text-white shadow-amber-200',
+    'from-cyan-600 to-blue-500 text-white shadow-cyan-200',
+    'from-rose-500 to-red-600 text-white shadow-rose-200',
+    'from-violet-600 to-indigo-700 text-white shadow-violet-200',
+    'from-teal-600 to-emerald-700 text-white shadow-teal-200'
+  ];
+
   return (
     <div className="py-6 sm:py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
-      {/* Breadcrumb Navigation */}
+      {/* Breadcrumbs */}
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-          <span className="cursor-pointer hover:text-indigo-600" onClick={() => updateRouteUrl('', '')}>Books & Key Books</span>
+          <span className="cursor-pointer hover:text-indigo-600 flex items-center gap-1" onClick={resetStepWizard}>
+            <BookOpen size={14} />
+            <span>Books & Key Books</span>
+          </span>
           {selectedBoard && <span>/</span>}
-          {selectedBoard && <span className="text-slate-900 font-bold">{selectedBoard}</span>}
-          {selectedGrade && <span>/</span>}
-          {selectedGrade && <span className="text-indigo-600 font-bold">Class {selectedGrade}</span>}
+          {selectedBoard && (
+            <span 
+              className={`cursor-pointer hover:text-indigo-600 ${currentStep === 1 ? 'text-indigo-600 font-bold' : ''}`}
+              onClick={() => updateRouteUrl(selectedBoard, '', '', 2)}
+            >
+              {selectedBoard}
+            </span>
+          )}
+          {selectedClass && <span>/</span>}
+          {selectedClass && (
+            <span 
+              className={`cursor-pointer hover:text-indigo-600 ${currentStep === 2 ? 'text-indigo-600 font-bold' : ''}`}
+              onClick={() => updateRouteUrl(selectedBoard, selectedClass, '', 3)}
+            >
+              Class {selectedClass}
+            </span>
+          )}
+          {selectedSubject && <span>/</span>}
+          {selectedSubject && (
+            <span 
+              className={`cursor-pointer hover:text-indigo-600 ${currentStep === 3 ? 'text-indigo-600 font-bold' : ''}`}
+              onClick={() => updateRouteUrl(selectedBoard, selectedClass, selectedSubject, 4)}
+            >
+              {selectedSubject}
+            </span>
+          )}
           {selectedBookModal && <span>/</span>}
           {selectedBookModal && <span className="text-indigo-600 font-bold line-clamp-1">{selectedBookModal.title}</span>}
         </div>
@@ -263,8 +403,101 @@ const Books: React.FC = () => {
         )}
       </div>
 
+      {/* STEP INDICATOR WIZARD */}
+      {!selectedBookModal && (
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="grid grid-cols-4 gap-2 sm:gap-4 relative">
+            <div 
+              onClick={() => updateRouteUrl('', '', '', 1)}
+              className={`flex flex-col items-center text-center p-2 sm:p-3 rounded-xl cursor-pointer transition-all ${
+                currentStep === 1 
+                  ? 'bg-indigo-50 border-2 border-indigo-600 text-indigo-700 shadow-sm' 
+                  : currentStep > 1 
+                  ? 'bg-emerald-50 border border-emerald-300 text-emerald-700' 
+                  : 'bg-slate-50 text-slate-400 border border-transparent'
+              }`}
+            >
+              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-black text-xs mb-1 sm:mb-1.5 ${
+                currentStep === 1 ? 'bg-indigo-600 text-white' : currentStep > 1 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'
+              }`}>
+                1
+              </div>
+              <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider line-clamp-1">
+                {selectedBoard ? selectedBoard.split(' ')[0] : 'Board'}
+              </span>
+              <span className="text-[9px] sm:text-[10px] text-slate-500 hidden sm:inline">Select Syllabus</span>
+            </div>
+
+            <div 
+              onClick={() => selectedBoard && updateRouteUrl(selectedBoard, '', '', 2)}
+              className={`flex flex-col items-center text-center p-2 sm:p-3 rounded-xl transition-all ${
+                !selectedBoard ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'cursor-pointer'
+              } ${
+                currentStep === 2 
+                  ? 'bg-indigo-50 border-2 border-indigo-600 text-indigo-700 shadow-sm' 
+                  : currentStep > 2 
+                  ? 'bg-emerald-50 border border-emerald-300 text-emerald-700' 
+                  : 'bg-slate-50 text-slate-400 border border-transparent'
+              }`}
+            >
+              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-black text-xs mb-1 sm:mb-1.5 ${
+                currentStep === 2 ? 'bg-indigo-600 text-white' : currentStep > 2 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'
+              }`}>
+                2
+              </div>
+              <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider line-clamp-1">
+                {selectedClass || 'Class'}
+              </span>
+              <span className="text-[9px] sm:text-[10px] text-slate-500 hidden sm:inline">Select Grade</span>
+            </div>
+
+            <div 
+              onClick={() => selectedClass && updateRouteUrl(selectedBoard, selectedClass, '', 3)}
+              className={`flex flex-col items-center text-center p-2 sm:p-3 rounded-xl transition-all ${
+                !selectedClass ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'cursor-pointer'
+              } ${
+                currentStep === 3 
+                  ? 'bg-indigo-50 border-2 border-indigo-600 text-indigo-700 shadow-sm' 
+                  : currentStep > 3 
+                  ? 'bg-emerald-50 border border-emerald-300 text-emerald-700' 
+                  : 'bg-slate-50 text-slate-400 border border-transparent'
+              }`}
+            >
+              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-black text-xs mb-1 sm:mb-1.5 ${
+                currentStep === 3 ? 'bg-indigo-600 text-white' : currentStep > 3 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'
+              }`}>
+                3
+              </div>
+              <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider line-clamp-1">
+                {selectedSubject || 'Subject'}
+              </span>
+              <span className="text-[9px] sm:text-[10px] text-slate-500 hidden sm:inline">Select Subject</span>
+            </div>
+
+            <div 
+              onClick={() => selectedSubject && updateRouteUrl(selectedBoard, selectedClass, selectedSubject, 4)}
+              className={`flex flex-col items-center text-center p-2 sm:p-3 rounded-xl transition-all ${
+                !selectedSubject ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'cursor-pointer'
+              } ${
+                currentStep === 4 
+                  ? 'bg-indigo-50 border-2 border-indigo-600 text-indigo-700 shadow-sm' 
+                  : 'bg-slate-50 text-slate-400 border border-transparent'
+              }`}
+            >
+              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-black text-xs mb-1 sm:mb-1.5 ${
+                currentStep === 4 ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-600'
+              }`}>
+                4
+              </div>
+              <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider line-clamp-1">Books</span>
+              <span className="text-[9px] sm:text-[10px] text-slate-500 hidden sm:inline">Read & Download</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedBookModal ? (
-        /* Single Book View */
+        /* SINGLE BOOK VIEW */
         <div className="space-y-6">
           <div className="bg-slate-50 p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex justify-between items-center border-b border-slate-200 pb-3">
@@ -320,328 +553,477 @@ const Books: React.FC = () => {
           )}
         </div>
       ) : (
-        /* Books Catalog, Board Selection & Class Dropdown Menu */
+        /* STEP WIZARD CONTENT */
         <div className="space-y-6">
-          {/* Top Bar: Board Selector & Class Filter Menu */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-50/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm">
-            {/* Board Selector */}
-            <div className="space-y-2 flex-1">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">Board / Syllabus:</h2>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => updateRouteUrl('')}
-                  className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all shadow-sm ${
-                    !selectedBoard ? 'bg-indigo-600 text-white shadow-indigo-200 scale-105' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  ALL BOARDS
-                </button>
-                {availableBoards.map(board => (
+          {/* STEP 1: SELECT BOARD */}
+          {currentStep === 1 && (
+            <div className="space-y-6 animate-in fade-in zoom-in-95 duration-200">
+              <div className="text-center max-w-xl mx-auto space-y-2">
+                <span className="text-xs font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+                  Step 1 of 4
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-black text-slate-900">Choose Educational Board</h2>
+                <p className="text-xs sm:text-sm text-slate-500">
+                  Select your board or curriculum authority to discover official textbooks.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+                {availableBoards.map((b, idx) => (
                   <button
-                    key={board.id}
-                    onClick={() => updateRouteUrl(board.name)}
-                    className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all shadow-sm ${
-                      selectedBoard.toLowerCase() === board.name.toLowerCase() ? 'bg-indigo-600 text-white shadow-indigo-200 scale-105' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
-                    }`}
+                    key={b.id}
+                    onClick={() => updateRouteUrl(b.name, '', '', 2)}
+                    className="p-6 bg-white hover:bg-slate-50 rounded-2xl border-2 border-slate-200 hover:border-indigo-500 shadow-sm hover:shadow-xl transition-all text-left group relative overflow-hidden flex flex-col justify-between h-36"
                   >
-                    {board.name}
+                    <div className="flex items-center justify-between">
+                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${pillColors[idx % pillColors.length]} flex items-center justify-center font-black text-sm shadow-md`}>
+                        {b.name.charAt(0)}
+                      </div>
+                      <ChevronRight size={18} className="text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-slate-900 text-base group-hover:text-indigo-600 transition-colors line-clamp-1">
+                        {b.name}
+                      </h3>
+                      <p className="text-[11px] text-slate-400 font-semibold mt-0.5">Official Board Curriculum</p>
+                    </div>
                   </button>
                 ))}
               </div>
             </div>
+          )}
 
-            {/* Class Filter Dropdown Menu */}
-            <div className="relative shrink-0" ref={classDropdownRef}>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Filter By Class:</h2>
-              <button
-                type="button"
-                onClick={() => setIsClassDropdownOpen(!isClassDropdownOpen)}
-                className={`w-full sm:w-56 flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all shadow-sm ${
-                  selectedGrade 
-                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-emerald-100' 
-                    : 'bg-white text-slate-700 border-slate-300 hover:border-slate-400'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Layers size={15} />
-                  <span>{selectedGrade ? `Class: ${selectedGrade}` : 'All Classes / Grades'}</span>
+          {/* STEP 2: SELECT CLASS */}
+          {currentStep === 2 && (
+            <div className="space-y-6 animate-in fade-in zoom-in-95 duration-200">
+              <div className="text-center max-w-xl mx-auto space-y-2">
+                <span className="text-xs font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+                  Step 2 of 4 • {selectedBoard}
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-black text-slate-900">Select Academic Class</h2>
+                <p className="text-xs sm:text-sm text-slate-500">
+                  Choose your grade or class level to view available textbooks.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
+                {stepClasses.map((c, idx) => (
+                  <button
+                    key={c.id}
+                    onClick={() => updateRouteUrl(selectedBoard, c.name, '', 3)}
+                    className="p-6 bg-white hover:bg-slate-50 rounded-2xl border-2 border-slate-200 hover:border-indigo-500 shadow-sm hover:shadow-xl transition-all text-center group flex flex-col items-center justify-center gap-3 h-36"
+                  >
+                    <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${pillColors[idx % pillColors.length]} flex items-center justify-center font-black text-lg shadow-md group-hover:scale-110 transition-transform`}>
+                      <Layers size={22} />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-slate-900 text-base group-hover:text-indigo-600 transition-colors">
+                        {c.name}
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Textbooks</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="text-center">
+                <button
+                  onClick={() => updateRouteUrl('', '', '', 1)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
+                >
+                  <ChevronLeft size={14} />
+                  <span>Change Board</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: SELECT SUBJECT */}
+          {currentStep === 3 && (
+            <div className="space-y-6 animate-in fade-in zoom-in-95 duration-200">
+              <div className="text-center max-w-xl mx-auto space-y-2">
+                <span className="text-xs font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+                  Step 3 of 4 • {selectedBoard} • Class {selectedClass}
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-black text-slate-900">Select Subject</h2>
+                <p className="text-xs sm:text-sm text-slate-500">
+                  Pick the subject to explore complete syllabus textbooks and key guides.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+                {availableSubjects.map((s, idx) => (
+                  <button
+                    key={s}
+                    onClick={() => updateRouteUrl(selectedBoard, selectedClass, s, 4)}
+                    className="p-5 bg-white hover:bg-slate-50 rounded-2xl border-2 border-slate-200 hover:border-indigo-500 shadow-sm hover:shadow-xl transition-all text-left group flex flex-col justify-between h-32"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${pillColors[idx % pillColors.length]} flex items-center justify-center font-black text-sm shadow-md`}>
+                        <BookOpen size={16} />
+                      </div>
+                      <ChevronRight size={16} className="text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-slate-900 text-sm group-hover:text-indigo-600 transition-colors line-clamp-1">
+                        {s}
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Click to Load</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="text-center">
+                <button
+                  onClick={() => updateRouteUrl(selectedBoard, '', '', 2)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
+                >
+                  <ChevronLeft size={14} />
+                  <span>Change Class</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: BOOKS GRID & VIEWER */}
+          {currentStep === 4 && (
+            <div className="space-y-6 animate-in fade-in zoom-in-95 duration-200">
+              {/* Header Info & Switch Subject Button */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-indigo-600 uppercase tracking-wider bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100">
+                      {selectedBoard || 'ALL BOARDS'}
+                    </span>
+                    {selectedClass && (
+                      <span className="text-xs font-black text-emerald-600 uppercase tracking-wider bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-100">
+                        Class {selectedClass}
+                      </span>
+                    )}
+                    {selectedSubject && (
+                      <span className="text-xs font-black text-purple-600 uppercase tracking-wider bg-purple-50 px-2.5 py-0.5 rounded-md border border-purple-100">
+                        {selectedSubject}
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+                    {selectedSubject ? `${selectedSubject} Textbooks` : 'All Textbooks'}
+                  </h2>
                 </div>
-                <ChevronDown size={16} className={`transition-transform duration-200 ${isClassDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
 
-              {/* Class Dropdown Menu Modal / Panel */}
-              {isClassDropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 p-3 space-y-2 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 px-1">
-                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">Select Class</span>
-                    {selectedGrade && (
-                      <button 
-                        onClick={() => { updateRouteUrl(selectedBoard, ''); setIsClassDropdownOpen(false); }}
-                        className="text-[11px] font-bold text-red-500 hover:text-red-700"
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => updateRouteUrl(selectedBoard, selectedClass, '', 3)}
+                    className="px-3.5 py-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-xl text-xs font-bold transition-all"
+                  >
+                    ← Switch Subject
+                  </button>
+                  <button
+                    onClick={resetStepWizard}
+                    className="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-all"
+                  >
+                    Reset All
+                  </button>
+                </div>
+              </div>
+
+              {/* Search Bar & Options */}
+              <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-3 justify-between items-center">
+                <div className="relative flex-1 w-full">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Search books by title, chapter, or keyword..." 
+                    className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                  {/* View Mode Toggle */}
+                  <div className="flex items-center bg-slate-100 p-0.5 rounded-xl text-xs font-bold">
+                    <button
+                      onClick={() => setViewMode('INFINITE')}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                        viewMode === 'INFINITE' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Infinite Scroll
+                    </button>
+                    <button
+                      onClick={() => setViewMode('PAGINATED')}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                        viewMode === 'PAGINATED' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Pages
+                    </button>
+                  </div>
+
+                  {viewMode === 'PAGINATED' && (
+                    <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700">
+                      <span className="text-slate-400 font-semibold">Show:</span>
+                      <select
+                        value={pageSize}
+                        onChange={(e) => handlePageSizeChange(e.target.value)}
+                        className="bg-transparent font-black text-indigo-600 focus:outline-none cursor-pointer"
                       >
-                        Clear Filter
+                        <option value="20">20</option>
+                        <option value="40">40</option>
+                        <option value="100">100</option>
+                        <option value="all">All</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* CHAPTER / UNIT FILTER CHIPS (IF UNITS EXIST) */}
+              {availableUnits.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                      <Filter size={14} className="text-indigo-600" />
+                      <span>Filter By Chapter / Unit:</span>
+                    </h3>
+                    {selectedUnit !== 'ALL' && (
+                      <button
+                        onClick={() => setSelectedUnit('ALL')}
+                        className="text-xs font-bold text-red-500 hover:text-red-700"
+                      >
+                        Reset Unit Filter
                       </button>
                     )}
                   </div>
-
-                  <div className="max-h-60 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                  <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={() => { updateRouteUrl(selectedBoard, ''); setIsClassDropdownOpen(false); }}
-                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
-                        !selectedGrade ? 'bg-indigo-50 text-indigo-700 font-black' : 'text-slate-700 hover:bg-slate-100'
+                      onClick={() => setSelectedUnit('ALL')}
+                      className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all shadow-sm ${
+                        selectedUnit === 'ALL'
+                          ? 'bg-indigo-600 text-white shadow-indigo-200 scale-105'
+                          : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                       }`}
                     >
-                      <span>All Classes</span>
-                      {!selectedGrade && <Check size={14} className="text-indigo-600" />}
+                      All Units ({books.length})
                     </button>
-
-                    {availableClasses.map(cls => (
+                    {availableUnits.map(u => (
                       <button
-                        key={cls}
-                        onClick={() => { updateRouteUrl(selectedBoard, cls); setIsClassDropdownOpen(false); }}
-                        className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
-                          selectedGrade.toLowerCase() === cls.toLowerCase() 
-                            ? 'bg-emerald-50 text-emerald-700 font-black' 
-                            : 'text-slate-700 hover:bg-slate-100'
+                        key={u.unit}
+                        onClick={() => setSelectedUnit(u.unit)}
+                        className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-1.5 ${
+                          selectedUnit === u.unit
+                            ? 'bg-emerald-600 text-white shadow-emerald-200 scale-105'
+                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                         }`}
                       >
-                        <span>Class {cls}</span>
-                        {selectedGrade.toLowerCase() === cls.toLowerCase() && (
-                          <Check size={14} className="text-emerald-600" />
-                        )}
+                        <span>{u.label}</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                          selectedUnit === u.unit ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {u.count}
+                        </span>
                       </button>
                     ))}
                   </div>
                 </div>
               )}
-            </div>
-          </div>
 
-          {/* Search bar, Active Filter Badges & Items Per Page Selector */}
-          <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-3 justify-between items-center">
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input 
-                type="text" 
-                placeholder="Search books by title, subject, or author..." 
-                className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-              {/* Page size limit selector (20, 40, 100, All) */}
-              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700">
-                <span className="text-slate-400 font-semibold">Show:</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => handlePageSizeChange(e.target.value)}
-                  className="bg-transparent font-black text-indigo-600 focus:outline-none cursor-pointer"
-                >
-                  <option value="20">20</option>
-                  <option value="40">40</option>
-                  <option value="100">100</option>
-                  <option value="all">All</option>
-                </select>
-              </div>
-
-              {selectedBoard && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold">
-                  <span>Board: {selectedBoard}</span>
-                  <X size={13} className="cursor-pointer hover:text-indigo-900" onClick={() => updateRouteUrl('', selectedGrade)} />
-                </span>
-              )}
-
-              {selectedGrade && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold">
-                  <span>Class {selectedGrade}</span>
-                  <X size={13} className="cursor-pointer hover:text-emerald-900" onClick={() => updateRouteUrl(selectedBoard, '')} />
-                </span>
-              )}
-
-              {(selectedBoard || selectedGrade || searchTerm) && (
-                <button 
-                  onClick={() => { setSearchTerm(''); updateRouteUrl('', ''); setUserCustomLimit(false); }} 
-                  className="w-full sm:w-auto px-3.5 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
-                >
-                  Reset Filters
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Results Summary Bar */}
-          {!isLoading && totalFilteredCount > 0 && (
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-2 px-1 text-xs text-slate-500 font-semibold">
-              <div>
-                Showing <span className="font-bold text-slate-800">
-                  {pageSize === 'all' ? `1–${totalFilteredCount}` : `${(currentPage - 1) * numericLimit + 1}–${Math.min(currentPage * numericLimit, totalFilteredCount)}`}
-                </span> of <span className="font-bold text-slate-800">{totalFilteredCount}</span> books
-                {isFiltered && <span className="text-indigo-600 font-bold ml-1">(Filtered)</span>}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="text-slate-400">Display Limit:</span>
-                <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg">
-                  {['20', '40', '100', 'all'].map((opt) => (
-                    <button
-                      key={opt}
-                      onClick={() => handlePageSizeChange(opt)}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase transition-all ${
-                        pageSize === opt 
-                          ? 'bg-indigo-600 text-white shadow-sm' 
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-white'
-                      }`}
-                    >
-                      {opt === 'all' ? 'All' : opt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Book Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-            {paginatedBooks.map((book) => (
-              <div
-                key={book.id}
-                onClick={() => handleOpenBook(book, false)}
-                className="p-5 sm:p-6 bg-white rounded-2xl border border-slate-200 hover:border-indigo-400 shadow-sm hover:shadow-xl transition-all flex flex-col justify-between text-center group cursor-pointer relative"
-              >
-                <div>
-                  <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform">
-                    <BookOpen size={24} />
+              {/* LOADING INDICATOR ON DEMAND */}
+              {isLoading && (
+                <div className="py-20 text-center space-y-4 bg-white rounded-3xl border border-slate-200 shadow-sm animate-in fade-in duration-200">
+                  <div className="relative inline-flex items-center justify-center">
+                    <Loader2 className="w-12 h-12 text-indigo-600 animate-spin" />
+                    <Sparkles className="w-5 h-5 text-amber-500 absolute animate-pulse" />
                   </div>
-                  <h3 className="font-bold text-slate-900 text-base group-hover:text-indigo-600 transition-colors line-clamp-2">
-                    {book.title}
-                  </h3>
-
-                  <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2">
-                    {book.grade && (
-                      <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md">
-                        Class {book.grade}
-                      </span>
-                    )}
-                    {book.board && (
-                      <span className="text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
-                        {book.board}
-                      </span>
-                    )}
+                  <div className="space-y-1">
+                    <h3 className="text-base font-black text-slate-800">Loading Textbooks & Keybooks...</h3>
+                    <p className="text-xs text-slate-400 font-medium">Fetching verified curriculum textbooks from server</p>
                   </div>
-
-                  {book.description && (
-                    <p className="text-xs text-slate-400 mt-2 line-clamp-2 font-medium">
-                      {book.description}
-                    </p>
-                  )}
                 </div>
+              )}
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-center gap-3">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleOpenBook(book, false); }}
-                    className="inline-flex items-center gap-1 text-xs font-black text-indigo-600 hover:underline"
+              {/* ERROR STATE */}
+              {!isLoading && error && (
+                <div className="text-center py-12 bg-red-50 rounded-2xl border border-red-100 p-6">
+                  <div className="text-red-500 mb-2 font-bold">Failed to load textbooks</div>
+                  <p className="text-red-600 text-xs">{error}</p>
+                  <button 
+                    onClick={() => updateRouteUrl(selectedBoard, selectedClass, selectedSubject, 4)} 
+                    className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded-xl font-bold text-xs hover:bg-red-200 transition-colors"
                   >
-                    <span>Read Book</span>
-                  </button>
-                  <span className="text-slate-300">•</span>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleOpenBook(book, true); }}
-                    className="inline-flex items-center gap-1 text-xs font-black text-emerald-600 hover:underline"
-                    title="Open in new browser tab with direct URL"
-                  >
-                    <span>New Tab</span>
-                    <ExternalLink size={12} />
+                    Retry Loading
                   </button>
                 </div>
-              </div>
-            ))}
-          </div>
+              )}
 
-          {/* Pagination Bar Controls */}
-          {!isLoading && pageSize !== 'all' && totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200">
-              <span className="text-xs font-bold text-slate-500">
-                Page <span className="text-indigo-600 font-black">{currentPage}</span> of <span className="font-bold text-slate-800">{totalPages}</span>
-              </span>
+              {/* EMPTY STATE */}
+              {!isLoading && !error && stepBooks.length === 0 && (
+                <div className="py-16 text-center text-slate-400 bg-white rounded-3xl border border-slate-200 p-6">
+                  <BookOpen size={48} className="mx-auto mb-3 opacity-20" />
+                  <p className="font-bold text-slate-600">No textbooks found for this subject or filter.</p>
+                  <p className="text-xs text-slate-400 mt-1">Try switching to another class or reset filters.</p>
+                  <button 
+                    onClick={() => updateRouteUrl(selectedBoard, selectedClass, '', 3)} 
+                    className="mt-4 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-all"
+                  >
+                    Choose Another Subject
+                  </button>
+                </div>
+              )}
 
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className={`p-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1 ${
-                    currentPage === 1 
-                      ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-slate-50' 
-                      : 'border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
-                  }`}
-                >
-                  <ChevronLeft size={16} />
-                  <span className="hidden sm:inline">Prev</span>
-                </button>
+              {/* BOOKS GRID */}
+              {!isLoading && !error && stepBooks.length > 0 && (
+                <>
+                  <div className="flex justify-between items-center px-1 text-xs text-slate-500 font-semibold">
+                    <div>
+                      Showing <span className="font-bold text-slate-800">{displayedBooks.length}</span> of <span className="font-bold text-slate-800">{totalFilteredCount}</span> textbooks
+                      {isFiltered && <span className="text-indigo-600 font-bold ml-1">(Filtered)</span>}
+                    </div>
+                  </div>
 
-                {/* Page number buttons */}
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(p => p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2))
-                  .map((pageNum, idx, arr) => {
-                    const prev = arr[idx - 1];
-                    const showEllipsis = prev && pageNum - prev > 1;
-                    return (
-                      <React.Fragment key={pageNum}>
-                        {showEllipsis && <span className="px-1 text-slate-400">...</span>}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                    {displayedBooks.map((book) => (
+                      <div
+                        key={book.id}
+                        onClick={() => handleOpenBook(book, false)}
+                        className="p-5 sm:p-6 bg-white rounded-2xl border border-slate-200 hover:border-indigo-400 shadow-sm hover:shadow-xl transition-all flex flex-col justify-between text-center group cursor-pointer relative"
+                      >
+                        <div>
+                          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform">
+                            <BookOpen size={24} />
+                          </div>
+                          <h3 className="font-bold text-slate-900 text-base group-hover:text-indigo-600 transition-colors line-clamp-2">
+                            {book.title}
+                          </h3>
+
+                          <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2">
+                            {book.grade && (
+                              <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md">
+                                Class {book.grade}
+                              </span>
+                            )}
+                            {book.board && (
+                              <span className="text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
+                                {book.board}
+                              </span>
+                            )}
+                          </div>
+
+                          {book.description && (
+                            <p className="text-xs text-slate-400 mt-2 line-clamp-2 font-medium">
+                              {book.description}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-center gap-3">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleOpenBook(book, false); }}
+                            className="inline-flex items-center gap-1 text-xs font-black text-indigo-600 hover:underline"
+                          >
+                            <span>Read Book</span>
+                          </button>
+                          <span className="text-slate-300">•</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleOpenBook(book, true); }}
+                            className="inline-flex items-center gap-1 text-xs font-black text-emerald-600 hover:underline"
+                            title="Open in new browser tab with direct URL"
+                          >
+                            <span>New Tab</span>
+                            <ExternalLink size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* INFINITE SCROLL LOADER REF & SKELETON TRIGGER */}
+                  {viewMode === 'INFINITE' && (
+                    <div ref={loadMoreRef} className="py-6 text-center">
+                      {isLoadingMore ? (
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full text-xs font-bold text-slate-600 animate-pulse">
+                          <Loader2 size={14} className="animate-spin text-indigo-600" />
+                          <span>Loading more textbooks...</span>
+                        </div>
+                      ) : visibleCount < stepBooks.length ? (
                         <button
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={`w-8 h-8 rounded-xl text-xs font-black transition-all ${
-                            currentPage === pageNum 
-                              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 scale-105' 
-                              : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                          onClick={handleLoadMore}
+                          className="px-5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-xl transition-all inline-flex items-center gap-1.5"
+                        >
+                          <ArrowDownCircle size={14} />
+                          <span>Load More ({stepBooks.length - visibleCount} remaining)</span>
+                        </button>
+                      ) : (
+                        <div className="inline-flex items-center gap-1.5 text-xs text-slate-400 font-bold">
+                          <CheckCircle2 size={14} className="text-emerald-500" />
+                          <span>All {stepBooks.length} textbooks loaded</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TRADITIONAL PAGINATION BAR */}
+                  {viewMode === 'PAGINATED' && pageSize !== 'all' && totalPages > 1 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200">
+                      <span className="text-xs font-bold text-slate-500">
+                        Page <span className="text-indigo-600 font-black">{currentPage}</span> of <span className="font-bold text-slate-800">{totalPages}</span>
+                      </span>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className={`p-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1 ${
+                            currentPage === 1 
+                              ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-slate-50' 
+                              : 'border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
                           }`}
                         >
-                          {pageNum}
+                          <ChevronLeft size={16} />
+                          <span className="hidden sm:inline">Prev</span>
                         </button>
-                      </React.Fragment>
-                    );
-                  })}
 
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className={`p-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1 ${
-                    currentPage === totalPages 
-                      ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-slate-50' 
-                      : 'border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
-                  }`}
-                >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            </div>
-          )}
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter(p => p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2))
+                          .map((pageNum, idx, arr) => {
+                            const prev = arr[idx - 1];
+                            const showEllipsis = prev && pageNum - prev > 1;
+                            return (
+                              <React.Fragment key={pageNum}>
+                                {showEllipsis && <span className="px-1 text-slate-400">...</span>}
+                                <button
+                                  onClick={() => setCurrentPage(pageNum)}
+                                  className={`w-8 h-8 rounded-xl text-xs font-black transition-all ${
+                                    currentPage === pageNum 
+                                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 scale-105' 
+                                      : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                                  }`}
+                                >
+                                  {pageNum}
+                                </button>
+                              </React.Fragment>
+                            );
+                          })}
 
-          {isLoading && (
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-            </div>
-          )}
-
-          {!isLoading && error && (
-            <div className="text-center py-12 bg-red-50 rounded-xl border border-red-100">
-              <div className="text-red-500 mb-2 font-semibold">Oops!</div>
-              <p className="text-red-600">{error}</p>
-              <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
-                Retry
-              </button>
-            </div>
-          )}
-
-          {!isLoading && !error && filteredBooks.length === 0 && (
-            <div className="py-16 text-center text-slate-400 bg-white rounded-3xl border border-slate-200">
-              <BookOpen size={48} className="mx-auto mb-3 opacity-20" />
-              <p className="font-bold text-slate-600">No books found for this class or board filter.</p>
-              <button onClick={() => updateRouteUrl('', '')} className="mt-4 text-xs font-bold text-indigo-600 hover:underline">
-                View all books
-              </button>
+                        <button
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                          className={`p-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1 ${
+                            currentPage === totalPages 
+                              ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-slate-50' 
+                              : 'border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
+                          }`}
+                        >
+                          <span className="hidden sm:inline">Next</span>
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
         </div>

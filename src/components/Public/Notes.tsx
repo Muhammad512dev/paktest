@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   Search, FileText, Download, ChevronLeft, ChevronRight, 
-  BookOpen, Sparkles, CheckSquare, ShieldCheck, Printer, ExternalLink
+  BookOpen, Sparkles, CheckSquare, ShieldCheck, Printer, ExternalLink,
+  Layers, Filter, ArrowDownCircle, CheckCircle2
 } from 'lucide-react';
 import { getNotes, getPublicCurriculum } from '../../services/dataService';
 import { Syllabus, ClassLevel } from '../../types';
@@ -20,10 +21,24 @@ const Notes: React.FC = () => {
   // Scope Filter: 'ALL' | 'CHAPTER_WISE' | 'FULL_BOOK' | 'PAST_PAPERS'
   const [scopeFilter, setScopeFilter] = useState<'ALL' | 'CHAPTER_WISE' | 'FULL_BOOK' | 'PAST_PAPERS'>('ALL');
 
+  // Chapter / Unit Filter: 'ALL' | unit string (e.g. '1', '2', '10', etc.)
+  const [selectedUnit, setSelectedUnit] = useState<string>('ALL');
+
+  // Note Type Sub-Filter: 'ALL' | 'Solved MCQs' | 'Short Questions' | 'Long Questions' | 'Solved Numericals' | 'Full Book Complete'
+  const [selectedNoteType, setSelectedNoteType] = useState<string>('ALL');
+
   // Selected Note Detail View State
   const [selectedNoteModal, setSelectedNoteModal] = useState<any | null>(null);
 
-  // Pagination State (20, 40, 100, 'all')
+  // View Mode: 'INFINITE' (Scroll to load more) vs 'PAGINATED' (Page 1, 2, 3...)
+  const [viewMode, setViewMode] = useState<'INFINITE' | 'PAGINATED'>('INFINITE');
+
+  // Infinite Scroll State
+  const [visibleCount, setVisibleCount] = useState<number>(20);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  // Traditional Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<string>('20');
   const [userCustomLimit, setUserCustomLimit] = useState<boolean>(false);
@@ -33,7 +48,6 @@ const Notes: React.FC = () => {
   const [selectedBoard, setSelectedBoard] = useState<string>('');
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<string>('');
-  const [selectedType, setSelectedType] = useState<string>('');
 
   useEffect(() => {
     const load = async () => {
@@ -83,21 +97,6 @@ const Notes: React.FC = () => {
     return list;
   }, [notes]);
 
-  // Dynamic classes strictly extracted from actual existing notes input fields
-  const availableClasses = useMemo(() => {
-    const list: { id: string; name: string; board?: string }[] = [];
-    notes.forEach(n => {
-      if (n.grade && n.grade.trim()) {
-        const trimmedGrade = n.grade.trim();
-        const trimmedBoard = (n.board || '').trim();
-        if (!list.some(c => c.name.toLowerCase() === trimmedGrade.toLowerCase() && (c.board || '').toLowerCase() === trimmedBoard.toLowerCase())) {
-          list.push({ id: trimmedGrade, name: trimmedGrade, board: trimmedBoard });
-        }
-      }
-    });
-    return list;
-  }, [notes]);
-
   // Extract available subjects from notes for the selected board & class
   const availableSubjects = useMemo(() => {
     const set = new Set<string>();
@@ -122,12 +121,79 @@ const Notes: React.FC = () => {
     return Array.from(set).map(g => ({ id: g, name: g }));
   }, [notes, selectedBoard]);
 
+  // Extract available Chapters / Units dynamically for currently active Board, Class & Subject
+  const availableUnits = useMemo(() => {
+    const unitMap = new Map<string, { unit: string; label: string; count: number }>();
+    
+    notes.forEach(n => {
+      if (selectedBoard && n.board && n.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return;
+      if (selectedClass && n.grade && n.grade.trim().toLowerCase() !== selectedClass.trim().toLowerCase()) return;
+      if (selectedSubject && n.subject && n.subject.trim().toLowerCase() !== selectedSubject.trim().toLowerCase()) return;
+
+      // Check unit property or parse from title
+      let unitNum = '';
+      if (n.unit) {
+        unitNum = String(n.unit).trim();
+      } else if (n.title) {
+        const m = n.title.match(/(?:unit|chapter|ch)\s*0?(\d+)/i);
+        if (m) unitNum = m[1];
+      }
+
+      if (unitNum) {
+        const cleanUnit = unitNum.replace(/^0+/, '');
+        if (cleanUnit) {
+          const current = unitMap.get(cleanUnit) || { unit: cleanUnit, label: `Unit ${cleanUnit}`, count: 0 };
+          current.count += 1;
+          unitMap.set(cleanUnit, current);
+        }
+      }
+    });
+
+    // Sort numerically
+    return Array.from(unitMap.values()).sort((a, b) => {
+      const na = parseInt(a.unit, 10);
+      const nb = parseInt(b.unit, 10);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      return a.unit.localeCompare(b.unit);
+    });
+  }, [notes, selectedBoard, selectedClass, selectedSubject]);
+
+  // Extract available Note Types dynamically for currently active filters
+  const availableNoteTypes = useMemo(() => {
+    const typeSet = new Map<string, number>();
+    notes.forEach(n => {
+      if (selectedBoard && n.board && n.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return;
+      if (selectedClass && n.grade && n.grade.trim().toLowerCase() !== selectedClass.trim().toLowerCase()) return;
+      if (selectedSubject && n.subject && n.subject.trim().toLowerCase() !== selectedSubject.trim().toLowerCase()) return;
+      
+      const t = n.noteType || 'Chapter Questions';
+      typeSet.set(t, (typeSet.get(t) || 0) + 1);
+    });
+    return Array.from(typeSet.entries()).map(([type, count]) => ({ type, count }));
+  }, [notes, selectedBoard, selectedClass, selectedSubject]);
+
+  // Filtered Notes List
   const stepNotes = useMemo(() => {
     return notes.filter(n => {
       if (selectedBoard && n.board && n.board.trim().toLowerCase() !== selectedBoard.trim().toLowerCase()) return false;
       if (selectedClass && n.grade && n.grade.trim().toLowerCase() !== selectedClass.trim().toLowerCase()) return false;
       if (selectedSubject && n.subject && n.subject.trim().toLowerCase() !== selectedSubject.trim().toLowerCase()) return false;
-      if (selectedType && n.noteType && n.noteType.trim().toLowerCase() !== selectedType.trim().toLowerCase()) return false;
+      
+      // NoteType Filter
+      if (selectedNoteType !== 'ALL' && n.noteType && n.noteType.trim().toLowerCase() !== selectedNoteType.trim().toLowerCase()) {
+        return false;
+      }
+
+      // Chapter / Unit Filter
+      if (selectedUnit !== 'ALL') {
+        const cleanTargetUnit = selectedUnit.replace(/^0+/, '');
+        const noteUnit = (n.unit || '').toString().replace(/^0+/, '');
+        const inTitle = n.title && (
+          new RegExp(`(?:unit|chapter|ch)\\s*0?${cleanTargetUnit}\\b`, 'i').test(n.title) ||
+          new RegExp(`exercise\\s*0?${cleanTargetUnit}\\.`, 'i').test(n.title)
+        );
+        if (noteUnit !== cleanTargetUnit && !inTitle) return false;
+      }
       
       // Scope Filter: 'ALL' | 'CHAPTER_WISE' | 'FULL_BOOK' | 'PAST_PAPERS'
       if (scopeFilter === 'CHAPTER_WISE') {
@@ -147,7 +213,42 @@ const Notes: React.FC = () => {
       }
       return true;
     });
-  }, [notes, selectedBoard, selectedClass, selectedSubject, selectedType, scopeFilter, filters.resource]);
+  }, [notes, selectedBoard, selectedClass, selectedSubject, selectedNoteType, selectedUnit, scopeFilter, filters.resource]);
+
+  // Reset pagination & visible count when filters change
+  useEffect(() => {
+    setVisibleCount(20);
+    setCurrentPage(1);
+  }, [searchTerm, selectedBoard, selectedClass, selectedSubject, selectedUnit, selectedNoteType, scopeFilter]);
+
+  // Infinite Scroll Intersection Observer
+  const handleLoadMore = useCallback(() => {
+    if (visibleCount < stepNotes.length && !isLoadingMore) {
+      setIsLoadingMore(true);
+      setTimeout(() => {
+        setVisibleCount(prev => Math.min(prev + 20, stepNotes.length));
+        setIsLoadingMore(false);
+      }, 150);
+    }
+  }, [visibleCount, stepNotes.length, isLoadingMore]);
+
+  useEffect(() => {
+    if (viewMode !== 'INFINITE') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visibleCount < stepNotes.length) {
+          handleLoadMore();
+        }
+      },
+      { threshold: 0.1, rootMargin: '200px' }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [viewMode, visibleCount, stepNotes.length, handleLoadMore]);
 
   // Dynamic URL Sync effect for step wizard navigation and note view
   useEffect(() => {
@@ -156,12 +257,14 @@ const Notes: React.FC = () => {
       const board = params.get('board') || '';
       const cls = params.get('class') || '';
       const subject = params.get('subject') || '';
+      const unit = params.get('unit') || 'ALL';
       const step = parseInt(params.get('step') || '1', 10);
       const noteId = params.get('noteId');
 
       setSelectedBoard(board);
       setSelectedClass(cls);
       setSelectedSubject(subject);
+      setSelectedUnit(unit);
       setCurrentStep(step);
 
       if (noteId && notes.length > 0) {
@@ -177,16 +280,18 @@ const Notes: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [notes]);
 
-  const updateRouteUrl = (newBoard: string, newClass: string, newSubject: string, newStep: number, noteId?: string) => {
+  const updateRouteUrl = (newBoard: string, newClass: string, newSubject: string, newStep: number, noteId?: string, unit = selectedUnit) => {
     setSelectedBoard(newBoard);
     setSelectedClass(newClass);
     setSelectedSubject(newSubject);
     setCurrentStep(newStep);
+    if (unit) setSelectedUnit(unit);
 
     const params = new URLSearchParams();
     if (newBoard) params.set('board', newBoard);
     if (newClass) params.set('class', newClass);
     if (newSubject) params.set('subject', newSubject);
+    if (unit && unit !== 'ALL') params.set('unit', unit);
     if (newStep > 1) params.set('step', newStep.toString());
     if (noteId) params.set('noteId', noteId);
 
@@ -201,6 +306,7 @@ const Notes: React.FC = () => {
       if (note.board) params.set('board', note.board);
       if (note.grade) params.set('class', note.grade);
       if (note.subject) params.set('subject', note.subject);
+      if (note.unit) params.set('unit', note.unit);
       params.set('step', '4');
       params.set('noteId', note.id);
       window.open(`/notes?${params.toString()}`, '_blank');
@@ -219,38 +325,32 @@ const Notes: React.FC = () => {
     setSelectedBoard('');
     setSelectedClass('');
     setSelectedSubject('');
-    setSelectedType('');
+    setSelectedUnit('ALL');
+    setSelectedNoteType('ALL');
     setFilters({ board: '', grade: '', noteType: '', resource: '' });
     setScopeFilter('ALL');
     setCurrentStep(1);
     setSelectedNoteModal(null);
     setUserCustomLimit(false);
+    setVisibleCount(20);
     window.history.pushState(null, '', '/notes');
   };
 
-  const isFiltered = Boolean(selectedBoard || selectedClass || selectedSubject || selectedType || scopeFilter !== 'ALL' || searchTerm || filters.resource);
-
-  // Sync limit if filter is active
-  useEffect(() => {
-    if (!userCustomLimit) {
-      if (isFiltered) {
-        setPageSize('all');
-      } else {
-        setPageSize('20');
-      }
-    }
-    setCurrentPage(1);
-  }, [searchTerm, selectedBoard, selectedClass, selectedSubject, selectedType, scopeFilter, filters.resource, isFiltered, userCustomLimit]);
+  const isFiltered = Boolean(selectedBoard || selectedClass || selectedSubject || selectedUnit !== 'ALL' || selectedNoteType !== 'ALL' || scopeFilter !== 'ALL' || searchTerm || filters.resource);
 
   const totalFilteredCount = stepNotes.length;
   const numericLimit = pageSize === 'all' ? totalFilteredCount : parseInt(pageSize, 10);
   const totalPages = Math.max(1, Math.ceil(totalFilteredCount / (numericLimit || 20)));
 
-  const paginatedNotes = useMemo(() => {
+  // Displayed Notes: Infinite Scroll slice vs Paginated slice
+  const displayedNotes = useMemo(() => {
+    if (viewMode === 'INFINITE') {
+      return stepNotes.slice(0, visibleCount);
+    }
     if (pageSize === 'all') return stepNotes;
     const start = (currentPage - 1) * numericLimit;
     return stepNotes.slice(start, start + numericLimit);
-  }, [stepNotes, pageSize, currentPage, numericLimit]);
+  }, [stepNotes, viewMode, visibleCount, pageSize, currentPage, numericLimit]);
 
   const handlePageSizeChange = (val: string) => {
     setPageSize(val);
@@ -281,7 +381,9 @@ const Notes: React.FC = () => {
           {selectedClass && <span>/</span>}
           {selectedClass && <span className="cursor-pointer hover:text-indigo-600" onClick={() => updateRouteUrl(selectedBoard, selectedClass, '', 2)}>{selectedClass} Notes</span>}
           {selectedSubject && <span>/</span>}
-          {selectedSubject && <span className="text-slate-800 font-bold">{selectedSubject}</span>}
+          {selectedSubject && <span className="cursor-pointer hover:text-indigo-600" onClick={() => updateRouteUrl(selectedBoard, selectedClass, selectedSubject, 4, undefined, 'ALL')}>{selectedSubject}</span>}
+          {selectedUnit !== 'ALL' && <span>/</span>}
+          {selectedUnit !== 'ALL' && <span className="text-slate-800 font-bold">Unit {selectedUnit}</span>}
         </div>
 
         {selectedNoteModal ? (
@@ -296,6 +398,11 @@ const Notes: React.FC = () => {
               <span className="text-xs font-bold text-sky-700 bg-sky-50 px-3 py-1 rounded-full border border-sky-200">
                 {selectedNoteModal.scope === 'FULL_BOOK' || selectedNoteModal.noteType === 'Full Book Complete' ? '📚 Full Book Master Notes' : '📖 Chapter-Wise Question Solutions'}
               </span>
+              {selectedNoteModal.unit && (
+                <span className="text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+                  Unit {selectedNoteModal.unit}
+                </span>
+              )}
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2 leading-tight">
               {selectedNoteModal.title || `${selectedNoteModal.subject} Notes (${selectedNoteModal.grade || 'General'})`}
@@ -313,13 +420,15 @@ const Notes: React.FC = () => {
               Comprehensive chapter-wise solved questions, MCQs with answer keys, numericals, and full book complete notes for matric & intermediate exams.
             </p>
             {(selectedBoard || selectedClass || selectedSubject) && (
-              <div className="mt-4 flex items-center justify-center gap-2 text-sm font-black uppercase text-slate-700 tracking-wider">
-                {selectedBoard && <span>🏛️ {selectedBoard}</span>}
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm font-black uppercase text-slate-700 tracking-wider">
+                {selectedBoard && <span className="bg-slate-100 px-2.5 py-1 rounded-lg">🏛️ {selectedBoard}</span>}
                 {selectedBoard && selectedClass && <span>›</span>}
-                {selectedClass && <span>🎓 {selectedClass}</span>}
+                {selectedClass && <span className="bg-slate-100 px-2.5 py-1 rounded-lg">🎓 {selectedClass}</span>}
                 {selectedClass && selectedSubject && <span>›</span>}
-                {selectedSubject && <span>📖 {selectedSubject}</span>}
-                <button onClick={resetStepWizard} className="ml-3 text-xs text-rose-500 hover:underline normal-case font-bold">(Reset)</button>
+                {selectedSubject && <span className="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg">📖 {selectedSubject}</span>}
+                {selectedUnit !== 'ALL' && <span>›</span>}
+                {selectedUnit !== 'ALL' && <span className="bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg">📑 Unit {selectedUnit}</span>}
+                <button onClick={resetStepWizard} className="ml-3 text-xs text-rose-500 hover:underline normal-case font-bold">(Reset All)</button>
               </div>
             )}
           </div>
@@ -596,7 +705,7 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
                 {availableSubjects.map((sub, idx) => (
                   <button
                     key={sub}
-                    onClick={() => updateRouteUrl(selectedBoard, selectedClass, sub, 4)}
+                    onClick={() => updateRouteUrl(selectedBoard, selectedClass, sub, 4, undefined, 'ALL')}
                     className={`p-5 rounded-2xl bg-gradient-to-r ${pillColors[idx % pillColors.length]} font-black text-base tracking-wide shadow-md hover:scale-105 transition-all text-center uppercase`}
                   >
                     {sub}
@@ -609,45 +718,66 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
           {/* STEP 4 / PDF Notes Cards View */}
           {(currentStep === 4 || (selectedBoard && selectedClass && selectedSubject)) && (
             <div className="space-y-6 mt-4">
-              {/* Search and Scope Filter Toolbar */}
-              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
-                <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-                  <div className="relative flex-1 w-full md:max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+              
+              {/* Top Control Toolbar (Search, View Mode & Selection Controls) */}
+              <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                
+                {/* Search Bar + Navigation Actions */}
+                <div className="flex flex-col md:flex-row gap-3 justify-between items-center">
+                  <div className="relative flex-1 w-full">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input 
                       type="text" 
-                      placeholder="Search notes by title, subject or author..." 
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      placeholder="Search within this subject (e.g. MCQs, Numericals, Unit 5, Exercise 2.1)..." 
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 rounded-2xl border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition-all"
                       value={searchTerm}
                       onChange={e => setSearchTerm(e.target.value)}
                     />
                   </div>
                   
-                  <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                    {/* Limit selector dropdown */}
-                    <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold text-slate-700">
-                      <span className="text-slate-400 font-semibold">Show:</span>
-                      <select
-                        value={pageSize}
-                        onChange={(e) => handlePageSizeChange(e.target.value)}
-                        className="bg-transparent font-black text-indigo-600 focus:outline-none cursor-pointer"
+                  <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+                    {/* View Mode Toggle: Infinite Scroll vs Pagination */}
+                    <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold text-slate-600">
+                      <button
+                        onClick={() => setViewMode('INFINITE')}
+                        className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                          viewMode === 'INFINITE'
+                            ? 'bg-white text-indigo-600 shadow-sm font-black'
+                            : 'hover:text-slate-900'
+                        }`}
+                        title="Smooth infinite scroll that loads items as you scroll down"
                       >
-                        <option value="20">20</option>
-                        <option value="40">40</option>
-                        <option value="100">100</option>
-                        <option value="all">All</option>
-                      </select>
+                        <ArrowDownCircle size={14} />
+                        <span>Auto-Scroll</span>
+                      </button>
+                      <button
+                        onClick={() => setViewMode('PAGINATED')}
+                        className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                          viewMode === 'PAGINATED'
+                            ? 'bg-white text-indigo-600 shadow-sm font-black'
+                            : 'hover:text-slate-900'
+                        }`}
+                        title="Traditional page numbers"
+                      >
+                        <Layers size={14} />
+                        <span>Pages</span>
+                      </button>
                     </div>
 
-                    <button onClick={resetStepWizard} className="px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-all">
-                      Change Selection
+                    <button 
+                      onClick={resetStepWizard} 
+                      className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all"
+                    >
+                      ← Back
                     </button>
                   </div>
                 </div>
 
-                {/* Scope Filters (All Notes, Chapter-Wise, Full Book, Past Papers) */}
-                <div className="flex items-center gap-2 pt-2 border-t border-slate-100 overflow-x-auto pb-1">
-                  <span className="text-xs font-bold text-slate-400 uppercase mr-1">Filter Scope:</span>
+                {/* 1. Primary Scope Filter (All, Chapter-Wise, Full Book, Past Papers) */}
+                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+                  <span className="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mr-1">
+                    <Filter size={13} /> Scope:
+                  </span>
                   {[
                     { id: 'ALL', label: 'All Resources' },
                     { id: 'CHAPTER_WISE', label: '📖 Chapter-Wise Solutions' },
@@ -656,7 +786,10 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
                   ].map((tab) => (
                     <button
                       key={tab.id}
-                      onClick={() => setScopeFilter(tab.id as any)}
+                      onClick={() => {
+                        setScopeFilter(tab.id as any);
+                        if (tab.id === 'FULL_BOOK') setSelectedUnit('ALL');
+                      }}
                       className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                         scopeFilter === tab.id
                           ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200 scale-105'
@@ -667,75 +800,238 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
                     </button>
                   ))}
                 </div>
-              </div>
 
-              {/* Results Summary Bar */}
-              {!isLoading && totalFilteredCount > 0 && (
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-2 px-1 text-xs text-slate-500 font-semibold">
-                  <div>
-                    Showing <span className="font-bold text-slate-800">
-                      {pageSize === 'all' ? `1–${totalFilteredCount}` : `${(currentPage - 1) * numericLimit + 1}–${Math.min(currentPage * numericLimit, totalFilteredCount)}`}
-                    </span> of <span className="font-bold text-slate-800">{totalFilteredCount}</span> notes
-                    {isFiltered && <span className="text-indigo-600 font-bold ml-1">(Filtered)</span>}
-                  </div>
+                {/* 2. Interactive CHAPTER / UNIT Quick Selector (Pill Chips) */}
+                {availableUnits.length > 0 && scopeFilter !== 'FULL_BOOK' && (
+                  <div className="pt-2 border-t border-slate-100 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-indigo-950 uppercase tracking-wider flex items-center gap-1">
+                        <BookOpen size={13} className="text-indigo-600" /> Filter By Chapter / Unit:
+                      </span>
+                      {selectedUnit !== 'ALL' && (
+                        <button 
+                          onClick={() => setSelectedUnit('ALL')}
+                          className="text-[11px] font-bold text-rose-500 hover:underline"
+                        >
+                          Clear Unit Filter
+                        </button>
+                      )}
+                    </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400">Display Limit:</span>
-                    <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg">
-                      {['20', '40', '100', 'all'].map((opt) => (
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-slate-200">
+                      <button
+                        onClick={() => setSelectedUnit('ALL')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1 ${
+                          selectedUnit === 'ALL'
+                            ? 'bg-slate-900 text-white shadow-sm scale-105'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        All Units ({availableUnits.reduce((acc, u) => acc + u.count, 0)})
+                      </button>
+
+                      {availableUnits.map(unitItem => (
                         <button
-                          key={opt}
-                          onClick={() => handlePageSizeChange(opt)}
-                          className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase transition-all ${
-                            pageSize === opt 
-                              ? 'bg-indigo-600 text-white shadow-sm' 
-                              : 'text-slate-600 hover:text-slate-900 hover:bg-white'
+                          key={unitItem.unit}
+                          onClick={() => setSelectedUnit(unitItem.unit)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                            selectedUnit === unitItem.unit
+                              ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-200 scale-105'
+                              : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200/50'
                           }`}
                         >
-                          {opt === 'all' ? 'All' : opt}
+                          <span>{unitItem.label}</span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                            selectedUnit === unitItem.unit ? 'bg-white/30 text-white' : 'bg-amber-200/80 text-amber-900'
+                          }`}>
+                            {unitItem.count}
+                          </span>
                         </button>
                       ))}
                     </div>
                   </div>
+                )}
+
+                {/* 3. Note Type Sub-Filter (Solved MCQs, Short Questions, Long Questions, Solved Numericals) */}
+                {availableNoteTypes.length > 1 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase mr-1">Type:</span>
+                    <button
+                      onClick={() => setSelectedNoteType('ALL')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                        selectedNoteType === 'ALL'
+                          ? 'bg-indigo-100 text-indigo-700 font-black'
+                          : 'text-slate-500 hover:bg-slate-100'
+                      }`}
+                    >
+                      All Types
+                    </button>
+                    {availableNoteTypes.map(({ type, count }) => (
+                      <button
+                        key={type}
+                        onClick={() => setSelectedNoteType(type)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 ${
+                          selectedNoteType === type
+                            ? 'bg-indigo-600 text-white shadow-xs font-black'
+                            : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/60'
+                        }`}
+                      >
+                        <span>{type}</span>
+                        <span className="opacity-70 text-[10px]">({count})</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Status and Active Filter Chips */}
+              {!isLoading && (
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 px-1 text-xs text-slate-500 font-semibold">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span>Showing <strong className="text-slate-900">{displayedNotes.length}</strong> of <strong className="text-slate-900">{totalFilteredCount}</strong> notes</span>
+                    {selectedUnit !== 'ALL' && (
+                      <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md font-bold flex items-center gap-1">
+                        Unit {selectedUnit} <button onClick={() => setSelectedUnit('ALL')} className="hover:text-red-600">×</button>
+                      </span>
+                    )}
+                    {selectedNoteType !== 'ALL' && (
+                      <span className="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-md font-bold flex items-center gap-1">
+                        {selectedNoteType} <button onClick={() => setSelectedNoteType('ALL')} className="hover:text-red-600">×</button>
+                      </span>
+                    )}
+                  </div>
+
+                  {viewMode === 'PAGINATED' && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-400">Page Limit:</span>
+                      <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg">
+                        {['20', '40', '100', 'all'].map((opt) => (
+                          <button
+                            key={opt}
+                            onClick={() => handlePageSizeChange(opt)}
+                            className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase transition-all ${
+                              pageSize === opt 
+                                ? 'bg-indigo-600 text-white shadow-sm' 
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-white'
+                            }`}
+                          >
+                            {opt === 'all' ? 'All' : opt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Notes Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                {paginatedNotes.map(note => (
-                  <div
-                    key={note.id}
-                    onClick={() => handleOpenNote(note, false)}
-                    className="p-5 bg-white rounded-2xl border border-slate-200 hover:border-indigo-400 shadow-sm hover:shadow-xl transition-all flex flex-col items-center justify-center text-center group cursor-pointer relative"
-                  >
-                    <div className="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <FileText size={22} />
+              {/* Loading Skeletons */}
+              {isLoading && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="p-6 bg-white rounded-3xl border border-slate-200 animate-pulse space-y-4">
+                      <div className="w-12 h-12 bg-slate-100 rounded-2xl mx-auto" />
+                      <div className="h-4 bg-slate-100 rounded-md w-3/4 mx-auto" />
+                      <div className="h-3 bg-slate-100 rounded-md w-1/2 mx-auto" />
                     </div>
-                    <h4 className="font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors line-clamp-2">{note.title || `${note.subject} Notes`}</h4>
-                    <p className="text-[11px] text-slate-400 font-semibold uppercase mt-1 tracking-wider">{note.grade || selectedClass} • {note.subject}</p>
-                    <div className="mt-3 flex items-center justify-center gap-2">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleOpenNote(note, false); }}
-                        className="inline-flex items-center gap-1 text-[11px] font-black text-indigo-600 hover:underline"
-                      >
-                        <span>Details & Preview</span>
-                      </button>
-                      <span className="text-slate-300">•</span>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleOpenNote(note, true); }}
-                        className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-600 hover:underline"
-                        title="Open in new browser tab with direct URL"
-                      >
-                        <span>New Tab</span>
-                        <span>↗</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
-              {/* Pagination Controls */}
-              {!isLoading && pageSize !== 'all' && totalPages > 1 && (
+              {/* PDF Notes Cards Grid */}
+              {!isLoading && displayedNotes.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                  {displayedNotes.map(note => (
+                    <div
+                      key={note.id}
+                      onClick={() => handleOpenNote(note, false)}
+                      className="p-5 bg-white rounded-3xl border border-slate-200/80 hover:border-indigo-400 shadow-sm hover:shadow-xl transition-all flex flex-col justify-between text-center group cursor-pointer relative hover:-translate-y-1"
+                    >
+                      {/* Top Badges */}
+                      <div className="flex items-center justify-between gap-1 w-full mb-3">
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                          {note.grade || selectedClass}
+                        </span>
+                        {note.unit && (
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/60">
+                            Unit {note.unit}
+                          </span>
+                        )}
+                        {note.scope === 'FULL_BOOK' && (
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                            Full Book
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Icon & Title */}
+                      <div className="space-y-2 my-auto">
+                        <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto group-hover:scale-110 group-hover:bg-rose-100 transition-all shadow-sm">
+                          <FileText size={24} />
+                        </div>
+                        <h4 className="font-black text-slate-900 text-sm group-hover:text-indigo-600 transition-colors line-clamp-2 leading-snug">
+                          {note.title || `${note.subject} Notes`}
+                        </h4>
+                        <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+                          {note.subject} • {note.noteType || 'Study Note'}
+                        </p>
+                      </div>
+
+                      {/* Card Action Buttons */}
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-center gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleOpenNote(note, false); }}
+                          className="inline-flex items-center gap-1 text-xs font-black text-indigo-600 hover:text-indigo-800 transition-colors"
+                        >
+                          <span>Open PDF</span>
+                        </button>
+                        <span className="text-slate-300">•</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleOpenNote(note, true); }}
+                          className="inline-flex items-center gap-1 text-xs font-black text-emerald-600 hover:text-emerald-800 transition-colors"
+                          title="Open in new browser tab"
+                        >
+                          <span>New Tab</span>
+                          <span>↗</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* INFINITE SCROLL / LOAD MORE SENTINEL */}
+              {!isLoading && viewMode === 'INFINITE' && visibleCount < totalFilteredCount && (
+                <div ref={loadMoreRef} className="py-8 text-center">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={isLoadingMore}
+                    className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-indigo-200 transition-all flex items-center gap-2 mx-auto"
+                  >
+                    {isLoadingMore ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                        <span>Loading more notes...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ArrowDownCircle size={16} />
+                        <span>Load More Notes ({totalFilteredCount - visibleCount} remaining)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* All Items Loaded Indicator */}
+              {!isLoading && viewMode === 'INFINITE' && totalFilteredCount > 0 && visibleCount >= totalFilteredCount && (
+                <div className="py-6 text-center text-xs font-bold text-slate-400 flex items-center justify-center gap-1.5">
+                  <CheckCircle2 size={15} className="text-emerald-500" />
+                  <span>All {totalFilteredCount} notes loaded and ready.</span>
+                </div>
+              )}
+
+              {/* TRADITIONAL PAGINATION CONTROLS */}
+              {!isLoading && viewMode === 'PAGINATED' && pageSize !== 'all' && totalPages > 1 && (
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200">
                   <span className="text-xs font-bold text-slate-500">
                     Page <span className="text-indigo-600 font-black">{currentPage}</span> of <span className="font-bold text-slate-800">{totalPages}</span>
@@ -793,12 +1089,6 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
                 </div>
               )}
 
-              {isLoading && (
-                <div className="flex justify-center items-center py-20">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-                </div>
-              )}
-
               {!isLoading && error && (
                 <div className="text-center py-12 bg-red-50 rounded-xl border border-red-100">
                   <div className="text-red-500 mb-2 font-semibold">Oops!</div>
@@ -812,7 +1102,7 @@ These study notes for **${selectedNoteModal.subject || 'this subject'} (Class ${
               {!isLoading && !error && stepNotes.length === 0 && (
                 <div className="py-16 text-center text-slate-400 bg-white rounded-3xl border border-slate-200">
                   <FileText size={48} className="mx-auto mb-3 opacity-20" />
-                  <p className="font-bold text-slate-600">No notes uploaded yet for your selection.</p>
+                  <p className="font-bold text-slate-600">No notes found matching your selection.</p>
                   <button onClick={resetStepWizard} className="mt-4 text-xs font-bold text-indigo-600 hover:underline">Reset filters and start over</button>
                 </div>
               )}

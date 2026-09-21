@@ -51,10 +51,10 @@ const LessonPlans: React.FC = () => {
           const allNotes = await getNotes().catch(() => []);
           if (Array.isArray(allNotes) && allNotes.length > 0) {
             finalPlans = allNotes.filter(n => 
-              (n.noteType && /lesson\s*plan|plan/i.test(n.noteType)) || 
-              (n.title && /lesson\s*plan|lp\b/i.test(n.title))
+              n.noteType === 'Lesson Plan' ||
+              (n.noteType && /lesson\s*plan/i.test(n.noteType)) || 
+              (n.title && /lesson\s*plan|teaching\s*guide/i.test(n.title))
             );
-            if (finalPlans.length === 0) finalPlans = allNotes;
           }
         }
 

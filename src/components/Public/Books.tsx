@@ -59,11 +59,10 @@ const Books: React.FC = () => {
           const allNotes = await getNotes().catch(() => []);
           if (Array.isArray(allNotes) && allNotes.length > 0) {
             finalBooks = allNotes.filter(n => 
-              !n.noteType || 
-              /textbook|book|complete/i.test(n.noteType) || 
-              (n.title && /book|textbook|guide/i.test(n.title))
+              n.noteType === 'Textbook' || 
+              (n.noteType && /textbook|book\b/i.test(n.noteType)) || 
+              (n.title && /textbook|guide\s*book|key\s*book|curriculum\s*book/i.test(n.title))
             );
-            if (finalBooks.length === 0) finalBooks = allNotes;
           }
         }
 

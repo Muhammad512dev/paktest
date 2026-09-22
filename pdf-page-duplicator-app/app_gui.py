@@ -13,10 +13,30 @@ def natural_sort_key(s):
     """Sorts alphanumeric strings naturally (e.g. 1, 2, 10 instead of 1, 10, 2)."""
     return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', str(s))]
 
+import numpy as np
+
+def is_blackout_or_dummy_page(page):
+    """Detects if a page is a dummy solid grey/black screen inserted by software like ZXT2007."""
+    text = page.get_text().strip()
+    if len(text) > 25:
+        return False
+    try:
+        pix = page.get_pixmap(dpi=50)
+        arr = np.frombuffer(pix.samples, dtype=np.uint8).reshape((pix.height, pix.width, pix.n))
+        if pix.n >= 3:
+            arr = arr[:, :, :3]
+        mean_val = np.mean(arr)
+        std_val = np.std(arr)
+        if std_val < 18 and (mean_val < 45 or (110 <= mean_val <= 150)):
+            return True
+        return False
+    except Exception:
+        return False
+
 def duplicate_pdf_page(input_path, output_path, target_page=1, copies=1, insert_pos="after"):
     """
     Losslessly duplicates a specific page in a PDF and saves the result using doc.select().
-    This re-references existing font and image streams, preventing file size inflation and corruption.
+    Automatically strips dummy blackout pages so the real notes start on Page 1.
     """
     doc = pymupdf.open(input_path)
     total_pages = len(doc)
@@ -24,18 +44,26 @@ def duplicate_pdf_page(input_path, output_path, target_page=1, copies=1, insert_
         doc.close()
         return 0
     
-    # Clamp target page index (0-based)
-    p_idx = max(0, min(total_pages - 1, target_page - 1))
+    start_idx = 0
+    if total_pages > 1 and is_blackout_or_dummy_page(doc[0]):
+        start_idx = 1
+        
+    valid_pages = list(range(start_idx, total_pages))
+    if not valid_pages:
+        valid_pages = [0]
+        
+    # Clamp target page index within valid pages
+    t_idx = max(0, min(len(valid_pages) - 1, target_page - 1))
+    target_actual_pno = valid_pages[t_idx]
     
-    orig_pages = list(range(total_pages))
-    dup_copies = [p_idx] * max(1, copies)
+    dup_copies = [target_actual_pno] * max(1, copies)
     
     if insert_pos == "start":
-        page_sequence = dup_copies + orig_pages
+        page_sequence = dup_copies + valid_pages
     elif insert_pos == "end":
-        page_sequence = orig_pages + dup_copies
+        page_sequence = valid_pages + dup_copies
     else: # "after"
-        page_sequence = orig_pages[:p_idx + 1] + dup_copies + orig_pages[p_idx + 1:]
+        page_sequence = valid_pages[:t_idx + 1] + dup_copies + valid_pages[t_idx + 1:]
         
     doc.select(page_sequence)
     
@@ -52,7 +80,7 @@ def duplicate_pdf_page(input_path, output_path, target_page=1, copies=1, insert_
 def repair_and_reconstruct_pdf(input_path, output_path, duplicate_first_page=False):
     """
     Reconstructs malformed, proprietary, or Edge-crashing PDFs into standard PDF streams.
-    Preserves 100% of the first page content without whitening or losing text/graphics.
+    Detects and strips dummy blackout pages so the real notes are on Page 1.
     Reduces bloated file size by ~70-80% while ensuring complete Microsoft Edge compatibility.
     """
     doc = pymupdf.open(input_path)
@@ -61,8 +89,17 @@ def repair_and_reconstruct_pdf(input_path, output_path, duplicate_first_page=Fal
         doc.close()
         return 0
         
+    start_idx = 0
+    if total_pages > 1 and is_blackout_or_dummy_page(doc[0]):
+        start_idx = 1
+        
+    valid_pages = list(range(start_idx, total_pages))
+    if not valid_pages:
+        valid_pages = [0]
+        
     new_doc = pymupdf.open()
-    page_indices = ([0] if duplicate_first_page else []) + list(range(total_pages))
+    real_p0 = valid_pages[0]
+    page_indices = ([real_p0] if duplicate_first_page else []) + valid_pages
     
     for p_idx in page_indices:
         page = doc[p_idx]

@@ -297,7 +297,23 @@ def scrape_all_download_items(main_url, log_cb=None):
 
     discovered_tasks.sort(key=lambda x: x['sort_key'])
     if log_cb: log_cb(f"Found {len(discovered_tasks)} downloadable sections.")
-    return subject_title, discovered_tasks
+def is_blackout_or_dummy_page(page):
+    """Detects if a page is a dummy solid grey/black screen inserted by software like ZXT2007."""
+    text = page.get_text().strip()
+    if len(text) > 25:
+        return False
+    try:
+        pix = page.get_pixmap(dpi=50)
+        arr = np.frombuffer(pix.samples, dtype=np.uint8).reshape((pix.height, pix.width, pix.n))
+        if pix.n >= 3:
+            arr = arr[:, :, :3]
+        mean_val = np.mean(arr)
+        std_val = np.std(arr)
+        if std_val < 18 and (mean_val < 45 or (110 <= mean_val <= 150)):
+            return True
+        return False
+    except Exception:
+        return False
 
 
 def process_and_watermark_pdf(input_path, output_path, logo_img=None, opacity=0.15, 
@@ -305,7 +321,7 @@ def process_and_watermark_pdf(input_path, output_path, logo_img=None, opacity=0.
                               duplicate_first_page=True):
     """
     Cleans third-party headers/footers, strips existing background watermarks, 
-    applies a semi-transparent brand logo, and optionally duplicates the real first page.
+    removes any dummy blackout first page, applies brand logo, and optionally duplicates real first page.
     """
     doc = pymupdf.open(input_path)
     new_doc = pymupdf.open()
@@ -315,11 +331,21 @@ def process_and_watermark_pdf(input_path, output_path, logo_img=None, opacity=0.
         doc.close()
         new_doc.close()
         return 0
+        
+    # Auto-detect and strip dummy blackout page
+    start_idx = 0
+    if total_pages > 1 and is_blackout_or_dummy_page(doc[0]):
+        start_idx = 1
+        
+    valid_page_indices = list(range(start_idx, total_pages))
+    if not valid_page_indices:
+        valid_page_indices = [0]
     
-    # If no modifications requested, duplicate/save directly without re-encoding
+    # If no modifications requested, save directly without re-encoding
     if not remove_header_footer and not remove_watermark and (logo_img is None or opacity <= 0):
-        if duplicate_first_page:
-            doc.select([0] + list(range(total_pages)))
+        real_p0 = valid_page_indices[0]
+        final_seq = ([real_p0] if duplicate_first_page else []) + valid_page_indices
+        doc.select(final_seq)
         doc.save(output_path, garbage=4, deflate=True, clean=True)
         final_count = len(doc)
         doc.close()
@@ -333,7 +359,8 @@ def process_and_watermark_pdf(input_path, output_path, logo_img=None, opacity=0.
         a = a.point(lambda p: int(p * opacity))
         wm_ready = Image.merge("RGBA", (r, g, b, a))
         
-    pages_to_process = ([0] if duplicate_first_page else []) + list(range(total_pages))
+    real_p0 = valid_page_indices[0]
+    pages_to_process = ([real_p0] if duplicate_first_page else []) + valid_page_indices
     
     for p_idx in pages_to_process:
         page = doc[p_idx]

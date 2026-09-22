@@ -258,12 +258,31 @@ class PDFNotesCleanerApp(tk.Tk):
             self.output_dir.set(d)
 
     def browse_local_folder(self):
-        d = filedialog.askdirectory(title="Select Folder Containing PDF Files")
+        d = filedialog.askdirectory(title="Select Main Notes Folder or Specific Subject Folder")
         if d:
             self.local_folder_var.set(d)
-            raw_files = glob.glob(os.path.join(d, "*.pdf"))
-            self.local_files_list = sorted(raw_files, key=lambda x: natural_sort_key(os.path.basename(x)))
-            self.log(f"📁 Selected folder with {len(self.local_files_list)} PDF files.")
+            self.scan_local_folder(d)
+
+    def scan_local_folder(self, d):
+        all_pdfs = []
+        for root, dirs, files in os.walk(d):
+            if "Cleaned_Branded_Notes" in root or "_raw_temp" in root:
+                continue
+            for f in files:
+                if f.lower().endswith(".pdf") and not f.startswith("Cleaned_") and not f.startswith("Complete_Merged_"):
+                    all_pdfs.append(os.path.join(root, f))
+        
+        self.local_files_list = sorted(all_pdfs, key=lambda x: (os.path.dirname(x), natural_sort_key(os.path.basename(x))))
+        
+        folders = set(os.path.dirname(f) for f in self.local_files_list)
+        if len(folders) > 1:
+            subfolder_names = [os.path.basename(f) or f for f in sorted(list(folders))]
+            sample = ", ".join(subfolder_names[:4])
+            if len(subfolder_names) > 4:
+                sample += f", ... (+{len(subfolder_names)-4} more)"
+            self.log(f"📁 Selected Main Folder: Found {len(self.local_files_list)} PDF files across {len(folders)} subfolders ({sample}).")
+        else:
+            self.log(f"📁 Selected Folder: Found {len(self.local_files_list)} PDF files.")
 
     def browse_local_files(self):
         files = filedialog.askopenfilenames(title="Select PDF Files to Clean", filetypes=[("PDF Files", "*.pdf")])
@@ -273,12 +292,22 @@ class PDFNotesCleanerApp(tk.Tk):
             self.log(f"📄 Selected {len(files)} PDF files.")
 
     def browse_merge_folder(self):
-        d = filedialog.askdirectory(title="Select Folder Containing PDF Files to Merge")
+        d = filedialog.askdirectory(title="Select Main Folder or Subject Folder to Merge")
         if d:
             self.merge_folder_var.set(d)
-            raw_files = glob.glob(os.path.join(d, "*.pdf"))
-            self.merge_files_list = sorted(raw_files, key=lambda x: natural_sort_key(os.path.basename(x)))
-            self.log(f"📁 Selected folder with {len(self.merge_files_list)} PDF files to merge.")
+            all_pdfs = []
+            for root, dirs, files in os.walk(d):
+                if "_raw_temp" in root:
+                    continue
+                for f in files:
+                    if f.lower().endswith(".pdf") and not f.startswith("Complete_Merged_"):
+                        all_pdfs.append(os.path.join(root, f))
+            self.merge_files_list = sorted(all_pdfs, key=lambda x: (os.path.dirname(x), natural_sort_key(os.path.basename(x))))
+            folders = set(os.path.dirname(f) for f in self.merge_files_list)
+            if len(folders) > 1:
+                self.log(f"📁 Selected Folder: Found {len(self.merge_files_list)} PDF files across {len(folders)} subfolders to merge.")
+            else:
+                self.log(f"📁 Selected folder with {len(self.merge_files_list)} PDF files to merge.")
 
     def browse_merge_files(self):
         files = filedialog.askopenfilenames(title="Select PDF Files to Merge", filetypes=[("PDF Files", "*.pdf")])
@@ -288,7 +317,7 @@ class PDFNotesCleanerApp(tk.Tk):
             self.log(f"📄 Selected {len(files)} PDF files to merge.")
 
     def open_output_folder(self):
-        target = self.last_output_dir or self.output_dir.get()
+        target = self.last_output_dir or self.local_folder_var.get() or self.output_dir.get()
         if os.path.exists(target):
             os.startfile(target)
         else:
@@ -443,14 +472,20 @@ class PDFNotesCleanerApp(tk.Tk):
             self.is_running = False
             self.set_buttons_state("normal")
 
-    # --- Mode 2: Clean & Brand Local PDF Files ---
+    # --- Mode 2: Clean & Brand Local PDF Files (Supports Recursive Subfolders) ---
     def run_local_automation(self):
         try:
             folder = self.local_folder_var.get().strip()
             files = self.local_files_list
             if not files and folder and os.path.exists(folder):
-                raw_files = glob.glob(os.path.join(folder, "*.pdf"))
-                files = sorted(raw_files, key=lambda x: natural_sort_key(os.path.basename(x)))
+                all_pdfs = []
+                for root, dirs, f_list in os.walk(folder):
+                    if "Cleaned_Branded_Notes" in root or "_raw_temp" in root:
+                        continue
+                    for f in f_list:
+                        if f.lower().endswith(".pdf") and not f.startswith("Cleaned_") and not f.startswith("Complete_Merged_"):
+                            all_pdfs.append(os.path.join(root, f))
+                files = sorted(all_pdfs, key=lambda x: (os.path.dirname(x), natural_sort_key(os.path.basename(x))))
                 
             if not files:
                 messagebox.showerror("Error", "Please select a folder or pick PDF files to process.")
@@ -463,63 +498,89 @@ class PDFNotesCleanerApp(tk.Tk):
             apply_wm = self.apply_wm_var.get()
             merge_all = self.merge_all_var.get()
             
-            parent_dir = os.path.dirname(files[0])
-            out_cleaned_dir = os.path.join(parent_dir, "Cleaned_Branded_Notes")
-            os.makedirs(out_cleaned_dir, exist_ok=True)
-            self.last_output_dir = out_cleaned_dir
+            # Group files by parent directory so each subfolder's outputs stay in that subfolder
+            from collections import defaultdict
+            folders_dict = defaultdict(list)
+            for fpath in files:
+                p_dir = os.path.dirname(fpath)
+                folders_dict[p_dir].append(fpath)
+
+            for p_dir in folders_dict:
+                folders_dict[p_dir].sort(key=lambda x: natural_sort_key(os.path.basename(x)))
+
+            total_files = len(files)
+            total_folders = len(folders_dict)
+            self.last_output_dir = folder or os.path.dirname(files[0])
             
             logo_img = None
             if apply_wm and os.path.exists(logo_p):
                 logo_img = Image.open(logo_p)
                 self.log(f"🖼️ Brand logo loaded ({logo_img.width}x{logo_img.height}) with {int(opacity*100)}% opacity.")
                 
-            self.log("="*50)
-            self.log(f"Cleaning {len(files)} local PDF files into:\n{out_cleaned_dir}")
+            self.log("="*55)
+            self.log(f"🚀 Processing {total_files} PDF files across {total_folders} folder(s)...")
+            self.log("="*55)
             
-            cleaned_list = []
-            total_pages = 0
+            processed_count = 0
             
-            for idx, fpath in enumerate(files, 1):
-                fname = os.path.basename(fpath)
-                out_path = os.path.join(out_cleaned_dir, f"Cleaned_{fname}")
+            for f_idx, (sub_dir, sub_files) in enumerate(folders_dict.items(), 1):
+                sub_name = os.path.basename(sub_dir) or "Notes"
+                out_cleaned_dir = os.path.join(sub_dir, "Cleaned_Branded_Notes")
+                os.makedirs(out_cleaned_dir, exist_ok=True)
                 
-                self.log(f"[{idx}/{len(files)}] Cleaning & Watermarking: {fname}...")
-                self.lbl_status.config(text=f"Cleaning [{idx}/{len(files)}]: {fname}...")
+                self.log(f"\n📂 [{f_idx}/{total_folders}] Folder: {sub_name} ({len(sub_files)} files)")
+                self.log(f"   Output destination: {out_cleaned_dir}")
                 
-                pages = process_and_watermark_pdf(fpath, out_path, logo_img, opacity, clean_hf, clean_wm, duplicate_first_page=self.duplicate_first_page_var.get())
-                total_pages += pages
-                cleaned_list.append((fname, out_path, pages))
+                cleaned_list = []
+                sub_total_pages = 0
                 
-                pct = int((idx / len(files)) * 80)
-                self.progress_var.set(pct)
-                
-            if merge_all and cleaned_list:
-                self.lbl_status.config(text="Merging cleaned PDFs into single master book...")
-                self.log(f"\nMerging {len(cleaned_list)} files ({total_pages} pages)...")
-                
-                merged_doc = pymupdf.open()
-                toc = []
-                page_offset = 1
-                
-                for orig_name, c_path, p_cnt in cleaned_list:
-                    clean_title = orig_name.replace('.pdf', '')
-                    toc.append([1, clean_title, page_offset])
-                    doc_item = pymupdf.open(c_path)
-                    merged_doc.insert_pdf(doc_item)
-                    page_offset += p_cnt
-                    doc_item.close()
+                for s_idx, fpath in enumerate(sub_files, 1):
+                    processed_count += 1
+                    fname = os.path.basename(fpath)
+                    out_path = os.path.join(out_cleaned_dir, f"Cleaned_{fname}")
                     
-                merged_doc.set_toc(toc)
-                merged_book_path = os.path.join(out_cleaned_dir, "Complete_Merged_Book_Notes.pdf")
-                merged_doc.save(merged_book_path, deflate=True)
-                merged_doc.close()
-                self.log(f"🎉 MASTER BOOK MERGED: {os.path.basename(merged_book_path)}")
+                    self.lbl_status.config(text=f"[{processed_count}/{total_files}] ({sub_name}) Cleaning: {fname}...")
+                    self.log(f"   [{s_idx}/{len(sub_files)}] Cleaning: {fname}...")
+                    
+                    pages = process_and_watermark_pdf(
+                        fpath, out_path, logo_img, opacity, clean_hf, clean_wm, 
+                        duplicate_first_page=self.duplicate_first_page_var.get()
+                    )
+                    sub_total_pages += pages
+                    cleaned_list.append((fname, out_path, pages))
+                    
+                    pct = int((processed_count / total_files) * 85)
+                    self.progress_var.set(pct)
+                    
+                if merge_all and cleaned_list:
+                    self.lbl_status.config(text=f"Merging {sub_name} into Master Book...")
+                    master_book_name = f"{sub_name}_Complete_Merged_Book.pdf" if sub_name != "Notes" else "Complete_Merged_Book_Notes.pdf"
+                    merged_book_path = os.path.join(out_cleaned_dir, master_book_name)
+                    
+                    merged_doc = pymupdf.open()
+                    toc = []
+                    page_offset = 1
+                    
+                    for orig_name, c_path, p_cnt in cleaned_list:
+                        clean_title = orig_name.replace('.pdf', '').replace('Cleaned_', '')
+                        toc.append([1, clean_title, page_offset])
+                        doc_item = pymupdf.open(c_path)
+                        merged_doc.insert_pdf(doc_item)
+                        page_offset += p_cnt
+                        doc_item.close()
+                        
+                    merged_doc.set_toc(toc)
+                    merged_doc.save(merged_book_path, deflate=True)
+                    merged_doc.close()
+                    final_mb = os.path.getsize(merged_book_path) / (1024 * 1024)
+                    self.log(f"   🎉 MASTER BOOK: {master_book_name} ({final_mb:.2f} MB, {page_offset-1} pages)")
                 
             self.progress_var.set(100)
-            self.lbl_status.config(text="✨ Local PDF Cleaning Complete!")
-            self.log("="*50)
-            self.log(f"✅ FINISHED! Output saved in:\n{out_cleaned_dir}")
-            messagebox.showinfo("Success", f"All {len(files)} local PDFs cleaned, watermarked, and merged!\n\nSaved in:\n{out_cleaned_dir}")
+            self.lbl_status.config(text="✨ All subfolders processed successfully!")
+            self.log("="*55)
+            self.log(f"✅ FINISHED! Processed {total_files} files across {total_folders} folder(s).")
+            self.log(f"Each folder's output is saved inside its own 'Cleaned_Branded_Notes' subfolder.")
+            messagebox.showinfo("Success", f"All {total_files} PDF files across {total_folders} folder(s) processed and merged!\n\nEach subfolder's output is saved in its respective 'Cleaned_Branded_Notes' directory.")
             
         except Exception as e:
             self.log(f"❌ Error: {e}")
@@ -528,14 +589,20 @@ class PDFNotesCleanerApp(tk.Tk):
             self.is_running = False
             self.set_buttons_state("normal")
 
-    # --- Mode 3: Merge Only ---
+    # --- Mode 3: Merge Only (Supports Recursive Subfolders) ---
     def run_merge_only(self):
         try:
             folder = self.merge_folder_var.get().strip()
             files = self.merge_files_list
             if not files and folder and os.path.exists(folder):
-                raw_files = glob.glob(os.path.join(folder, "*.pdf"))
-                files = sorted(raw_files, key=lambda x: natural_sort_key(os.path.basename(x)))
+                all_pdfs = []
+                for root, dirs, f_list in os.walk(folder):
+                    if "_raw_temp" in root:
+                        continue
+                    for f in f_list:
+                        if f.lower().endswith(".pdf") and not f.startswith("Complete_Merged_"):
+                            all_pdfs.append(os.path.join(root, f))
+                files = sorted(all_pdfs, key=lambda x: (os.path.dirname(x), natural_sort_key(os.path.basename(x))))
                 
             if not files:
                 messagebox.showerror("Error", "Please select a folder or pick PDF files to merge.")
@@ -544,42 +611,61 @@ class PDFNotesCleanerApp(tk.Tk):
             book_title = self.merge_book_title_var.get().strip() or "Merged_Book_Notes"
             safe_title = re.sub(r'[\\/*?:"<>|]', '_', book_title).strip()
             
-            parent_dir = os.path.dirname(files[0])
-            out_file = os.path.join(parent_dir, f"{safe_title}.pdf")
-            self.last_output_dir = parent_dir
+            from collections import defaultdict
+            folders_dict = defaultdict(list)
+            for fpath in files:
+                p_dir = os.path.dirname(fpath)
+                folders_dict[p_dir].append(fpath)
+
+            for p_dir in folders_dict:
+                folders_dict[p_dir].sort(key=lambda x: natural_sort_key(os.path.basename(x)))
+
+            total_folders = len(folders_dict)
+            self.last_output_dir = folder or os.path.dirname(files[0])
             
             self.log("="*50)
-            self.log(f"Fast Merging {len(files)} PDF files into:\n{out_file}")
-            self.lbl_status.config(text=f"Merging {len(files)} PDFs...")
+            self.log(f"Fast Merging PDF files across {total_folders} folder(s)...")
             
-            merged_doc = pymupdf.open()
-            toc = []
-            page_offset = 1
-            
-            for idx, fpath in enumerate(files, 1):
-                fname = os.path.basename(fpath)
-                doc_item = pymupdf.open(fpath)
-                p_cnt = len(doc_item)
+            for f_idx, (sub_dir, sub_files) in enumerate(folders_dict.items(), 1):
+                sub_name = os.path.basename(sub_dir) or "Notes"
+                if total_folders > 1:
+                    out_file = os.path.join(sub_dir, f"{sub_name}_Complete_Merged_Book.pdf")
+                else:
+                    out_file = os.path.join(sub_dir, f"{safe_title}.pdf")
+                    
+                self.lbl_status.config(text=f"Merging folder [{f_idx}/{total_folders}]: {sub_name} ({len(sub_files)} files)...")
+                self.log(f"\n📂 [{f_idx}/{total_folders}] Merging: {sub_name} -> {os.path.basename(out_file)}")
                 
-                title_item = fname.replace('.pdf', '')
-                toc.append([1, title_item, page_offset])
-                merged_doc.insert_pdf(doc_item)
-                page_offset += p_cnt
-                doc_item.close()
+                merged_doc = pymupdf.open()
+                toc = []
+                page_offset = 1
                 
-                self.log(f"  + [{idx}/{len(files)}] Added: {fname} ({p_cnt} pages)")
-                self.progress_var.set(int((idx / len(files)) * 90))
+                for idx, fpath in enumerate(sub_files, 1):
+                    fname = os.path.basename(fpath)
+                    doc_item = pymupdf.open(fpath)
+                    p_cnt = len(doc_item)
+                    
+                    title_item = fname.replace('.pdf', '')
+                    toc.append([1, title_item, page_offset])
+                    merged_doc.insert_pdf(doc_item)
+                    page_offset += p_cnt
+                    doc_item.close()
+                    
+                    self.log(f"  + [{idx}/{len(sub_files)}] Added: {fname} ({p_cnt} pages)")
+                    
+                merged_doc.set_toc(toc)
+                merged_doc.save(out_file, deflate=True)
+                merged_doc.close()
                 
-            merged_doc.set_toc(toc)
-            merged_doc.save(out_file, deflate=True)
-            merged_doc.close()
-            
-            final_mb = os.path.getsize(out_file) / (1024 * 1024)
-            self.progress_var.set(100)
-            self.lbl_status.config(text="✨ Merge Complete!")
+                final_mb = os.path.getsize(out_file) / (1024 * 1024)
+                self.log(f"  🎉 SUCCESS: {os.path.basename(out_file)} ({final_mb:.2f} MB, {page_offset-1} pages)")
+                
+                self.progress_var.set(int((f_idx / total_folders) * 100))
+                
+            self.lbl_status.config(text="✨ Merge Complete for all subfolders!")
             self.log("="*50)
-            self.log(f"🎉 SUCCESS! Merged {len(files)} PDFs into:\n{out_file} ({final_mb:.2f} MB, {page_offset-1} pages)")
-            messagebox.showinfo("Success", f"PDFs merged successfully!\n\nSaved as:\n{out_file}")
+            self.log(f"🎉 SUCCESS! Merged all folders in their respective directories.")
+            messagebox.showinfo("Success", f"PDFs merged successfully inside each respective folder!")
             
         except Exception as e:
             self.log(f"❌ Error: {e}")

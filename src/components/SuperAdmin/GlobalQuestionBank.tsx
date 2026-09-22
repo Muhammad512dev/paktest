@@ -587,38 +587,362 @@ const GlobalQuestionBank: React.FC = () => {
     XLSX.writeFile(wb, `PakParcha_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
+  // --- COMPREHENSIVE SAMPLE QUESTION DATASETS FOR TEMPLATES ---
+  const getSampleQuestionsData = (filterType?: string, contextualBoard?: string, contextualGrade?: string, contextualSubject?: string) => {
+    const defaultBoard = contextualBoard || "Punjab Board (PCTB)";
+    const defaultGrade = contextualGrade || "Class 9";
+
+    const allQuestions = [
+      // --- MATHEMATICS EXAMPLES ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 10",
+        Subject: contextualSubject || "Mathematics",
+        Chapter: "Quadratic Equations",
+        Topic: "Discriminant & Nature of Roots",
+        QuestionText_EN: "The discriminant of the quadratic equation ax² + bx + c = 0 is:",
+        QuestionText_UR: "دو درجی مساوات ax² + bx + c = 0 کا فرق کنندہ (discriminant) ہوتا ہے:",
+        Type: "MCQ",
+        Marks: 1,
+        Difficulty: "Easy",
+        OptionA_EN: "b² - 4ac",
+        OptionA_UR: "b² - 4ac",
+        OptionB_EN: "b² + 4ac",
+        OptionB_UR: "b² + 4ac",
+        OptionC_EN: "-b ± √(b² - 4ac)",
+        OptionC_UR: "-b ± √(b² - 4ac)",
+        OptionD_EN: "4ac - b²",
+        OptionD_UR: "4ac - b²",
+        CorrectAnswer_Letter: "A",
+        ModelAnswer_EN: "",
+        ModelAnswer_UR: "",
+        ImageURL: "",
+        Sources: "Textbook Exercise|Past Board 2024"
+      },
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "Mathematics",
+        Chapter: "Matrices and Determinants",
+        Topic: "Singular and Non-Singular Matrices",
+        QuestionText_EN: "If the determinant of a square matrix |A| = 0, then matrix A is called:",
+        QuestionText_UR: "اگر کسی مربی قالب کا مقطع |A| = 0 ہو، تو قالب A کہلاتا ہے:",
+        Type: "MCQ",
+        Marks: 1,
+        Difficulty: "Easy",
+        OptionA_EN: "Singular Matrix",
+        OptionA_UR: "نادر قالب (Singular)",
+        OptionB_EN: "Non-Singular Matrix",
+        OptionB_UR: "غیر نادر قالب (Non-Singular)",
+        OptionC_EN: "Identity Matrix",
+        OptionC_UR: "وحدانی قالب (Identity)",
+        OptionD_EN: "Null Matrix",
+        OptionD_UR: "صفری قالب (Null)",
+        CorrectAnswer_Letter: "A",
+        ModelAnswer_EN: "",
+        ModelAnswer_UR: "",
+        ImageURL: "",
+        Sources: "Textbook Exercise|Model Paper"
+      },
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 10",
+        Subject: contextualSubject || "Mathematics",
+        Chapter: "Introduction to Trigonometry",
+        Topic: "Trigonometric Identities",
+        QuestionText_EN: "Prove the fundamental trigonometric identity: sin²θ + cos²θ = 1.",
+        QuestionText_UR: "بنیادی مثلثیاتی مماثلت ثابت کریں: sin²θ + cos²θ = 1",
+        Type: "Short Answer",
+        Marks: 2,
+        Difficulty: "Medium",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "In a right triangle with perpendicular a, base b and hypotenuse c: sinθ = a/c and cosθ = b/c. Then sin²θ + cos²θ = (a²/c²) + (b²/c²) = (a² + b²)/c². By Pythagoras Theorem, a² + b² = c², so c²/c² = 1. Hence proved.",
+        ModelAnswer_UR: "قائمۃ الزاویہ مثلث میں عمود a، قاعدہ b اور وتر c ہو۔ sinθ = a/c اور cosθ = b/c ہے۔ لہٰذا sin²θ + cos²θ = (a² + b²)/c²۔ مسئلہ فیثاغورث کی رو سے a² + b² = c² ہوتا ہے، پس c²/c² = 1۔ ثابت ہوا۔",
+        ImageURL: "",
+        Sources: "Past Board 2023|Important Concept"
+      },
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "Mathematics",
+        Chapter: "Matrices and Determinants",
+        Topic: "Cramer's Rule",
+        QuestionText_EN: "Solve the following system of linear equations using Cramer's Rule:\n2x - 2y = 4\n3x + 2y = 6",
+        QuestionText_UR: "کرائمر کے قانون (Cramer's Rule) کی مدد سے مساواتوں کا نظام حل کریں:\n2x - 2y = 4\n3x + 2y = 6",
+        Type: "Long Answer",
+        Marks: 4,
+        Difficulty: "Hard",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "Matrix A = [[2, -2], [3, 2]], |A| = (2)(2) - (-2)(3) = 4 + 6 = 10 ≠ 0.\nMatrix Ax = [[4, -2], [6, 2]], |Ax| = (4)(2) - (-2)(6) = 8 + 12 = 20. So x = |Ax| / |A| = 20/10 = 2.\nMatrix Ay = [[2, 4], [3, 6]], |Ay| = (2)(6) - (4)(3) = 12 - 12 = 0. So y = |Ay| / |A| = 0/10 = 0.\nSolution Set = {(2, 0)}.",
+        ModelAnswer_UR: "قالب A = [[2, -2], [3, 2]]، مقطع |A| = 4 + 6 = 10 ≠ 0۔\nقالب Ax کا مقطع |Ax| = 8 + 12 = 20، پس x = 20/10 = 2۔\nقالب Ay کا مقطع |Ay| = 12 - 12 = 0، پس y = 0/10 = 0۔\nحل سیٹ = {(2, 0)}۔",
+        ImageURL: "",
+        Sources: "Textbook Review Exercise|Past Board 2022"
+      },
+
+      // --- CHEMISTRY EXAMPLES ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "Chemistry",
+        Chapter: "Structure of Molecules",
+        Topic: "Types of Covalent Bonds",
+        QuestionText_EN: "Which of the following diatomic gas molecules contains a triple covalent bond?",
+        QuestionText_UR: "درج ذیل میں سے کس مالیکیول میں ٹرپل کوویلنٹ بانڈ موجود ہوتا ہے؟",
+        Type: "MCQ",
+        Marks: 1,
+        Difficulty: "Medium",
+        OptionA_EN: "N₂ (Nitrogen)",
+        OptionA_UR: "N₂ (نائٹروجن)",
+        OptionB_EN: "O₂ (Oxygen)",
+        OptionB_UR: "O₂ (آکسیجن)",
+        OptionC_EN: "Cl₂ (Chlorine)",
+        OptionC_UR: "Cl₂ (کلورین)",
+        OptionD_EN: "H₂ (Hydrogen)",
+        OptionD_UR: "H₂ (ہائیڈروجن)",
+        CorrectAnswer_Letter: "A",
+        ModelAnswer_EN: "",
+        ModelAnswer_UR: "",
+        ImageURL: "",
+        Sources: "Textbook Exercise|Past Board 2024"
+      },
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 11",
+        Subject: contextualSubject || "Chemistry",
+        Chapter: "Basic Concepts",
+        Topic: "Avogadro's Constant & Moles",
+        QuestionText_EN: "The number of atoms present in exactly 1 mole of carbon-12 (12g) is:",
+        QuestionText_UR: "کاربن-12 کے 1 مول میں موجود ایٹمز کی تعداد کتنی ہوتی ہے؟",
+        Type: "MCQ",
+        Marks: 1,
+        Difficulty: "Easy",
+        OptionA_EN: "6.022 × 10²³ atoms",
+        OptionA_UR: "6.022 × 10²³ ایٹمز",
+        OptionB_EN: "3.011 × 10²³ atoms",
+        OptionB_UR: "3.011 × 10²³ ایٹمز",
+        OptionC_EN: "1.66 × 10⁻²⁴ atoms",
+        OptionC_UR: "1.66 × 10⁻²⁴ ایٹمز",
+        OptionD_EN: "12 × 10²³ atoms",
+        OptionD_UR: "12 × 10²³ ایٹمز",
+        CorrectAnswer_Letter: "A",
+        ModelAnswer_EN: "",
+        ModelAnswer_UR: "",
+        ImageURL: "",
+        Sources: "Model Paper|FBISE Board"
+      },
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "Chemistry",
+        Chapter: "Physical States of Matter",
+        Topic: "Boyle's Law",
+        QuestionText_EN: "State Boyle's Law and write its mathematical equation.",
+        QuestionText_UR: "بوائل کا قانون بیان کریں اور اس کا حسابی فارمولا لکھیں۔",
+        Type: "Short Answer",
+        Marks: 2,
+        Difficulty: "Medium",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "Boyle's Law states that the volume of a given mass of a gas is inversely proportional to its pressure at constant temperature. Mathematical form: V ∝ 1/P or P₁V₁ = P₂V₂ = k (constant).",
+        ModelAnswer_UR: "اگر درجہ حرارت مستقل رہے تو گیس کے دیے گئے ماس کا والیم اس پر لگائے گئے پریشر کے انورسلی پروپورشنل ہوتا ہے۔ حسابی فارمولا: V ∝ 1/P یا P₁V₁ = P₂V₂ = k (مستقل)۔",
+        ImageURL: "",
+        Sources: "Textbook Chapter 5|Board Important"
+      },
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 10",
+        Subject: contextualSubject || "Chemistry",
+        Chapter: "Chemical Equilibrium",
+        Topic: "Law of Mass Action & Kc Derivation",
+        QuestionText_EN: "State the Law of Mass Action. Derive the expression for equilibrium constant (Kc) for the general reversible reaction: aA + bB ⇌ cC + dD.",
+        QuestionText_UR: "لا آف ماس ایکشن بیان کریں۔ اور عمومی ریورسیبل ری ایکشن aA + bB ⇌ cC + dD کے لیے ایکویلیبریم کانسٹنٹ (Kc) کا فارمولا اخذ کریں۔",
+        Type: "Long Answer",
+        Marks: 5,
+        Difficulty: "Hard",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "The rate at which a substance reacts is directly proportional to its active mass. For reaction aA + bB ⇌ cC + dD: Forward rate Rf = kf[A]^a[B]^b, Reverse rate Rr = kr[C]^c[D]^d. At dynamic equilibrium Rf = Rr, therefore kf/kr = ([C]^c[D]^d) / ([A]^a[B]^b) = Kc.",
+        ModelAnswer_UR: "کسی شے کے ری ایکٹ کرنے کی رفتار اس کے ایکٹو ماس کے ڈائریکٹلی پروپورشنل ہوتی ہے۔ فارورڈ ری ایکشن کی رفتار Rf = kf[A]^a[B]^b، ریورس ری ایکشن کی رفتار Rr = kr[C]^c[D]^d۔ متوازن حالت پر Rf = Rr، لہٰذا Kc = ([C]^c[D]^d) / ([A]^a[B]^b)۔",
+        ImageURL: "",
+        Sources: "Textbook Chapter 9|Past Board 2023"
+      },
+
+      // --- PHYSICS EXAMPLES ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "Physics",
+        Chapter: "Dynamics",
+        Topic: "Newton's Second Law of Motion",
+        QuestionText_EN: "The SI unit of force is Newton (N), which in base units is equivalent to:",
+        QuestionText_UR: "فورس کا ایس آئی یونٹ نیوٹن (N) ہے، جو بنیادی یونٹس میں برابر ہوتا ہے:",
+        Type: "MCQ",
+        Marks: 1,
+        Difficulty: "Easy",
+        OptionA_EN: "kg·m/s²",
+        OptionA_UR: "kg·m/s²",
+        OptionB_EN: "kg·m²/s²",
+        OptionB_UR: "kg·m²/s²",
+        OptionC_EN: "kg·m/s",
+        OptionC_UR: "kg·m/s",
+        OptionD_EN: "N·m",
+        OptionD_UR: "N·m",
+        CorrectAnswer_Letter: "A",
+        ModelAnswer_EN: "",
+        ModelAnswer_UR: "",
+        ImageURL: "",
+        Sources: "Textbook Exercise|Past Paper"
+      },
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 10",
+        Subject: contextualSubject || "Physics",
+        Chapter: "Current Electricity",
+        Topic: "Ohm's Law & Resistance",
+        QuestionText_EN: "State Ohm's Law and state the relationship between Voltage, Current, and Resistance.",
+        QuestionText_UR: "اوہم کا قانون (Ohm's Law) بیان کریں اور وولٹیج، کرنٹ اور ریزسٹنس کے مابین تعلق واضح کریں۔",
+        Type: "Short Answer",
+        Marks: 2,
+        Difficulty: "Medium",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "The current (I) flowing through a conductor is directly proportional to the potential difference (V) across its ends, provided temperature and physical state remain constant. Formula: V = IR (where V is in Volts, I in Amperes, R in Ohms Ω).",
+        ModelAnswer_UR: "اگر موصل کی طبعی حالت اور درجہ حرارت تبدیل نہ ہو تو اس میں سے گزرنے والا کرنٹ (I) اس کے سروں پر پوٹینشل ڈفرنس (V) کے ڈائریکٹلی پروپورشنل ہوتا ہے۔ فارمولا: V = IR۔",
+        ImageURL: "",
+        Sources: "Textbook Chapter 14|Past Board 2024"
+      },
+
+      // --- BIOLOGY EXAMPLES ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "Biology",
+        Chapter: "Bioenergetics",
+        Topic: "Photosynthesis Equation",
+        QuestionText_EN: "Which of the following is the overall balanced chemical equation for Photosynthesis?",
+        QuestionText_UR: "فوٹوسنتھیسز (Photosynthesis) کے عمل کی متوازن کیمیائی مساوات کون سی ہے؟",
+        Type: "MCQ",
+        Marks: 1,
+        Difficulty: "Medium",
+        OptionA_EN: "6CO₂ + 12H₂O + Light → C₆H₁₂O₆ + 6O₂ + 6H₂O",
+        OptionA_UR: "6CO₂ + 12H₂O + روشنی → C₆H₁₂O₆ + 6O₂ + 6H₂O",
+        OptionB_EN: "C₆H₁₂O₆ + 6O₂ → 6CO₂ + 6H₂O + Energy",
+        OptionB_UR: "C₆H₁₂O₆ + 6O₂ → 6CO₂ + 6H₂O + انرجی",
+        OptionC_EN: "6CO₂ + 6O₂ → C₆H₁₂O₆ + 6H₂O",
+        OptionC_UR: "6CO₂ + 6O₂ → C₆H₁₂O₆ + 6H₂O",
+        OptionD_EN: "CO₂ + H₂O → C₆H₁₂O₆",
+        OptionD_UR: "CO₂ + H₂O → C₆H₁₂O₆",
+        CorrectAnswer_Letter: "A",
+        ModelAnswer_EN: "",
+        ModelAnswer_UR: "",
+        ImageURL: "",
+        Sources: "Textbook Exercise|Model Paper"
+      },
+
+      // --- MATCH COLUMNS EXAMPLE ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "Chemistry",
+        Chapter: "Acids, Bases and Salts",
+        Topic: "Natural Sources of Acids",
+        QuestionText_EN: "Match the naturally occurring acids in Column A with their respective sources in Column B.",
+        QuestionText_UR: "کالم الف میں دیے گئے قدرتی ایسڈز کو کالم ب میں ان کے ذرائع سے ملائیں۔",
+        Type: "Match Columns",
+        Marks: 4,
+        Difficulty: "Medium",
+        Pair1_Left_EN: "Citric Acid",
+        Pair1_Left_UR: "سائٹرک ایسڈ",
+        Pair1_Right_EN: "Citrus Fruits (Lemon/Orange)",
+        Pair1_Right_UR: "لیموں اور مالٹا",
+        Pair2_Left_EN: "Acetic Acid (Vinegar)",
+        Pair2_Left_UR: "ایسٹک ایسڈ (سرکہ)",
+        Pair2_Right_EN: "Vinegar Solution",
+        Pair2_Right_UR: "سرکہ کا محلول",
+        Pair3_Left_EN: "Lactic Acid",
+        Pair3_Left_UR: "لیکٹک ایسڈ",
+        Pair3_Right_EN: "Sour Milk & Yogurt",
+        Pair3_Right_UR: "کھٹا دودھ اور دہی",
+        Pair4_Left_EN: "Tartaric Acid",
+        Pair4_Left_UR: "ٹارٹرک ایسڈ",
+        Pair4_Right_EN: "Tamarind & Grapes",
+        Pair4_Right_UR: "املی اور انگور",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "",
+        ModelAnswer_UR: "",
+        ImageURL: "",
+        Sources: "Textbook Table|Practical Chemistry"
+      },
+
+      // --- TRUE / FALSE EXAMPLE ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "Physics",
+        Chapter: "Kinematics",
+        Topic: "Scalar and Vector Quantities",
+        QuestionText_EN: "Speed is a scalar quantity while velocity is a vector quantity having both magnitude and direction.",
+        QuestionText_UR: "سپیڈ ایک سکیلر مقدار ہے جبکہ ویلاسٹی ایک ویکٹر مقدار ہے جس کی مقدار اور سمت دونوں ہوتی ہیں۔",
+        Type: "True/False",
+        Marks: 1,
+        Difficulty: "Easy",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "",
+        CorrectAnswer_Letter: "True",
+        ModelAnswer_EN: "True",
+        ModelAnswer_UR: "درست",
+        ImageURL: "",
+        Sources: "Textbook Concept|Past Paper"
+      },
+
+      // --- FILL IN THE BLANKS EXAMPLE ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 10",
+        Subject: contextualSubject || "Mathematics",
+        Chapter: "Sets and Functions",
+        Topic: "De Morgan's Laws",
+        QuestionText_EN: "According to De Morgan's Law, the complement of union (A ∪ B)' is equal to ________.",
+        QuestionText_UR: "ڈی مورگن کے قانون کے مطابق، یونین کا کمپلیمنٹ (A ∪ B)' برابر ہوتا ہے ________ کے۔",
+        Type: "Fill in the Blanks",
+        Marks: 1,
+        Difficulty: "Medium",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "",
+        CorrectAnswer_Letter: "A' ∩ B'",
+        ModelAnswer_EN: "A' ∩ B'",
+        ModelAnswer_UR: "A' ∩ B'",
+        ImageURL: "",
+        Sources: "Textbook Summary"
+      }
+    ];
+
+    if (!filterType || filterType === 'ALL' || filterType === 'Master Complete') {
+      return allQuestions;
+    }
+
+    const norm = normalizeQuestionType(filterType);
+    return allQuestions.filter(q => normalizeQuestionType(q.Type) === norm);
+  };
+
   const downloadTemplate = (format: 'CSV' | 'XLSX', type: string, contextual: boolean = false) => {
-     let columns: string[] = [];
-     
-     if (!contextual || !selSyllabusId) columns.push("Board");
-     if (!contextual || !selClassId) columns.push("Grade");
-     if (!contextual || !selSubjectId) columns.push("Subject");
-     if (!contextual || !selChapterId) columns.push("Chapter");
-     if (!contextual || !newQuestion.topic) columns.push("Topic");
-
-     columns.push("QuestionText_EN", "QuestionText_UR", "Type", "Marks", "Difficulty", "ImageURL", "Sources");
-
-     if (type === 'MCQ') {
-        columns.push("OptionA_EN", "OptionA_UR", "OptionB_EN", "OptionB_UR", "OptionC_EN", "OptionC_UR", "OptionD_EN", "OptionD_UR", "CorrectAnswer_Letter");
-     } else if (type === 'Match Columns') {
-        for(let i=1; i<=5; i++) {
-            columns.push(`Pair${i}_Left_EN`, `Pair${i}_Left_UR`, `Pair${i}_Right_EN`, `Pair${i}_Right_UR`);
-        }
-     } else if (type === 'True/False') {
-        columns.push("CorrectAnswer");
-     } else if (type === 'Fill in the Blanks') {
-        columns.push("Answer_EN", "Answer_UR");
-     } else {
-        columns.push("ModelAnswer_EN", "ModelAnswer_UR");
-     }
-
      const board = getSyllabusName(selSyllabusId);
      const grade = getClassName(selClassId);
-     const filename = contextual ? `Template_${type.replace(' ', '_')}_${board}_${grade}` : `Master_${type.replace(' ', '_')}`;
+     const subject = getSubjectName(selSubjectId);
+     
+     const isAll = (type === 'ALL' || type === 'Master Complete');
+     const sampleRows = getSampleQuestionsData(
+        isAll ? 'ALL' : type, 
+        contextual && board !== 'N/A' ? board : undefined,
+        contextual && grade !== 'N/A' ? grade : undefined,
+        contextual && subject !== 'N/A' ? subject : undefined
+     );
+
+     const filename = isAll 
+        ? `PakParcha_Master_Question_Template_All_Subjects`
+        : contextual 
+           ? `Template_${type.replace(/\s+/g, '_')}_${board}_${grade}`
+           : `Master_Template_${type.replace(/\s+/g, '_')}`;
 
      if (format === 'CSV') {
-         const content = columns.join(",");
-         const blob = new Blob([content], { type: 'text/csv' });
+         const ws = XLSX.utils.json_to_sheet(sampleRows);
+         const csv = XLSX.utils.sheet_to_csv(ws);
+         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
          const url = window.URL.createObjectURL(blob);
          const a = document.createElement('a');
          a.href = url;
@@ -626,8 +950,65 @@ const GlobalQuestionBank: React.FC = () => {
          a.click();
      } else {
          const wb = XLSX.utils.book_new();
-         const ws = XLSX.utils.aoa_to_sheet([columns]);
-         XLSX.utils.book_append_sheet(wb, ws, "Template");
+
+         if (isAll) {
+             // 1. All Question Examples
+             const wsAll = XLSX.utils.json_to_sheet(sampleRows);
+             XLSX.utils.book_append_sheet(wb, wsAll, "All_Question_Examples");
+
+             // 2. Mathematics Sheet
+             const mathRows = sampleRows.filter(r => r.Subject === "Mathematics");
+             if (mathRows.length) {
+                 const wsMath = XLSX.utils.json_to_sheet(mathRows);
+                 XLSX.utils.book_append_sheet(wb, wsMath, "Mathematics_Examples");
+             }
+
+             // 3. Chemistry Sheet
+             const chemRows = sampleRows.filter(r => r.Subject === "Chemistry");
+             if (chemRows.length) {
+                 const wsChem = XLSX.utils.json_to_sheet(chemRows);
+                 XLSX.utils.book_append_sheet(wb, wsChem, "Chemistry_Examples");
+             }
+
+             // 4. Physics Sheet
+             const physRows = sampleRows.filter(r => r.Subject === "Physics");
+             if (physRows.length) {
+                 const wsPhys = XLSX.utils.json_to_sheet(physRows);
+                 XLSX.utils.book_append_sheet(wb, wsPhys, "Physics_Examples");
+             }
+
+             // 5. Biology Sheet
+             const bioRows = sampleRows.filter(r => r.Subject === "Biology");
+             if (bioRows.length) {
+                 const wsBio = XLSX.utils.json_to_sheet(bioRows);
+                 XLSX.utils.book_append_sheet(wb, wsBio, "Biology_Examples");
+             }
+
+             // 6. Formatting Instructions Guide Sheet
+             const guideRows = [
+                 { "Field Name": "Board", "Required": "Yes", "Description": "Exam Board / Syllabus (e.g. Punjab Board (PCTB), Federal Board (FBISE), Sindh Board, KPK Board, Cambridge)" },
+                 { "Field Name": "Grade", "Required": "Yes", "Description": "Class level (e.g. Class 9, Class 10, Class 11, Class 12, Grade 8)" },
+                 { "Field Name": "Subject", "Required": "Yes", "Description": "Subject name (e.g. Mathematics, Chemistry, Physics, Biology, Computer Science, English, Urdu, Islamiat, Pak Studies)" },
+                 { "Field Name": "Chapter", "Required": "Yes", "Description": "Chapter / Unit title (e.g. Quadratic Equations, Structure of Molecules, Dynamics)" },
+                 { "Field Name": "Topic", "Required": "Optional", "Description": "Specific sub-topic or section within the chapter" },
+                 { "Field Name": "QuestionText_EN", "Required": "Yes (or UR)", "Description": "Question statement in English. Supports LaTeX like $x^2+y^2=r^2$ and unicode mathematical symbols" },
+                 { "Field Name": "QuestionText_UR", "Required": "Yes (or EN)", "Description": "Question statement in Urdu (نستعلیق / اردو)" },
+                 { "Field Name": "Type", "Required": "Yes", "Description": "Question Type: MCQ, Short Answer, Long Answer, Match Columns, True/False, Fill in the Blanks" },
+                 { "Field Name": "Marks", "Required": "Yes", "Description": "Default marks awarded (e.g. 1 for MCQ, 2 for Short, 4 or 5 for Long Answer)" },
+                 { "Field Name": "Difficulty", "Required": "Yes", "Description": "Easy, Medium, or Hard" },
+                 { "Field Name": "OptionA_EN / UR .. OptionD", "Required": "For MCQ", "Description": "Options A, B, C, D in English and Urdu" },
+                 { "Field Name": "CorrectAnswer_Letter", "Required": "For MCQ/TF", "Description": "Correct Option letter: A, B, C, or D (or True/False)" },
+                 { "Field Name": "ModelAnswer_EN / UR", "Required": "Optional", "Description": "Step-by-step solution, mathematical proof, derivation or marking scheme" },
+                 { "Field Name": "Pair1_Left_EN .. Pair5_Right_UR", "Required": "For Match", "Description": "Matching pairs for Column A and Column B" },
+                 { "Field Name": "Sources", "Required": "Optional", "Description": "Pipe-separated past paper tags (e.g. Past Board 2024|Model Paper|Exercise)" }
+             ];
+             const wsGuide = XLSX.utils.json_to_sheet(guideRows);
+             XLSX.utils.book_append_sheet(wb, wsGuide, "Instructions_Guide");
+         } else {
+             const ws = XLSX.utils.json_to_sheet(sampleRows);
+             XLSX.utils.book_append_sheet(wb, ws, `${type.replace(/\s+/g, '_')}_Template`);
+         }
+
          XLSX.writeFile(wb, `${filename}.xlsx`);
      }
   };
@@ -938,29 +1319,79 @@ const GlobalQuestionBank: React.FC = () => {
       {/* Global Import Modal */}
       {isImportModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+           <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[92vh]">
               <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                 <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2"><FileSpreadsheet size={20} className="text-indigo-600"/> Global Bulk Import</h3>
-                 <button onClick={() => setIsImportModalOpen(false)}><X size={20}/></button>
+                 <div>
+                    <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2"><FileSpreadsheet size={20} className="text-indigo-600"/> Global Bulk Question Import</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">Download pre-filled templates with Math, Chemistry, Physics & Biology examples, or upload your file.</p>
+                 </div>
+                 <button onClick={() => setIsImportModalOpen(false)} className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors"><X size={20}/></button>
               </div>
-              <div className="p-8 space-y-6">
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="p-6 space-y-6 overflow-y-auto">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
-                       <h4 className="font-bold text-sm text-gray-700 flex items-center gap-2"><Download size={16} className="text-indigo-400" /> 1. Get Master Templates</h4>
-                       <div className="flex flex-col gap-2">
-                           {['MCQ', 'True/False', 'Fill in the Blanks', 'Match Columns', 'Short Answer'].map(t => (
-                               <button key={t} onClick={() => downloadTemplate('XLSX', t)} className="w-full flex items-center justify-between p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all text-left">
-                                   <div className="flex items-center gap-3">
-                                      <CheckSquare className="text-indigo-600" size={18} />
-                                      <span className="text-xs font-bold text-gray-900 uppercase">{t}</span>
-                                   </div>
-                                   <Download size={14} className="text-gray-300" />
-                               </button>
-                           ))}
+                       <h4 className="font-bold text-sm text-gray-800 flex items-center gap-2"><Download size={16} className="text-indigo-600" /> 1. Download Master Templates</h4>
+                       
+                       {/* Featured All-in-One Master Template */}
+                       <div className="p-3.5 bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-50 border-2 border-indigo-200 rounded-xl shadow-sm">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                             <div>
+                                <span className="text-xs font-black text-indigo-950 uppercase tracking-tight flex items-center gap-1.5">
+                                   ⭐ Master Global Template (All Subjects)
+                                </span>
+                                <p className="text-[10px] text-indigo-700 mt-0.5 font-medium leading-relaxed">
+                                   Includes real examples of <strong>Math</strong> (Matrices, Quadratic, Trig), <strong>Chemistry</strong> (Reactions, Moles, Bonds), <strong>Physics</strong> & <strong>Biology</strong>.
+                                </p>
+                             </div>
+                          </div>
+                          <div className="flex gap-2 mt-3">
+                             <button 
+                                onClick={() => downloadTemplate('XLSX', 'ALL')} 
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all"
+                             >
+                                <Download size={13} /> Excel (.xlsx) Multi-Tab
+                             </button>
+                             <button 
+                                onClick={() => downloadTemplate('CSV', 'ALL')} 
+                                className="flex items-center justify-center gap-1.5 py-2 px-3 bg-white hover:bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg text-xs font-bold transition-all"
+                             >
+                                <Download size={13} /> CSV
+                             </button>
+                          </div>
+                       </div>
+
+                       <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider pt-1">Or Download Single Question Type Template:</p>
+                       <div className="grid grid-cols-1 gap-2 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
+                            {[
+                               { type: 'MCQ', label: 'Multiple Choice (MCQ)', sub: 'With Math & Chemistry Options' },
+                               { type: 'Short Answer', label: 'Short Answer Questions', sub: 'Math Proofs & Chemistry Gas Laws' },
+                               { type: 'Long Answer', label: 'Long Answer Questions', sub: 'Cramer\'s Rule & Mass Action Derivation' },
+                               { type: 'Match Columns', label: 'Match Columns', sub: 'Acid-Source & Biology Organelle Pairs' },
+                               { type: 'True/False', label: 'True / False', sub: 'Physics & General Science Facts' },
+                               { type: 'Fill in the Blanks', label: 'Fill in Blanks', sub: 'Math Sets & Chemical Formulas' },
+                            ].map(item => (
+                                <div key={item.type} className="flex items-center justify-between p-2.5 border border-gray-200 rounded-lg hover:border-indigo-200 hover:bg-gray-50/80 transition-all text-left">
+                                    <div className="flex items-center gap-2.5">
+                                       <CheckSquare className="text-indigo-600 shrink-0" size={16} />
+                                       <div>
+                                          <span className="text-xs font-bold text-gray-900 block">{item.label}</span>
+                                          <span className="text-[10px] text-gray-400 block">{item.sub}</span>
+                                       </div>
+                                    </div>
+                                    <div className="flex gap-1.5 shrink-0">
+                                       <button onClick={() => downloadTemplate('XLSX', item.type)} className="px-2 py-1 bg-slate-100 hover:bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded border border-slate-200" title="Download Excel">
+                                          XLSX
+                                       </button>
+                                       <button onClick={() => downloadTemplate('CSV', item.type)} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold rounded border border-slate-200" title="Download CSV">
+                                          CSV
+                                       </button>
+                                    </div>
+                                </div>
+                            ))}
                        </div>
                     </div>
                     <div className="space-y-4">
-                       <h4 className="font-bold text-sm text-gray-700 flex items-center gap-2"><Upload size={16} className="text-indigo-400" /> 2. Upload Data</h4>
+                       <h4 className="font-bold text-sm text-gray-800 flex items-center gap-2"><Upload size={16} className="text-indigo-600" /> 2. Upload Data</h4>
                        <div 
                           onClick={() => fileInputRef.current?.click()}
                           className="border-2 border-dashed border-gray-200 rounded-xl py-10 flex flex-col items-center justify-center text-center bg-gray-50/50 group cursor-pointer hover:border-indigo-300"
@@ -1263,15 +1694,37 @@ const GlobalQuestionBank: React.FC = () => {
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
                        <h5 className="text-xs font-bold text-gray-700 uppercase">1. Download Template</h5>
-                       <div className="flex flex-col gap-2 max-h-[180px] overflow-y-auto pr-2 custom-scrollbar">
-                          {['MCQ', 'True/False', 'Fill in the Blanks', 'Match Columns', 'Short Answer'].map(t => (
-                             <button key={t} onClick={() => downloadTemplate('XLSX', t, true)} className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all text-left group">
-                                <div className="flex items-center gap-3">
-                                   <Layers className="text-slate-600" size={18} />
-                                   <p className="text-xs font-bold text-slate-900 uppercase">{t}</p>
-                                </div>
-                                <Download size={14} className="text-slate-300 group-hover:text-indigo-600" />
+                       
+                       {/* Featured Master Template */}
+                       <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl">
+                          <p className="text-xs font-bold text-indigo-950">⭐ Master Global Template (All Types)</p>
+                          <p className="text-[10px] text-indigo-700 mt-0.5">With Math, Chemistry, Physics & Biology examples</p>
+                          <div className="flex gap-2 mt-2">
+                             <button onClick={() => downloadTemplate('XLSX', 'ALL', true)} className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[11px] font-bold shadow-xs">
+                                XLSX Multi-Tab
                              </button>
+                             <button onClick={() => downloadTemplate('CSV', 'ALL', true)} className="px-3 py-1.5 bg-white hover:bg-indigo-50 border border-indigo-200 text-indigo-700 rounded text-[11px] font-bold">
+                                CSV
+                             </button>
+                          </div>
+                       </div>
+
+                       <div className="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto pr-1 custom-scrollbar">
+                          {['MCQ', 'Short Answer', 'Long Answer', 'Match Columns', 'True/False', 'Fill in the Blanks'].map(t => (
+                             <div key={t} className="flex items-center justify-between p-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all text-left group">
+                                <div className="flex items-center gap-2">
+                                   <Layers className="text-slate-600 shrink-0" size={15} />
+                                   <p className="text-xs font-bold text-slate-900">{t}</p>
+                                </div>
+                                <div className="flex gap-1">
+                                   <button onClick={() => downloadTemplate('XLSX', t, true)} className="px-2 py-0.5 bg-slate-100 hover:bg-indigo-50 text-indigo-600 text-[9px] font-bold rounded border border-slate-200">
+                                      XLSX
+                                   </button>
+                                   <button onClick={() => downloadTemplate('CSV', t, true)} className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[9px] font-bold rounded border border-slate-200">
+                                      CSV
+                                   </button>
+                                </div>
+                             </div>
                           ))}
                        </div>
                     </div>

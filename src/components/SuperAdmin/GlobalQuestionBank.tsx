@@ -11,7 +11,7 @@ import {
   HelpCircle, ChevronRight, Image as ImageIcon, ListFilter,
   BookOpen, GraduationCap, Library, Layers, FileText, CloudDownload,
   FileCode, Table, AlertCircle, FileUp, Info, CheckSquare, ChevronDown,
-  Tag, List, ToggleLeft, FormInput, Database, FileCheck, Loader2, Eye, Filter, Edit2, Check, PenTool, FileDown
+  Tag, List, ToggleLeft, FormInput, Database, FileCheck, Loader2, Eye, Filter, Edit2, Check, PenTool, FileDown, Copy
 } from 'lucide-react';
 import { Difficulty, Question, QuestionSource, QuestionType, MatchingPair, Syllabus, ClassLevel, Subject } from '../../types';
 import { generateQuestionsAI, translateToUrdu } from '../../services/geminiService';
@@ -81,6 +81,16 @@ const GlobalQuestionBank: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState(0);
   const [isSequenceImportModalOpen, setIsSequenceImportModalOpen] = useState(false);
+  const [isEquationGuideOpen, setIsEquationGuideOpen] = useState(false);
+  const [guideTab, setGuideTab] = useState<'MATH' | 'CHEM' | 'PHYSICS' | 'CHEATSHEET'>('MATH');
+  const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
+
+  const handleCopySnippet = (snippet: string) => {
+    navigator.clipboard.writeText(snippet);
+    setCopiedSnippet(snippet);
+    setTimeout(() => setCopiedSnippet(null), 2000);
+  };
+
   const [isSourceDropdownOpen, setIsSourceDropdownOpen] = useState(false);
   const [importRows, setImportRows] = useState<any[]>([]);
   const [batchBoardOverride, setBatchBoardOverride] = useState<string>('');
@@ -1004,6 +1014,30 @@ const GlobalQuestionBank: React.FC = () => {
              ];
              const wsGuide = XLSX.utils.json_to_sheet(guideRows);
              XLSX.utils.book_append_sheet(wb, wsGuide, "Instructions_Guide");
+
+             // 7. Equations & Formulas Syntax Guide Sheet
+             const equationGuideRows = [
+                 { "Subject": "Mathematics", "Concept": "Quadratic Formula", "LaTeX Syntax": "$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$", "Plain Unicode": "x = (-b ± √(b² - 4ac)) / (2a)", "Example": "Solve $x^2 - 5x + 6 = 0$ using $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$" },
+                 { "Subject": "Mathematics", "Concept": "Fractions", "LaTeX Syntax": "$\\frac{numerator}{denominator}$", "Plain Unicode": "a / b", "Example": "Evaluate $\\frac{2x + 1}{3} = 5$" },
+                 { "Subject": "Mathematics", "Concept": "Powers / Exponents", "LaTeX Syntax": "$x^2 + y^3 = z^n$", "Plain Unicode": "x² + y³ = zⁿ", "Example": "If $2^{x+1} = 32$, find $x$." },
+                 { "Subject": "Mathematics", "Concept": "Square Root & Radicals", "LaTeX Syntax": "$\\sqrt{x}$ or $\\sqrt[3]{27}$", "Plain Unicode": "√x or ∛27", "Example": "Simplify $\\sqrt{75} + \\sqrt{108}$" },
+                 { "Subject": "Mathematics", "Concept": "2x2 Matrix", "LaTeX Syntax": "$\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}$", "Plain Unicode": "[[a, b], [c, d]]", "Example": "Find $|A|$ for $A = \\begin{bmatrix} 2 & -3 \\\\ 1 & 4 \\end{bmatrix}$" },
+                 { "Subject": "Mathematics", "Concept": "Trigonometry", "LaTeX Syntax": "$\\sin^2\\theta + \\cos^2\\theta = 1$", "Plain Unicode": "sin²θ + cos²θ = 1", "Example": "Prove $\\tan\\theta = \\frac{\\sin\\theta}{\\cos\\theta}$" },
+                 { "Subject": "Mathematics", "Concept": "Sets & Logic", "LaTeX Syntax": "$A \\cup B$, $A \\cap B$, $A'$", "Plain Unicode": "A ∪ B, A ∩ B, A'", "Example": "Verify $(A \\cup B)' = A' \\cap B'$" },
+                 { "Subject": "Chemistry", "Concept": "Chemical Formula", "LaTeX Syntax": "$\\ce{H2SO4}$ or $\\ce{C6H12O6}$", "Plain Unicode": "H₂SO₄ or C₆H₁₂O₆", "Example": "Molar mass of $\\ce{H2SO4}$" },
+                 { "Subject": "Chemistry", "Concept": "Chemical Reactions", "LaTeX Syntax": "$\\ce{2H2 + O2 -> 2H2O}$", "Plain Unicode": "2H₂ + O₂ → 2H₂O", "Example": "Balance $\\ce{CH4 + 2O2 -> CO2 + 2H2O}$" },
+                 { "Subject": "Chemistry", "Concept": "Reversible Reaction", "LaTeX Syntax": "$\\ce{N2 + 3H2 <=> 2NH3}$", "Plain Unicode": "N₂ + 3H₂ ⇌ 2NH₃", "Example": "Write $K_c$ for $\\ce{N2 + 3H2 <=> 2NH3}$" },
+                 { "Subject": "Chemistry", "Concept": "Ions & Charges", "LaTeX Syntax": "$\\ce{Na+ + Cl- -> NaCl}$ or $\\ce{SO4^{2-}}$", "Plain Unicode": "Na⁺ + Cl⁻ → NaCl", "Example": "Oxidation state of sulfur in $\\ce{SO4^{2-}}$" },
+                 { "Subject": "Chemistry", "Concept": "Reaction Conditions (Heat)", "LaTeX Syntax": "$\\ce{CaCO3 ->[\\Delta] CaO + CO2 ^}$", "Plain Unicode": "CaCO₃ →(heat) CaO + CO₂↑", "Example": "Decomposition of $\\ce{CaCO3}$ under heat $\\Delta$" },
+                 { "Subject": "Physics", "Concept": "Newton's 2nd Law", "LaTeX Syntax": "$F = ma$ or $\\vec{F} = m\\vec{a}$", "Plain Unicode": "F = ma (N = kg·m/s²)", "Example": "Force required for $m=1000\\text{ kg}, a=2.5\\text{ m/s}^2$" },
+                 { "Subject": "Physics", "Concept": "2nd Equation of Motion", "LaTeX Syntax": "$S = v_i t + \\frac{1}{2}at^2$", "Plain Unicode": "S = vi·t + 0.5·a·t²", "Example": "Derive $S = v_i t + \\frac{1}{2}at^2$" },
+                 { "Subject": "Physics", "Concept": "3rd Equation of Motion", "LaTeX Syntax": "$2aS = v_f^2 - v_i^2$", "Plain Unicode": "2aS = vf² - vi²", "Example": "Calculate acceleration using $2aS = v_f^2 - v_i^2$" },
+                 { "Subject": "Physics", "Concept": "Kinetic Energy", "LaTeX Syntax": "$E_k = \\frac{1}{2}mv^2$", "Plain Unicode": "Ek = 1/2·m·v²", "Example": "Kinetic energy of $2\\text{ kg}$ object at $10\\text{ m/s}$" },
+                 { "Subject": "Physics", "Concept": "Ohm's Law & Power", "LaTeX Syntax": "$V = IR$ and $P = \\frac{V^2}{R}$", "Plain Unicode": "V = IR and P = V²/R", "Example": "Find resistance using $R = \\frac{V^2}{P}$" },
+                 { "Subject": "Physics", "Concept": "Waves & Time Period", "LaTeX Syntax": "$v = f\\lambda$ and $T = 2\\pi\\sqrt{\\frac{l}{g}}$", "Plain Unicode": "v = f·λ and T = 2π√(l/g)", "Example": "Time period of pendulum of length $1\\text{ m}$" }
+             ];
+             const wsEqGuide = XLSX.utils.json_to_sheet(equationGuideRows);
+             XLSX.utils.book_append_sheet(wb, wsEqGuide, "Equations_Syntax_Guide");
          } else {
              const ws = XLSX.utils.json_to_sheet(sampleRows);
              XLSX.utils.book_append_sheet(wb, ws, `${type.replace(/\s+/g, '_')}_Template`);
@@ -1137,7 +1171,14 @@ const GlobalQuestionBank: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Global Question Bank</h1>
           <p className="text-sm text-gray-500 mt-1">Enterprise-grade academic content repository</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2.5 items-center flex-wrap">
+          <button 
+             onClick={() => setIsEquationGuideOpen(true)}
+             className="px-3.5 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 border border-indigo-200 text-indigo-700 rounded-lg text-sm font-bold flex items-center gap-1.5 shadow-xs transition-all"
+             title="Learn how to write Math, Physics, and Chemistry equations in LaTeX"
+          >
+            <span>📐</span> Equations Guide
+          </button>
           <button onClick={() => setIsImportModalOpen(true)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2">
             <Upload size={16} /> Global Import
           </button>
@@ -1330,6 +1371,23 @@ const GlobalQuestionBank: React.FC = () => {
               <div className="p-6 space-y-6 overflow-y-auto">
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
+                       {/* Quick Equation Syntax Shortcut */}
+                       <div 
+                          onClick={() => setIsEquationGuideOpen(true)}
+                          className="p-3 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 hover:from-amber-100 hover:to-orange-100 border border-amber-200 rounded-xl cursor-pointer flex items-center justify-between transition-all group shadow-xs"
+                       >
+                          <div className="flex items-center gap-2.5">
+                             <span className="text-xl">📐</span>
+                             <div>
+                                <p className="text-xs font-bold text-amber-950">How to write Math & Chemistry Equations?</p>
+                                <p className="text-[10px] text-amber-700">LaTeX, \ce&#123;...&#125; reactions, matrices, roots & Urdu bilingual tips</p>
+                             </div>
+                          </div>
+                          <span className="text-xs font-bold text-amber-800 bg-white/90 px-2.5 py-1 rounded-lg border border-amber-200 group-hover:bg-white transition-all flex items-center gap-1 shadow-xs">
+                             Guide <ChevronRight size={13} />
+                          </span>
+                       </div>
+
                        <h4 className="font-bold text-sm text-gray-800 flex items-center gap-2"><Download size={16} className="text-indigo-600" /> 1. Download Master Templates</h4>
                        
                        {/* Featured All-in-One Master Template */}
@@ -1958,7 +2016,10 @@ const GlobalQuestionBank: React.FC = () => {
                            <div className="space-y-3">
                               <div className="flex justify-between items-center">
                                  <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Question (English)</label>
-                                 <button onClick={handleTranslateAll} className="text-[10px] font-bold text-indigo-600 hover:underline flex items-center gap-1"><Sparkles size={10}/> Translate to Urdu</button>
+                                 <div className="flex items-center gap-3">
+                                    <button onClick={() => setIsEquationGuideOpen(true)} className="text-[10px] font-bold text-slate-500 hover:text-indigo-600 hover:underline flex items-center gap-1"><Info size={11}/> 📐 Equations Guide</button>
+                                    <button onClick={handleTranslateAll} className="text-[10px] font-bold text-indigo-600 hover:underline flex items-center gap-1"><Sparkles size={10}/> Translate to Urdu</button>
+                                 </div>
                               </div>
                               <textarea value={newQuestion.text} onChange={e => setNewQuestion({...newQuestion, text: e.target.value})} className="w-full border border-slate-300 p-5 rounded-2xl min-h-[160px] outline-none focus:ring-2 focus:ring-indigo-500 text-sm shadow-sm transition-all" placeholder="Enter English text..." />
                            </div>
@@ -2046,6 +2107,487 @@ const GlobalQuestionBank: React.FC = () => {
                     </button>
                  )}
               </div>
+           </div>
+        </div>
+      )}
+      {/* Equation & Formula Syntax Guide Modal */}
+      {isEquationGuideOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+              
+              {/* Modal Header */}
+              <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex justify-between items-center shrink-0">
+                 <div>
+                    <h3 className="font-bold text-lg flex items-center gap-2.5">
+                       <span className="p-1.5 bg-indigo-500/20 border border-indigo-400/30 rounded-lg text-lg">📐</span> 
+                       Equations, Formulas & Reactions Syntax Guide
+                    </h3>
+                    <p className="text-xs text-indigo-200 mt-0.5">
+                       Complete LaTeX & <code className="bg-white/10 px-1 py-0.5 rounded text-amber-300 font-mono">\ce&#123;...&#125;</code> guide for Math, Physics, Chemistry, and Urdu Bilingual Question Papers
+                    </p>
+                 </div>
+                 <button 
+                    onClick={() => setIsEquationGuideOpen(false)} 
+                    className="p-1.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                 >
+                    <X size={20}/>
+                 </button>
+              </div>
+
+              {/* Navigation Tabs */}
+              <div className="px-6 pt-3 bg-slate-100 border-b border-slate-200 flex gap-2 shrink-0 overflow-x-auto">
+                 <button 
+                    onClick={() => setGuideTab('MATH')}
+                    className={`px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all flex items-center gap-2 border-t border-x ${
+                       guideTab === 'MATH' 
+                       ? 'bg-white text-indigo-600 border-slate-200 -mb-px shadow-xs' 
+                       : 'bg-transparent text-slate-600 hover:bg-slate-200/60 border-transparent'
+                    }`}
+                 >
+                    <span>🔢</span> Mathematics Formulas
+                 </button>
+                 <button 
+                    onClick={() => setGuideTab('CHEM')}
+                    className={`px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all flex items-center gap-2 border-t border-x ${
+                       guideTab === 'CHEM' 
+                       ? 'bg-white text-emerald-600 border-slate-200 -mb-px shadow-xs' 
+                       : 'bg-transparent text-slate-600 hover:bg-slate-200/60 border-transparent'
+                    }`}
+                 >
+                    <span>🧪</span> Chemistry Reactions & mhchem
+                 </button>
+                 <button 
+                    onClick={() => setGuideTab('PHYSICS')}
+                    className={`px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all flex items-center gap-2 border-t border-x ${
+                       guideTab === 'PHYSICS' 
+                       ? 'bg-white text-blue-600 border-slate-200 -mb-px shadow-xs' 
+                       : 'bg-transparent text-slate-600 hover:bg-slate-200/60 border-transparent'
+                    }`}
+                 >
+                    <span>⚡</span> Physics Laws & Vectors
+                 </button>
+                 <button 
+                    onClick={() => setGuideTab('CHEATSHEET')}
+                    className={`px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all flex items-center gap-2 border-t border-x ${
+                       guideTab === 'CHEATSHEET' 
+                       ? 'bg-white text-amber-600 border-slate-200 -mb-px shadow-xs' 
+                       : 'bg-transparent text-slate-600 hover:bg-slate-200/60 border-transparent'
+                    }`}
+                 >
+                    <span>📋</span> Quick Rules & Urdu RTL Tips
+                 </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-slate-50/50">
+                 
+                 {/* Top Tip Banner */}
+                 <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-between gap-3 text-xs text-indigo-900">
+                    <div className="flex items-center gap-2">
+                       <Sparkles size={16} className="text-indigo-600 shrink-0" />
+                       <span>
+                          <strong>Pro Tip:</strong> Click the <code className="bg-indigo-100 px-1.5 py-0.5 rounded text-[11px] font-mono font-bold">Copy</code> button next to any formula to copy its exact LaTeX snippet. Paste it directly into English or Urdu Question boxes!
+                       </span>
+                    </div>
+                    {copiedSnippet && (
+                       <span className="px-2.5 py-1 bg-green-600 text-white text-[11px] font-bold rounded-lg shrink-0 flex items-center gap-1 shadow-xs animate-in fade-in">
+                          <Check size={12}/> Copied!
+                       </span>
+                    )}
+                 </div>
+
+                 {/* TAB 1: MATHEMATICS */}
+                 {guideTab === 'MATH' && (
+                    <div className="space-y-4">
+                       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+                          <div className="px-4 py-3 bg-indigo-50/60 border-b border-slate-200 flex justify-between items-center">
+                             <h4 className="font-bold text-xs text-indigo-950 uppercase tracking-wider">Mathematics Core Formulas & LaTeX Syntax</h4>
+                             <span className="text-[11px] text-slate-500 font-medium">KaTeX Native Rendering</span>
+                          </div>
+                          <div className="divide-y divide-slate-100 overflow-x-auto">
+                             <table className="w-full text-left text-xs">
+                                <thead className="bg-slate-50 text-slate-500 font-bold text-[11px] uppercase tracking-wider border-b border-slate-200">
+                                   <tr>
+                                      <th className="p-3">Topic / Concept</th>
+                                      <th className="p-3">LaTeX Code (Copyable)</th>
+                                      <th className="p-3">Rendered Preview</th>
+                                      <th className="p-3">Urdu Question Example</th>
+                                   </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 font-sans">
+                                   {[
+                                      {
+                                         concept: "Quadratic Formula",
+                                         latex: "$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$",
+                                         urdu: "دو درجی فارمولا $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$ کی مدد سے حل کریں۔"
+                                      },
+                                      {
+                                         concept: "Fractions & Division",
+                                         latex: "$\\frac{2x + 1}{3x - 5} = 4$",
+                                         urdu: "مساوات $\\frac{2x + 1}{3x - 5} = 4$ میں $x$ کی قیمت معلوم کریں۔"
+                                      },
+                                      {
+                                         concept: "Powers & Exponents",
+                                         latex: "$2^{x+1} + 2^{x-1} = 40$",
+                                         urdu: "قوت نمائی مساوات $2^{x+1} + 2^{x-1} = 40$ کو حل کریں۔"
+                                      },
+                                      {
+                                         concept: "Square Roots & Radicals",
+                                         latex: "$\\sqrt{75} + \\sqrt{108} - \\sqrt{300}$",
+                                         urdu: "جذری مقدار $\\sqrt{75} + \\sqrt{108}$ کو مختصر کریں۔"
+                                      },
+                                      {
+                                         concept: "2x2 Matrix & Determinant",
+                                         latex: "$A = \\begin{bmatrix} 2 & -3 \\\\ 1 & 4 \\end{bmatrix}$",
+                                         urdu: "قالب $A = \\begin{bmatrix} 2 & -3 \\\\ 1 & 4 \\end{bmatrix}$ کا مقطع $|A|$ معلوم کریں۔"
+                                      },
+                                      {
+                                         concept: "Trigonometric Identities",
+                                         latex: "$\\sin^2\\theta + \\cos^2\\theta = 1$",
+                                         urdu: "ثابت کریں کہ $\\tan\\theta = \\frac{\\sin\\theta}{\\cos\\theta}$"
+                                      },
+                                      {
+                                         concept: "Sets & Logic (Union/Intersection)",
+                                         latex: "$(A \\cup B)' = A' \\cap B'$",
+                                         urdu: "ڈی مورگن کا قانون $(A \\cup B)' = A' \\cap B'$ ثابت کریں۔"
+                                      },
+                                      {
+                                         concept: "Logarithms",
+                                         latex: "$\\log_a(xy) = \\log_a x + \\log_a y$",
+                                         urdu: "لوگارتھم کا قانون $\\log_a(\\frac{x}{y}) = \\log_a x - \\log_a y$ ثابت کریں۔"
+                                      },
+                                      {
+                                         concept: "Geometry & Volume",
+                                         latex: "$V = \\frac{4}{3}\\pi r^3$",
+                                         urdu: "کروی جسم کا والیم $V = \\frac{4}{3}\\pi r^3$ معلوم کریں۔"
+                                      }
+                                   ].map((item, idx) => (
+                                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                                         <td className="p-3 font-bold text-slate-800 whitespace-nowrap">{item.concept}</td>
+                                         <td className="p-3 font-mono text-[11px] text-indigo-700 bg-indigo-50/30">
+                                            <div className="flex items-center justify-between gap-2">
+                                               <code>{item.latex}</code>
+                                               <button 
+                                                  onClick={() => handleCopySnippet(item.latex)} 
+                                                  className="p-1 bg-white hover:bg-indigo-100 text-indigo-600 rounded border border-indigo-200 transition-all shrink-0" 
+                                                  title="Copy LaTeX"
+                                               >
+                                                  {copiedSnippet === item.latex ? <Check size={12} className="text-green-600"/> : <Copy size={12}/>}
+                                               </button>
+                                            </div>
+                                         </td>
+                                         <td className="p-3 text-slate-900 font-medium">
+                                            <MathRenderer text={item.latex} inline={true} />
+                                         </td>
+                                         <td className="p-3 font-urdu text-sm text-slate-700 text-right" dir="rtl">
+                                            <MathRenderer text={item.urdu} inline={false} />
+                                         </td>
+                                      </tr>
+                                   ))}
+                                </tbody>
+                             </table>
+                          </div>
+                       </div>
+                    </div>
+                 )}
+
+                 {/* TAB 2: CHEMISTRY */}
+                 {guideTab === 'CHEM' && (
+                    <div className="space-y-4">
+                       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+                          <div className="px-4 py-3 bg-emerald-50/60 border-b border-slate-200 flex justify-between items-center">
+                             <h4 className="font-bold text-xs text-emerald-950 uppercase tracking-wider">Chemistry Reactions & Formula Syntax (<code className="font-mono text-emerald-700">\ce&#123;...&#125;</code> mhchem)</h4>
+                             <span className="text-[11px] text-slate-500 font-medium">Automatic Subscripts & Reaction Arrows</span>
+                          </div>
+                          <div className="divide-y divide-slate-100 overflow-x-auto">
+                             <table className="w-full text-left text-xs">
+                                <thead className="bg-slate-50 text-slate-500 font-bold text-[11px] uppercase tracking-wider border-b border-slate-200">
+                                   <tr>
+                                      <th className="p-3">Reaction Type</th>
+                                      <th className="p-3">\ce&#123;...&#125; Code (Copyable)</th>
+                                      <th className="p-3">Rendered Preview</th>
+                                      <th className="p-3">Urdu Question Example</th>
+                                   </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 font-sans">
+                                   {[
+                                      {
+                                         concept: "Chemical Formula",
+                                         latex: "$\\ce{H2SO4}$ and $\\ce{KMnO4}$",
+                                         urdu: "سلفیورک ایسڈ $\\ce{H2SO4}$ کا مالیکیولر ماس معلوم کریں۔"
+                                      },
+                                      {
+                                         concept: "Balanced Chemical Reaction",
+                                         latex: "$\\ce{2H2 + O2 -> 2H2O}$",
+                                         urdu: "کیمیائی مساوات $\\ce{2H2 + O2 -> 2H2O}$ کو متوازن کریں۔"
+                                      },
+                                      {
+                                         concept: "Combustion Reaction",
+                                         latex: "$\\ce{CH4 + 2O2 -> CO2 + 2H2O}$",
+                                         urdu: "میتھین کے جلنے کا عمل $\\ce{CH4 + 2O2 -> CO2 + 2H2O}$"
+                                      },
+                                      {
+                                         concept: "Reversible Equilibrium (⇌)",
+                                         latex: "$\\ce{N2 + 3H2 <=> 2NH3}$",
+                                         urdu: "ری ایکشن $\\ce{N2 + 3H2 <=> 2NH3}$ کے لیے $K_c$ کی مساوات اخذ کریں۔"
+                                      },
+                                      {
+                                         concept: "Ions & Valence Charges",
+                                         latex: "$\\ce{Na+ + Cl- -> NaCl}$ and $\\ce{SO4^{2-}}$",
+                                         urdu: "سلفیٹ آئن $\\ce{SO4^{2-}}$ میں سلفر کی آکسیڈیشن سٹیٹ لکھیں۔"
+                                      },
+                                      {
+                                         concept: "Reaction under Heat (Δ)",
+                                         latex: "$\\ce{CaCO3 ->[\\Delta] CaO + CO2 ^}$",
+                                         urdu: "کیلشیم کاربونیٹ کی حرارت کے زیر اثر ڈی کمپوزیشن $\\ce{CaCO3 ->[\\Delta] CaO + CO2 ^}$"
+                                      },
+                                      {
+                                         concept: "Physical States (s, l, g, aq)",
+                                         latex: "$\\ce{Zn(s) + 2HCl(aq) -> ZnCl2(aq) + H2(g) ^}$",
+                                         urdu: "زنک کا ہائیڈروکلورک ایسڈ کے ساتھ تعامل $\\ce{Zn(s) + 2HCl(aq) -> ZnCl2(aq) + H2(g) ^}$"
+                                      },
+                                      {
+                                         concept: "Organic Dehydration",
+                                         latex: "$\\ce{CH3-CH2-OH ->[H2SO4][170^\\circ C] CH2=CH2 + H2O}$",
+                                         urdu: "ایتھانول کی ڈی ہائیڈریشن $\\ce{CH3CH2OH ->[H2SO4] CH2=CH2 + H2O}$"
+                                      }
+                                   ].map((item, idx) => (
+                                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                                         <td className="p-3 font-bold text-slate-800 whitespace-nowrap">{item.concept}</td>
+                                         <td className="p-3 font-mono text-[11px] text-emerald-800 bg-emerald-50/30">
+                                            <div className="flex items-center justify-between gap-2">
+                                               <code>{item.latex}</code>
+                                               <button 
+                                                  onClick={() => handleCopySnippet(item.latex)} 
+                                                  className="p-1 bg-white hover:bg-emerald-100 text-emerald-700 rounded border border-emerald-200 transition-all shrink-0" 
+                                                  title="Copy Formula"
+                                               >
+                                                  {copiedSnippet === item.latex ? <Check size={12} className="text-green-600"/> : <Copy size={12}/>}
+                                               </button>
+                                            </div>
+                                         </td>
+                                         <td className="p-3 text-slate-900 font-medium">
+                                            <MathRenderer text={item.latex} inline={true} />
+                                         </td>
+                                         <td className="p-3 font-urdu text-sm text-slate-700 text-right" dir="rtl">
+                                            <MathRenderer text={item.urdu} inline={false} />
+                                         </td>
+                                      </tr>
+                                   ))}
+                                </tbody>
+                             </table>
+                          </div>
+                       </div>
+                    </div>
+                 )}
+
+                 {/* TAB 3: PHYSICS */}
+                 {guideTab === 'PHYSICS' && (
+                    <div className="space-y-4">
+                       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+                          <div className="px-4 py-3 bg-blue-50/60 border-b border-slate-200 flex justify-between items-center">
+                             <h4 className="font-bold text-xs text-blue-950 uppercase tracking-wider">Physics Laws, Motion & Vector Equations</h4>
+                             <span className="text-[11px] text-slate-500 font-medium">Kinematics, Electromagnetism & Waves</span>
+                          </div>
+                          <div className="divide-y divide-slate-100 overflow-x-auto">
+                             <table className="w-full text-left text-xs">
+                                <thead className="bg-slate-50 text-slate-500 font-bold text-[11px] uppercase tracking-wider border-b border-slate-200">
+                                   <tr>
+                                      <th className="p-3">Physics Law / Concept</th>
+                                      <th className="p-3">LaTeX Code (Copyable)</th>
+                                      <th className="p-3">Rendered Preview</th>
+                                      <th className="p-3">Urdu Question Example</th>
+                                   </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 font-sans">
+                                   {[
+                                      {
+                                         concept: "Newton's 2nd Law & Vectors",
+                                         latex: "$\\vec{F} = m\\vec{a}$ or $F = ma$",
+                                         urdu: "نیوٹن کے دوسرے قانون حرکت $F = ma$ کا اطلاق کریں۔"
+                                      },
+                                      {
+                                         concept: "1st Equation of Motion",
+                                         latex: "$v_f = v_i + at$",
+                                         urdu: "حرکت کی پہلی مساوات $v_f = v_i + at$ کی مدد سے آخری ولاسٹی معلوم کریں۔"
+                                      },
+                                      {
+                                         concept: "2nd Equation of Motion",
+                                         latex: "$S = v_i t + \\frac{1}{2}at^2$",
+                                         urdu: "حرکت کی دوسری مساوات $S = v_i t + \\frac{1}{2}at^2$ اخذ کریں۔"
+                                      },
+                                      {
+                                         concept: "3rd Equation of Motion",
+                                         latex: "$2aS = v_f^2 - v_i^2$",
+                                         urdu: "مساوات $2aS = v_f^2 - v_i^2$ کا حسابی حل کریں۔"
+                                      },
+                                      {
+                                         concept: "Kinetic & Potential Energy",
+                                         latex: "$E_k = \\frac{1}{2}mv^2$ and $E_p = mgh$",
+                                         urdu: "حرکی توانائی کا فارمولا $E_k = \\frac{1}{2}mv^2$ ثابت کریں۔"
+                                      },
+                                      {
+                                         concept: "Universal Gravitation",
+                                         latex: "$F = G\\frac{m_1 m_2}{r^2}$",
+                                         urdu: "گریویٹیشن کے قانون $F = G\\frac{m_1 m_2}{r^2}$ سے زمین کا ماس معلوم کریں۔"
+                                      },
+                                      {
+                                         concept: "Ohm's Law & Electric Power",
+                                         latex: "$V = IR$ and $P = I^2R = \\frac{V^2}{R}$",
+                                         urdu: "اوہم کا قانون $V = IR$ بیان کریں اور حسابی تصدیق کریں۔"
+                                      },
+                                      {
+                                         concept: "Wave Equation & Pendulum",
+                                         latex: "$v = f\\lambda$ and $T = 2\\pi\\sqrt{\\frac{l}{g}}$",
+                                         urdu: "سادہ پینڈولم کے ٹائم پیریڈ کا فارمولا $T = 2\\pi\\sqrt{\\frac{l}{g}}$ لکھیں۔"
+                                      },
+                                      {
+                                         concept: "Nuclear Decay (Alpha / Beta)",
+                                         latex: "$\\ce{^{238}_{92}U -> ^{234}_{90}Th + ^{4}_{2}\\alpha}$",
+                                         urdu: "یورینیم کے الفا ڈیکے کی نیوکلیائی مساوات $\\ce{^{238}_{92}U -> ^{234}_{90}Th + ^{4}_{2}\\alpha}$"
+                                      }
+                                   ].map((item, idx) => (
+                                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                                         <td className="p-3 font-bold text-slate-800 whitespace-nowrap">{item.concept}</td>
+                                         <td className="p-3 font-mono text-[11px] text-blue-800 bg-blue-50/30">
+                                            <div className="flex items-center justify-between gap-2">
+                                               <code>{item.latex}</code>
+                                               <button 
+                                                  onClick={() => handleCopySnippet(item.latex)} 
+                                                  className="p-1 bg-white hover:bg-blue-100 text-blue-700 rounded border border-blue-200 transition-all shrink-0" 
+                                                  title="Copy Equation"
+                                               >
+                                                  {copiedSnippet === item.latex ? <Check size={12} className="text-green-600"/> : <Copy size={12}/>}
+                                               </button>
+                                            </div>
+                                         </td>
+                                         <td className="p-3 text-slate-900 font-medium">
+                                            <MathRenderer text={item.latex} inline={true} />
+                                         </td>
+                                         <td className="p-3 font-urdu text-sm text-slate-700 text-right" dir="rtl">
+                                            <MathRenderer text={item.urdu} inline={false} />
+                                         </td>
+                                      </tr>
+                                   ))}
+                                </tbody>
+                             </table>
+                          </div>
+                       </div>
+                    </div>
+                 )}
+
+                 {/* TAB 4: CHEATSHEET & URDU RULES */}
+                 {guideTab === 'CHEATSHEET' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                       
+                       {/* Box 1: Core Rules */}
+                       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
+                          <h4 className="font-bold text-xs text-indigo-950 uppercase tracking-wider flex items-center gap-2">
+                             <span>📌</span> Essential Formatting Rules
+                          </h4>
+                          <ul className="text-xs text-slate-700 space-y-2 leading-relaxed">
+                             <li className="flex items-start gap-2">
+                                <span className="text-indigo-600 font-bold">•</span>
+                                <div>
+                                   <strong>Inline Math:</strong> Wrap with single dollar signs: <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-700 font-mono">{"$x^2 + y^2 = r^2$"}</code>.
+                                </div>
+                             </li>
+                             <li className="flex items-start gap-2">
+                                <span className="text-indigo-600 font-bold">•</span>
+                                <div>
+                                   <strong>Display Math (Centered):</strong> Wrap with double dollar signs: <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-700 font-mono">{"$$x = \\frac{-b \\pm \\sqrt{D}}{2a}$$"}</code>.
+                                </div>
+                             </li>
+                             <li className="flex items-start gap-2">
+                                <span className="text-indigo-600 font-bold">•</span>
+                                <div>
+                                   <strong>Chemistry Reactions:</strong> Wrap with <code className="bg-slate-100 px-1 py-0.5 rounded text-emerald-700 font-mono">{"$\\ce{...}$"}</code>. No manual subscript numbers needed — <code className="bg-slate-100 px-1 py-0.5 rounded text-emerald-700 font-mono">{"\\ce{H2SO4}"}</code> automatically becomes <MathRenderer text="$\ce{H2SO4}$" inline={true} />!
+                                </div>
+                             </li>
+                             <li className="flex items-start gap-2">
+                                <span className="text-indigo-600 font-bold">•</span>
+                                <div>
+                                   <strong>Excel CSV/XLSX Export:</strong> You can paste LaTeX formulas directly into Excel columns (<code className="font-mono text-[11px]">QuestionText_EN</code>, <code className="font-mono text-[11px]">QuestionText_UR</code>, <code className="font-mono text-[11px]">OptionA_EN</code>, etc.).
+                                </div>
+                             </li>
+                          </ul>
+                       </div>
+
+                       {/* Box 2: Urdu RTL Isolation */}
+                       <div className="bg-white p-5 rounded-xl border border-indigo-100 shadow-xs space-y-3">
+                          <h4 className="font-bold text-xs text-indigo-950 uppercase tracking-wider flex items-center gap-2">
+                             <span>🇵🇰</span> Urdu / RTL Bilingual Equations Protection
+                          </h4>
+                          <p className="text-xs text-slate-600 leading-relaxed">
+                             In right-to-left Urdu questions, chemical and mathematical formulas can sometimes reverse directions (e.g. <code className="text-red-500">2H2O</code> turning into <code className="text-red-500">O2H2</code>).
+                          </p>
+                          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1.5 text-xs text-emerald-900">
+                             <div className="font-bold flex items-center gap-1.5 text-emerald-950">
+                                <CheckCircle size={14} className="text-emerald-600" />
+                                How PakParcha handles it:
+                             </div>
+                             <p className="text-[11px] leading-relaxed">
+                                PakParcha's <strong>MathRenderer</strong> automatically applies <code className="bg-white px-1 py-0.5 rounded text-emerald-800 font-mono">&lt;bdi&gt;</code> (Bi-Directional Isolation) to all <code className="bg-white px-1 py-0.5 rounded text-emerald-800 font-mono">$...$</code> blocks, keeping equations in pristine Left-to-Right layout inside right-to-left Urdu sentences!
+                             </p>
+                          </div>
+                          <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-right font-urdu text-sm" dir="rtl">
+                             <strong>مثال:</strong> اگر $x^2 - 5x + 6 = 0$ ہو تو $x = 2, 3$ ہے۔
+                          </div>
+                       </div>
+
+                       {/* Box 3: Common Symbols Reference */}
+                       <div className="md:col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
+                          <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wider">
+                             ⚡ Quick Symbols Reference
+                          </h4>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 text-xs">
+                             {[
+                                { sym: "$\\pm$", code: "\\pm", name: "Plus/Minus" },
+                                { sym: "$\\times$", code: "\\times", name: "Multiply" },
+                                { sym: "$\\div$", code: "\\div", name: "Divide" },
+                                { sym: "$\\sqrt{x}$", code: "\\sqrt{x}", name: "Square Root" },
+                                { sym: "$\\theta$", code: "\\theta", name: "Theta" },
+                                { sym: "$\\alpha, \\beta$", code: "\\alpha, \\beta", name: "Alpha, Beta" },
+                                { sym: "$\\Delta$", code: "\\Delta", name: "Delta (Heat)" },
+                                { sym: "$\\lambda$", code: "\\lambda", name: "Wavelength" },
+                                { sym: "$\\pi$", code: "\\pi", name: "Pi (3.1415)" },
+                                { sym: "$\\infty$", code: "\\infty", name: "Infinity" },
+                                { sym: "$\\approx$", code: "\\approx", name: "Approx" },
+                                { sym: "$\\le, \\ge$", code: "\\le, \\ge", name: "Less/Greater Eq" },
+                             ].map((s, i) => (
+                                <div 
+                                   key={i} 
+                                   onClick={() => handleCopySnippet(`$${s.code}$`)}
+                                   className="p-2 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-lg cursor-pointer transition-all flex flex-col items-center justify-center text-center group"
+                                   title="Click to copy"
+                                >
+                                   <div className="text-sm font-bold text-slate-800 group-hover:text-indigo-600 mb-1">
+                                      <MathRenderer text={s.sym} inline={true} />
+                                   </div>
+                                   <span className="font-mono text-[10px] text-slate-500 group-hover:text-indigo-600">{s.code}</span>
+                                   <span className="text-[9px] text-slate-400">{s.name}</span>
+                                </div>
+                             ))}
+                          </div>
+                       </div>
+                    </div>
+                 )}
+
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-4 bg-slate-100 border-t border-slate-200 flex justify-between items-center shrink-0">
+                 <div className="text-xs text-slate-500">
+                    Need an Excel sheet with all these syntax samples? Download the <button onClick={() => downloadTemplate('XLSX', 'ALL')} className="font-bold text-indigo-600 hover:underline">Master Template (.xlsx)</button>.
+                 </div>
+                 <button 
+                    onClick={() => setIsEquationGuideOpen(false)} 
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 shadow-sm transition-all"
+                 >
+                    Close Guide
+                 </button>
+              </div>
+
            </div>
         </div>
       )}

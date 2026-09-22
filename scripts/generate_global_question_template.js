@@ -378,6 +378,30 @@ XLSX.utils.book_append_sheet(wb, wsBio, "Biology_Examples");
 const wsGuide = XLSX.utils.json_to_sheet(guideRows);
 XLSX.utils.book_append_sheet(wb, wsGuide, "Instructions_Guide");
 
+// Sheet 7: Equations & Formulas Syntax Guide Sheet
+const equationGuideRows = [
+  { "Subject": "Mathematics", "Concept": "Quadratic Formula", "LaTeX Syntax": "$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$", "Plain Unicode": "x = (-b ± √(b² - 4ac)) / (2a)", "Example": "Solve $x^2 - 5x + 6 = 0$ using $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$" },
+  { "Subject": "Mathematics", "Concept": "Fractions", "LaTeX Syntax": "$\\frac{numerator}{denominator}$", "Plain Unicode": "a / b", "Example": "Evaluate $\\frac{2x + 1}{3} = 5$" },
+  { "Subject": "Mathematics", "Concept": "Powers / Exponents", "LaTeX Syntax": "$x^2 + y^3 = z^n$", "Plain Unicode": "x² + y³ = zⁿ", "Example": "If $2^{x+1} = 32$, find $x$." },
+  { "Subject": "Mathematics", "Concept": "Square Root & Radicals", "LaTeX Syntax": "$\\sqrt{x}$ or $\\sqrt[3]{27}$", "Plain Unicode": "√x or ∛27", "Example": "Simplify $\\sqrt{75} + \\sqrt{108}$" },
+  { "Subject": "Mathematics", "Concept": "2x2 Matrix", "LaTeX Syntax": "$\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}$", "Plain Unicode": "[[a, b], [c, d]]", "Example": "Find $|A|$ for $A = \\begin{bmatrix} 2 & -3 \\\\ 1 & 4 \\end{bmatrix}$" },
+  { "Subject": "Mathematics", "Concept": "Trigonometry", "LaTeX Syntax": "$\\sin^2\\theta + \\cos^2\\theta = 1$", "Plain Unicode": "sin²θ + cos²θ = 1", "Example": "Prove $\\tan\\theta = \\frac{\\sin\\theta}{\\cos\\theta}$" },
+  { "Subject": "Mathematics", "Concept": "Sets & Logic", "LaTeX Syntax": "$A \\cup B$, $A \\cap B$, $A'$", "Plain Unicode": "A ∪ B, A ∩ B, A'", "Example": "Verify $(A \\cup B)' = A' \\cap B'$" },
+  { "Subject": "Chemistry", "Concept": "Chemical Formula", "LaTeX Syntax": "$\\ce{H2SO4}$ or $\\ce{C6H12O6}$", "Plain Unicode": "H₂SO₄ or C₆H₁₂O₆", "Example": "Molar mass of $\\ce{H2SO4}$" },
+  { "Subject": "Chemistry", "Concept": "Chemical Reactions", "LaTeX Syntax": "$\\ce{2H2 + O2 -> 2H2O}$", "Plain Unicode": "2H₂ + O₂ → 2H₂O", "Example": "Balance $\\ce{CH4 + 2O2 -> CO2 + 2H2O}$" },
+  { "Subject": "Chemistry", "Concept": "Reversible Reaction", "LaTeX Syntax": "$\\ce{N2 + 3H2 <=> 2NH3}$", "Plain Unicode": "N₂ + 3H₂ ⇌ 2NH₃", "Example": "Write $K_c$ for $\\ce{N2 + 3H2 <=> 2NH3}$" },
+  { "Subject": "Chemistry", "Concept": "Ions & Charges", "LaTeX Syntax": "$\\ce{Na+ + Cl- -> NaCl}$ or $\\ce{SO4^{2-}}$", "Plain Unicode": "Na⁺ + Cl⁻ → NaCl", "Example": "Oxidation state of sulfur in $\\ce{SO4^{2-}}$" },
+  { "Subject": "Chemistry", "Concept": "Reaction Conditions (Heat)", "LaTeX Syntax": "$\\ce{CaCO3 ->[\\Delta] CaO + CO2 ^}$", "Plain Unicode": "CaCO₃ →(heat) CaO + CO₂↑", "Example": "Decomposition of $\\ce{CaCO3}$ under heat $\\Delta$" },
+  { "Subject": "Physics", "Concept": "Newton's 2nd Law", "LaTeX Syntax": "$F = ma$ or $\\vec{F} = m\\vec{a}$", "Plain Unicode": "F = ma (N = kg·m/s²)", "Example": "Force required for $m=1000\\text{ kg}, a=2.5\\text{ m/s}^2$" },
+  { "Subject": "Physics", "Concept": "2nd Equation of Motion", "LaTeX Syntax": "$S = v_i t + \\frac{1}{2}at^2$", "Plain Unicode": "S = vi·t + 0.5·a·t²", "Example": "Derive $S = v_i t + \\frac{1}{2}at^2$" },
+  { "Subject": "Physics", "Concept": "3rd Equation of Motion", "LaTeX Syntax": "$2aS = v_f^2 - v_i^2$", "Plain Unicode": "2aS = vf² - vi²", "Example": "Calculate acceleration using $2aS = v_f^2 - v_i^2$" },
+  { "Subject": "Physics", "Concept": "Kinetic Energy", "LaTeX Syntax": "$E_k = \\frac{1}{2}mv^2$", "Plain Unicode": "Ek = 1/2·m·v²", "Example": "Kinetic energy of $2\\text{ kg}$ object at $10\\text{ m/s}$" },
+  { "Subject": "Physics", "Concept": "Ohm's Law & Power", "LaTeX Syntax": "$V = IR$ and $P = \\frac{V^2}{R}$", "Plain Unicode": "V = IR and P = V²/R", "Example": "Find resistance using $R = \\frac{V^2}{P}$" },
+  { "Subject": "Physics", "Concept": "Waves & Time Period", "LaTeX Syntax": "$v = f\\lambda$ and $T = 2\\pi\\sqrt{\\frac{l}{g}}$", "Plain Unicode": "v = f·λ and T = 2π√(l/g)", "Example": "Time period of pendulum of length $1\\text{ m}$" }
+];
+const wsEqGuide = XLSX.utils.json_to_sheet(equationGuideRows);
+XLSX.utils.book_append_sheet(wb, wsEqGuide, "Equations_Syntax_Guide");
+
 const excelOutPath = path.join(ROOT_DIR, 'Global_Questions_Master_Template.xlsx');
 XLSX.writeFile(wb, excelOutPath);
 console.log(`✅ Created Master Excel Template at: ${excelOutPath}`);

@@ -106,46 +106,90 @@ def extract_download_sources(page_url):
         return []
 
 def download_drive_file(file_id, dest_path):
-    """Downloads Google Drive file with automatic token confirmation."""
-    url = f"https://docs.google.com/uc?export=download&id={file_id}"
-    try:
-        resp = session.get(url, stream=True, timeout=25)
-        token = None
-        for k, v in resp.cookies.items():
-            if k.startswith('download_warning'):
-                token = v
-                break
-        if not token:
-            m = re.search(r'confirm=([0-9A-Za-z_-]+)', resp.text[:2500])
-            if m:
-                token = m.group(1)
-        if token:
-            resp = session.get(url, params={'confirm': token}, stream=True, timeout=30)
+    """Downloads Google Drive file with modern usercontent endpoint, automatic form handling for large files, and strict PDF validation."""
+    endpoints = [
+        f"https://drive.usercontent.google.com/download?id={file_id}&export=download&authuser=0",
+        f"https://docs.google.com/uc?export=download&id={file_id}"
+    ]
+    
+    for url in endpoints:
+        try:
+            resp = session.get(url, stream=True, timeout=30)
+            chunk = next(resp.iter_content(2048), b'')
             
-        chunk = next(resp.iter_content(2048), b'')
-        if b'%PDF' in chunk or resp.headers.get('content-type') == 'application/pdf' or len(chunk) > 500:
-            with open(dest_path, 'wb') as f:
-                f.write(chunk)
-                for chk in resp.iter_content(65536):
-                    if chk:
-                        f.write(chk)
-            return os.path.exists(dest_path) and os.path.getsize(dest_path) > 15000
-        return False
-    except Exception:
-        return False
+            # 1. Direct PDF stream
+            if chunk.startswith(b'%PDF') or b'%PDF' in chunk[:1024]:
+                with open(dest_path, 'wb') as f:
+                    f.write(chunk)
+                    for chk in resp.iter_content(65536):
+                        if chk:
+                            f.write(chk)
+                if is_valid_pdf_file(dest_path):
+                    return True
+                    
+            # 2. Virus scan warning HTML page with download form
+            html_snippet = chunk.decode('utf-8', errors='ignore') + resp.text[:4000]
+            forms = re.findall(r'<form[^>]+action="([^"]+)"[^>]*>(.*?)</form>', html_snippet, re.DOTALL)
+            if forms:
+                action, body = forms[0]
+                inputs = dict(re.findall(r'<input[^>]+name="([^"]+)"[^>]+value="([^"]*)"', body))
+                if 'confirm' not in inputs:
+                    inputs['confirm'] = 't'
+                r_confirm = session.get(action, params=inputs, stream=True, timeout=35)
+                c2 = next(r_confirm.iter_content(2048), b'')
+                if c2.startswith(b'%PDF') or b'%PDF' in c2[:1024]:
+                    with open(dest_path, 'wb') as f:
+                        f.write(c2)
+                        for chk in r_confirm.iter_content(65536):
+                            if chk:
+                                f.write(chk)
+                    if is_valid_pdf_file(dest_path):
+                        return True
+                        
+            # Clean up failed artifact
+            if os.path.exists(dest_path):
+                try: os.remove(dest_path)
+                except Exception: pass
+        except Exception:
+            if os.path.exists(dest_path):
+                try: os.remove(dest_path)
+                except Exception: pass
+    return False
 
 def download_direct_pdf(url, dest_path):
+    """Downloads direct PDF URL with strict binary validation."""
     try:
         resp = session.get(url, stream=True, timeout=30)
         chunk = next(resp.iter_content(2048), b'')
-        if b'%PDF' in chunk or resp.headers.get('content-type') == 'application/pdf' or len(chunk) > 500:
+        if b'%PDF' in chunk or (chunk.startswith(b'%PDF-')):
             with open(dest_path, 'wb') as f:
                 f.write(chunk)
                 for chk in resp.iter_content(65536):
                     if chk:
                         f.write(chk)
-            return os.path.exists(dest_path) and os.path.getsize(dest_path) > 15000
+                        
+            if os.path.exists(dest_path) and os.path.getsize(dest_path) > 1000:
+                with open(dest_path, 'rb') as f_chk:
+                    header = f_chk.read(1024)
+                    if b'%PDF' in header:
+                        return True
+        if os.path.exists(dest_path):
+            try: os.remove(dest_path)
+            except Exception: pass
         return False
+    except Exception:
+        if os.path.exists(dest_path):
+            try: os.remove(dest_path)
+            except Exception: pass
+        return False
+
+def is_valid_pdf_file(path):
+    if not os.path.exists(path) or os.path.getsize(path) < 1000:
+        return False
+    try:
+        with open(path, 'rb') as f:
+            header = f.read(1024)
+            return b'%PDF' in header
     except Exception:
         return False
 
@@ -202,8 +246,8 @@ def run_download_worker(selected_classes, selected_subjects, dest_dir):
         os.makedirs(subj_dir, exist_ok=True)
         dest_path = os.path.join(subj_dir, filename)
         
-        # Skip if already exists and valid (>15KB)
-        if os.path.exists(dest_path) and os.path.getsize(dest_path) > 15000:
+        # Skip if already exists and is a genuine valid PDF
+        if is_valid_pdf_file(dest_path):
             with state_lock:
                 download_state["completed_files"] += 1
                 download_state["skipped_files"] += 1

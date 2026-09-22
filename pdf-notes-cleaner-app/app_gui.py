@@ -43,7 +43,7 @@ class PDFNotesCleanerApp(tk.Tk):
         self.clean_hf_var = tk.BooleanVar(value=True)
         self.clean_wm_var = tk.BooleanVar(value=True)
         self.apply_wm_var = tk.BooleanVar(value=True)
-        self.add_blank_page_var = tk.BooleanVar(value=False)
+        self.duplicate_first_page_var = tk.BooleanVar(value=True)
         self.merge_all_var = tk.BooleanVar(value=True)
         
         # Tab 1: Web Scraper
@@ -126,7 +126,7 @@ class PDFNotesCleanerApp(tk.Tk):
         ttk.Checkbutton(ctrl_row, text="Whiten Header/Footer", variable=self.clean_hf_var).pack(side="left", padx=(10, 8))
         ttk.Checkbutton(ctrl_row, text="Remove Old Watermark", variable=self.clean_wm_var).pack(side="left", padx=(0, 8))
         ttk.Checkbutton(ctrl_row, text="Apply Brand Logo", variable=self.apply_wm_var).pack(side="left", padx=(0, 8))
-        ttk.Checkbutton(ctrl_row, text="Add Blank 1st Page", variable=self.add_blank_page_var).pack(side="left")
+        ttk.Checkbutton(ctrl_row, text="Duplicate 1st Page", variable=self.duplicate_first_page_var).pack(side="left")
 
         # Tabs Notebook
         self.notebook = ttk.Notebook(self)
@@ -387,7 +387,7 @@ class PDFNotesCleanerApp(tk.Tk):
                 
                 if downloaded and os.path.exists(raw_path):
                     self.log(f"  🧹 Cleaning headers, footers & applying watermark...")
-                    pages = process_and_watermark_pdf(raw_path, clean_path, logo_img, opacity, clean_hf, clean_wm, add_first_blank_page=self.add_blank_page_var.get())
+                    pages = process_and_watermark_pdf(raw_path, clean_path, logo_img, opacity, clean_hf, clean_wm, duplicate_first_page=self.duplicate_first_page_var.get())
                     total_pages_count += pages
                     cleaned_files.append((unit_num, item_title, clean_path, pages))
                     self.log(f"  ✅ Saved: {clean_name} ({pages} pages)")
@@ -486,7 +486,7 @@ class PDFNotesCleanerApp(tk.Tk):
                 self.log(f"[{idx}/{len(files)}] Cleaning & Watermarking: {fname}...")
                 self.lbl_status.config(text=f"Cleaning [{idx}/{len(files)}]: {fname}...")
                 
-                pages = process_and_watermark_pdf(fpath, out_path, logo_img, opacity, clean_hf, clean_wm, add_first_blank_page=self.add_blank_page_var.get())
+                pages = process_and_watermark_pdf(fpath, out_path, logo_img, opacity, clean_hf, clean_wm, duplicate_first_page=self.duplicate_first_page_var.get())
                 total_pages += pages
                 cleaned_list.append((fname, out_path, pages))
                 

@@ -302,10 +302,10 @@ def scrape_all_download_items(main_url, log_cb=None):
 
 def process_and_watermark_pdf(input_path, output_path, logo_img=None, opacity=0.15, 
                               remove_header_footer=True, remove_watermark=True,
-                              add_first_blank_page=False):
+                              duplicate_first_page=True):
     """
     Cleans third-party headers/footers, strips existing background watermarks, 
-    applies a semi-transparent brand logo, and optionally adds a blank first page.
+    applies a semi-transparent brand logo, and optionally duplicates the real first page.
     """
     doc = pymupdf.open(input_path)
     new_doc = pymupdf.open()
@@ -315,15 +315,11 @@ def process_and_watermark_pdf(input_path, output_path, logo_img=None, opacity=0.
         doc.close()
         new_doc.close()
         return 0
-        
-    # 1. Prepend an empty blank page as the first page of the notes if requested
-    if add_first_blank_page:
-        first_rect = doc[0].rect
-        blank_p = new_doc.new_page(width=first_rect.width, height=first_rect.height)
-        blank_p.draw_rect(blank_p.rect, color=(1, 1, 1), fill=(1, 1, 1))
     
     # If no modifications requested, insert source pages directly
     if not remove_header_footer and not remove_watermark and (logo_img is None or opacity <= 0):
+        if duplicate_first_page:
+            new_doc.insert_pdf(doc, from_page=0, to_page=0)
         new_doc.insert_pdf(doc)
         new_doc.save(output_path, deflate=True)
         final_count = len(new_doc)
@@ -338,7 +334,9 @@ def process_and_watermark_pdf(input_path, output_path, logo_img=None, opacity=0.
         a = a.point(lambda p: int(p * opacity))
         wm_ready = Image.merge("RGBA", (r, g, b, a))
         
-    for p_idx in range(total_pages):
+    pages_to_process = ([0] if duplicate_first_page else []) + list(range(total_pages))
+    
+    for p_idx in pages_to_process:
         page = doc[p_idx]
         rect = page.rect
         

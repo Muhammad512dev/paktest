@@ -43,7 +43,7 @@ class PDFNotesCleanerApp(tk.Tk):
         self.clean_hf_var = tk.BooleanVar(value=True)
         self.clean_wm_var = tk.BooleanVar(value=True)
         self.apply_wm_var = tk.BooleanVar(value=True)
-        self.add_blank_page_var = tk.BooleanVar(value=True)
+        self.add_blank_page_var = tk.BooleanVar(value=False)
         self.merge_all_var = tk.BooleanVar(value=True)
         
         # Tab 1: Web Scraper

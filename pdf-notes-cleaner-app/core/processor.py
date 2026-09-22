@@ -302,7 +302,7 @@ def scrape_all_download_items(main_url, log_cb=None):
 
 def process_and_watermark_pdf(input_path, output_path, logo_img=None, opacity=0.15, 
                               remove_header_footer=True, remove_watermark=True,
-                              add_first_blank_page=True):
+                              add_first_blank_page=False):
     """
     Cleans third-party headers/footers, strips existing background watermarks, 
     applies a semi-transparent brand logo, and optionally adds a blank first page.

@@ -316,15 +316,14 @@ def process_and_watermark_pdf(input_path, output_path, logo_img=None, opacity=0.
         new_doc.close()
         return 0
     
-    # If no modifications requested, insert source pages directly
+    # If no modifications requested, duplicate/save directly without re-encoding
     if not remove_header_footer and not remove_watermark and (logo_img is None or opacity <= 0):
         if duplicate_first_page:
-            new_doc.insert_pdf(doc, from_page=0, to_page=0)
-        new_doc.insert_pdf(doc)
-        new_doc.save(output_path, deflate=True)
-        final_count = len(new_doc)
-        new_doc.close()
+            doc.select([0] + list(range(total_pages)))
+        doc.save(output_path, garbage=4, deflate=True, clean=True)
+        final_count = len(doc)
         doc.close()
+        new_doc.close()
         return final_count
 
     wm_ready = None

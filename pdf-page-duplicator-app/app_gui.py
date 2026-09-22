@@ -15,10 +15,8 @@ def natural_sort_key(s):
 
 def duplicate_pdf_page(input_path, output_path, target_page=1, copies=1, insert_pos="after"):
     """
-    Losslessly duplicates a specific page in a PDF and saves the result.
-    target_page: 1-based page number (1 for first page).
-    copies: number of duplicate copies to create.
-    insert_pos: 'after' (right after source page), 'start' (at beginning), 'end' (at end).
+    Losslessly duplicates a specific page in a PDF and saves the result using doc.select().
+    This re-references existing font and image streams, preventing file size inflation and corruption.
     """
     doc = pymupdf.open(input_path)
     total_pages = len(doc)
@@ -27,27 +25,26 @@ def duplicate_pdf_page(input_path, output_path, target_page=1, copies=1, insert_
         return 0
     
     # Clamp target page index (0-based)
-    page_idx = max(0, min(total_pages - 1, target_page - 1))
-    new_doc = pymupdf.open()
+    p_idx = max(0, min(total_pages - 1, target_page - 1))
+    
+    orig_pages = list(range(total_pages))
+    dup_copies = [p_idx] * max(1, copies)
     
     if insert_pos == "start":
-        for _ in range(copies):
-            new_doc.insert_pdf(doc, from_page=page_idx, to_page=page_idx)
-        new_doc.insert_pdf(doc)
+        page_sequence = dup_copies + orig_pages
     elif insert_pos == "end":
-        new_doc.insert_pdf(doc)
-        for _ in range(copies):
-            new_doc.insert_pdf(doc, from_page=page_idx, to_page=page_idx)
+        page_sequence = orig_pages + dup_copies
     else: # "after"
-        for i in range(total_pages):
-            new_doc.insert_pdf(doc, from_page=i, to_page=i)
-            if i == page_idx:
-                for _ in range(copies):
-                    new_doc.insert_pdf(doc, from_page=page_idx, to_page=page_idx)
-                    
-    new_doc.save(output_path, deflate=True)
-    final_count = len(new_doc)
-    new_doc.close()
+        page_sequence = orig_pages[:p_idx + 1] + dup_copies + orig_pages[p_idx + 1:]
+        
+    doc.select(page_sequence)
+    
+    out_dir = os.path.dirname(output_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+        
+    doc.save(output_path, garbage=4, deflate=True, clean=True)
+    final_count = len(doc)
     doc.close()
     return final_count
 

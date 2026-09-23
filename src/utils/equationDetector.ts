@@ -283,23 +283,42 @@ export function autoDetectAndFormatEquations(
     .replace(/\bweakacid\b/gi, 'Weak acid')
     .replace(/\bstrongbase\b/gi, 'Strong base');
 
-  // 2. Step 2: Normalize unicode superscripts & subscripts (x², H₂SO₄, 10⁻²⁴)
+  // 2. Protect existing LaTeX Math blocks ($...$, $$...$$, \(...\), \[...\]) before auto-detecting formulas
+  const mathPlaceholders: string[] = [];
+  const mathRegex = /(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\])/gs;
+  text = text.replace(mathRegex, (match) => {
+    const cleanMath = match
+      .replace(/\\ce\{\s*\\ce\{/g, '\\ce{')
+      .replace(/\\ce\{\s*\$/g, '\\ce{')
+      .replace(/\$\s*\}/g, '}')
+      .replace(/2ce\{/g, '2');
+    const idx = mathPlaceholders.length;
+    mathPlaceholders.push(cleanMath);
+    return `___MATH_BLOCK_${idx}___`;
+  });
+
+  // 3. Step 2: Normalize unicode superscripts & subscripts (x², H₂SO₄, 10⁻²⁴)
   text = normalizeUnicodeScripts(text);
 
-  // 3. Step 3: Detect & format chemical reactions & formulas
+  // 4. Step 3: Detect & format chemical reactions & formulas
   text = formatChemicalReactions(text);
   text = formatChemicalFormulas(text);
 
-  // 4. Step 4: Detect & format roots, radicals and fractions
+  // 5. Step 4: Detect & format roots, radicals and fractions
   text = formatRadicals(text);
 
-  // 5. Step 5: Detect & format Greek letters and math operators
+  // 6. Step 5: Detect & format Greek letters and math operators
   text = formatGreekAndSymbols(text);
 
-  // 6. Step 6: Detect algebraic equations & units (mol^{-1})
+  // 7. Step 6: Detect algebraic equations & units (mol^{-1})
   text = formatAlgebraicEquations(text);
 
-  // 7. Step 7: Clean up delimiters
+  // 8. Restore protected math blocks
+  text = text.replace(/___MATH_BLOCK_(\d+)___/g, (_m, idx) => {
+    return mathPlaceholders[parseInt(idx, 10)] || '';
+  });
+
+  // 9. Step 7: Clean up delimiters
   text = normalizeDelimiters(text);
 
   return text.trim();

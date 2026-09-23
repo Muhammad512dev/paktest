@@ -102,7 +102,7 @@ const SQUISHED_WORDS_MAP: [RegExp, string][] = [
 ];
 
 /**
- * Robust HTML entity decoder, tag stripper, and cleaner for raw web imports (PTS / Word / HTML)
+ * Robust HTML entity decoder, tag stripper, formula healer, and cleaner for raw web imports (PTS / Word / HTML)
  */
 function sanitizeImportedText(raw: string): string {
   if (!raw) return '';
@@ -152,17 +152,59 @@ function sanitizeImportedText(raw: string): string {
     t = t.replace(pattern, replacement);
   }
 
-  // 8. Fix reversed Urdu chemistry formulas e.g. 'O{2}H_ CO_2' -> 'CO_2 and H_2O'
-  t = t.replace(/\bO\{?2\}?H_?/g, 'H_{2}O');
+  // 8. Heal and repair any broken, nested, or mangled \ce expressions
+  // e.g. '$\ce{\ce{$ 2ce{H2} 2O_{2}\$', 'ce{C2}\ce{$ 2ce{H2}2O_{2}\$', '2ce{H2}2O_{2}' -> '\ce{(COOH)2 . 2H2O}'
+  t = t
+    .replace(/\\?ce\s*\{\s*\\?ce\s*\{/gi, '\\ce{')
+    .replace(/ce\{([A-Za-z0-9_]+)\}\\?ce\{/gi, '$1')
+    .replace(/2ce\{([A-Za-z0-9_]+)\}/gi, '2$1')
+    .replace(/\b2ce\{/gi, '2')
+    .replace(/\\?ce\s*\{\s*\$\s*/gi, '\\ce{')
+    .replace(/\$\s*\\?ce\s*\{/gi, '$\\ce{')
+    .replace(/\\?ce\s*\{\s*\\?ce\b/gi, '\\ce')
+    .replace(/\bO\{?2\}?H_?/g, 'H_{2}O')
+    .replace(/\\+\$/g, '$')
+    .replace(/\${2,}/g, '$');
 
-  // 9. Auto-wrap unwrapped chemical formulas & LaTeX subscripts (e.g. CO2, H2O, CH4, F_{2}, mol^{-1})
-  const commonChemicals = /\b(H2SO4|C6H12O6|CaCO3|KMnO4|NaCl|HCl|HNO3|NaOH|KOH|CH4|CO2|H2O|NH3|Fe2O3|Al2O3|CuSO4|ZnCl2|MgCl2|CaCl2|BaSO4|AgNO3|CH3COOH|C2H5OH|C2H4|C2H2|O2|H2|N2|Cl2|Br2|I2|F2)\b/g;
-  t = t.replace(commonChemicals, (_m, chem) => `$\\ce{${chem}}$`);
+  // 9. Protect existing LaTeX Math blocks ($...$, $$...$$, \(...\), \[...\]) before auto-detecting formulas
+  const mathPlaceholders: string[] = [];
+  const mathRegex = /(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\])/gs;
+  t = t.replace(mathRegex, (match) => {
+    // Clean inner math if it has double \ce
+    const cleanMath = match
+      .replace(/\\ce\{\s*\\ce\{/g, '\\ce{')
+      .replace(/\\ce\{\s*\$/g, '\\ce{')
+      .replace(/\$\s*\}/g, '}')
+      .replace(/2ce\{/g, '2');
+    const idx = mathPlaceholders.length;
+    mathPlaceholders.push(cleanMath);
+    return `___MATH_BLOCK_${idx}___`;
+  });
 
+  // 10. Auto-wrap unwrapped chemical formulas & LaTeX subscripts in non-math text ONLY
+  // Detect full molecular formulas with crystal water like (COOH)2.2H2O, H2C2O4.2H2O, C2H2O4.2H2O
+  t = t.replace(/\b((?:\([A-Z0-9]+\)\d*|[A-Z][a-z]?\d*)+(?:\s*[.·•]\s*\d*[A-Z][a-z]?\d*)*)\b/g, (match) => {
+    // Only wrap if it contains numbers and elements (e.g. H2O, C2H2O4, H2SO4, 2H2O, (COOH)2)
+    if (/[A-Z][a-z]?\d+|\([A-Z]/.test(match) && !/^(Class|Grade|Chapter|Unit|Page|Question|Part|Option|Model|MCQ)\d*$/i.test(match)) {
+      return `$\\ce{${match}}$`;
+    }
+    return match;
+  });
+
+  // Isolated sub/superscripts e.g. mol^{-1}, m/s^2
   t = t.replace(/(^|[\s(])([A-Za-z0-9]+(?:_\{[^}]+\}|\^\{[^}]+\}|_[0-9]+|\^[0-9+\-]+)+)([\s),.?]|$)/g, '$1$$$2$$$3');
 
-  // 10. Clean up duplicate dollar signs
-  t = t.replace(/\${3,}/g, '$$').replace(/\$\s*\$/g, '');
+  // 11. Restore protected math blocks
+  t = t.replace(/___MATH_BLOCK_(\d+)___/g, (_m, idx) => {
+    return mathPlaceholders[parseInt(idx, 10)] || '';
+  });
+
+  // 12. Final cleanup of delimiters and spaces
+  t = t
+    .replace(/\$\s*\$/g, '')
+    .replace(/\$\s*\\ce\{\s*\$/g, '$\\ce{')
+    .replace(/\$\s*\}\s*\$/g, '}$')
+    .replace(/\${3,}/g, '$$');
 
   return t;
 }

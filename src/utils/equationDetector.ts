@@ -40,9 +40,6 @@ const SYMBOLS_MAP: Record<string, string> = {
   '↑': '^', '↓': 'v', '°': '^\\circ'
 };
 
-// Common known chemical formulas regex
-const KNOWN_CHEMICAL_FORMULAS = /\b([A-Z][a-z]?\d*(?:[A-Z][a-z]?\d*)+(?:[+\-]\d*|\^[+\-]\d*|\([A-Za-z0-9]+\)\d*)?)\b/g;
-
 /**
  * Converts HTML subscript/superscript tags and entities into plain LaTeX syntax
  */
@@ -50,15 +47,33 @@ export function cleanHtmlMathEntities(text: string): string {
   if (!text) return '';
 
   return text
-    // Replace MathML tags if present
+    // 1. Decode entities
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    
+    // 2. Convert PTS / Web SVG equation arrows into clean LaTeX reaction arrows
+    .replace(/<img[^>]*src=["'][^"']*paktestsolution\.com\/Equations\/[^"']*["'][^>]*>/gi, ' -> ')
+    .replace(/<img[^>]*src=["'][^"']*(?:arrow|reaction|chem)[^"']*["'][^>]*>/gi, ' -> ')
+
+    // 3. Replace MathML tags if present
     .replace(/<math[^>]*>(.*?)<\/math>/gis, (_match, inner) => {
-      // Basic MathML text extract
       return inner.replace(/<[^>]+>/g, ' ').trim();
     })
-    // Superscript & Subscript tags
+
+    // 4. Superscript & Subscript tags
     .replace(/<sup[^>]*>(.*?)<\/sup>/gi, '^{$1}')
     .replace(/<sub[^>]*>(.*?)<\/sub>/gi, '_{$1}')
-    // HTML entities
+
+    // 5. Strip useless structural HTML tags (<p>, <p dir="rtl">, </p>, <span>, </span>, <div>, </div>)
+    .replace(/<\/?(?:p|div|span)[^>]*>/gi, ' ')
+    .replace(/<\s*\/\s*p\s*\d*>/gi, ' ') // handles mangled '< /p 2>'
+    .replace(/<br\s*[\/]?>/gi, '\n')
+    
+    // 6. Scientific HTML entities
     .replace(/&plusmn;/gi, '±')
     .replace(/&times;/gi, '×')
     .replace(/&divide;/gi, '÷')
@@ -83,12 +98,7 @@ export function cleanHtmlMathEntities(text: string): string {
     .replace(/&rarr;/gi, '→')
     .replace(/&harr;/gi, '↔')
     .replace(/&deg;/gi, '°')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>');
+    .replace(/\s+/g, ' ');
 }
 
 /**
@@ -101,13 +111,12 @@ export function normalizeUnicodeScripts(text: string): string {
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     if (SUPERSCRIPTS[char]) {
-      // Check if preceding char was already part of a power block
       let supSeq = '';
       while (i < text.length && SUPERSCRIPTS[text[i]]) {
         supSeq += SUPERSCRIPTS[text[i]];
         i++;
       }
-      i--; // adjust loop index
+      i--;
       out += supSeq.length > 1 ? `^{${supSeq}}` : `^${supSeq}`;
     } else if (SUBSCRIPTS[char]) {
       let subSeq = '';
@@ -125,30 +134,33 @@ export function normalizeUnicodeScripts(text: string): string {
 }
 
 /**
- * Detects chemical reactions (e.g. 2H2 + O2 -> 2H2O, CaCO3 -> CaO + CO2)
+ * Detects chemical reactions (e.g. 2H2 + O2 -> 2H2O, CH4(g) -> C(g) + 2H2(g))
  */
 function formatChemicalReactions(text: string): string {
-  // Reaction arrows: ->, -->, <=>, ⇌, →
-  const reactionRegex = /([A-Z0-9\(\)]+(?:_[0-9]+|\^[0-9+\-]+)?(?:\s*\+\s*[A-Z0-9\(\)]+(?:_[0-9]+|\^[0-9+\-]+)?)*)\s*(?:->|-->|=>|⇌|<=>|→)\s*([A-Z0-9\(\)]+(?:_[0-9]+|\^[0-9+\-]+)?(?:\s*\+\s*[A-Z0-9\(\)]+(?:_[0-9]+|\^[0-9+\-]+)?)*)/g;
+  const reactionRegex = /([A-Z0-9\(\)]+(?:_\{[^\}]+\}|_[0-9]+|\^\{[^\}]+\}|\^[0-9+\-]+)?(?:\s*\+\s*[A-Z0-9\(\)]+(?:_\{[^\}]+\}|_[0-9]+|\^\{[^\}]+\}|\^[0-9+\-]+)?)*)\s*(?:->|-->|=>|⇌|<=>|→)\s*([A-Z0-9\(\)]+(?:_\{[^\}]+\}|_[0-9]+|\^\{[^\}]+\}|\^[0-9+\-]+)?(?:\s*\+\s*[A-Z0-9\(\)]+(?:_\{[^\}]+\}|_[0-9]+|\^\{[^\}]+\}|\^[0-9+\-]+)?)*)/g;
 
   return text.replace(reactionRegex, (match, reactants, products) => {
     // Clean up reactants & products for mhchem
-    const cleanReactants = reactants.replace(/_([0-9]+)/g, '$1').replace(/\^([0-9+\-]+)/g, '$1');
-    const cleanProducts = products.replace(/_([0-9]+)/g, '$1').replace(/\^([0-9+\-]+)/g, '$1');
+    const cleanReactants = reactants.replace(/_\{([^\}]+)\}/g, '$1').replace(/_([0-9]+)/g, '$1').replace(/\^\{([^\}]+)\}/g, '$1');
+    const cleanProducts = products.replace(/_\{([^\}]+)\}/g, '$1').replace(/_([0-9]+)/g, '$1').replace(/\^\{([^\}]+)\}/g, '$1');
     const arrow = match.includes('<=>') || match.includes('⇌') ? '<=>' : '->';
     return `$\\ce{${cleanReactants.trim()} ${arrow} ${cleanProducts.trim()}}$`;
   });
 }
 
 /**
- * Detects standalone chemical formulas like H2SO4, CaCO3, KMnO4, NaCl, CH4, CO2, H2O
+ * Detects standalone chemical formulas like H2SO4, CaCO3, KMnO4, F_{2}, Cl_{2}
  */
 function formatChemicalFormulas(text: string): string {
-  // Common valid formulas that shouldn't conflict with normal English words
+  // Matches F_{2}, Cl_{2}, Br_{2}, I_{2}, CH_{4(g)}, etc.
+  text = text.replace(/\b([A-Z][a-z]?)(?:_\{(\d+)\}|_(\d+))\b/g, (_m, elem, sub1, sub2) => {
+    const sub = sub1 || sub2;
+    return `$\\ce{${elem}${sub}}$`;
+  });
+
   const commonChemicals = /\b(H2SO4|C6H12O6|CaCO3|KMnO4|NaCl|HCl|HNO3|NaOH|KOH|CH4|CO2|H2O|NH3|SO4\^?\{?2\-?\}?|NO3\^?\{?1\-?\}?|Fe2O3|Al2O3|CuSO4|ZnCl2|MgCl2|CaCl2|BaSO4|AgNO3|CH3COOH|C2H5OH|C2H4|C2H2|O2|H2|N2|Cl2|Br2|I2|F2)\b/g;
 
   return text.replace(commonChemicals, (match) => {
-    // If already inside $...$, don't re-wrap
     const clean = match.replace(/_([0-9]+)/g, '$1').replace(/\^\{?([0-9+\-]+)\}?/g, '^{$1}');
     return `$\\ce{${clean}}$`;
   });
@@ -159,33 +171,26 @@ function formatChemicalFormulas(text: string): string {
  */
 function formatRadicals(text: string): string {
   return text
-    // √(expression) -> \sqrt{expression}
     .replace(/√\s*\(([^)]+)\)/g, '$\\sqrt{$1}$')
-    // √[3](expression) or ∛(expression)
     .replace(/∛\s*\(([^)]+)\)/g, '$\\sqrt[3]{$1}$')
     .replace(/∛\s*([A-Za-z0-9]+)/g, '$\\sqrt[3]{$1}$')
-    // √single_identifier -> \sqrt{identifier}
     .replace(/√\s*([A-Za-z0-9]+)/g, '$\\sqrt{$1}$')
-    // sqrt(expression)
     .replace(/\bsqrt\s*\(([^)]+)\)/gi, '$\\sqrt{$1}$');
 }
 
 /**
- * Detects quadratic formulas, equations with equals and powers (e.g. ax^2 + bx + c = 0, y = mx + c)
+ * Detects algebraic equations, units with powers (e.g. kj mol^{-1}, m/s^2)
  */
 function formatAlgebraicEquations(text: string): string {
-  // Matches expressions with exponents / relations like: x^2 + 5x + 6 = 0, 2x - 3y = 7, etc.
-  const equationPattern = /\b([a-zA-Z0-9\s+\-*\/^()_]{2,})\s*([=<>≤≥≠])\s*([a-zA-Z0-9\s+\-*\/^()_]{1,})\b/g;
-
-  return text.replace(equationPattern, (match, left, op, right) => {
-    // Only format if contains math indicators like ^, _, +, *, /, or numbers mixed with variables
-    const hasMathIndicator = /[\^_\/\*]|\d+[a-zA-Z]|[a-zA-Z]\d+/.test(match);
-    if (!hasMathIndicator) return match;
-
-    // Convert op if needed
-    const opLatex = SYMBOLS_MAP[op] || op;
-    return `$${left.trim()} ${opLatex} ${right.trim()}$`;
+  // Units with powers like kj mol^{-1}, kg m^{-2}
+  text = text.replace(/\b(\d+)?\s*([a-zA-Z]+)\s+([a-zA-Z]+(?:\^\{[^\}]+\}|\^[0-9+\-]+))\b/g, (_m, num, u1, u2) => {
+    return num ? `$${num}\\text{ ${u1} }${u2}$` : `$${u1}\\text{ }${u2}$`;
   });
+
+  // Isolated sub/superscripts e.g. mol^{-1}
+  text = text.replace(/(^|[^$])\b([a-zA-Z]+(?:\^\{[^\}]+\}|\^[0-9+\-]+|_\{[^\}]+\}|_[0-9]+))\b([^$]|$)/g, '$1$$$2$$$3');
+
+  return text;
 }
 
 /**
@@ -213,12 +218,9 @@ function normalizeDelimiters(text: string): string {
   if (!text) return '';
 
   return text
-    // Replace quadruple or triple dollars
     .replace(/\${3,}/g, '$$')
-    // Merge closely joined inline math: $a$ + $b$ -> $a + b$
     .replace(/\$\s*([+\-*\/=<>])\s*\$/g, ' $1 ')
     .replace(/\$\s*\$/g, '')
-    // Ensure clean spacing around single dollar signs
     .replace(/([^\s$])\$([^\$])/g, '$1 $$2')
     .replace(/([^\$])\$([^\s$])/g, '$1$ $2');
 }
@@ -233,31 +235,26 @@ export function autoDetectAndFormatEquations(
 ): string {
   if (!rawText || typeof rawText !== 'string') return '';
 
-  // 1. If text is already strictly formatted with LaTeX ($...$), preserve it
-  if (/\$[^\$]+\$/.test(rawText) && !/<[a-z][\s\S]*>/i.test(rawText) && !/[²³⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉√±×÷⇌]/.test(rawText)) {
-    return rawText;
-  }
-
-  // 2. Step 1: Clean HTML tags and entities
+  // 1. Step 1: Clean HTML tags, decode entities, and convert PTS SVG equation images
   let text = cleanHtmlMathEntities(rawText);
 
-  // 3. Step 2: Normalize unicode superscripts & subscripts (x², H₂SO₄, 10⁻²⁴)
+  // 2. Step 2: Normalize unicode superscripts & subscripts (x², H₂SO₄, 10⁻²⁴)
   text = normalizeUnicodeScripts(text);
 
-  // 4. Step 3: Detect & format chemical reactions & formulas
+  // 3. Step 3: Detect & format chemical reactions & formulas
   text = formatChemicalReactions(text);
   text = formatChemicalFormulas(text);
 
-  // 5. Step 4: Detect & format roots, radicals and fractions
+  // 4. Step 4: Detect & format roots, radicals and fractions
   text = formatRadicals(text);
 
-  // 6. Step 5: Detect & format Greek letters and math operators
+  // 5. Step 5: Detect & format Greek letters and math operators
   text = formatGreekAndSymbols(text);
 
-  // 7. Step 6: Detect algebraic equations
+  // 6. Step 6: Detect algebraic equations & units (mol^{-1})
   text = formatAlgebraicEquations(text);
 
-  // 8. Step 7: Clean up delimiters
+  // 7. Step 7: Clean up delimiters
   text = normalizeDelimiters(text);
 
   return text.trim();

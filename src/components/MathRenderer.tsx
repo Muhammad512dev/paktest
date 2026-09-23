@@ -30,18 +30,18 @@ function sanitizeImportedText(raw: string): string {
   // 2. Convert PTS / Web SVG equation arrows into clean LaTeX arrows
   t = t
     .replace(/<img[^>]*src=["'][^"']*paktestsolution\.com\/Equations\/[^"']*["'][^>]*>/gi, ' \\rightarrow ')
-    .replace(/<img[^>]*src=["'][^"']*(?:arrow|reaction)[^"']*["'][^>]*>/gi, ' \\rightarrow ');
+    .replace(/<img[^>]*src=["'][^"']*(?:arrow|reaction|chem)[^"']*["'][^>]*>/gi, ' \\rightarrow ');
 
   // 3. Strip meaningless structural HTML tags (<p>, </p>, <p dir="rtl">, <span>, </span>, <div>, </div>)
   t = t
     .replace(/<\/?(?:p|div|span)[^>]*>/gi, ' ')
+    .replace(/<\s*\/\s*p\s*\d*>/gi, ' ')
     .replace(/<br\s*[\/]?>/gi, '\n')
     .replace(/\s+/g, ' ')
     .trim();
 
-  // 4. Auto-wrap unwrapped LaTeX subscripts and superscripts like mol^{-1}, F_{2}, CH_{4(g)}, b^2-4ac
-  const subSupRegex = new RegExp('(^|[^$])\\b([A-Za-z0-9()]+(?:_\\{[^}]+\\}|\\^\\{[^}]+\\}|_[0-9]+|\\^[0-9+-]+)+(?:\\s*[+*/=→-]\\s*[A-Za-z0-9()]+(?:_\\{[^}]+\\}|\\^\\{[^}]+\\}|_[0-9]+|\\^[0-9+-]+)*)\\b([^$]|$)', 'g');
-  t = t.replace(subSupRegex, (_m: string, p1: string, p2: string, p3: string) => p1 + '$' + p2 + '$' + p3);
+  // 4. Auto-wrap unwrapped LaTeX subscripts and superscripts like mol^{-1}, F_{2}, CH_{4(g)}
+  t = t.replace(/(^|[\s(])([A-Za-z0-9]+(?:_\{[^}]+\}|\^\{[^}]+\}|_[0-9]+|\^[0-9+\-]+)+)([\s),.?]|$)/g, '$1$$$2$$$3');
 
   // 5. Clean up duplicate dollar signs
   t = t.replace(/\${3,}/g, '$$').replace(/\$\s*\$/g, '');

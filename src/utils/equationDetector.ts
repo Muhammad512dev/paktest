@@ -219,7 +219,7 @@ function normalizeDelimiters(text: string): string {
 
   return text
     .replace(/\${3,}/g, '$$')
-    .replace(/\$\s*([+\-*\/=<>])\s*\$/g, ' $1 ')
+    .replace(/\$\s*([+*/=<>-])\s*\$/g, ' $1 ')
     .replace(/\$\s*\$/g, '')
     .replace(/([^\s$])\$([^\$])/g, '$1 $$2')
     .replace(/([^\$])\$([^\s$])/g, '$1$ $2');

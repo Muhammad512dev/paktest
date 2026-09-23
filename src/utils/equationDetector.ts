@@ -68,9 +68,11 @@ export function cleanHtmlMathEntities(text: string): string {
     .replace(/<sup[^>]*>(.*?)<\/sup>/gi, '^{$1}')
     .replace(/<sub[^>]*>(.*?)<\/sub>/gi, '_{$1}')
 
-    // 5. Strip useless structural HTML tags (<p>, <p dir="rtl">, </p>, <span>, </span>, <div>, </div>)
-    .replace(/<\/?(?:p|div|span)[^>]*>/gi, ' ')
-    .replace(/<\s*\/\s*p\s*\d*>/gi, ' ') // handles mangled '< /p 2>'
+    // 5. Strip useless structural HTML tags (<p>, <p dir="rtl">, </p>, <p 2>, </p 2>, < /p 2>, < /p>, <span>, </span>, <div>, </div>)
+    .replace(/<\s*\/?\s*p\s*\d*\s*>?/gi, ' ')
+    .replace(/<\s*\/?\s*p[^>]*>/gi, ' ')
+    .replace(/<\s*\/?\s*(?:div|span|strong|em|b|i)\s*[^>]*>/gi, ' ')
+    .replace(/<\s*\/?\s*p.*$/gi, '')
     .replace(/<br\s*[\/]?>/gi, '\n')
     
     // 6. Scientific HTML entities
@@ -98,6 +100,9 @@ export function cleanHtmlMathEntities(text: string): string {
     .replace(/&rarr;/gi, '→')
     .replace(/&harr;/gi, '↔')
     .replace(/&deg;/gi, '°')
+    .replace(/^2\s+(?=[0-9\u0600-\u06FF])/g, '')
+    .replace(/\b2(9\d\d)\b/g, '1$1')
+    .replace(/\bO\{?2\}?H_?/g, 'H_{2}O')
     .replace(/\s+/g, ' ');
 }
 
@@ -237,6 +242,46 @@ export function autoDetectAndFormatEquations(
 
   // 1. Step 1: Clean HTML tags, decode entities, and convert PTS SVG equation images
   let text = cleanHtmlMathEntities(rawText);
+
+  // 1b. Fix corrupted word prefixes where first letter became '2'
+  const CORRUPTED_PREFIXES: [RegExp, string][] = [
+    [/^2lkanes\b/i, 'Alkanes'], [/^2lkenes\b/i, 'Alkenes'], [/^2lkynes\b/i, 'Alkynes'],
+    [/^2oth\s*alkanes\s*and\s*alkenes\b/i, 'Both alkanes and alkenes'],
+    [/^2othalkanesandalkenes\b/i, 'Both alkanes and alkenes'],
+    [/^2oth\s*[a-d]\s*(?:and|&)\s*[a-d]\b/i, 'Both A and B'], [/^2oth\b/i, 'Both'],
+    [/^2cience\b/i, 'Science'], [/^2istology\b/i, 'Histology'], [/^2ociology\b/i, 'Sociology'],
+    [/^2one\s*of\s*these\b/i, 'None of these'], [/^2oneofthese\b/i, 'None of these'], [/^2one\b/i, 'None'],
+    [/^2ll\s*of\s*these\b/i, 'All of these'], [/^2llofthese\b/i, 'All of these'],
+    [/^2ll\s*of\s*the\s*above\b/i, 'All of the above'], [/^2lloftheabove\b/i, 'All of the above'],
+    [/^2llabove\b/i, 'All of the above'], [/^2ll\b/i, 'All'],
+    [/^2eak\s*acid\b/i, 'Weak acid'], [/^2eakacid\b/i, 'Weak acid'], [/^2xplosive\b/i, 'Explosive'],
+    [/^2trong\s*base\b/i, 'Strong base'], [/^2trongbase\b/i, 'Strong base'],
+    [/^2trong\s*acid\b/i, 'Strong acid'], [/^2trongacid\b/i, 'Strong acid'],
+    [/^2eak\s*base\b/i, 'Weak base'], [/^2eakbase\b/i, 'Weak base'],
+    [/^2hysics\b/i, 'Physics'], [/^2hemistry\b/i, 'Chemistry'], [/^2iology\b/i, 'Biology'],
+    [/^2athematics\b/i, 'Mathematics'], [/^2ydrogen\b/i, 'Hydrogen'], [/^2xygen\b/i, 'Oxygen'],
+    [/^2itrogen\b/i, 'Nitrogen'], [/^2arbon\b/i, 'Carbon'], [/^2cid\b/i, 'Acid'],
+    [/^2ase\b/i, 'Base'], [/^2alt\b/i, 'Salt'], [/^2ater\b/i, 'Water'],
+    [/^2lement\b/i, 'Element'], [/^2ompound\b/i, 'Compound'], [/^2ixture\b/i, 'Mixture']
+  ];
+
+  for (const [p, r] of CORRUPTED_PREFIXES) {
+    if (p.test(text)) {
+      text = text.replace(p, r);
+      break;
+    }
+  }
+
+  // 1c. Fix squished words
+  text = text
+    .replace(/\bbothalkanesandalkenes\b/gi, 'Both alkanes and alkenes')
+    .replace(/\bnoneofthese\b/gi, 'None of these')
+    .replace(/\ballofthese\b/gi, 'All of these')
+    .replace(/\balloffthese\b/gi, 'All of these')
+    .replace(/\balloftheabove\b/gi, 'All of the above')
+    .replace(/\ballabove\b/gi, 'All of the above')
+    .replace(/\bweakacid\b/gi, 'Weak acid')
+    .replace(/\bstrongbase\b/gi, 'Strong base');
 
   // 2. Step 2: Normalize unicode superscripts & subscripts (x², H₂SO₄, 10⁻²⁴)
   text = normalizeUnicodeScripts(text);

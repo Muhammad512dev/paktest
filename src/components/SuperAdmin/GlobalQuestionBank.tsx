@@ -18,6 +18,7 @@ import { generateQuestionsAI, translateToUrdu } from '../../services/geminiServi
 import MathRenderer from '../MathRenderer';
 import * as XLSX from 'xlsx';
 import { parseMhtmlToQuestions } from '../../utils/mhtmlParser';
+import { autoDetectAndFormatEquations, autoDetectAndFormatRow } from '../../utils/equationDetector';
 
 const normalizeQuestionType = (type: string): string => {
   const t = (type || '').toLowerCase().trim();
@@ -93,6 +94,7 @@ const GlobalQuestionBank: React.FC = () => {
 
   const [isSourceDropdownOpen, setIsSourceDropdownOpen] = useState(false);
   const [importRows, setImportRows] = useState<any[]>([]);
+  const [autoDetectEquations, setAutoDetectEquations] = useState(true);
   const [batchBoardOverride, setBatchBoardOverride] = useState<string>('');
   const [batchClassOverride, setBatchClassOverride] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -367,8 +369,11 @@ const GlobalQuestionBank: React.FC = () => {
         
         // Use sheet_to_json to parse. defval: '' ensures empty cells come as empty strings
         const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        const processedRows = autoDetectEquations 
+          ? jsonData.map((row: any) => autoDetectAndFormatRow(row))
+          : jsonData;
 
-        setImportRows(jsonData);
+        setImportRows(processedRows);
         setIsImportModalOpen(false);
         setIsSequenceImportModalOpen(false);
         setIsSyncScreenOpen(true);
@@ -393,20 +398,28 @@ const GlobalQuestionBank: React.FC = () => {
         const questionsToImport = Array.isArray(json) ? json : [json];
         
         // Ensure every question has necessary fields for the DB
-        const prepared = questionsToImport.map(q => ({
-          ...q,
-          id: q.id || `q_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`,
-          // Mirror missing language so single-language JSON imports still render in Urdu-only/English-only views
-          text: (q.text || q.textUrdu || ''),
-          textUrdu: (q.textUrdu || q.text || ''),
-          source: q.source || QuestionSource.MODEL_PAPER,
-          medium: q.medium || (q.text && q.textUrdu ? 'Bilingual' : q.textUrdu ? 'Urdu' : 'English'),
-          difficulty: q.difficulty || Difficulty.MEDIUM,
-          marks: q.marks || 1,
-          // Mirror missing options for MCQs
-          options: q.type === 'MCQ' ? ((Array.isArray(q.options) && q.options.length) ? q.options : (Array.isArray(q.optionsUrdu) ? q.optionsUrdu : [])) : q.options,
-          optionsUrdu: q.type === 'MCQ' ? ((Array.isArray(q.optionsUrdu) && q.optionsUrdu.length) ? q.optionsUrdu : (Array.isArray(q.options) ? q.options : [])) : q.optionsUrdu
-        }));
+        const prepared = questionsToImport.map(q => {
+          const rawText = (q.text || q.textUrdu || '');
+          const rawTextUrdu = (q.textUrdu || q.text || '');
+          const text = autoDetectEquations ? autoDetectAndFormatEquations(rawText, { isUrdu: false, subject: q.subject }) : rawText;
+          const textUrdu = autoDetectEquations ? autoDetectAndFormatEquations(rawTextUrdu, { isUrdu: true, subject: q.subject }) : rawTextUrdu;
+          const rawOpts = q.type === 'MCQ' ? ((Array.isArray(q.options) && q.options.length) ? q.options : (Array.isArray(q.optionsUrdu) ? q.optionsUrdu : [])) : q.options;
+          const rawOptsUrdu = q.type === 'MCQ' ? ((Array.isArray(q.optionsUrdu) && q.optionsUrdu.length) ? q.optionsUrdu : (Array.isArray(q.options) ? q.options : [])) : q.optionsUrdu;
+
+          return {
+            ...q,
+            id: q.id || `q_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`,
+            text,
+            textUrdu,
+            source: q.source || QuestionSource.MODEL_PAPER,
+            medium: q.medium || (text && textUrdu ? 'Bilingual' : textUrdu ? 'Urdu' : 'English'),
+            difficulty: q.difficulty || Difficulty.MEDIUM,
+            marks: q.marks || 1,
+            options: autoDetectEquations && Array.isArray(rawOpts) ? rawOpts.map((o: string) => autoDetectAndFormatEquations(o)) : rawOpts,
+            optionsUrdu: autoDetectEquations && Array.isArray(rawOptsUrdu) ? rawOptsUrdu.map((o: string) => autoDetectAndFormatEquations(o, { isUrdu: true })) : rawOptsUrdu,
+            correctAnswer: autoDetectEquations ? autoDetectAndFormatEquations(q.correctAnswer || '') : (q.correctAnswer || '')
+          };
+        });
 
         const res = await addQuestionsBulk(prepared as any);
         const imported = res?.imported ?? prepared.length;
@@ -1450,9 +1463,26 @@ const GlobalQuestionBank: React.FC = () => {
                     </div>
                     <div className="space-y-4">
                        <h4 className="font-bold text-sm text-gray-800 flex items-center gap-2"><Upload size={16} className="text-indigo-600" /> 2. Upload Data</h4>
+                       
+                       {/* Auto Detect Equations Toggle */}
+                       <label className="flex items-center gap-2.5 p-2.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl cursor-pointer hover:bg-amber-100/60 transition-all">
+                          <input 
+                             type="checkbox" 
+                             checked={autoDetectEquations} 
+                             onChange={e => setAutoDetectEquations(e.target.checked)} 
+                             className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                          />
+                          <div className="text-xs">
+                             <span className="font-bold text-amber-950 flex items-center gap-1.5">
+                                <span>⚡</span> Auto-Detect Equations ($...$, \ce&#123;...&#125;)
+                             </span>
+                             <p className="text-[10px] text-amber-700 font-medium">Auto-converts x², H2SO4, 2H2+O2-&gt;2H2O, ±, √, trig & Greek letters</p>
+                          </div>
+                       </label>
+
                        <div 
                           onClick={() => fileInputRef.current?.click()}
-                          className="border-2 border-dashed border-gray-200 rounded-xl py-10 flex flex-col items-center justify-center text-center bg-gray-50/50 group cursor-pointer hover:border-indigo-300"
+                          className="border-2 border-dashed border-gray-200 rounded-xl py-8 flex flex-col items-center justify-center text-center bg-gray-50/50 group cursor-pointer hover:border-indigo-300"
                         >
                           <CloudDownload size={32} className="text-gray-300 mb-2 group-hover:text-indigo-400" />
                           <p className="text-xs font-bold text-gray-700">Choose Excel/CSV/MHTML File</p>

@@ -1,7 +1,4 @@
-/**
- * Parser for MHTML (.mht / .mhtml) files generated from PTS / Web Archives
- * Converts questions, options, math, and chemistry into structured JSON for Question Bank import.
- */
+import { autoDetectAndFormatEquations } from './equationDetector';
 
 export interface ParsedMhtmlQuestion {
   Board: string;
@@ -27,25 +24,11 @@ export interface ParsedMhtmlQuestion {
   ImageURL?: string;
 }
 
-function cleanHtmlContent(str: string): string {
+function cleanHtmlContent(str: string, isUrdu: boolean = false): string {
   if (!str) return '';
   
-  // Normalize mathematical sub/sup or chemical formulas inside tags
-  let cleaned = str
-    .replace(/<sub[^>]*>(.*?)<\/sub>/gi, '_$1')
-    .replace(/<sup[^>]*>(.*?)<\/sup>/gi, '^$1')
-    .replace(/<br\s*[\/]?>/gi, ' ')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  return cleaned;
+  // Use intelligent equation detector to convert html, sub/sup, MathML, unicode and reactions
+  return autoDetectAndFormatEquations(str, { isUrdu });
 }
 
 export function parseMhtmlToQuestions(

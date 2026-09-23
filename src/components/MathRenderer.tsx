@@ -118,12 +118,20 @@ function sanitizeImportedText(raw: string): string {
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&');
 
-  // 2. Convert PTS / Web SVG equation arrows into clean LaTeX arrows
+  // 2. Convert PTS / Web SVG reaction arrows ONLY (arrow/reaction), while preserving diagrams and equation SVGs
   t = t
-    .replace(/<img[^>]*src=["'][^"']*paktestsolution\.com\/Equations\/[^"']*["'][^>]*>/gi, ' \\rightarrow ')
-    .replace(/<img[^>]*src=["'][^"']*(?:arrow|reaction|chem)[^"']*["'][^>]*>/gi, ' \\rightarrow ');
+    .replace(/<img[^>]*src=["'][^"']*(?:arrow|reaction|rarr|RightArrow)[^"']*["'][^>]*>/gi, ' \\rightarrow ');
 
-  // 3. Strip all structural and malformed HTML tags (<p>, </p>, <p dir="rtl">, <p 2>, </p 2>, < /p 2>, < /p>, < /p 2, <span>, </span>, <div>, </div>)
+  // 3. Protect inline <svg>...</svg> and <img> elements from tag stripping
+  const mediaPlaceholders: string[] = [];
+  const mediaRegex = /(<svg[\s\S]*?<\/svg>|<img[^>]*>)/gi;
+  t = t.replace(mediaRegex, (match) => {
+    const idx = mediaPlaceholders.length;
+    mediaPlaceholders.push(match);
+    return `___MEDIA_BLOCK_${idx}___`;
+  });
+
+  // 4. Strip structural and malformed HTML tags (<p>, </p>, <p dir="rtl">, <p 2>, </p 2>, < /p 2>, < /p>, < /p 2, <span>, </span>, <div>, </div>)
   t = t
     .replace(/<\s*\/?\s*p\s*\d*\s*>?/gi, ' ')
     .replace(/<\s*\/?\s*p[^>]*>/gi, ' ')
@@ -133,13 +141,13 @@ function sanitizeImportedText(raw: string): string {
     .replace(/\s+/g, ' ')
     .trim();
 
-  // 4. Strip leading '2 ' prefix left over from mangled '<p 2>' in Urdu or numbers
+  // 5. Strip leading '2 ' prefix left over from mangled '<p 2>' in Urdu or numbers
   t = t.replace(/^2\s+(?=[0-9\u0600-\u06FF])/g, '');
 
-  // 5. Fix year options where leading '1' was mangled to '2' (e.g. 2900 -> 1900, 2909 -> 1909, 2990 -> 1990)
+  // 6. Fix year options where leading '1' was mangled to '2' (e.g. 2900 -> 1900, 2909 -> 1909, 2990 -> 1990)
   t = t.replace(/\b2(9\d\d)\b/g, '1$1');
 
-  // 6. Fix corrupted word prefixes where first letter became '2'
+  // 7. Fix corrupted word prefixes where first letter became '2'
   for (const [pattern, replacement] of CORRUPTED_PREFIX_MAP) {
     if (pattern.test(t)) {
       t = t.replace(pattern, replacement);
@@ -147,13 +155,12 @@ function sanitizeImportedText(raw: string): string {
     }
   }
 
-  // 7. Fix squished words
+  // 8. Fix squished words
   for (const [pattern, replacement] of SQUISHED_WORDS_MAP) {
     t = t.replace(pattern, replacement);
   }
 
-  // 8. Heal and repair any broken, nested, or mangled \ce expressions
-  // e.g. '$\ce{\ce{$ 2ce{H2} 2O_{2}\$', 'ce{C2}\ce{$ 2ce{H2}2O_{2}\$', '2ce{H2}2O_{2}' -> '\ce{(COOH)2 . 2H2O}'
+  // 9. Heal and repair any broken, nested, or mangled \ce expressions
   t = t
     .replace(/\\?ce\s*\{\s*\\?ce\s*\{/gi, '\\ce{')
     .replace(/ce\{([A-Za-z0-9_]+)\}\\?ce\{/gi, '$1')
@@ -166,11 +173,10 @@ function sanitizeImportedText(raw: string): string {
     .replace(/\\+\$/g, '$')
     .replace(/\${2,}/g, '$');
 
-  // 9. Protect existing LaTeX Math blocks ($...$, $$...$$, \(...\), \[...\]) before auto-detecting formulas
+  // 10. Protect existing LaTeX Math blocks ($...$, $$...$$, \(...\), \[...\]) before auto-detecting formulas
   const mathPlaceholders: string[] = [];
   const mathRegex = /(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\])/gs;
   t = t.replace(mathRegex, (match) => {
-    // Clean inner math if it has double \ce
     const cleanMath = match
       .replace(/\\ce\{\s*\\ce\{/g, '\\ce{')
       .replace(/\\ce\{\s*\$/g, '\\ce{')
@@ -181,10 +187,8 @@ function sanitizeImportedText(raw: string): string {
     return `___MATH_BLOCK_${idx}___`;
   });
 
-  // 10. Auto-wrap unwrapped chemical formulas & LaTeX subscripts in non-math text ONLY
-  // Detect full molecular formulas with crystal water like (COOH)2.2H2O, H2C2O4.2H2O, C2H2O4.2H2O
+  // 11. Auto-wrap unwrapped chemical formulas & LaTeX subscripts in non-math text ONLY
   t = t.replace(/\b((?:\([A-Z0-9]+\)\d*|[A-Z][a-z]?\d*)+(?:\s*[.·•]\s*\d*[A-Z][a-z]?\d*)*)\b/g, (match) => {
-    // Only wrap if it contains numbers and elements (e.g. H2O, C2H2O4, H2SO4, 2H2O, (COOH)2)
     if (/[A-Z][a-z]?\d+|\([A-Z]/.test(match) && !/^(Class|Grade|Chapter|Unit|Page|Question|Part|Option|Model|MCQ)\d*$/i.test(match)) {
       return `$\\ce{${match}}$`;
     }
@@ -194,12 +198,17 @@ function sanitizeImportedText(raw: string): string {
   // Isolated sub/superscripts e.g. mol^{-1}, m/s^2
   t = t.replace(/(^|[\s(])([A-Za-z0-9]+(?:_\{[^}]+\}|\^\{[^}]+\}|_[0-9]+|\^[0-9+\-]+)+)([\s),.?]|$)/g, '$1$$$2$$$3');
 
-  // 11. Restore protected math blocks
+  // 12. Restore protected math blocks
   t = t.replace(/___MATH_BLOCK_(\d+)___/g, (_m, idx) => {
     return mathPlaceholders[parseInt(idx, 10)] || '';
   });
 
-  // 12. Final cleanup of delimiters and spaces
+  // 13. Restore protected media/SVG blocks
+  t = t.replace(/___MEDIA_BLOCK_(\d+)___/g, (_m, idx) => {
+    return mediaPlaceholders[parseInt(idx, 10)] || '';
+  });
+
+  // 14. Final cleanup of delimiters and spaces
   t = t
     .replace(/\$\s*\$/g, '')
     .replace(/\$\s*\\ce\{\s*\$/g, '$\\ce{')
@@ -234,14 +243,30 @@ const MathRenderer: React.FC<MathRendererProps> = ({
     // Normalize double-escaped LaTeX strings (e.g. \\ce -> \ce, \\frac -> \frac)
     processedText = processedText.replace(/\\\\([a-zA-Z]+)/g, '\\$1');
 
-    // Split by LaTeX Math expressions to preserve equations while converting markdown formatting
-    const mathRegex = /(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\])/gs;
-    const parts = processedText.split(mathRegex);
+    // Split by LaTeX Math expressions AND SVG/Media tags to preserve them during markdown formatting
+    const tokenRegex = /(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\]|<svg[\s\S]*?<\/svg>|<img[^>]*>)/gi;
+    const parts = processedText.split(tokenRegex);
 
     const formattedParts = parts.map(part => {
+      if (!part) return '';
+
       // If it's a math expression, keep it intact
       if (/^(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\])$/s.test(part)) {
         return part;
+      }
+
+      // If it's an inline SVG, wrap in responsive container
+      if (/^<svg[\s\S]*?<\/svg>$/i.test(part)) {
+        return `<span class="inline-svg-diagram" style="display:inline-block; vertical-align:middle; max-width:100%; margin:4px 2px;">${part}</span>`;
+      }
+
+      // If it's an Image tag (e.g. diagram/equation SVG), ensure responsive display
+      if (/^<img[^>]*>$/i.test(part)) {
+        let img = part;
+        if (!/style=/i.test(img)) {
+          img = img.replace(/<img/i, '<img style="max-height:160px; max-width:100%; object-fit:contain; display:inline-block; vertical-align:middle; margin:4px 2px;" loading="lazy"');
+        }
+        return img;
       }
       
       let p = part

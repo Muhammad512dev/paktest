@@ -55,9 +55,8 @@ export function cleanHtmlMathEntities(text: string): string {
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
     
-    // 2. Convert PTS / Web SVG equation arrows into clean LaTeX reaction arrows
-    .replace(/<img[^>]*src=["'][^"']*paktestsolution\.com\/Equations\/[^"']*["'][^>]*>/gi, ' -> ')
-    .replace(/<img[^>]*src=["'][^"']*(?:arrow|reaction|chem)[^"']*["'][^>]*>/gi, ' -> ')
+    // 2. Convert PTS / Web SVG reaction arrows ONLY (arrow/reaction/RightArrow)
+    .replace(/<img[^>]*src=["'][^"']*(?:arrow|reaction|rarr|RightArrow)[^"']*["'][^>]*>/gi, ' -> ')
 
     // 3. Replace MathML tags if present
     .replace(/<math[^>]*>(.*?)<\/math>/gis, (_match, inner) => {

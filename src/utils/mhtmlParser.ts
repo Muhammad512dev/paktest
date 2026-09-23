@@ -39,10 +39,51 @@ export function parseMhtmlToQuestions(
   let detectedSubject = defaultMeta.subject || '';
   let detectedBoard = defaultMeta.board || '';
 
+  // 0. Extract embedded MIME resources (SVGs, PNGs, JPEGs) from MHTML boundaries
+  const resourceMap: Record<string, string> = {};
+  const boundaryMatch = mhtmlContent.match(/boundary="?([^"\r\n]+)"?/i);
+  let mainHtmlContent = mhtmlContent;
+
+  if (boundaryMatch) {
+    const boundary = boundaryMatch[1].trim();
+    const parts = mhtmlContent.split('--' + boundary);
+
+    for (const part of parts) {
+      const locMatch = part.match(/Content-Location:\s*([^\r\n]+)/i);
+      const typeMatch = part.match(/Content-Type:\s*([^\r\n;]+)/i);
+      const encodingMatch = part.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i);
+
+      if (locMatch && typeMatch) {
+        const loc = locMatch[1].trim();
+        const mimeType = typeMatch[1].trim();
+        const splits = part.split(/\r?\n\r?\n/);
+        if (splits.length >= 2) {
+          const body = splits.slice(1).join('\n\n').trim();
+          if (encodingMatch && /base64/i.test(encodingMatch[1])) {
+            const cleanB64 = body.replace(/\s+/g, '');
+            resourceMap[loc] = `data:${mimeType};base64,${cleanB64}`;
+          } else if (/svg|utf-8|text\//i.test(mimeType) || /utf-8/i.test(part)) {
+            resourceMap[loc] = body;
+          }
+        }
+      }
+    }
+
+    if (parts.length > 1 && /<html|<div|<body/i.test(parts[1])) {
+      mainHtmlContent = parts[1];
+    }
+  }
+
+  // Replace external image URLs with embedded data URIs so they display 100% offline
+  for (const [url, dataUri] of Object.entries(resourceMap)) {
+    if (url.startsWith('http') || url.startsWith('cid:')) {
+      mainHtmlContent = mainHtmlContent.replaceAll(url, dataUri);
+    }
+  }
+
   // 1. Try extracting Grade and Subject from modal-title, header, or page titles
-  // Matches e.g. "Select Your Questions Here.... 9TH - Biology", "10TH - Physics", "Class 9 - Chemistry", "9th Grade - Math"
   if (!detectedGrade || !detectedSubject) {
-    const titleTags = mhtmlContent.match(/<(?:p|h\d|div|span)[^>]*class=["'][^"']*(?:modal-title|card-title|title|header|heading)[^"']*["'][^>]*>([\s\S]*?)<\/(?:p|h\d|div|span)>/gi) || [];
+    const titleTags = mainHtmlContent.match(/<(?:p|h\d|div|span)[^>]*class=["'][^"']*(?:modal-title|card-title|title|header|heading)[^"']*["'][^>]*>([\s\S]*?)<\/(?:p|h\d|div|span)>/gi) || [];
     for (const tag of titleTags) {
       const cleaned = cleanHtmlContent(tag);
       const pairMatch = cleaned.match(/(?:Class|Grade)?\s*(\d{1,2})(?:TH|ST|ND|RD)?\s*(?:Class|Grade)?\s*[-–—:]\s*([A-Za-z\s]+)/i);
@@ -63,7 +104,7 @@ export function parseMhtmlToQuestions(
 
   // 1b. Broad document search for patterns like "9TH - Biology" or "Class 10 - Physics"
   if (!detectedGrade || !detectedSubject) {
-    const broadMatch = mhtmlContent.match(/\b(?:Class\s*)?(\d{1,2})(?:TH|ST|ND|RD)\s*[-–—]\s*([A-Za-z]+)\b/i);
+    const broadMatch = mainHtmlContent.match(/\b(?:Class\s*)?(\d{1,2})(?:TH|ST|ND|RD)\s*[-–—]\s*([A-Za-z]+)\b/i);
     if (broadMatch) {
       if (!detectedGrade) detectedGrade = `Class ${broadMatch[1].trim()}`;
       if (!detectedSubject) detectedSubject = broadMatch[2].trim();
@@ -113,7 +154,7 @@ export function parseMhtmlToQuestions(
   const finalSubject = detectedSubject || 'General';
 
   // Split by topic-heading containers
-  const rawBlocks = mhtmlContent.split(/<div[^>]*class=["'][^"']*topic-heading[^"']*["']>/i);
+  const rawBlocks = mainHtmlContent.split(/<div[^>]*class=["'][^"']*topic-heading[^"']*["']>/i);
   const questions: ParsedMhtmlQuestion[] = [];
 
   let currentTopic = 'General Topic';

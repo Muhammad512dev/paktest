@@ -300,7 +300,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [imageScale, setImageScale] = useState<number>(1.0);
 
   // MCQ Grid Controls: Default 2 columns for Board format / Bilingual mode, otherwise 4
-  const [mcqColumns, setMcqColumns] = useState<number>(paper.languageMode === 'Bilingual' ? 2 : 4);
+  const [mcqColumns, setMcqColumns] = useState<number>(languageMode === 'Bilingual' ? 2 : 4);
   const [verticalSpacing, setVerticalSpacing] = useState<number>(2);
   const [questionGap, setQuestionGap] = useState<number>(0);
   const [bilingualInline, setBilingualInline] = useState(true);

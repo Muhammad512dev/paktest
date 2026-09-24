@@ -265,6 +265,13 @@ const MathRenderer: React.FC<MathRendererProps> = ({
         if (!/style=/i.test(img)) {
           img = img.replace(/<img/i, '<img style="max-height:160px; max-width:100%; object-fit:contain; display:inline-block; vertical-align:middle; margin:4px 2px;" loading="lazy"');
         }
+        
+        // Auto-fix relative /uploads/ URLs to point to the backend
+        const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+        if (API_URL) {
+            img = img.replace(/src=["']\/uploads\//g, `src="${API_URL}/uploads/`);
+        }
+        
         return img;
       }
       

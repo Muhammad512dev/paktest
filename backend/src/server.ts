@@ -2549,16 +2549,18 @@ async function processBase64ImagesInText(text: string, userId: string, fallbackB
     let match;
     const matches = [];
     
-    // Find all matches first
-    const regex2 = /src=["'](data:image\/([^;]+);base64,([^"']+))["']/g;
+    // Find all matches first (now handles missing quotes and newline-mangled base64)
+    const regex2 = /src=["']?(data:image\/([^;]+);base64,([a-zA-Z0-9+/=\s]+))["']?/g;
     while ((match = regex2.exec(text)) !== null) {
         matches.push({
             fullMatch: match[0],
             dataUri: match[1],
             ext: match[2] === 'svg+xml' ? 'svg' : match[2],
-            base64Data: match[3]
+            base64Data: match[3].replace(/\s+/g, '') // remove any whitespace that leaked in
         });
     }
+
+    console.log(`Found ${matches.length} base64 images in text payload.`);
 
     for (const img of matches) {
         try {

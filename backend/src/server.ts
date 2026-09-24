@@ -2542,7 +2542,7 @@ app.post('/api/questions', authenticate, async (req: any, res: any) => {
     }
 });
 
-async function processImagesInText(text: string, userId: string, fallbackBaseUrl: string): Promise<string> {
+async function processImagesInText(text: string, userId: string, fallbackBaseUrl: string, classLevel?: string, subject?: string): Promise<string> {
     if (!text || typeof text !== 'string') return text;
 
     let processedText = text;
@@ -2564,13 +2564,11 @@ async function processImagesInText(text: string, userId: string, fallbackBaseUrl
     const regexHttp = /src=["']?(https?:\/\/[^"'\s>]+)["']?/gi;
     while ((match = regexHttp.exec(text)) !== null) {
         const url = match[1];
-        // Skip if already points to our own storage or supabase
         if (url.includes('supabase.co') || url.includes('/uploads/img_') || url.includes('examforge-uploads')) {
             continue;
         }
         const extMatch = url.match(/\.(svg|png|jpg|jpeg|gif|webp)(?:[?#]|$)/i);
         const ext = extMatch ? extMatch[1].toLowerCase() : 'png';
-        
         matches.push({
             fullMatch: match[0],
             isBase64: false,
@@ -2594,14 +2592,19 @@ async function processImagesInText(text: string, userId: string, fallbackBaseUrl
                 const fetchRes = await fetch(img.url);
                 if (!fetchRes.ok) {
                     console.error(`Failed to download ${img.url}: ${fetchRes.statusText}`);
-                    continue; // Skip if we can't download
+                    continue;
                 }
                 const arrayBuffer = await fetchRes.arrayBuffer();
                 buffer = Buffer.from(arrayBuffer);
             }
 
             const filename = `img_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${img.ext}`;
-            const objectKey = `${userId || 'public'}/${filename}`;
+            
+            // Organize into class and subject folders, replace spaces with underscores
+            const cLevel = classLevel ? classLevel.replace(/\s+/g, '_') : 'General';
+            const subj = subject ? subject.replace(/\s+/g, '_') : 'General';
+            const objectKey = `${userId || 'public'}/${cLevel}/${subj}/${filename}`;
+            
             const storageProvider = (process.env.STORAGE_PROVIDER || 'local').toLowerCase();
 
             let publicUrlToReplace = '';
@@ -2663,7 +2666,6 @@ async function processImagesInText(text: string, userId: string, fallbackBaseUrl
             
             if (!publicUrlToReplace) {
                 console.log(`Falling back to local storage for: ${filename}`);
-                // Fallback to local
                 const uploadDir = path.join((process as any).cwd(), 'uploads');
                 if (!fs.existsSync(uploadDir)) {
                     fs.mkdirSync(uploadDir, { recursive: true });
@@ -2674,7 +2676,6 @@ async function processImagesInText(text: string, userId: string, fallbackBaseUrl
                 publicUrlToReplace = `${publicBase}/uploads/${filename}`;
             }
 
-            // Replace in text using exactly the format it had before (with quotes)
             processedText = processedText.replace(img.fullMatch, `src="${publicUrlToReplace}"`);
 
         } catch (e) {
@@ -2687,20 +2688,22 @@ async function processImagesInText(text: string, userId: string, fallbackBaseUrl
 
 async function processQuestionImages(q: any, userId: string, fallbackBaseUrl: string): Promise<any> {
     const fieldsToProcess = ['text', 'textUrdu', 'options', 'optionsUrdu', 'modelAnswer', 'modelAnswerUrdu', 'pairingConfig'];
+    const classLevel = q.classLevel;
+    const subject = q.subject;
     
     for (const field of fieldsToProcess) {
         if (q[field] && typeof q[field] === 'string') {
-            q[field] = await processImagesInText(q[field], userId, fallbackBaseUrl);
+            q[field] = await processImagesInText(q[field], userId, fallbackBaseUrl, classLevel, subject);
         } else if (Array.isArray(q[field])) {
             for (let j = 0; j < q[field].length; j++) {
                 if (typeof q[field][j] === 'string') {
-                    q[field][j] = await processImagesInText(q[field][j], userId, fallbackBaseUrl);
+                    q[field][j] = await processImagesInText(q[field][j], userId, fallbackBaseUrl, classLevel, subject);
                 } else if (typeof q[field][j] === 'object' && q[field][j] !== null) {
                     if (typeof q[field][j].left === 'string') {
-                        q[field][j].left = await processImagesInText(q[field][j].left, userId, fallbackBaseUrl);
+                        q[field][j].left = await processImagesInText(q[field][j].left, userId, fallbackBaseUrl, classLevel, subject);
                     }
                     if (typeof q[field][j].right === 'string') {
-                        q[field][j].right = await processImagesInText(q[field][j].right, userId, fallbackBaseUrl);
+                        q[field][j].right = await processImagesInText(q[field][j].right, userId, fallbackBaseUrl, classLevel, subject);
                     }
                 }
             }

@@ -136,7 +136,6 @@ function sanitizeImportedText(raw: string): string {
     .replace(/<\s*\/?\s*p\s*\d*\s*>?/gi, ' ')
     .replace(/<\s*\/?\s*p[^>]*>/gi, ' ')
     .replace(/<\s*\/?\s*(?:div|span|strong|em|b|i)\s*[^>]*>/gi, ' ')
-    .replace(/<\s*\/?\s*p.*$/gi, '') // trailing unclosed '< /p 2' or '< /p'
     .replace(/<br\s*[\/]?>/gi, '\n')
     .replace(/\s+/g, ' ')
     .trim();

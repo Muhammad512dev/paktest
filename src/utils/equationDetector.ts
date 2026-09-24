@@ -48,8 +48,6 @@ export function cleanHtmlMathEntities(text: string): string {
 
   return text
     // 1. Decode entities
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'")
     .replace(/&nbsp;/gi, ' ')
@@ -67,11 +65,9 @@ export function cleanHtmlMathEntities(text: string): string {
     .replace(/<sup[^>]*>(.*?)<\/sup>/gi, '^{$1}')
     .replace(/<sub[^>]*>(.*?)<\/sub>/gi, '_{$1}')
 
-    // 5. Strip useless structural HTML tags (<p>, <p dir="rtl">, </p>, <p 2>, </p 2>, < /p 2>, < /p>, <span>, </span>, <div>, </div>)
-    .replace(/<\s*\/?\s*p\s*\d*\s*>?/gi, ' ')
+    // 5. Strip useless structural HTML tags
     .replace(/<\s*\/?\s*p[^>]*>/gi, ' ')
     .replace(/<\s*\/?\s*(?:div|span|strong|em|b|i)\s*[^>]*>/gi, ' ')
-    .replace(/<\s*\/?\s*p.*$/gi, '')
     .replace(/<br\s*[\/]?>/gi, '\n')
     
     // 6. Scientific HTML entities

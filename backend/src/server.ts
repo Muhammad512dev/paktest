@@ -2478,10 +2478,19 @@ app.get('/api/questions', authenticate, questionLimiter as any, async (req: any,
         }
 
         if (req.query.medium) where.medium = req.query.medium;
-        if (req.query.subject) where.subject = req.query.subject;
-        if (req.query.classLevel) where.classLevel = req.query.classLevel;
-        if (req.query.type) where.type = req.query.type;
-        if (req.query.difficulty) where.difficulty = req.query.difficulty;
+        
+        if (req.query.subject) {
+            where.subject = Array.isArray(req.query.subject) ? { in: req.query.subject } : req.query.subject;
+        }
+        if (req.query.classLevel) {
+            where.classLevel = Array.isArray(req.query.classLevel) ? { in: req.query.classLevel } : req.query.classLevel;
+        }
+        if (req.query.type) {
+            where.type = Array.isArray(req.query.type) ? { in: req.query.type } : req.query.type;
+        }
+        if (req.query.difficulty) {
+            where.difficulty = Array.isArray(req.query.difficulty) ? { in: req.query.difficulty } : req.query.difficulty;
+        }
 
         // â”€â”€â”€ Redis Cache: skip cache for text searches (always unique)
         const schoolKey = req.user?.schoolId || 'global';

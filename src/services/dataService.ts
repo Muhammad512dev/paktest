@@ -387,20 +387,33 @@ export const getQuestionsPage = async (params?: {
   pageSize?: number;
   q?: string;
   medium?: string;
-  subject?: string;
-  classLevel?: string;
-  type?: string;
-  difficulty?: string;
+  subject?: string | string[];
+  classLevel?: string | string[];
+  type?: string | string[];
+  difficulty?: string | string[];
 }): Promise<{ data: Question[]; pagination: any }> => {
   const sp = new URLSearchParams();
   if (params?.page) sp.set('page', String(params.page));
   if (params?.pageSize) sp.set('pageSize', String(params.pageSize));
   if (params?.q) sp.set('q', params.q);
   if (params?.medium) sp.set('medium', params.medium);
-  if (params?.subject) sp.set('subject', params.subject);
-  if (params?.classLevel) sp.set('classLevel', params.classLevel);
-  if (params?.type) sp.set('type', params.type);
-  if (params?.difficulty) sp.set('difficulty', params.difficulty);
+  
+  if (params?.subject) {
+    if (Array.isArray(params.subject)) params.subject.forEach(s => sp.append('subject', s));
+    else sp.set('subject', params.subject);
+  }
+  if (params?.classLevel) {
+    if (Array.isArray(params.classLevel)) params.classLevel.forEach(c => sp.append('classLevel', c));
+    else sp.set('classLevel', params.classLevel);
+  }
+  if (params?.type) {
+    if (Array.isArray(params.type)) params.type.forEach(t => sp.append('type', t));
+    else sp.set('type', params.type);
+  }
+  if (params?.difficulty) {
+    if (Array.isArray(params.difficulty)) params.difficulty.forEach(d => sp.append('difficulty', d));
+    else sp.set('difficulty', params.difficulty);
+  }
   const qs = sp.toString();
 
   const res = await fetch(`${API_URL}/api/questions${qs ? `?${qs}` : ''}`, { headers: getHeaders() });

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
-  getQuestions, addQuestion, addQuestionsBulk, deleteQuestion, updateQuestion,
+  getQuestionsPage, addQuestion, addQuestionsBulk, deleteQuestion, updateQuestion,
   getSyllabuses, getClasses, getSubjects, getChapters, getTopics,
   ensureCurriculumPath, uploadFile
 } from '../../services/dataService';
@@ -52,17 +52,23 @@ const GlobalQuestionBank: React.FC = () => {
   const [chapters, setChapters] = useState<any[]>([]);
   const [topics, setTopics] = useState<any[]>([]);
 
-  /* Load data asynchronously on mount */
-  const loadAllData = async () => {
-    const [qs, syls, clss, subs, chs, tops] = await Promise.all([
-      getQuestions({ pageSize: 1000, maxPages: 10 }),
+  // Server-side Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalQuestions, setTotalQuestions] = useState(0);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
+  const [refreshCounter, setRefreshCounter] = useState(0);
+  const pageSize = typeof viewLimit === 'number' ? viewLimit : 50;
+
+  /* Load curriculum data asynchronously on mount */
+  const loadCurriculumData = async () => {
+    const [syls, clss, subs, chs, tops] = await Promise.all([
       getSyllabuses(),
       getClasses(),
       getSubjects(),
       getChapters(),
       getTopics()
     ]);
-    setQuestions(qs);
     setSyllabuses(syls);
     setClasses(clss);
     setSubjects(subs);
@@ -71,7 +77,7 @@ const GlobalQuestionBank: React.FC = () => {
   };
 
   useEffect(() => { 
-    loadAllData();
+    loadCurriculumData();
   }, []);
 
   // Modals & States
@@ -81,6 +87,7 @@ const GlobalQuestionBank: React.FC = () => {
   const [isSyncScreenOpen, setIsSyncScreenOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState(0);
+  const [isLoadingExport, setIsExporting] = useState(false);
   const [isSequenceImportModalOpen, setIsSequenceImportModalOpen] = useState(false);
   const [isEquationGuideOpen, setIsEquationGuideOpen] = useState(false);
   const [guideTab, setGuideTab] = useState<'MATH' | 'CHEM' | 'PHYSICS' | 'CHEATSHEET'>('MATH');
@@ -127,30 +134,52 @@ const GlobalQuestionBank: React.FC = () => {
   const filteredChapters = useMemo(() => chapters.filter(ch => ch.subjectId === selSubjectId), [chapters, selSubjectId]);
   const filteredTopics = useMemo(() => topics.filter(t => t.chapterId === selChapterId), [topics, selChapterId]);
 
-  // Main Filtering Logic for List
-  const filteredQuestions = useMemo(() => {
-    return questions.filter(q => {
-      const matchesSearch = q.text.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            (q.textUrdu && q.textUrdu.includes(searchTerm));
+  // Server-Side Fetching Logic
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      setIsLoadingQuestions(true);
       
-      let matchesSyllabus = true;
-      if (filterSyllabus !== 'All') {
-         // Find classes that belong to this syllabus
-         const allowedClasses = classes.filter(c => c.syllabusId === filterSyllabus).map(c => c.name);
-         // Check if the question's class matches any of those names
-         matchesSyllabus = allowedClasses.includes(q.classLevel);
+      let classLevelQuery: string | string[] | undefined = undefined;
+      
+      // If a specific class is selected, use it. Otherwise, if a syllabus is selected, pass all its classes.
+      if (filterClass !== 'All') {
+        classLevelQuery = filterClass;
+      } else if (filterSyllabus !== 'All') {
+        classLevelQuery = classes.filter(c => c.syllabusId === filterSyllabus).map(c => c.name);
       }
 
-      const matchesClass = filterClass === 'All' || q.classLevel === filterClass;
-      const matchesSubject = filterSubject === 'All' || q.subject === filterSubject;
-      const matchesType = filterType === 'All' || normalizeQuestionType(q.type) === normalizeQuestionType(filterType);
-      const matchesDifficulty = filterDifficulty === 'All' || q.difficulty === filterDifficulty;
+      try {
+        const res = await getQuestionsPage({
+          page: currentPage,
+          pageSize: pageSize,
+          q: searchTerm !== '' ? searchTerm : undefined,
+          classLevel: classLevelQuery,
+          subject: filterSubject !== 'All' ? filterSubject : undefined,
+          type: filterType !== 'All' ? filterType : undefined,
+          difficulty: filterDifficulty !== 'All' ? filterDifficulty : undefined,
+        });
+        setQuestions(res.data || []);
+        setTotalPages(res.pagination?.pages || 1);
+        setTotalQuestions(res.pagination?.total || 0);
+      } catch (err) {
+        console.error("Failed to fetch questions", err);
+      } finally {
+        setIsLoadingQuestions(false);
+      }
+    };
 
-      return matchesSearch && matchesSyllabus && matchesClass && matchesSubject && matchesType && matchesDifficulty;
-    });
-  }, [questions, searchTerm, filterSyllabus, filterClass, filterSubject, filterType, filterDifficulty, classes]);
+    // Debounce the fetch slightly to prevent spamming on every keystroke
+    const timer = setTimeout(() => {
+      fetchQuestions();
+    }, 300);
 
-  const displayedQuestions = viewLimit === 'ALL' ? filteredQuestions : filteredQuestions.slice(0, viewLimit);
+    return () => clearTimeout(timer);
+  }, [currentPage, pageSize, searchTerm, filterSyllabus, filterClass, filterSubject, filterType, filterDifficulty, classes, refreshCounter]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterSyllabus, filterClass, filterSubject, filterType, filterDifficulty]);
 
   // Dynamic Options for Filters
   const classOptions = useMemo(() => {
@@ -297,7 +326,7 @@ const GlobalQuestionBank: React.FC = () => {
               await addQuestion(questionData);
           }
           
-          await loadAllData();
+          await setRefreshCounter(prev => prev + 1);
           setIsAddModalOpen(false);
           handleResetForm();
       } catch (e: any) {
@@ -431,7 +460,7 @@ const GlobalQuestionBank: React.FC = () => {
           : '';
         alert(`Import Complete: imported ${imported}, skipped ${skipped}, failed ${failed}${errCount ? ` (see console for ${errCount} errors)` : ''}.${sampleText}`);
         if (errCount) console.error('Question import errors:', res.errors);
-        loadAllData();
+        setRefreshCounter(prev => prev + 1);
       } catch (err) {
         console.error("JSON Import Error:", err);
         alert("Invalid JSON format. The file must be a JSON array or object matching the Question schema.");
@@ -530,7 +559,7 @@ const GlobalQuestionBank: React.FC = () => {
          const skipped = res?.skipped ?? 0;
          const failed = res?.failed ?? 0;
          const errCount = Array.isArray(res?.errors) ? res.errors.length : 0;
-         await loadAllData();
+         await setRefreshCounter(prev => prev + 1);
          const sampleErrors = Array.isArray(res?.errors) ? res.errors.slice(0, 3) : [];
          const sampleText = sampleErrors.length
            ? `\n\nExamples:\n${sampleErrors.map((e: any) => `Row ${e.index ?? '?'}: ${(e.errors || []).join('; ')}`).join('\n')}`
@@ -553,60 +582,86 @@ const GlobalQuestionBank: React.FC = () => {
   const getChapterName = (id: string) => chapters.find(ch => ch.id === id)?.name || 'N/A';
 
   // --- EXPORT FUNCTIONALITY ---
-  const handleExport = () => {
-    const data = filteredQuestions.map(q => {
-      const row: any = {
-        Board: syllabuses.find(s => classes.find(c => c.name === q.classLevel)?.syllabusId === s.id)?.name || 'Unknown',
-        Grade: q.classLevel,
-        Subject: q.subject,
-        Chapter: q.chapter,
-        Topic: q.topic,
-        QuestionText_EN: q.text,
-        QuestionText_UR: q.textUrdu || '',
-        Type: q.type,
-        Marks: q.marks,
-        Difficulty: q.difficulty,
-        ImageURL: q.imageUrl || '',
-        Sources: q.sources?.join('|') || '',
-        CorrectAnswer: q.correctAnswer || ''
-      };
-
-      if (q.type === 'MCQ' && q.options) {
-          row.OptionA_EN = q.options[0] || '';
-          row.OptionB_EN = q.options[1] || '';
-          row.OptionC_EN = q.options[2] || '';
-          row.OptionD_EN = q.options[3] || '';
-          if (q.optionsUrdu) {
-              row.OptionA_UR = q.optionsUrdu[0] || '';
-              row.OptionB_UR = q.optionsUrdu[1] || '';
-              row.OptionC_UR = q.optionsUrdu[2] || '';
-              row.OptionD_UR = q.optionsUrdu[3] || '';
-          }
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      let classLevelQuery: string | string[] | undefined = undefined;
+      if (filterClass !== 'All') {
+        classLevelQuery = filterClass;
+      } else if (filterSyllabus !== 'All') {
+        classLevelQuery = classes.filter(c => c.syllabusId === filterSyllabus).map(c => c.name);
       }
+      
+      const res = await getQuestionsPage({
+        page: 1,
+        pageSize: 10000,
+        q: searchTerm !== '' ? searchTerm : undefined,
+        classLevel: classLevelQuery,
+        subject: filterSubject !== 'All' ? filterSubject : undefined,
+        type: filterType !== 'All' ? filterType : undefined,
+        difficulty: filterDifficulty !== 'All' ? filterDifficulty : undefined,
+      });
+      const exportQuestions = res.data || [];
 
-      if (q.type === 'Match Columns' && q.matchingPairs) {
-          q.matchingPairs.forEach((p, i) => {
-              row[`Pair${i+1}_Left_EN`] = p.left;
-              row[`Pair${i+1}_Right_EN`] = p.right;
-              row[`Pair${i+1}_Left_UR`] = p.leftUrdu || '';
-              row[`Pair${i+1}_Right_UR`] = p.rightUrdu || '';
-          });
-      }
+      const data = exportQuestions.map(q => {
+        const row: any = {
+          Board: syllabuses.find(s => classes.find(c => c.name === q.classLevel)?.syllabusId === s.id)?.name || 'Unknown',
+          Grade: q.classLevel,
+          Subject: q.subject,
+          Chapter: q.chapter,
+          Topic: q.topic,
+          QuestionText_EN: q.text,
+          QuestionText_UR: q.textUrdu || '',
+          Type: q.type,
+          Marks: q.marks,
+          Difficulty: q.difficulty,
+          ImageURL: q.imageUrl || '',
+          Sources: q.sources?.join('|') || '',
+          CorrectAnswer: q.correctAnswer || ''
+        };
 
-      // Truncate fields to avoid Excel limit (32767 chars)
-      Object.keys(row).forEach(key => {
-          if (typeof row[key] === 'string' && row[key].length > 32000) {
-              row[key] = row[key].substring(0, 32000) + '... [TRUNCATED]';
-          }
+        if (q.type === 'MCQ' && q.options) {
+            row.OptionA_EN = q.options[0] || '';
+            row.OptionB_EN = q.options[1] || '';
+            row.OptionC_EN = q.options[2] || '';
+            row.OptionD_EN = q.options[3] || '';
+            if (q.optionsUrdu) {
+                row.OptionA_UR = q.optionsUrdu[0] || '';
+                row.OptionB_UR = q.optionsUrdu[1] || '';
+                row.OptionC_UR = q.optionsUrdu[2] || '';
+                row.OptionD_UR = q.optionsUrdu[3] || '';
+            }
+        }
+
+        if (q.type === 'Match Columns' && q.matchingPairs) {
+            q.matchingPairs.forEach((p, i) => {
+                row[`Pair${i+1}_Left_EN`] = p.left;
+                row[`Pair${i+1}_Right_EN`] = p.right;
+                row[`Pair${i+1}_Left_UR`] = p.leftUrdu || '';
+                row[`Pair${i+1}_Right_UR`] = p.rightUrdu || '';
+            });
+        }
+
+        // Truncate fields to avoid Excel limit (32767 chars)
+        Object.keys(row).forEach(key => {
+            if (typeof row[key] === 'string' && row[key].length > 32000) {
+                row[key] = row[key].substring(0, 32000) + '... [TRUNCATED]';
+            }
+        });
+
+        return row;
       });
 
-      return row;
-    });
-
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Questions");
-    XLSX.writeFile(wb, `PakParcha_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Questions");
+      XLSX.writeFile(wb, `PakParcha_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (err) {
+      console.error("Export failed:", err);
+      alert("Export failed. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // --- COMPREHENSIVE SAMPLE QUESTION DATASETS FOR TEMPLATES ---
@@ -1220,8 +1275,9 @@ const GlobalQuestionBank: React.FC = () => {
              ref={mhtmlFileInputRef}
              onChange={handleMhtmlUpload} 
           />
-          <button onClick={handleExport} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2">
-            <FileDown size={16} /> Export List
+          <button onClick={handleExport} disabled={isLoadingExport} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50">
+            {isLoadingExport ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />} 
+            {isLoadingExport ? "Exporting..." : "Export List"}
           </button>
           <button onClick={() => { handleResetForm(); setIsAddModalOpen(true); }} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 flex items-center gap-2 shadow-sm">
             <Plus size={16} /> Add Question
@@ -1327,7 +1383,7 @@ const GlobalQuestionBank: React.FC = () => {
         </div>
         
         <div className="divide-y divide-gray-100 flex-1">
-           {displayedQuestions.map(q => (
+           {questions.map(q => (
              <div key={q.id} className="p-4 hover:bg-gray-50 flex gap-4 items-start group">
                 <div className="flex-1">
                    <div className="flex flex-wrap gap-2 mb-2">
@@ -1335,7 +1391,7 @@ const GlobalQuestionBank: React.FC = () => {
                       <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold uppercase">{q.classLevel}</span>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${q.difficulty === Difficulty.HARD ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>{q.difficulty}</span>
                       <span className="px-2 py-0.5 bg-orange-50 text-orange-700 rounded text-[10px] font-bold uppercase">{q.type}</span>
-                      {q.sources?.map(s => (
+                      {q.sources?.map((s: any) => (
                         <span key={s} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold uppercase">{s}</span>
                       ))}
                    </div>
@@ -1361,11 +1417,11 @@ const GlobalQuestionBank: React.FC = () => {
                 </div>
                 <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => handleEditClick(q)} className="p-2 text-indigo-400 hover:bg-indigo-50 rounded transition-all"><Edit2 size={16} /></button>
-                    <button onClick={async () => { await deleteQuestion(q.id); await loadAllData(); }} className="p-2 text-red-400 hover:bg-red-50 rounded transition-all"><Trash2 size={16} /></button>
+                    <button onClick={async () => { await deleteQuestion(q.id); await setRefreshCounter(prev => prev + 1); }} className="p-2 text-red-400 hover:bg-red-50 rounded transition-all"><Trash2 size={16} /></button>
                 </div>
              </div>
            ))}
-           {displayedQuestions.length === 0 && (
+           {questions.length === 0 && (
               <div className="p-12 text-center text-gray-400 flex flex-col items-center">
                  <Search size={48} className="opacity-20 mb-4" />
                  <p className="text-sm">No questions found matching your criteria.</p>
@@ -1375,10 +1431,12 @@ const GlobalQuestionBank: React.FC = () => {
         </div>
         
         <div className="p-3 border-t border-gray-100 bg-gray-50 flex justify-between items-center text-xs text-gray-500 font-medium">
-           <span>Showing {displayedQuestions.length} of {filteredQuestions.length} questions</span>
-           {viewLimit !== 'ALL' && filteredQuestions.length > (typeof viewLimit === 'number' ? viewLimit : 0) && (
-              <button onClick={() => setViewLimit('ALL')} className="text-indigo-600 hover:underline">View All</button>
-           )}
+           <span>Showing {questions.length} of {totalQuestions} questions</span>
+           <div className="flex items-center gap-2">
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || isLoadingQuestions} className="px-2 py-1 rounded border border-gray-200 hover:bg-gray-100 disabled:opacity-50">Prev</button>
+              <span>{currentPage} / {totalPages}</span>
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || isLoadingQuestions} className="px-2 py-1 rounded border border-gray-200 hover:bg-gray-100 disabled:opacity-50">Next</button>
+           </div>
         </div>
       </div>
 

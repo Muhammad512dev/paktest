@@ -71,7 +71,7 @@ const storage = multer.diskStorage({
     }
 });
 
-const ALLOWED_FILE_TYPES = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx', '.xls', '.xlsx'];
+const ALLOWED_FILE_TYPES = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.pdf', '.doc', '.docx', '.xls', '.xlsx'];
 
 const upload = multer({
     storage: storage,
@@ -409,25 +409,71 @@ const inferMedium = (q: any): 'English' | 'Urdu' | 'Bilingual' => {
     return 'English';
 };
 
-const ensureStringArray = (v: any) => (Array.isArray(v) ? v.filter(x => typeof x === 'string') : []);
+/**
+ * Automatically extracts embedded base64 data URIs (SVGs, PNGs, JPEGs) from question text / options
+ * and writes them as permanent files organized cleanly in class and subject folders:
+ * uploads/{Class_Name}/{Subject}/
+ */
+function extractAndSaveEmbeddedMedia(content: string, classLevel: string, subject: string): string {
+    if (!content || typeof content !== 'string') return content;
+
+    const classFolder = (classLevel || 'General').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+    const subjFolder = (subject || 'General').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+    const targetDir = path.join(uploadDir, classFolder, subjFolder);
+
+    const dataUriRegex = /data:image\/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=]+)/g;
+    if (!dataUriRegex.test(content)) return content;
+    dataUriRegex.lastIndex = 0;
+
+    if (!fs.existsSync(targetDir)) {
+        try {
+            fs.mkdirSync(targetDir, { recursive: true });
+        } catch (dirErr) {
+            console.error('Error creating class upload directory:', dirErr);
+        }
+    }
+
+    return content.replace(dataUriRegex, (_match, format, b64Data) => {
+        try {
+            const ext = format.includes('svg') ? '.svg' : format.includes('png') ? '.png' : format.includes('webp') ? '.webp' : '.jpg';
+            const uniqueName = `eq_${Date.now()}_${Math.round(Math.random() * 1e6)}${ext}`;
+            const filePath = path.join(targetDir, uniqueName);
+            const buffer = Buffer.from(b64Data, 'base64');
+            fs.writeFileSync(filePath, buffer);
+            return `/uploads/${classFolder}/${subjFolder}/${uniqueName}`;
+        } catch (err) {
+            console.error('Error saving embedded media to class folder:', err);
+            return _match;
+        }
+    });
+}
 
 const sanitizeQuestionInput = (raw: any, schoolId: string | null) => {
     const q: any = { ...(raw || {}) };
 
+    q.subject = typeof q.subject === 'string' ? q.subject : '';
+    q.classLevel = typeof q.classLevel === 'string' ? q.classLevel : '';
+
     q.type = normalizeQuestionType(q.type);
-    q.text = typeof q.text === 'string' ? q.text.trim() : '';
-    q.textUrdu = typeof q.textUrdu === 'string' ? q.textUrdu.trim() : '';
+    q.text = typeof q.text === 'string' ? extractAndSaveEmbeddedMedia(q.text.trim(), q.classLevel, q.subject) : '';
+    q.textUrdu = typeof q.textUrdu === 'string' ? extractAndSaveEmbeddedMedia(q.textUrdu.trim(), q.classLevel, q.subject) : '';
 
     // If one language is missing, mirror the other so Urdu-only/English-only views never look blank.
     if (q.text === '' && q.textUrdu !== '') q.text = q.textUrdu;
     if (q.textUrdu === '' && q.text !== '') q.textUrdu = q.text;
 
-    q.options = ensureStringArray(q.options).map((s: string) => s.trim()).filter(Boolean);
-    q.optionsUrdu = ensureStringArray(q.optionsUrdu).map((s: string) => s.trim()).filter(Boolean);
+    q.options = ensureStringArray(q.options)
+        .map((s: string) => extractAndSaveEmbeddedMedia(s.trim(), q.classLevel, q.subject))
+        .filter(Boolean);
+    q.optionsUrdu = ensureStringArray(q.optionsUrdu)
+        .map((s: string) => extractAndSaveEmbeddedMedia(s.trim(), q.classLevel, q.subject))
+        .filter(Boolean);
+
+    if (q.imageUrl) {
+        q.imageUrl = extractAndSaveEmbeddedMedia(q.imageUrl, q.classLevel, q.subject);
+    }
 
     // If options exist in only one language, mirror them to the other side.
-    // This keeps single-language imports usable and prevents accidental skips
-    // when the file/template only includes one set of option columns.
     if (q.type === 'MCQ') {
         if (q.options.length === 0 && q.optionsUrdu.length > 0) q.options = [...q.optionsUrdu];
         if (q.optionsUrdu.length === 0 && q.options.length > 0) q.optionsUrdu = [...q.options];
@@ -441,15 +487,12 @@ const sanitizeQuestionInput = (raw: any, schoolId: string | null) => {
     if (!q.source) q.source = q.sources[0];
 
     const inferredMedium = inferMedium(q);
-    // If client provided medium but it's inconsistent with available fields, prefer inferred.
     if (q.medium === 'English' || q.medium === 'Urdu' || q.medium === 'Bilingual') {
         if (q.medium !== inferredMedium) q.medium = inferredMedium;
     } else {
         q.medium = inferredMedium;
     }
 
-    if (typeof q.subject !== 'string') q.subject = '';
-    if (typeof q.classLevel !== 'string') q.classLevel = '';
     if (typeof q.topic !== 'string') q.topic = '';
     if (q.topic.trim() === '') q.topic = 'General';
     if (typeof q.difficulty !== 'string') q.difficulty = 'Medium';

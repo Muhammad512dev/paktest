@@ -66,8 +66,9 @@ export function cleanHtmlMathEntities(text: string): string {
     .replace(/<sub[^>]*>(.*?)<\/sub>/gi, '_{$1}')
 
     // 5. Strip useless structural HTML tags
-    .replace(/<\s*\/?\s*p[^>]*>/gi, ' ')
-    .replace(/<\s*\/?\s*(?:div|span|strong|em|b|i)\s*[^>]*>/gi, ' ')
+    .replace(/<\s*\/?\s*p\b[^>]*>/gi, ' ')
+    .replace(/<\s*\/?\s*(?:div|span|strong|em|b|i)\b[^>]*>/gi, ' ')
+
     .replace(/<br\s*[\/]?>/gi, '\n')
     
     // 6. Scientific HTML entities

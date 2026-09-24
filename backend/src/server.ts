@@ -2542,6 +2542,121 @@ app.post('/api/questions', authenticate, async (req: any, res: any) => {
     }
 });
 
+async function processBase64ImagesInText(text: string, userId: string): Promise<string> {
+    if (!text || !text.includes('data:image/')) return text;
+
+    let processedText = text;
+    let match;
+    const matches = [];
+    
+    // Find all matches first
+    const regex2 = /src=["'](data:image\/([^;]+);base64,([^"']+))["']/g;
+    while ((match = regex2.exec(text)) !== null) {
+        matches.push({
+            fullMatch: match[0],
+            dataUri: match[1],
+            ext: match[2] === 'svg+xml' ? 'svg' : match[2],
+            base64Data: match[3]
+        });
+    }
+
+    for (const img of matches) {
+        try {
+            const buffer = Buffer.from(img.base64Data, 'base64');
+            const filename = `img_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${img.ext}`;
+            const objectKey = `${userId || 'public'}/${filename}`;
+            const storageProvider = (process.env.STORAGE_PROVIDER || 'local').toLowerCase();
+
+            let publicUrlToReplace = '';
+
+            if (storageProvider === 'r2') {
+                const endpoint = process.env.R2_ENDPOINT?.replace(/\/$/, '');
+                const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+                const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+                const bucket = process.env.R2_BUCKET || 'examforge-uploads';
+                const publicUrl = process.env.R2_PUBLIC_URL?.replace(/\/$/, '');
+                if (endpoint && accessKeyId && secretAccessKey && publicUrl) {
+                    const client = new S3Client({
+                        region: 'auto',
+                        endpoint,
+                        credentials: { accessKeyId, secretAccessKey },
+                    });
+                    await client.send(new PutObjectCommand({
+                        Bucket: bucket,
+                        Key: objectKey,
+                        Body: buffer,
+                        ContentType: img.ext === 'svg' ? 'image/svg+xml' : `image/${img.ext}`,
+                    }));
+                    publicUrlToReplace = `${publicUrl}/${objectKey}`;
+                }
+            } else if (storageProvider === 'supabase') {
+                const baseUrl = process.env.SUPABASE_URL?.replace(/\/$/, '');
+                const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+                const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'examforge-uploads';
+                if (baseUrl && serviceKey) {
+                    const storageResponse = await fetch(`${baseUrl}/storage/v1/object/${bucket}/${objectKey}`, {
+                        method: 'POST', 
+                        headers: { 
+                            Authorization: `Bearer ${serviceKey}`, 
+                            apikey: serviceKey, 
+                            'Content-Type': img.ext === 'svg' ? 'image/svg+xml' : `image/${img.ext}`, 
+                            'x-upsert': 'true' 
+                        }, 
+                        body: buffer as any
+                    });
+                    if (storageResponse.ok) {
+                        publicUrlToReplace = `${baseUrl}/storage/v1/object/public/${bucket}/${objectKey}`;
+                    }
+                }
+            }
+            
+            if (!publicUrlToReplace) {
+                // Fallback to local
+                const uploadDir = path.join((process as any).cwd(), 'uploads');
+                if (!fs.existsSync(uploadDir)) {
+                    fs.mkdirSync(uploadDir, { recursive: true });
+                }
+                const localFilePath = path.join(uploadDir, filename);
+                await fs.promises.writeFile(localFilePath, buffer);
+                const publicBase = process.env.PUBLIC_API_URL?.replace(/\/$/, '') || '';
+                publicUrlToReplace = `${publicBase}/uploads/${filename}`;
+            }
+
+            // Replace in text
+            processedText = processedText.replace(img.fullMatch, `src="${publicUrlToReplace}"`);
+
+        } catch (e) {
+            console.error('Failed to process base64 image:', e);
+        }
+    }
+
+    return processedText;
+}
+
+async function processQuestionImages(q: any, userId: string): Promise<any> {
+    const fieldsToProcess = ['text', 'textUrdu', 'options', 'optionsUrdu', 'modelAnswer', 'modelAnswerUrdu', 'pairingConfig'];
+    
+    for (const field of fieldsToProcess) {
+        if (q[field] && typeof q[field] === 'string') {
+            q[field] = await processBase64ImagesInText(q[field], userId);
+        } else if (Array.isArray(q[field])) {
+            for (let j = 0; j < q[field].length; j++) {
+                if (typeof q[field][j] === 'string') {
+                    q[field][j] = await processBase64ImagesInText(q[field][j], userId);
+                } else if (typeof q[field][j] === 'object' && q[field][j] !== null) {
+                    if (typeof q[field][j].left === 'string') {
+                        q[field][j].left = await processBase64ImagesInText(q[field][j].left, userId);
+                    }
+                    if (typeof q[field][j].right === 'string') {
+                        q[field][j].right = await processBase64ImagesInText(q[field][j].right, userId);
+                    }
+                }
+            }
+        }
+    }
+    return q;
+}
+
 app.post('/api/questions/bulk', authenticate, async (req: any, res: any) => {
     const { questions } = req.body;
     const schoolId = req.user?.role === 'SUPER_ADMIN' ? null : req.user?.schoolId;
@@ -2561,7 +2676,8 @@ app.post('/api/questions/bulk', authenticate, async (req: any, res: any) => {
         const validQuestions = [];
 
         for (let i = 0; i < questions.length; i++) {
-            const q = sanitizeQuestionInput(questions[i], schoolId);
+            let q = sanitizeQuestionInput(questions[i], schoolId);
+            q = await processQuestionImages(q, req.user?.id || 'admin');
             const validation = validateQuestion(q);
 
             if (!validation.valid) {

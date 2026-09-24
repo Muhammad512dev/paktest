@@ -2542,7 +2542,7 @@ app.post('/api/questions', authenticate, async (req: any, res: any) => {
     }
 });
 
-async function processBase64ImagesInText(text: string, userId: string): Promise<string> {
+async function processBase64ImagesInText(text: string, userId: string, fallbackBaseUrl: string): Promise<string> {
     if (!text || !text.includes('data:image/')) return text;
 
     let processedText = text;
@@ -2618,7 +2618,7 @@ async function processBase64ImagesInText(text: string, userId: string): Promise<
                 }
                 const localFilePath = path.join(uploadDir, filename);
                 await fs.promises.writeFile(localFilePath, buffer);
-                const publicBase = process.env.PUBLIC_API_URL?.replace(/\/$/, '') || '';
+                const publicBase = process.env.PUBLIC_API_URL?.replace(/\/$/, '') || fallbackBaseUrl;
                 publicUrlToReplace = `${publicBase}/uploads/${filename}`;
             }
 
@@ -2633,22 +2633,22 @@ async function processBase64ImagesInText(text: string, userId: string): Promise<
     return processedText;
 }
 
-async function processQuestionImages(q: any, userId: string): Promise<any> {
+async function processQuestionImages(q: any, userId: string, fallbackBaseUrl: string): Promise<any> {
     const fieldsToProcess = ['text', 'textUrdu', 'options', 'optionsUrdu', 'modelAnswer', 'modelAnswerUrdu', 'pairingConfig'];
     
     for (const field of fieldsToProcess) {
         if (q[field] && typeof q[field] === 'string') {
-            q[field] = await processBase64ImagesInText(q[field], userId);
+            q[field] = await processBase64ImagesInText(q[field], userId, fallbackBaseUrl);
         } else if (Array.isArray(q[field])) {
             for (let j = 0; j < q[field].length; j++) {
                 if (typeof q[field][j] === 'string') {
-                    q[field][j] = await processBase64ImagesInText(q[field][j], userId);
+                    q[field][j] = await processBase64ImagesInText(q[field][j], userId, fallbackBaseUrl);
                 } else if (typeof q[field][j] === 'object' && q[field][j] !== null) {
                     if (typeof q[field][j].left === 'string') {
-                        q[field][j].left = await processBase64ImagesInText(q[field][j].left, userId);
+                        q[field][j].left = await processBase64ImagesInText(q[field][j].left, userId, fallbackBaseUrl);
                     }
                     if (typeof q[field][j].right === 'string') {
-                        q[field][j].right = await processBase64ImagesInText(q[field][j].right, userId);
+                        q[field][j].right = await processBase64ImagesInText(q[field][j].right, userId, fallbackBaseUrl);
                     }
                 }
             }
@@ -2674,10 +2674,11 @@ app.post('/api/questions/bulk', authenticate, async (req: any, res: any) => {
         };
 
         const validQuestions = [];
+        const fallbackBaseUrl = `${req.protocol}://${req.get('host')}`;
 
         for (let i = 0; i < questions.length; i++) {
             let q = sanitizeQuestionInput(questions[i], schoolId);
-            q = await processQuestionImages(q, req.user?.id || 'admin');
+            q = await processQuestionImages(q, req.user?.id || 'admin', fallbackBaseUrl);
             const validation = validateQuestion(q);
 
             if (!validation.valid) {

@@ -2593,24 +2593,39 @@ async function processBase64ImagesInText(text: string, userId: string, fallbackB
                 const baseUrl = process.env.SUPABASE_URL?.replace(/\/$/, '');
                 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
                 const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'examforge-uploads';
+                
+                if (!baseUrl || !serviceKey) {
+                    console.error("Supabase config missing on backend! SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set.");
+                }
+
                 if (baseUrl && serviceKey) {
-                    const storageResponse = await fetch(`${baseUrl}/storage/v1/object/${bucket}/${objectKey}`, {
-                        method: 'POST', 
-                        headers: { 
-                            Authorization: `Bearer ${serviceKey}`, 
-                            apikey: serviceKey, 
-                            'Content-Type': img.ext === 'svg' ? 'image/svg+xml' : `image/${img.ext}`, 
-                            'x-upsert': 'true' 
-                        }, 
-                        body: buffer as any
-                    });
-                    if (storageResponse.ok) {
-                        publicUrlToReplace = `${baseUrl}/storage/v1/object/public/${bucket}/${objectKey}`;
+                    try {
+                        const storageResponse = await fetch(`${baseUrl}/storage/v1/object/${bucket}/${objectKey}`, {
+                            method: 'POST', 
+                            headers: { 
+                                Authorization: `Bearer ${serviceKey}`, 
+                                apikey: serviceKey, 
+                                'Content-Type': img.ext === 'svg' ? 'image/svg+xml' : `image/${img.ext}`, 
+                                'x-upsert': 'true' 
+                            }, 
+                            body: buffer as any
+                        });
+                        
+                        if (storageResponse.ok) {
+                            publicUrlToReplace = `${baseUrl}/storage/v1/object/public/${bucket}/${objectKey}`;
+                            console.log(`Successfully uploaded to Supabase: ${publicUrlToReplace}`);
+                        } else {
+                            const errText = await storageResponse.text();
+                            console.error(`Supabase upload failed! Status: ${storageResponse.status}, Error: ${errText}`);
+                        }
+                    } catch (fetchErr) {
+                        console.error(`Fetch to Supabase failed:`, fetchErr);
                     }
                 }
             }
             
             if (!publicUrlToReplace) {
+                console.log(`Falling back to local storage for: ${filename}`);
                 // Fallback to local
                 const uploadDir = path.join((process as any).cwd(), 'uploads');
                 if (!fs.existsSync(uploadDir)) {

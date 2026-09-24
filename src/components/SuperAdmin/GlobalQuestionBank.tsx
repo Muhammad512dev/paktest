@@ -100,6 +100,7 @@ const GlobalQuestionBank: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sequenceFileInputRef = useRef<HTMLInputElement>(null);
   const diagramFileInputRef = useRef<HTMLInputElement>(null);
+  const mhtmlFileInputRef = useRef<HTMLInputElement>(null);
 
   // Form State
   const [formStep, setFormStep] = useState<'TYPE' | 'CONTENT'>('TYPE');
@@ -305,51 +306,49 @@ const GlobalQuestionBank: React.FC = () => {
   };
 
   // --- CSV/EXCEL PARSING & SYNC LOGIC ---
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMhtmlUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const ext = file.name.toLowerCase();
+    const reader = new FileReader();
+    reader.readAsText(file, 'utf-8');
 
-    // Check if it's an MHTML / MHT file
-    if (ext.endsWith('.mht') || ext.endsWith('.mhtml')) {
-      const reader = new FileReader();
-      reader.readAsText(file, 'utf-8');
+    reader.onload = (event) => {
+      try {
+        const rawText = event.target?.result as string;
+        if (!rawText) return;
 
-      reader.onload = (event) => {
-        try {
-          const rawText = event.target?.result as string;
-          if (!rawText) return;
+        const explicitBoard = selSyllabusId ? getSyllabusName(selSyllabusId) : '';
+        const explicitGrade = selClassId ? getClassName(selClassId) : '';
+        const explicitSubject = selSubjectId ? getSubjectName(selSubjectId) : '';
 
-          // Determine current selected metadata (only if selected by user, else leave empty for auto-detection)
-          const explicitBoard = selSyllabusId ? getSyllabusName(selSyllabusId) : '';
-          const explicitGrade = selClassId ? getClassName(selClassId) : '';
-          const explicitSubject = selSubjectId ? getSubjectName(selSubjectId) : '';
+        const parsedQuestions = parseMhtmlToQuestions(rawText, {
+          board: (explicitBoard && explicitBoard !== 'N/A') ? explicitBoard : undefined,
+          grade: (explicitGrade && explicitGrade !== 'N/A') ? explicitGrade : undefined,
+          subject: (explicitSubject && explicitSubject !== 'N/A') ? explicitSubject : undefined
+        });
 
-          const parsedQuestions = parseMhtmlToQuestions(rawText, {
-            board: (explicitBoard && explicitBoard !== 'N/A') ? explicitBoard : undefined,
-            grade: (explicitGrade && explicitGrade !== 'N/A') ? explicitGrade : undefined,
-            subject: (explicitSubject && explicitSubject !== 'N/A') ? explicitSubject : undefined
-          });
-
-          if (parsedQuestions.length === 0) {
-            alert("No question records were found in the uploaded MHTML file.");
-            return;
-          }
-
-          setImportRows(parsedQuestions);
-          setIsImportModalOpen(false);
-          setIsSequenceImportModalOpen(false);
-          setIsSyncScreenOpen(true);
-        } catch (mhtmlErr) {
-          console.error("MHTML Parsing error:", mhtmlErr);
-          alert("Failed to parse MHTML file. Please ensure it is a valid web archive file.");
+        if (parsedQuestions.length === 0) {
+          alert("No question records were found in the uploaded MHTML file.");
+          return;
         }
-      };
 
-      if (e.target) e.target.value = '';
-      return;
-    }
+        setImportRows(parsedQuestions);
+        setIsImportModalOpen(false);
+        setIsSequenceImportModalOpen(false);
+        setIsSyncScreenOpen(true);
+      } catch (mhtmlErr) {
+        console.error("MHTML Parsing error:", mhtmlErr);
+        alert("Failed to parse MHTML file. Please ensure it is a valid web archive file.");
+      }
+    };
+
+    if (e.target) e.target.value = '';
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
     // Standard Excel / CSV file handling
     const reader = new FileReader();
@@ -1208,6 +1207,19 @@ const GlobalQuestionBank: React.FC = () => {
              className="hidden" 
              onChange={handleJsonImport} 
           />
+          <button 
+             onClick={() => mhtmlFileInputRef.current?.click()}
+             className="px-4 py-2 border border-indigo-200 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-100 flex items-center gap-2 transition-colors shadow-sm"
+          >
+            <Upload size={16} /> Import MHTML
+          </button>
+          <input 
+             type="file" 
+             accept=".mht,.mhtml" 
+             className="hidden" 
+             ref={mhtmlFileInputRef}
+             onChange={handleMhtmlUpload} 
+          />
           <button onClick={handleExport} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2">
             <FileDown size={16} /> Export List
           </button>
@@ -1485,10 +1497,10 @@ const GlobalQuestionBank: React.FC = () => {
                           className="border-2 border-dashed border-gray-200 rounded-xl py-8 flex flex-col items-center justify-center text-center bg-gray-50/50 group cursor-pointer hover:border-indigo-300"
                         >
                           <CloudDownload size={32} className="text-gray-300 mb-2 group-hover:text-indigo-400" />
-                          <p className="text-xs font-bold text-gray-700">Choose Excel/CSV/MHTML File</p>
-                          <p className="text-[9px] text-gray-400 mt-1">.xlsx, .csv, .mht, .mhtml supported</p>
+                          <p className="text-xs font-bold text-gray-700">Choose Excel/CSV File</p>
+                          <p className="text-[9px] text-gray-400 mt-1">.xlsx, .csv supported</p>
                           <button className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-md hover:bg-indigo-700">Browse Files</button>
-                          <input type="file" ref={fileInputRef} className="hidden" accept=".csv, .xlsx, .xls, .mht, .mhtml" onChange={handleFileUpload} />
+                          <input type="file" ref={fileInputRef} className="hidden" accept=".csv, .xlsx, .xls" onChange={handleFileUpload} />
                        </div>
                     </div>
                  </div>

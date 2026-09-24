@@ -63,7 +63,18 @@ export function parseMhtmlToQuestions(
             const cleanB64 = body.replace(/\s+/g, '');
             resourceMap[loc] = `data:${mimeType};base64,${cleanB64}`;
           } else if (/svg|utf-8|text\//i.test(mimeType) || /utf-8/i.test(part)) {
-            resourceMap[loc] = body;
+            if (mimeType.includes('svg')) {
+              // Convert unencoded SVGs to base64 so backend extracts them correctly
+              try {
+                // btoa requires ascii, unescape/encodeURIComponent handles unicode
+                const b64 = btoa(unescape(encodeURIComponent(body)));
+                resourceMap[loc] = `data:image/svg+xml;base64,${b64}`;
+              } catch (e) {
+                resourceMap[loc] = body; // fallback
+              }
+            } else {
+              resourceMap[loc] = body;
+            }
           }
         }
       }

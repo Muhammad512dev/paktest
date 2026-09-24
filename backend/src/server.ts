@@ -448,6 +448,19 @@ function extractAndSaveEmbeddedMedia(content: string, classLevel: string, subjec
     });
 }
 
+const ensureStringArray = (val: any): string[] => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val.map(v => String(v || ''));
+    if (typeof val === 'string') {
+        try {
+            const parsed = JSON.parse(val);
+            if (Array.isArray(parsed)) return parsed.map(v => String(v || ''));
+        } catch(e) {}
+        return [val];
+    }
+    return [String(val)];
+};
+
 const sanitizeQuestionInput = (raw: any, schoolId: string | null) => {
     const q: any = { ...(raw || {}) };
 

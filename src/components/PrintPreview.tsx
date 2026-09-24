@@ -297,9 +297,10 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
 
   // Student Info Style
   const [studentInfoStyle, setStudentInfoStyle] = useState<'Standard' | 'Grid'>('Standard');
+  const [imageScale, setImageScale] = useState<number>(1.0);
 
-  // MCQ Grid Controls: Default 2 columns for Board format / Bilingual mode, questionGap to 0
-  const [mcqColumns, setMcqColumns] = useState<number>(2);
+  // MCQ Grid Controls: Default 2 columns for Board format / Bilingual mode, otherwise 4
+  const [mcqColumns, setMcqColumns] = useState<number>(paper.languageMode === 'Bilingual' ? 2 : 4);
   const [verticalSpacing, setVerticalSpacing] = useState<number>(2);
   const [questionGap, setQuestionGap] = useState<number>(0);
   const [bilingualInline, setBilingualInline] = useState(true);
@@ -1025,6 +1026,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             <RangeControl label="Opt Gap" value={verticalSpacing} setValue={setVerticalSpacing} min={0} max={16} width="w-14" />
             <RangeControl label="Margin" value={pagePadding} setValue={setPagePadding} min={0} max={40} unit="mm" width="w-16" />
             <RangeControl label="MCQ Cols" value={mcqColumns} setValue={setMcqColumns} min={1} max={4} width="w-14" />
+            <RangeControl label="Img Zoom" value={imageScale} setValue={setImageScale} min={0.5} max={3} step={0.1} width="w-16" />
           </div>
 
           {/* 4. Visibility & Watermark */}
@@ -1063,8 +1065,9 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               fontWeight: boldAllText ? '700' : fontWeight,
               fontFamily: englishFont,
               width: pageStyles[pageSize].width,
-              padding: `${pagePadding}mm`
-            }}
+              padding: `${pagePadding}mm`,
+              '--img-scale': imageScale
+            } as React.CSSProperties}
           >
             {/* Urdu Font Injection */}
             <style>{`

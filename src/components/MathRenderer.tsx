@@ -263,7 +263,10 @@ const MathRenderer: React.FC<MathRendererProps> = ({
       if (/^<img[^>]*>$/i.test(part)) {
         let img = part;
         if (!/style=/i.test(img)) {
-          img = img.replace(/<img/i, '<img style="max-height:160px; max-width:100%; object-fit:contain; display:inline-block; vertical-align:middle; margin:4px 2px;" loading="lazy"');
+          img = img.replace(/<img/i, '<img style="max-height:160px; max-width:100%; object-fit:contain; display:inline-block; vertical-align:middle; margin:4px 2px; zoom: var(--img-scale, 1);" loading="lazy"');
+        } else {
+          // If it already has a style, inject the zoom variable at the end of the style string
+          img = img.replace(/style=["']([^"']*)["']/i, 'style="$1; zoom: var(--img-scale, 1);"');
         }
         
         // Auto-fix relative /uploads/ URLs to point to the backend

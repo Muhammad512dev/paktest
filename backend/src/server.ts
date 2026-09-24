@@ -2542,29 +2542,64 @@ app.post('/api/questions', authenticate, async (req: any, res: any) => {
     }
 });
 
-async function processBase64ImagesInText(text: string, userId: string, fallbackBaseUrl: string): Promise<string> {
-    if (!text || !text.includes('data:image/')) return text;
+async function processImagesInText(text: string, userId: string, fallbackBaseUrl: string): Promise<string> {
+    if (!text || typeof text !== 'string') return text;
 
     let processedText = text;
     let match;
-    const matches = [];
+    const matches: any[] = [];
     
-    // Find all matches first (now handles missing quotes and newline-mangled base64)
-    const regex2 = /src=["']?(data:image\/([^;]+);base64,([a-zA-Z0-9+/=\s]+))["']?/g;
-    while ((match = regex2.exec(text)) !== null) {
+    // 1. Find all base64 matches
+    const regexB64 = /src=["']?(data:image\/([^;]+);base64,([a-zA-Z0-9+/=\s]+))["']?/g;
+    while ((match = regexB64.exec(text)) !== null) {
         matches.push({
             fullMatch: match[0],
-            dataUri: match[1],
+            isBase64: true,
             ext: match[2] === 'svg+xml' ? 'svg' : match[2],
-            base64Data: match[3].replace(/\s+/g, '') // remove any whitespace that leaked in
+            base64Data: match[3].replace(/\s+/g, '')
         });
     }
 
-    console.log(`Found ${matches.length} base64 images in text payload.`);
+    // 2. Find all HTTP matches
+    const regexHttp = /src=["']?(https?:\/\/[^"'\s>]+)["']?/gi;
+    while ((match = regexHttp.exec(text)) !== null) {
+        const url = match[1];
+        // Skip if already points to our own storage or supabase
+        if (url.includes('supabase.co') || url.includes('/uploads/img_') || url.includes('examforge-uploads')) {
+            continue;
+        }
+        const extMatch = url.match(/\.(svg|png|jpg|jpeg|gif|webp)(?:[?#]|$)/i);
+        const ext = extMatch ? extMatch[1].toLowerCase() : 'png';
+        
+        matches.push({
+            fullMatch: match[0],
+            isBase64: false,
+            url: url,
+            ext: ext
+        });
+    }
+
+    if (matches.length > 0) {
+        console.log(`Found ${matches.length} images (Base64/HTTP) in text payload to process.`);
+    }
 
     for (const img of matches) {
         try {
-            const buffer = Buffer.from(img.base64Data, 'base64');
+            let buffer: Buffer;
+            
+            if (img.isBase64) {
+                buffer = Buffer.from(img.base64Data, 'base64');
+            } else {
+                console.log(`Downloading external image: ${img.url}`);
+                const fetchRes = await fetch(img.url);
+                if (!fetchRes.ok) {
+                    console.error(`Failed to download ${img.url}: ${fetchRes.statusText}`);
+                    continue; // Skip if we can't download
+                }
+                const arrayBuffer = await fetchRes.arrayBuffer();
+                buffer = Buffer.from(arrayBuffer);
+            }
+
             const filename = `img_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${img.ext}`;
             const objectKey = `${userId || 'public'}/${filename}`;
             const storageProvider = (process.env.STORAGE_PROVIDER || 'local').toLowerCase();
@@ -2639,11 +2674,11 @@ async function processBase64ImagesInText(text: string, userId: string, fallbackB
                 publicUrlToReplace = `${publicBase}/uploads/${filename}`;
             }
 
-            // Replace in text
+            // Replace in text using exactly the format it had before (with quotes)
             processedText = processedText.replace(img.fullMatch, `src="${publicUrlToReplace}"`);
 
         } catch (e) {
-            console.error('Failed to process base64 image:', e);
+            console.error('Failed to process image:', e);
         }
     }
 
@@ -2655,17 +2690,17 @@ async function processQuestionImages(q: any, userId: string, fallbackBaseUrl: st
     
     for (const field of fieldsToProcess) {
         if (q[field] && typeof q[field] === 'string') {
-            q[field] = await processBase64ImagesInText(q[field], userId, fallbackBaseUrl);
+            q[field] = await processImagesInText(q[field], userId, fallbackBaseUrl);
         } else if (Array.isArray(q[field])) {
             for (let j = 0; j < q[field].length; j++) {
                 if (typeof q[field][j] === 'string') {
-                    q[field][j] = await processBase64ImagesInText(q[field][j], userId, fallbackBaseUrl);
+                    q[field][j] = await processImagesInText(q[field][j], userId, fallbackBaseUrl);
                 } else if (typeof q[field][j] === 'object' && q[field][j] !== null) {
                     if (typeof q[field][j].left === 'string') {
-                        q[field][j].left = await processBase64ImagesInText(q[field][j].left, userId, fallbackBaseUrl);
+                        q[field][j].left = await processImagesInText(q[field][j].left, userId, fallbackBaseUrl);
                     }
                     if (typeof q[field][j].right === 'string') {
-                        q[field][j].right = await processBase64ImagesInText(q[field][j].right, userId, fallbackBaseUrl);
+                        q[field][j].right = await processImagesInText(q[field][j].right, userId, fallbackBaseUrl);
                     }
                 }
             }

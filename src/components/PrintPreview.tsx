@@ -316,7 +316,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [printBubbleSheet, setPrintBubbleSheet] = useState(false);
   const [printAnswerKey, setPrintAnswerKey] = useState(false);
   const [separateSubjective, setSeparateSubjective] = useState(false); // New State for Page Break
-  const [subjectiveEmptyLines, setSubjectiveEmptyLines] = useState<number>(0);
+  const [shortEmptyLines, setShortEmptyLines] = useState<number>(0);
+  const [longEmptyLines, setLongEmptyLines] = useState<number>(0);
 
   // Interaction State
   const [isToolbarOpen, setIsToolbarOpen] = useState(true);
@@ -994,8 +995,10 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               <Layers size={16} /> Split
             </button>
             <div className="flex items-center gap-2 border-l border-slate-700 pl-2 ml-1" title="Add empty lines after subjective questions for students to write answers">
-              <span className="text-[10px] text-slate-400 font-bold uppercase">Empty Lines:</span>
-              <input type="number" min={0} max={20} value={subjectiveEmptyLines === 0 ? '' : subjectiveEmptyLines} placeholder="0" onChange={e => setSubjectiveEmptyLines(e.target.value === '' ? 0 : parseInt(e.target.value))} className="w-12 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" />
+              <span className="text-[10px] text-slate-400 font-bold uppercase">Short:</span>
+              <input type="number" min={0} max={20} value={shortEmptyLines === 0 ? '' : shortEmptyLines} placeholder="0" onChange={e => setShortEmptyLines(e.target.value === '' ? 0 : parseInt(e.target.value))} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" />
+              <span className="text-[10px] text-slate-400 font-bold uppercase">Long:</span>
+              <input type="number" min={0} max={40} value={longEmptyLines === 0 ? '' : longEmptyLines} placeholder="0" onChange={e => setLongEmptyLines(e.target.value === '' ? 0 : parseInt(e.target.value))} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" />
             </div>
             <button onClick={() => setBoardExamFormat(p => !p)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${boardExamFormat ? 'bg-amber-600/30 border-amber-500/50 text-amber-300' : 'bg-transparent border-slate-700 text-slate-400 hover:text-amber-300'}`} title="Pakistani Board Exam Format (Bilingual side-by-side rows)">
               <FileText size={16} /> Board Format
@@ -1691,11 +1694,11 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       </td>
                     )}
                   </tr>
-                  {!isMCQType(q.type) && subjectiveEmptyLines > 0 && (
+                  {!isMCQType(q.type) && (q.type === 'Long Answer' ? longEmptyLines : shortEmptyLines) > 0 && (
                     <tr className="print:break-inside-avoid">
                       <td colSpan={languageMode === 'Bilingual' ? 4 : 2} className="px-2 pt-4 pb-6">
                         <div className="flex flex-col gap-8">
-                          {Array.from({ length: subjectiveEmptyLines }).map((_, i) => (
+                          {Array.from({ length: q.type === 'Long Answer' ? longEmptyLines : shortEmptyLines }).map((_, i) => (
                             <div key={i} className="border-b border-black print:border-black w-full h-[1px]" />
                           ))}
                         </div>
@@ -1857,10 +1860,10 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       )}
                       
                       {/* Empty lines for subjective answers */}
-                      {!isMCQType(q.type) && subjectiveEmptyLines > 0 && (
+                      {!isMCQType(q.type) && (q.type === 'Long Answer' ? longEmptyLines : shortEmptyLines) > 0 && (
                         <div className="mt-4 flex flex-col gap-6 pt-2 pb-4">
-                          {Array.from({ length: subjectiveEmptyLines }).map((_, i) => (
-                            <div key={i} className="border-b border-slate-300 w-full" />
+                          {Array.from({ length: q.type === 'Long Answer' ? longEmptyLines : shortEmptyLines }).map((_, i) => (
+                            <div key={i} className="border-b border-black print:border-black w-full h-[1px]" />
                           ))}
                         </div>
                       )}
@@ -2149,9 +2152,9 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     </div>
                   )}
 
-                  {!isMCQType(q.type) && subjectiveEmptyLines > 0 && (
+                  {!isMCQType(q.type) && (q.type === 'Long Answer' ? longEmptyLines : shortEmptyLines) > 0 && (
                     <div className="flex flex-col gap-8 pt-6 pb-6 print:break-inside-avoid w-full px-2">
-                      {Array.from({ length: subjectiveEmptyLines }).map((_, i) => (
+                      {Array.from({ length: q.type === 'Long Answer' ? longEmptyLines : shortEmptyLines }).map((_, i) => (
                         <div key={i} className="border-b border-black print:border-black w-full h-[1px]" />
                       ))}
                     </div>

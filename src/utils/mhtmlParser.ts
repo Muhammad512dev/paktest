@@ -235,7 +235,8 @@ export function parseMhtmlToQuestions(
       let correctAnswer = '';
 
       if (isMcq) {
-        const liMatches = qRow.match(/<li[\s\S]*?<\/li>/gi) || [];
+        const unescapedQRow = qRow.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+        const liMatches = unescapedQRow.match(/<li[\s\S]*?<\/li>/gi) || [];
         const optionLetters = ['A', 'B', 'C', 'D'];
 
         liMatches.forEach((li, idx) => {

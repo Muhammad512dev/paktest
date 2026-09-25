@@ -1680,22 +1680,24 @@ const GlobalQuestionBank: React.FC = () => {
                     {/* Batch Author Selection */}
                     <div className="flex items-center gap-2">
                        <label className="text-xs font-medium text-slate-500">Author:</label>
-                       <select
+                       <input
+                          list="batch-authors"
+                          placeholder="Individual (Type or Select)"
                           value={batchAuthorOverride}
                           onChange={(e) => {
                              const val = e.target.value;
                              setBatchAuthorOverride(val);
-                             if (val && val !== '__AUTO__') {
+                             if (val) {
                                 setImportRows(prev => prev.map(r => ({ ...r, Sources: val })));
                              }
                           }}
-                          className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
-                       >
-                          <option value="">Individual</option>
+                          className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 w-44"
+                       />
+                       <datalist id="batch-authors">
                           {["Model Paper", "Past Paper", "Textbook", "Super Admin"].map(a => (
-                             <option key={a} value={a}>{a}</option>
+                             <option key={a} value={a} />
                           ))}
-                       </select>
+                       </datalist>
                     </div>
                  </div>
 
@@ -2112,7 +2114,18 @@ const GlobalQuestionBank: React.FC = () => {
                                  </select>
                               </div>
 
-                              <div className="grid grid-cols-2 gap-3">
+                              <div className="grid grid-cols-3 gap-3">
+                                 <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Type</label>
+                                    <select value={newQuestion.type} onChange={e => {
+                                       setNewQuestion({...newQuestion, type: e.target.value});
+                                       if (e.target.value === 'MCQ') setCustomFormat('CHOICE');
+                                    }} className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-sm outline-none">
+                                       {['MCQ', 'Short Question', 'Long Answer', 'Fill in the Blank', 'True/False', 'Match Columns', 'Numerical', 'Derivation'].map(t => (
+                                          <option key={t} value={t}>{t}</option>
+                                       ))}
+                                    </select>
+                                 </div>
                                  <div className="space-y-1.5">
                                     <label className="text-[10px] font-bold text-slate-500 uppercase">Marks</label>
                                     <input type="number" value={newQuestion.marks} onChange={e => setNewQuestion({...newQuestion, marks: parseInt(e.target.value) || 1})} className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-sm outline-none" />
@@ -2142,6 +2155,20 @@ const GlobalQuestionBank: React.FC = () => {
                                   </button>
                                   {isSourceDropdownOpen && (
                                      <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 max-h-60 overflow-y-auto">
+                                        <div className="p-2 border-b border-slate-100 mb-2">
+                                           <input 
+                                              type="text" 
+                                              placeholder="Type custom source & press Enter..." 
+                                              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                                              onKeyDown={(e) => {
+                                                 if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                    e.preventDefault();
+                                                    handleToggleSource(e.currentTarget.value.trim());
+                                                    e.currentTarget.value = '';
+                                                 }
+                                              }}
+                                           />
+                                        </div>
                                         {Object.values(QuestionSource).map(src => (
                                            <label key={src} className="flex items-center gap-3 p-2.5 hover:bg-indigo-50 rounded-lg cursor-pointer transition-colors">
                                               <input type="checkbox" checked={newQuestion.sources?.includes(src)} onChange={() => handleToggleSource(src)} className="rounded text-indigo-600" />

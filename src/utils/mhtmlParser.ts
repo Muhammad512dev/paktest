@@ -202,8 +202,19 @@ export function parseMhtmlToQuestions(
       const engMatch = qRow.match(/<div[^>]*class=["'][^"']*english-col[^"']*["']>([\s\S]*?)<\/div>/i);
       const urduMatch = qRow.match(/<div[^>]*class=["'][^"']*urdu-col[^"']*["']>([\s\S]*?)<\/div>/i);
 
-      const questionTextEn = engMatch ? cleanHtmlContent(engMatch[1]) : '';
-      const questionTextUr = urduMatch ? cleanHtmlContent(urduMatch[1]) : '';
+      let rawEng = engMatch ? engMatch[1] : '';
+      let rawUrdu = urduMatch ? urduMatch[1] : '';
+
+      // Remove the inline options list (e.g., <ul class="inline-options">...</ul>) from the question text
+      rawEng = rawEng.replace(/(?:<|&lt;)ul[^>]*class=["']?(?:[^"']*?)inline-options(?:[^"']*?)["']?[\s\S]*?(?:<|&lt;)\/ul(?:>|&gt;)/gi, '');
+      rawUrdu = rawUrdu.replace(/(?:<|&lt;)ul[^>]*class=["']?(?:[^"']*?)inline-options(?:[^"']*?)["']?[\s\S]*?(?:<|&lt;)\/ul(?:>|&gt;)/gi, '');
+
+      // Remove any standalone list items that might have been outside a ul
+      rawEng = rawEng.replace(/(?:<|&lt;)li[^>]*(?:>|&gt;)[\s\S]*?(?:<|&lt;)\/li(?:>|&gt;)/gi, '');
+      rawUrdu = rawUrdu.replace(/(?:<|&lt;)li[^>]*(?:>|&gt;)[\s\S]*?(?:<|&lt;)\/li(?:>|&gt;)/gi, '');
+
+      const questionTextEn = cleanHtmlContent(rawEng);
+      const questionTextUr = cleanHtmlContent(rawUrdu);
 
       if (!questionTextEn && !questionTextUr) continue;
 

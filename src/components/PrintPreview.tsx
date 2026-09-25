@@ -989,7 +989,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             </button>
             <div className="flex items-center gap-2 border-l border-slate-700 pl-2 ml-1" title="Add empty lines after subjective questions for students to write answers">
               <span className="text-[10px] text-slate-400 font-bold uppercase">Empty Lines:</span>
-              <input type="number" min={0} max={20} value={subjectiveEmptyLines} onChange={e => setSubjectiveEmptyLines(parseInt(e.target.value) || 0)} className="w-12 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" />
+              <input type="number" min={0} max={20} value={subjectiveEmptyLines === 0 ? '' : subjectiveEmptyLines} placeholder="0" onChange={e => setSubjectiveEmptyLines(e.target.value === '' ? 0 : parseInt(e.target.value))} className="w-12 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" />
             </div>
             <button onClick={() => setBoardExamFormat(p => !p)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${boardExamFormat ? 'bg-amber-600/30 border-amber-500/50 text-amber-300' : 'bg-transparent border-slate-700 text-slate-400 hover:text-amber-300'}`} title="Pakistani Board Exam Format (Bilingual side-by-side rows)">
               <FileText size={16} /> Board Format

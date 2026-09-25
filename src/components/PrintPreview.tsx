@@ -316,6 +316,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [printBubbleSheet, setPrintBubbleSheet] = useState(false);
   const [printAnswerKey, setPrintAnswerKey] = useState(false);
   const [separateSubjective, setSeparateSubjective] = useState(false); // New State for Page Break
+  const [subjectiveEmptyLines, setSubjectiveEmptyLines] = useState<number>(0);
 
   // Interaction State
   const [isToolbarOpen, setIsToolbarOpen] = useState(true);
@@ -986,6 +987,10 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             <button onClick={() => setSeparateSubjective(!separateSubjective)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${separateSubjective ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-400' : 'bg-transparent border-slate-700 text-slate-400'}`} title="Print Subjective Part on Separate Page">
               <Layers size={16} /> Split
             </button>
+            <div className="flex items-center gap-2 border-l border-slate-700 pl-2 ml-1" title="Add empty lines after subjective questions for students to write answers">
+              <span className="text-[10px] text-slate-400 font-bold uppercase">Empty Lines:</span>
+              <input type="number" min={0} max={20} value={subjectiveEmptyLines} onChange={e => setSubjectiveEmptyLines(parseInt(e.target.value) || 0)} className="w-12 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" />
+            </div>
             <button onClick={() => setBoardExamFormat(p => !p)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${boardExamFormat ? 'bg-amber-600/30 border-amber-500/50 text-amber-300' : 'bg-transparent border-slate-700 text-slate-400 hover:text-amber-300'}`} title="Pakistani Board Exam Format (Bilingual side-by-side rows)">
               <FileText size={16} /> Board Format
             </button>
@@ -1667,8 +1672,18 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       <td className="print:hidden align-top" style={{ width: '28px' }}>
                         <button onClick={() => removeQuestion(q.id)} className="p-1 text-red-400 hover:text-red-600"><Trash2 size={12} /></button>
                       </td>
-                    )}
                   </tr>
+                  {!isMCQType(q.type) && subjectiveEmptyLines > 0 && (
+                    <tr className="print:break-inside-avoid">
+                      <td colSpan={languageMode === 'Bilingual' ? 4 : 2} className="px-2 pt-2 pb-4">
+                        <div className="flex flex-col gap-6">
+                          {Array.from({ length: subjectiveEmptyLines }).map((_, i) => (
+                            <div key={i} className="border-b border-slate-300 w-full" />
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </React.Fragment>
               );
             })}
@@ -1811,6 +1826,15 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       {showAnswersInline && q.type !== 'MCQ' && (
                         <div className="mt-2 text-sm text-green-700 bg-green-50 p-1 rounded border border-green-200 font-medium">
                           <span className="font-bold">Ans:</span> <MathRenderer text={q.correctAnswer || 'N/A'} inline />
+                        </div>
+                      )}
+                      
+                      {/* Empty lines for subjective answers */}
+                      {!isMCQType(q.type) && subjectiveEmptyLines > 0 && (
+                        <div className="mt-4 flex flex-col gap-6 pt-2 pb-4">
+                          {Array.from({ length: subjectiveEmptyLines }).map((_, i) => (
+                            <div key={i} className="border-b border-slate-300 w-full" />
+                          ))}
                         </div>
                       )}
                     </div>

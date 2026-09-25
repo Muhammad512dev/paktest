@@ -1753,16 +1753,36 @@ registerCurriculumRoutes('subjects', prisma.subject);
 registerCurriculumRoutes('chapters', prisma.chapter);
 registerCurriculumRoutes('topics', prisma.topic);
 registerCurriculumRoutes('sources', prisma.source);
-app.get('/api/curriculum/question-types', (req, res) => {
-    res.json([
-        { id: 'MCQ', name: 'Multiple Choice', category: 'Objective' },
-        { id: 'Match Columns', name: 'Match Columns', category: 'Objective' },
-        { id: 'Fill in the Blanks', name: 'Fill in the Blanks', category: 'Objective' },
-        { id: 'True/False', name: 'True/False', category: 'Objective' },
-        { id: 'Short Answer', name: 'Short Answer', category: 'Subjective' },
-        { id: 'Long Answer', name: 'Long Answer', category: 'Subjective' },
-        { id: 'Diagram Based', name: 'Diagram Based', category: 'Subjective' },
-    ]);
+app.get('/api/curriculum/question-types', async (req, res) => {
+    try {
+        const hardcoded = [
+            { id: 'MCQ', name: 'Multiple Choice', category: 'Objective' },
+            { id: 'Match Columns', name: 'Match Columns', category: 'Objective' },
+            { id: 'Fill in the Blanks', name: 'Fill in the Blanks', category: 'Objective' },
+            { id: 'True/False', name: 'True/False', category: 'Objective' },
+            { id: 'Short Answer', name: 'Short Answer', category: 'Subjective' },
+            { id: 'Long Answer', name: 'Long Answer', category: 'Subjective' },
+            { id: 'Diagram Based', name: 'Diagram Based', category: 'Subjective' },
+        ];
+        
+        // Find any new types in the database
+        const dbTypes = await prisma.question.findMany({
+            distinct: ['type'],
+            select: { type: true },
+            where: { type: { notIn: hardcoded.map(h => h.id), not: '' } }
+        });
+
+        const newTypes = dbTypes.map(t => ({
+            id: t.type,
+            name: t.type,
+            category: (t.type.toLowerCase().includes('mcq') || t.type.toLowerCase().includes('objective') || t.type.toLowerCase().includes('fill') || t.type.toLowerCase().includes('match') || t.type.toLowerCase().includes('true')) ? 'Objective' : 'Subjective'
+        }));
+
+        res.json([...hardcoded, ...newTypes]);
+    } catch (e) {
+        console.error("Failed to fetch question types:", e);
+        res.status(500).json({ error: "Failed to fetch question types" });
+    }
 });
 app.post('/api/curriculum/sync', authenticate, async (req, res) => {
     const { board, grade, subject, chapter, topic } = req.body;
@@ -1863,6 +1883,22 @@ app.post('/api/questions', authenticate, async (req, res) => {
         if (!validation.valid) {
             return res.status(400).json({ error: 'Validation failed', details: validation.errors });
         }
+        
+        // Auto-create source if it exists
+        const uniqueSources = new Set();
+        if (Array.isArray(sanitized.sources)) {
+            sanitized.sources.forEach(s => { if (s && s.trim()) uniqueSources.add(s.trim()); });
+        } else if (sanitized.source && sanitized.source.trim()) {
+            uniqueSources.add(sanitized.source.trim());
+        }
+        for (const src of uniqueSources) {
+            try {
+                await prisma.source.upsert({ where: { name: src }, update: {}, create: { name: src } });
+            } catch (err) {
+                console.error("Failed to auto-create source:", src, err.message);
+            }
+        }
+
         const question = await prisma.question.create({ data: sanitized });
         await trackActivity(req, 'CURRICULUM', `Added question`);
         res.json(question);
@@ -1886,6 +1922,8 @@ app.post('/api/questions/bulk', authenticate, async (req, res) => {
             errors: []
         };
         const validQuestions = [];
+        const uniqueSources = new Set();
+        
         for (let i = 0; i < questions.length; i++) {
             const q = sanitizeQuestionInput(questions[i], schoolId);
             const validation = validateQuestion(q);
@@ -1899,7 +1937,30 @@ app.post('/api/questions/bulk', authenticate, async (req, res) => {
                 continue;
             }
             validQuestions.push(q);
+            
+            // Collect unique sources
+            if (Array.isArray(q.sources)) {
+                q.sources.forEach(s => {
+                    if (s && s.trim() !== '') uniqueSources.add(s.trim());
+                });
+            } else if (q.source && q.source.trim() !== '') {
+                uniqueSources.add(q.source.trim());
+            }
         }
+        
+        // Auto-create missing sources in the Source curriculum table
+        for (const src of uniqueSources) {
+            try {
+                await prisma.source.upsert({
+                    where: { name: src },
+                    update: {},
+                    create: { name: src }
+                });
+            } catch (err) {
+                console.error("Failed to auto-create source:", src, err.message);
+            }
+        }
+        
         // Batch insert valid questions in chunks of 500
         const chunkSize = 500;
         for (let i = 0; i < validQuestions.length; i += chunkSize) {

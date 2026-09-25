@@ -427,12 +427,12 @@ const GlobalQuestionBank: React.FC = () => {
         
         // Ensure every question has necessary fields for the DB
         const prepared = questionsToImport.map(q => {
-          const rawText = (q.text || q.textUrdu || '');
-          const rawTextUrdu = (q.textUrdu || q.text || '');
-          const text = autoDetectEquations ? autoDetectAndFormatEquations(rawText, { isUrdu: false, subject: q.subject }) : rawText;
-          const textUrdu = autoDetectEquations ? autoDetectAndFormatEquations(rawTextUrdu, { isUrdu: true, subject: q.subject }) : rawTextUrdu;
-          const rawOpts = q.type === 'MCQ' ? ((Array.isArray(q.options) && q.options.length) ? q.options : (Array.isArray(q.optionsUrdu) ? q.optionsUrdu : [])) : q.options;
-          const rawOptsUrdu = q.type === 'MCQ' ? ((Array.isArray(q.optionsUrdu) && q.optionsUrdu.length) ? q.optionsUrdu : (Array.isArray(q.options) ? q.options : [])) : q.optionsUrdu;
+          const rawText = (q.text || '');
+          const rawTextUrdu = (q.textUrdu || '');
+          const text = autoDetectEquations && rawText ? autoDetectAndFormatEquations(rawText, { isUrdu: false, subject: q.subject }) : rawText;
+          const textUrdu = autoDetectEquations && rawTextUrdu ? autoDetectAndFormatEquations(rawTextUrdu, { isUrdu: true, subject: q.subject }) : rawTextUrdu;
+          const rawOpts = q.type === 'MCQ' ? (Array.isArray(q.options) ? q.options : []) : q.options;
+          const rawOptsUrdu = q.type === 'MCQ' ? (Array.isArray(q.optionsUrdu) ? q.optionsUrdu : []) : q.optionsUrdu;
 
           return {
             ...q,
@@ -528,8 +528,8 @@ const GlobalQuestionBank: React.FC = () => {
 
         const q: Question = {
             id: `bulk_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 5)}`,
-            text: text || textUrdu,
-            textUrdu: textUrdu || text,
+            text: text,
+            textUrdu: textUrdu,
             type: type,
             marks: parseInt(row.Marks) || 1,
             difficulty: (row.Difficulty || Difficulty.MEDIUM) as Difficulty,
@@ -541,9 +541,9 @@ const GlobalQuestionBank: React.FC = () => {
             correctAnswer: String(row.CorrectAnswer_Letter || row.CorrectAnswer || ''),
             sources: row.Sources ? String(row.Sources).split('|') : [QuestionSource.MODEL_PAPER],
             source: row.Sources ? String(row.Sources).split('|')[0] : QuestionSource.MODEL_PAPER,
-            options: (type === 'MCQ' && options.length === 0 && optionsUrdu.length > 0) ? [...optionsUrdu] : options,
-            optionsUrdu: (type === 'MCQ' && optionsUrdu.length === 0 && options.length > 0) ? [...options] : optionsUrdu,
-            medium: (text && textUrdu && text !== textUrdu) ? 'Bilingual' : textUrdu ? 'Urdu' : 'English'
+            options: type === 'MCQ' ? options : [],
+            optionsUrdu: type === 'MCQ' ? optionsUrdu : [],
+            medium: (text && textUrdu) ? 'Bilingual' : textUrdu ? 'Urdu' : 'English'
         } as Question;
 
         finalQuestions.push(q);

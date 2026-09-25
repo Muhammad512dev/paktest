@@ -61,17 +61,20 @@ const CurriculumManager: React.FC = () => {
 
   /* Fixed: Make refreshData async and await Promise results for curriculum nodes */
   const refreshData = async () => {
-    const syls = await getSyllabuses();
+    const [syls, clss, subs, chs, tops, srcs] = await Promise.all([
+      getSyllabuses(),
+      getClasses(),
+      getSubjects(),
+      getChapters(),
+      getTopics(),
+      getSources()
+    ]);
+    
     setSyllabuses(syls);
-    const clss = await getClasses();
     setClasses(clss);
-    const subs = await getSubjects();
     setSubjects(subs);
-    const chs = await getChapters();
     setChapters(chs);
-    const tops = await getTopics();
     setTopics(tops);
-    const srcs = await getSources();
     setSources(srcs);
   };
 

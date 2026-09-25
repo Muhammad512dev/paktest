@@ -377,6 +377,11 @@ const Quiz: React.FC = () => {
                                <MathRenderer text={q.textUrdu} dir="rtl" />
                             </div>
                         )}
+                        {q.imageUrl && (
+                            <div className="mt-4 flex justify-center">
+                               <img src={q.imageUrl} alt="Question diagram" className="max-w-full max-h-[400px] object-contain rounded-xl border border-slate-200" />
+                            </div>
+                        )}
                         <div className="flex gap-2 mt-3">
                            <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2 py-1 rounded border border-indigo-100 uppercase tracking-wider">{q.source}</span>
                         </div>

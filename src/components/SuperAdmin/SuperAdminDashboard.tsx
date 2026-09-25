@@ -32,7 +32,7 @@ import {
   getSystemConfig,
   getUsers,
   getTransactions,
-  getQuestions,
+  getQuestionsPage,
   approveSchool
 } from '../../services/dataService';
 import { PlatformNotification, School } from '../../types';
@@ -61,13 +61,13 @@ const SuperAdminDashboard: React.FC = () => {
   /* Refactored data loading to handle async responses correctly */
   const loadData = async () => {
     try {
-      const [notes, schoolList, config, usersList, txList, questionsList] = await Promise.all([
+      const [notes, schoolList, config, usersList, txList, questionsRes] = await Promise.all([
         getPlatformNotifications().catch(() => []),
         getSchools().catch(() => []),
         getSystemConfig().catch(() => ({ currencySymbol: '$' })),
         getUsers().catch(() => []),
         getTransactions().catch(() => []),
-        getQuestions().catch(() => [])
+        getQuestionsPage({ pageSize: 1 }).catch(() => ({ data: [], pagination: { total: 0 } }))
       ]);
 
       setNotifications(notes || []);
@@ -77,7 +77,8 @@ const SuperAdminDashboard: React.FC = () => {
       // Calculate Real-time Metrics
       const totalRevenue = (txList || []).reduce((acc: number, tx: any) => acc + (tx?.amount || 0), 0);
       // Estimate tokens: approx 750 tokens per question generated (input + output + reasoning)
-      const estimatedTokens = (questionsList || []).length * 750; 
+      const totalQuestions = questionsRes?.pagination?.total || 0;
+      const estimatedTokens = totalQuestions * 750; 
 
       setMetrics({
         revenue: totalRevenue || 0,

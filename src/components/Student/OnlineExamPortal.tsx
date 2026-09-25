@@ -418,8 +418,14 @@ const OnlineExamPortal: React.FC<OnlineExamPortalProps> = ({ paperId, onComplete
                       <MathRenderer text={q.textUrdu} />
                     </div>
                   )}
+                  {/* Show SVG/Image if present */}
+                  {q.imageUrl && (
+                    <div className="mt-4 flex justify-center">
+                      <img src={q.imageUrl} alt="Question Diagram" className="max-w-full max-h-[400px] object-contain rounded-xl border border-gray-100 shadow-sm" />
+                    </div>
+                  )}
                   {/* Fallback: show whatever text is available */}
-                  {(!q.text && !q.textUrdu) && (
+                  {(!q.text && !q.textUrdu && !q.imageUrl) && (
                     <h2 className="text-lg font-bold text-gray-400 italic">Question text not available</h2>
                   )}
                 </div>

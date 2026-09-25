@@ -187,7 +187,7 @@ export function parseMhtmlToQuestions(
     }
 
     // Match all question rows inside TableHover
-    const qRows = block.match(/<div[^>]*class=["'][^"']*TableHover[^"']*["'][\s\S]*?(?=<div[^>]*class=["'][^"']*TableHover[^"']*["']|$)/gi) || [];
+    const qRows = block.match(/(?:<|&lt;)div[^>]*class=["']?[^"']*TableHover[^"']*["']?[\s\S]*?(?=(?:<|&lt;)div[^>]*class=["']?[^"']*TableHover[^"']*["']?|$)/gi) || [];
 
     for (const qRow of qRows) {
       const isMcq = /multiple-options-col|class=["']abcd["']/i.test(qRow);
@@ -203,16 +203,25 @@ export function parseMhtmlToQuestions(
       let rawUrdu = '';
       
       try {
+        // Unescape HTML entities in case the MHTML encodes the inner content
+        const unescapedRow = qRow.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
         const parser = new DOMParser();
-        const doc = parser.parseFromString(qRow, 'text/html');
-        const engCol = doc.querySelector('.english-col');
-        const urduCol = doc.querySelector('.urdu-col');
+        const doc = parser.parseFromString(unescapedRow, 'text/html');
+        
+        const divs = Array.from(doc.querySelectorAll('div, span, td'));
+        const engCol = divs.find(d => (d.className || '').toLowerCase().includes('english-col'));
+        const urduCol = divs.find(d => (d.className || '').toLowerCase().includes('urdu-col'));
+        
         if (engCol) rawEng = engCol.innerHTML;
         if (urduCol) rawUrdu = urduCol.innerHTML;
       } catch (e) {
-        // Fallback to basic regex if DOMParser fails
-        const engMatch = qRow.match(/<div[^>]*class=["'][^"']*english-col[^"']*["']>([\s\S]*?)<\/div>/i);
-        const urduMatch = qRow.match(/<div[^>]*class=["'][^"']*urdu-col[^"']*["']>([\s\S]*?)<\/div>/i);
+        console.error("DOMParser error:", e);
+      }
+
+      // Fallback to basic regex if DOMParser didn't find anything
+      if (!rawEng && !rawUrdu) {
+        const engMatch = qRow.match(/(?:<|&lt;)div[^>]*class=["']?[^"']*english-col[^"']*["']?(?:>|&gt;)([\s\S]*?)(?:<|&lt;)\/div(?:>|&gt;)/i);
+        const urduMatch = qRow.match(/(?:<|&lt;)div[^>]*class=["']?[^"']*urdu-col[^"']*["']?(?:>|&gt;)([\s\S]*?)(?:<|&lt;)\/div(?:>|&gt;)/i);
         rawEng = engMatch ? engMatch[1] : '';
         rawUrdu = urduMatch ? urduMatch[1] : '';
       }

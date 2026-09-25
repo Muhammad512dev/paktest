@@ -198,12 +198,24 @@ export function parseMhtmlToQuestions(
       const sourceMatch = qRow.match(/<span[^>]*class=["'][^"']*questionperiority[^"']*["']>([\s\S]*?)<\/span>/i);
       const source = sourceMatch ? cleanHtmlContent(sourceMatch[1]) : 'Exercise';
 
-      // English & Urdu Question Text
-      const engMatch = qRow.match(/<div[^>]*class=["'][^"']*english-col[^"']*["']>([\s\S]*?)<\/div>/i);
-      const urduMatch = qRow.match(/<div[^>]*class=["'][^"']*urdu-col[^"']*["']>([\s\S]*?)<\/div>/i);
-
-      let rawEng = engMatch ? engMatch[1] : '';
-      let rawUrdu = urduMatch ? urduMatch[1] : '';
+      // English & Urdu Question Text (Using DOMParser for robust nested div handling)
+      let rawEng = '';
+      let rawUrdu = '';
+      
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(qRow, 'text/html');
+        const engCol = doc.querySelector('.english-col');
+        const urduCol = doc.querySelector('.urdu-col');
+        if (engCol) rawEng = engCol.innerHTML;
+        if (urduCol) rawUrdu = urduCol.innerHTML;
+      } catch (e) {
+        // Fallback to basic regex if DOMParser fails
+        const engMatch = qRow.match(/<div[^>]*class=["'][^"']*english-col[^"']*["']>([\s\S]*?)<\/div>/i);
+        const urduMatch = qRow.match(/<div[^>]*class=["'][^"']*urdu-col[^"']*["']>([\s\S]*?)<\/div>/i);
+        rawEng = engMatch ? engMatch[1] : '';
+        rawUrdu = urduMatch ? urduMatch[1] : '';
+      }
 
       // Remove the inline options list (e.g., <ul class="inline-options">...</ul>) from the question text
       rawEng = rawEng.replace(/(?:<|&lt;)ul[^>]*class=["']?(?:[^"']*?)inline-options(?:[^"']*?)["']?[\s\S]*?(?:<|&lt;)\/ul(?:>|&gt;)/gi, '');

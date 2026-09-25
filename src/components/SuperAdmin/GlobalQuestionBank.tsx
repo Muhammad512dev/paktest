@@ -104,6 +104,9 @@ const GlobalQuestionBank: React.FC = () => {
   const [autoDetectEquations, setAutoDetectEquations] = useState(true);
   const [batchBoardOverride, setBatchBoardOverride] = useState<string>('');
   const [batchClassOverride, setBatchClassOverride] = useState<string>('');
+  const [batchSubjectOverride, setBatchSubjectOverride] = useState<string>('');
+  const [batchTypeOverride, setBatchTypeOverride] = useState<string>('');
+  const [batchAuthorOverride, setBatchAuthorOverride] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sequenceFileInputRef = useRef<HTMLInputElement>(null);
   const diagramFileInputRef = useRef<HTMLInputElement>(null);
@@ -482,7 +485,7 @@ const GlobalQuestionBank: React.FC = () => {
       const row = importRows[i];
       const board = row.Board || (batchBoardOverride && batchBoardOverride !== '__AUTO__' ? batchBoardOverride : undefined) || getSyllabusName(selSyllabusId) || 'General';
       const grade = String(row.Grade || (batchClassOverride && batchClassOverride !== '__AUTO__' ? batchClassOverride : undefined) || getClassName(selClassId) || 'General');
-      const subject = row.Subject || getSubjectName(selSubjectId) || 'General';
+      const subject = row.Subject || (batchSubjectOverride && batchSubjectOverride !== '__AUTO__' ? batchSubjectOverride : undefined) || getSubjectName(selSubjectId) || 'General';
       const chapter = row.Chapter || getChapterName(selChapterId) || 'General';
       const topic = row.Topic || newQuestion.topic || 'General';
 
@@ -504,7 +507,7 @@ const GlobalQuestionBank: React.FC = () => {
 
         const text = (row.QuestionText_EN || row.Question || '').trim();
         const textUrdu = (row.QuestionText_UR || row.QuestionUrdu || '').trim();
-        const type = normalizeQuestionType(row.Type || 'MCQ');
+        const type = normalizeQuestionType((batchTypeOverride && batchTypeOverride !== '__AUTO__' ? batchTypeOverride : undefined) || row.Type || 'MCQ');
         
         // Prevent duplicate questions in same batch
         if (finalQuestions.some(fq => fq.text === text && fq.textUrdu === textUrdu && fq.text !== '')) {
@@ -526,6 +529,7 @@ const GlobalQuestionBank: React.FC = () => {
             continue;
         }
 
+        const sourcesValue = (batchAuthorOverride && batchAuthorOverride !== '__AUTO__' ? batchAuthorOverride : undefined) || row.Sources;
         const q: Question = {
             id: `bulk_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 5)}`,
             text: text,
@@ -539,8 +543,8 @@ const GlobalQuestionBank: React.FC = () => {
             chapter: path.chapter.name,
             imageUrl: row.ImageURL || '',
             correctAnswer: String(row.CorrectAnswer_Letter || row.CorrectAnswer || ''),
-            sources: row.Sources ? String(row.Sources).split('|') : [QuestionSource.MODEL_PAPER],
-            source: row.Sources ? String(row.Sources).split('|')[0] : QuestionSource.MODEL_PAPER,
+            sources: sourcesValue ? String(sourcesValue).split('|') : [QuestionSource.MODEL_PAPER],
+            source: sourcesValue ? String(sourcesValue).split('|')[0] : QuestionSource.MODEL_PAPER,
             options: type === 'MCQ' ? options : [],
             optionsUrdu: type === 'MCQ' ? optionsUrdu : [],
             medium: (text && textUrdu) ? 'Bilingual' : textUrdu ? 'Urdu' : 'English'
@@ -1603,7 +1607,7 @@ const GlobalQuestionBank: React.FC = () => {
                           }}
                           className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
                        >
-                          <option value="">Keep From File / Individual</option>
+                          <option value="">Individual</option>
                           <optgroup label="Select from System Curriculum">
                              {syllabuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                           </optgroup>
@@ -1612,7 +1616,7 @@ const GlobalQuestionBank: React.FC = () => {
 
                     {/* Batch Class Selection */}
                     <div className="flex items-center gap-2">
-                       <label className="text-xs font-medium text-slate-500">Class / Grade:</label>
+                       <label className="text-xs font-medium text-slate-500">Class:</label>
                        <select
                           value={batchClassOverride}
                           onChange={(e) => {
@@ -1624,10 +1628,73 @@ const GlobalQuestionBank: React.FC = () => {
                           }}
                           className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
                        >
-                          <option value="">Keep From File / Individual</option>
+                          <option value="">Individual</option>
                           <optgroup label="Select from System Classes">
                              {Array.from(new Set(classes.map(c => c.name))).map(cName => <option key={cName} value={cName}>{cName}</option>)}
                           </optgroup>
+                       </select>
+                    </div>
+
+                    {/* Batch Subject Selection */}
+                    <div className="flex items-center gap-2">
+                       <label className="text-xs font-medium text-slate-500">Subject:</label>
+                       <select
+                          value={batchSubjectOverride}
+                          onChange={(e) => {
+                             const val = e.target.value;
+                             setBatchSubjectOverride(val);
+                             if (val && val !== '__AUTO__') {
+                                setImportRows(prev => prev.map(r => ({ ...r, Subject: val })));
+                             }
+                          }}
+                          className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                       >
+                          <option value="">Individual</option>
+                          <optgroup label="System Subjects">
+                             {Array.from(new Set(subjects.map(s => s.name))).map(sName => <option key={sName} value={sName}>{sName}</option>)}
+                          </optgroup>
+                       </select>
+                    </div>
+
+                    {/* Batch Type Selection */}
+                    <div className="flex items-center gap-2">
+                       <label className="text-xs font-medium text-slate-500">Type:</label>
+                       <select
+                          value={batchTypeOverride}
+                          onChange={(e) => {
+                             const val = e.target.value;
+                             setBatchTypeOverride(val);
+                             if (val && val !== '__AUTO__') {
+                                setImportRows(prev => prev.map(r => ({ ...r, Type: val })));
+                             }
+                          }}
+                          className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                       >
+                          <option value="">Individual</option>
+                          {['MCQ', 'Short Question', 'Long Answer', 'Fill in the Blank', 'True/False', 'Match Columns', 'Numerical', 'Derivation'].map(t => (
+                             <option key={t} value={t}>{t}</option>
+                          ))}
+                       </select>
+                    </div>
+
+                    {/* Batch Author Selection */}
+                    <div className="flex items-center gap-2">
+                       <label className="text-xs font-medium text-slate-500">Author:</label>
+                       <select
+                          value={batchAuthorOverride}
+                          onChange={(e) => {
+                             const val = e.target.value;
+                             setBatchAuthorOverride(val);
+                             if (val && val !== '__AUTO__') {
+                                setImportRows(prev => prev.map(r => ({ ...r, Sources: val })));
+                             }
+                          }}
+                          className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                       >
+                          <option value="">Individual</option>
+                          {["Model Paper", "Past Paper", "Textbook", "Super Admin"].map(a => (
+                             <option key={a} value={a}>{a}</option>
+                          ))}
                        </select>
                     </div>
                  </div>

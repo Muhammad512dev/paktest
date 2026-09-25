@@ -1257,7 +1257,9 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                 </div>
               )}
 
-              {/* PART I: OBJECTIVE */}
+              {/* COMBINED WRAPPER FOR GLOBAL COLUMNS */}
+              <div className={`${layoutMode === 'DoubleColumn' && !isGridView ? 'columns-2 gap-8' : ''}`}>
+                {/* PART I: OBJECTIVE */}
               {objectiveSections.length > 0 && (
                 <div className="mb-8">
                   {showPartHeadings && (
@@ -1272,7 +1274,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       )}
                     </div>
                   )}
-                  <div className={`flex-1 ${layoutMode === 'DoubleColumn' && !isGridView ? 'columns-2 gap-8' : 'space-y-1'}`}>
+                  <div className={`flex-1 space-y-1`}>
                     {(() => {
                       let qNum = 1;
                       return objectiveSections.map((sec) => {
@@ -1307,7 +1309,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       )}
                     </div>
                   )}
-                  <div className={`flex-1 ${layoutMode === 'DoubleColumn' && !isGridView ? 'columns-2 gap-8' : 'space-y-1'}`}>
+                  <div className={`flex-1 space-y-1`}>
                     {(() => {
                       let qNum = objectiveSections.filter(sec => questions.some(q => (q as any).sectionId === sec.id)).length + 1;
                       let longHeadingRendered = false;
@@ -1362,6 +1364,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                 </div>
               )}
 
+              </div>
               {/* TEACHER COPY ANSWER KEY (Inline Logic) */}
               {printAnswerKey && mcqsCount > 0 && (
                 <div className="mt-8 p-6 border-t-[3px] border-black bg-slate-50/50 break-inside-avoid rounded-2xl">
@@ -1690,10 +1693,10 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                   </tr>
                   {!isMCQType(q.type) && subjectiveEmptyLines > 0 && (
                     <tr className="print:break-inside-avoid">
-                      <td colSpan={languageMode === 'Bilingual' ? 4 : 2} className="px-2 pt-2 pb-4">
-                        <div className="flex flex-col gap-6">
+                      <td colSpan={languageMode === 'Bilingual' ? 4 : 2} className="px-2 pt-4 pb-6">
+                        <div className="flex flex-col gap-8">
                           {Array.from({ length: subjectiveEmptyLines }).map((_, i) => (
-                            <div key={i} className="border-b border-slate-300 w-full" />
+                            <div key={i} className="border-b border-black print:border-black w-full h-[1px]" />
                           ))}
                         </div>
                       </td>
@@ -2143,6 +2146,14 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                           </div>
                         </div>
                       </div>
+                    </div>
+                  )}
+
+                  {!isMCQType(q.type) && subjectiveEmptyLines > 0 && (
+                    <div className="flex flex-col gap-8 pt-6 pb-6 print:break-inside-avoid w-full px-2">
+                      {Array.from({ length: subjectiveEmptyLines }).map((_, i) => (
+                        <div key={i} className="border-b border-black print:border-black w-full h-[1px]" />
+                      ))}
                     </div>
                   )}
 

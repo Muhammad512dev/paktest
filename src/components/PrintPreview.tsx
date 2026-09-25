@@ -360,6 +360,12 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
     ));
   };
 
+  const updateQuestionMcqCols = (qId: string, cols: number) => {
+    setQuestions(prev => prev.map(q =>
+      q.id === qId ? { ...q, mcqColsOverride: cols } as any : q
+    ));
+  };
+
   const removeSection = (sectionId: string) => {
     if (confirm("Remove this entire section from printing?")) {
       setRemovedSections(prev => {
@@ -1558,7 +1564,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
 
               const isFirstPartOfMainQuestion = sec.hasParts && partIndex === 0;
               const showRepeatedStatement = sec.showQuestionStatement === true && isFirstPartOfMainQuestion;
-              const effectiveMcqCols = (layoutMode === 'DoubleColumn' && isMCQType(q.type)) ? 2 : mcqColumns;
+              const baseCols = (layoutMode === 'DoubleColumn' && isMCQType(q.type)) ? 2 : mcqColumns;
+              const effectiveMcqCols = ((q as any).mcqColsOverride) ? (q as any).mcqColsOverride : baseCols;
               return (
                 <React.Fragment key={q.id}>
                   {showRepeatedStatement && (
@@ -1669,9 +1676,17 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     )}
 
                     {isManualEdit && (
-                      <td className="print:hidden align-top" style={{ width: '28px' }}>
-                        <button onClick={() => removeQuestion(q.id)} className="p-1 text-red-400 hover:text-red-600"><Trash2 size={12} /></button>
+                      <td className="print:hidden align-top" style={{ width: '40px' }}>
+                        <button onClick={() => removeQuestion(q.id)} className="p-1 text-red-400 hover:text-red-600 w-full flex justify-center"><Trash2 size={12} /></button>
+                        {isMCQType(q.type) && (
+                          <div className="flex flex-col items-center gap-1 mt-1 opacity-50 hover:opacity-100">
+                            {[1, 2, 4].map(c => (
+                              <button key={c} onClick={() => updateQuestionMcqCols(q.id, c)} className={`text-[9px] font-bold px-1 rounded border ${((q as any).mcqColsOverride === c) || (!(q as any).mcqColsOverride && effectiveMcqCols === c) ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-slate-400 border-slate-300 hover:bg-slate-50'}`}>{c}C</button>
+                            ))}
+                          </div>
+                        )}
                       </td>
+                    )}
                   </tr>
                   {!isMCQType(q.type) && subjectiveEmptyLines > 0 && (
                     <tr className="print:break-inside-avoid">
@@ -1756,7 +1771,16 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                   <td style={{ padding: `${tableDensity}px` }} className="border-r-2 border-black align-top text-center font-black">
                     {sec.subQuestionNumbering === 'Roman' ? `(${getSubQuestionLabel(idx, true)})` : `${idx + 1}.`}
                     {isManualEdit && (
-                      <button onClick={() => removeQuestion(q.id)} className="absolute -left-10 top-2 p-1 text-red-500 hover:bg-red-50 rounded print:hidden opacity-0 group-row:opacity-100"><Trash2 size={14} /></button>
+                      <div className="absolute -left-10 top-2 print:hidden opacity-0 group-hover/row:opacity-100 flex flex-col items-center gap-1">
+                        <button onClick={() => removeQuestion(q.id)} className="p-1 text-red-500 hover:bg-red-50 rounded"><Trash2 size={14} /></button>
+                        {isMCQType(q.type) && (
+                          <div className="flex flex-col gap-1 items-center bg-white border border-slate-200 rounded p-1 shadow-sm">
+                            {[1, 2, 4].map(c => (
+                              <button key={c} onClick={() => updateQuestionMcqCols(q.id, c)} className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${((q as any).mcqColsOverride === c) || (!(q as any).mcqColsOverride && mcqColumns === c) ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>{c}C</button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </td>
                   <td style={{ padding: `${tableDensity}px` }} className="p-2 align-top">
@@ -1795,7 +1819,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       {isMCQType(q.type) && (
                         <div
                           className="grid pt-2 border-t border-slate-100 mt-1"
-                          style={{ gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))`, gap: `${verticalSpacing}px` }}
+                          style={{ gridTemplateColumns: `repeat(${((q as any).mcqColsOverride) ? (q as any).mcqColsOverride : mcqColumns}, minmax(0, 1fr))`, gap: `${verticalSpacing}px` }}
                         >
                           {getMcqOptions(q).map((_, i) => {
                             const opt = q.options?.[i] || '';
@@ -1895,9 +1919,16 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               return (
                 <div key={q.id} className="relative break-inside-avoid group/q" style={{ marginBottom: `${questionGap}px` }}>
                   {isManualEdit && (
-                    <div className="absolute -left-12 top-0 flex flex-col gap-1 print:hidden">
+                    <div className="absolute -left-12 top-0 flex flex-col gap-1 print:hidden opacity-0 group-hover/q:opacity-100">
                       <button onClick={() => togglePageBreak(q.id)} className={`p-1.5 rounded transition-colors shadow-sm ${q.pageBreakAfter ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><Scissors size={14} /></button>
                       <button onClick={() => removeQuestion(q.id)} className="p-1.5 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors shadow-sm"><Trash2 size={14} /></button>
+                      {isMCQType(q.type) && (
+                        <div className="flex flex-col gap-1 items-center bg-white border border-slate-200 rounded p-1 shadow-sm mt-1">
+                          {[1, 2, 4].map(c => (
+                            <button key={c} onClick={() => updateQuestionMcqCols(q.id, c)} className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${((q as any).mcqColsOverride === c) || (!(q as any).mcqColsOverride && mcqColumns === c) ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>{c}C</button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -2022,7 +2053,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     <div
                       className={`grid gap-x-4 mt-2 break-inside-avoid transition-all`}
                       style={{
-                        gridTemplateColumns: `repeat(${mcqColumns}, minmax(0, 1fr))`,
+                        gridTemplateColumns: `repeat(${((q as any).mcqColsOverride) ? (q as any).mcqColsOverride : mcqColumns}, minmax(0, 1fr))`,
                         columnGap: `${verticalSpacing * 2}px`,
                         rowGap: `${verticalSpacing * 2}px`
                       }}

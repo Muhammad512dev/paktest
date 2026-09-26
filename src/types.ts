@@ -245,6 +245,18 @@ export const getDefaultSectionInstruction = (type: string, selectCount: number, 
     return `Change the following sentences into Indirect / Direct Speech${chooseStr}.`;
   } else if (normType.includes('active') || normType.includes('passive')) {
     return `Change the following sentences into Active / Passive Voice${chooseStr}.`;
+  } else if (normType.includes('verb') || normType.includes('اشکال')) {
+    return `Write the 2nd and 3rd forms of the following verbs${chooseStr}.`;
+  } else if (normType.includes('opposite') || normType.includes('antonym') || normType.includes('متضاد')) {
+    return `Write the opposites / antonyms of the following words${chooseStr}.`;
+  } else if (normType.includes('singular') || normType.includes('plural') || normType.includes('واحد') || normType.includes('جمع')) {
+    return `Write the plurals of the following words${chooseStr}.`;
+  } else if (normType.includes('masculine') || normType.includes('feminine') || normType.includes('gender') || normType.includes('مذکر') || normType.includes('مؤنث')) {
+    return `Change the gender of the following words${chooseStr}.`;
+  } else if (normType.includes('meaning') || normType.includes('synonym') || normType.includes('معنی') || normType.includes('مترادف')) {
+    return `Write the meanings / synonyms of the following words${chooseStr}.`;
+  } else if (normType.includes('sentence') || normType.includes('pair') || normType.includes('جملے') || normType.includes('جوڑے')) {
+    return `Use the following words in sentences${chooseStr}.`;
   } else {
     return isAll
       ? `Answer all of the following ${type} questions.`
@@ -281,6 +293,18 @@ export const getDefaultSectionInstructionUrdu = (type: string, selectCount: numb
     return `درج ذیل الفاظ کی درست ہجے لکھیں (${chooseAnyUrdu})۔`;
   } else if (normType.includes('missing')) {
     return `درج ذیل جملوں میں لاپتہ الفاظ بھریں (${chooseAnyUrdu})۔`;
+  } else if (normType.includes('verb') || normType.includes('اشکال')) {
+    return `درج ذیل افعال کی دوسری اور تیسری اشکال لکھیں (${chooseAnyUrdu})۔`;
+  } else if (normType.includes('opposite') || normType.includes('antonym') || normType.includes('متضاد')) {
+    return `درج ذیل الفاظ کے متضاد لکھیں (${chooseAnyUrdu})۔`;
+  } else if (normType.includes('singular') || normType.includes('plural') || normType.includes('واحد') || normType.includes('جمع')) {
+    return `درج ذیل واحد الفاظ کی جمع لکھیں (${chooseAnyUrdu})۔`;
+  } else if (normType.includes('masculine') || normType.includes('feminine') || normType.includes('gender') || normType.includes('مذکر') || normType.includes('مؤنث')) {
+    return `درج ذیل الفاظ کی تذکیر و تانیث لکھیں (${chooseAnyUrdu})۔`;
+  } else if (normType.includes('meaning') || normType.includes('synonym') || normType.includes('معنی') || normType.includes('مترادف')) {
+    return `درج ذیل الفاظ کے معانی لکھیں (${chooseAnyUrdu})۔`;
+  } else if (normType.includes('sentence') || normType.includes('pair') || normType.includes('جملے') || normType.includes('جوڑے')) {
+    return `درج ذیل الفاظ کو جملوں میں استعمال کریں (${chooseAnyUrdu})۔`;
   } else if (normType.includes('comprehension') || normType.includes('passage')) {
     return isAll
       ? 'عبارت پڑھیں اور درج ذیل تمام سوالات کے جوابات دیں۔'

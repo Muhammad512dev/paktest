@@ -275,6 +275,30 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
            val.includes('املا');
   };
 
+  const isVerbFormType = (t?: string): boolean => {
+    if (!t) return false;
+    const val = t.toLowerCase().trim();
+    return val.includes('verb form') || val.includes('form of verb') || val.includes('forms of verb') || val.includes('verb') || val.includes('اشکال فعل') || val.includes('فعل کی اشکال');
+  };
+
+  const isOppositesType = (t?: string): boolean => {
+    if (!t) return false;
+    const val = t.toLowerCase().trim();
+    return val.includes('opposite') || val.includes('antonym') || val.includes('متضاد') || val.includes('اضداد');
+  };
+
+  const isSingularPluralType = (t?: string): boolean => {
+    if (!t) return false;
+    const val = t.toLowerCase().trim();
+    return val.includes('singular') || val.includes('plural') || val.includes('واحد') || val.includes('جمع');
+  };
+
+  const isGenderType = (t?: string): boolean => {
+    if (!t) return false;
+    const val = t.toLowerCase().trim();
+    return val.includes('masculine') || val.includes('feminine') || val.includes('gender') || val.includes('مذکر') || val.includes('مؤنث') || val.includes('مونث');
+  };
+
   const isSentenceType = (t?: string): boolean => {
     if (!t) return false;
     const val = t.toLowerCase().trim();
@@ -2355,24 +2379,82 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                               </div>
 
                               {/* Student Answer Space / Blank Line */}
-                              {!showAnswersInline && (
-                                <div className="mt-2 border-b border-dashed border-slate-400 w-full min-h-[14px]"></div>
-                              )}
+                              {!showAnswersInline && (() => {
+                                const isVerb = isVerbFormType(q.type) || isVerbFormType(sec.questionType);
+                                const isOpp = isOppositesType(q.type) || isOppositesType(sec.questionType);
+                                const isSing = isSingularPluralType(q.type) || isSingularPluralType(sec.questionType);
+                                const isGen = isGenderType(q.type) || isGenderType(sec.questionType);
+
+                                if (isVerb) {
+                                  return (
+                                    /* FORMS OF VERBS: TWO EMPTY SMALL LINES ON SAME LINE */
+                                    <div className="mt-2 pt-1 border-t border-slate-100 flex items-center gap-2 text-[10px] font-bold text-slate-600">
+                                      <div className="flex-1 flex items-center gap-1 min-w-0">
+                                        <span className="shrink-0 text-slate-500 font-black">2nd:</span>
+                                        <div className="flex-1 border-b border-black border-dashed min-h-[14px]"></div>
+                                      </div>
+                                      <div className="flex-1 flex items-center gap-1 min-w-0">
+                                        <span className="shrink-0 text-slate-500 font-black">3rd:</span>
+                                        <div className="flex-1 border-b border-black border-dashed min-h-[14px]"></div>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                                if (isOpp) {
+                                  return (
+                                    <div className="mt-1.5 flex items-center gap-1 text-[10px] font-bold text-slate-600">
+                                      <span className="shrink-0 text-slate-500 font-black">Opposite:</span>
+                                      <div className="flex-1 border-b border-black border-dashed min-h-[14px]"></div>
+                                    </div>
+                                  );
+                                }
+                                if (isSing) {
+                                  return (
+                                    <div className="mt-1.5 flex items-center gap-1 text-[10px] font-bold text-slate-600">
+                                      <span className="shrink-0 text-slate-500 font-black">Plural:</span>
+                                      <div className="flex-1 border-b border-black border-dashed min-h-[14px]"></div>
+                                    </div>
+                                  );
+                                }
+                                if (isGen) {
+                                  return (
+                                    <div className="mt-1.5 flex items-center gap-1 text-[10px] font-bold text-slate-600">
+                                      <span className="shrink-0 text-slate-500 font-black">Feminine:</span>
+                                      <div className="flex-1 border-b border-black border-dashed min-h-[14px]"></div>
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <div className="mt-2 border-b border-dashed border-slate-400 w-full min-h-[14px]"></div>
+                                );
+                              })()}
 
                               {/* TEACHER COPY / ANSWER KEY: Only shown if showAnswersInline is true */}
-                              {showAnswersInline && (answerEn || answerUr) && (
-                                <div className="mt-1 pt-1 border-t border-green-200 text-green-800 text-xs bg-green-50 p-1 rounded">
-                                  <span className="font-black text-[9px] uppercase text-green-700 block">Ans:</span>
-                                  {(languageMode === 'Bilingual' || languageMode === 'English') && answerEn && (
-                                    <MathRenderer text={answerEn} inline />
-                                  )}
-                                  {(languageMode === 'Bilingual' || languageMode === 'Urdu') && answerUr && (
-                                    <div dir="rtl" className="font-urdu text-right mt-0.5">
-                                      <MathRenderer text={answerUr} inline />
+                              {showAnswersInline && (answerEn || answerUr) && (() => {
+                                const isVerb = isVerbFormType(q.type) || isVerbFormType(sec.questionType);
+                                if (isVerb && answerEn) {
+                                  const parts = answerEn.split(/[,/|]/).map(s => s.trim()).filter(Boolean);
+                                  return (
+                                    <div className="mt-1 pt-1 border-t border-green-200 text-green-800 text-xs bg-green-50 p-1 rounded flex items-center gap-2">
+                                      <div className="flex-1 min-w-0 truncate"><span className="font-black text-[9px] uppercase text-green-700 mr-1">2nd:</span>{parts[0] || answerEn}</div>
+                                      <div className="flex-1 min-w-0 truncate"><span className="font-black text-[9px] uppercase text-green-700 mr-1">3rd:</span>{parts[1] || ''}</div>
                                     </div>
-                                  )}
-                                </div>
-                              )}
+                                  );
+                                }
+                                return (
+                                  <div className="mt-1 pt-1 border-t border-green-200 text-green-800 text-xs bg-green-50 p-1 rounded">
+                                    <span className="font-black text-[9px] uppercase text-green-700 block">Ans:</span>
+                                    {(languageMode === 'Bilingual' || languageMode === 'English') && answerEn && (
+                                      <MathRenderer text={answerEn} inline />
+                                    )}
+                                    {(languageMode === 'Bilingual' || languageMode === 'Urdu') && answerUr && (
+                                      <div dir="rtl" className="font-urdu text-right mt-0.5">
+                                        <MathRenderer text={answerUr} inline />
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           );
                         })}

@@ -65,20 +65,25 @@ const GlobalQuestionBank: React.FC = () => {
 
   /* Load curriculum data asynchronously on mount */
   const loadCurriculumData = async () => {
-    const [syls, clss, subs, chs, tops, meta] = await Promise.all([
-      getSyllabuses(),
-      getClasses(),
-      getSubjects(),
-      getChapters(),
-      getTopics(),
-      getMetadata()
-    ]);
-    setSyllabuses(syls);
-    setClasses(clss);
-    setSubjects(subs);
-    setChapters(chs);
-    setTopics(tops);
-    setMetadata(meta);
+    try {
+      const [syls, clss, subs, chs, tops] = await Promise.all([
+        getSyllabuses().catch(() => []),
+        getClasses().catch(() => []),
+        getSubjects().catch(() => []),
+        getChapters().catch(() => []),
+        getTopics().catch(() => [])
+      ]);
+      setSyllabuses(syls);
+      setClasses(clss);
+      setSubjects(subs);
+      setChapters(chs);
+      setTopics(tops);
+      
+      const meta = await getMetadata().catch(() => ({ types: [], sources: [] }));
+      setMetadata(meta);
+    } catch (err) {
+      console.error("Failed to load curriculum data", err);
+    }
   };
 
   useEffect(() => { 

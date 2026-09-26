@@ -1679,22 +1679,24 @@ const GlobalQuestionBank: React.FC = () => {
                     {/* Batch Type Selection */}
                     <div className="flex items-center gap-2">
                        <label className="text-xs font-medium text-slate-500">Type:</label>
-                       <select
+                       <input
+                          list="batch-types"
+                          placeholder="Individual (Type or Select)"
                           value={batchTypeOverride}
                           onChange={(e) => {
                              const val = e.target.value;
                              setBatchTypeOverride(val);
-                             if (val && val !== '__AUTO__') {
+                             if (val) {
                                 setImportRows(prev => prev.map(r => ({ ...r, Type: val })));
                              }
                           }}
-                          className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
-                       >
-                          <option value="">Individual</option>
-                          {['MCQ', 'Short Question', 'Long Answer', 'Fill in the Blank', 'True/False', 'Match Columns', 'Numerical', 'Derivation'].map(t => (
-                             <option key={t} value={t}>{t}</option>
+                          className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 w-44"
+                       />
+                       <datalist id="batch-types">
+                          {metadata.types.map(t => (
+                             <option key={t} value={t} />
                           ))}
-                       </select>
+                       </datalist>
                     </div>
 
                     {/* Batch Author Selection */}
@@ -1714,8 +1716,8 @@ const GlobalQuestionBank: React.FC = () => {
                           className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 w-44"
                        />
                        <datalist id="batch-authors">
-                          {["Model Paper", "Past Paper", "Textbook", "Super Admin"].map(a => (
-                             <option key={a} value={a} />
+                          {metadata.sources.map(s => (
+                             <option key={s} value={s} />
                           ))}
                        </datalist>
                     </div>

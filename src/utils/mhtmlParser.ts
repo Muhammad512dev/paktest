@@ -199,7 +199,10 @@ export function parseMhtmlToQuestions(
       const isFillBlanks = /fill.in|blank/i.test(qRow);
       const isDiagram = /diagram|figure/i.test(qRow);
       const isDefinitions = /defin/i.test(qRow);
-      const isSpelling = /spelling|dictation/i.test(qRow);
+      const isWordsMeanings = /word.*mean|meanings|الفاظ.*معنی|vocabulary/i.test(qRow);
+      const isPairOfWords = /pair.*of.*word|confusing.*word|الفاظ کے جوڑے/i.test(qRow);
+      const isWordsSentences = /word.*sentence|make.*sentence|جملے بنائیں/i.test(qRow);
+      const isSpelling = /spelling|dictation|missing.*letter|املا/i.test(qRow);
       const isMissingWord = /missing.word|fill.the.word/i.test(qRow);
       const isComprehension = /comprehension|passage/i.test(qRow);
       const isComposition = /composition|essay/i.test(qRow);
@@ -210,24 +213,27 @@ export function parseMhtmlToQuestions(
       const isActivePassive = /active.*passive|passive.*active|active.voice|passive.voice/i.test(qRow);
       const isLong = /Long/i.test(qRow);
 
-      let type: ParsedMhtmlQuestion['Type'];
-      if (isMcq)               type = 'MCQ';
-      else if (isMatch)        type = 'Match Columns';
-      else if (isTrueFalse)    type = 'True/False';
-      else if (isFillBlanks)   type = 'Fill in the Blanks';
-      else if (isDiagram)      type = 'Diagram Based';
-      else if (isDefinitions)  type = 'Definitions';
-      else if (isSpelling)     type = 'Spelling Check';
-      else if (isMissingWord)  type = 'Missing Word';
-      else if (isComprehension) type = 'Comprehension';
-      else if (isComposition)  type = 'Composition / Essay';
-      else if (isTranslation)  type = 'Translation';
-      else if (isLetterWriting) type = 'Letter Writing';
-      else if (isStoryWriting)  type = 'Story / Paragraph Writing';
+      let type: string;
+      if (isMcq)                 type = 'MCQ';
+      else if (isMatch)          type = 'Match Columns';
+      else if (isWordsMeanings)  type = 'Words / Meanings';
+      else if (isPairOfWords)    type = 'Pair of Words';
+      else if (isWordsSentences) type = 'Words / Sentences';
+      else if (isTrueFalse)      type = 'True/False';
+      else if (isFillBlanks)     type = 'Fill in the Blanks';
+      else if (isDiagram)        type = 'Diagram Based';
+      else if (isDefinitions)    type = 'Definitions';
+      else if (isSpelling)       type = 'Spelling Check';
+      else if (isMissingWord)    type = 'Missing Word';
+      else if (isComprehension)  type = 'Comprehension';
+      else if (isComposition)    type = 'Composition / Essay';
+      else if (isTranslation)    type = 'Translation';
+      else if (isLetterWriting)  type = 'Letter Writing';
+      else if (isStoryWriting)   type = 'Story / Paragraph Writing';
       else if (isDirectIndirect) type = 'Direct / Indirect Speech';
       else if (isActivePassive)  type = 'Active / Passive Voice';
-      else if (isLong)         type = 'Long Answer';
-      else                     type = 'Short Answer';
+      else if (isLong)           type = 'Long Answer';
+      else                       type = 'Short Answer';
 
       // Source / Priority
       const sourceMatch = qRow.match(/<span[^>]*class=["'][^"']*questionperiority[^"']*["']>([\s\S]*?)<\/span>/i);
@@ -236,6 +242,8 @@ export function parseMhtmlToQuestions(
       // English & Urdu Question Text (Using DOMParser for robust nested div handling)
       let rawEng = '';
       let rawUrdu = '';
+      const pairsObj: Record<string, string> = {};
+      let hasPairs = false;
       
       try {
         // Unescape HTML entities in case the MHTML encodes the inner content
@@ -249,6 +257,24 @@ export function parseMhtmlToQuestions(
         
         if (engCol) rawEng = engCol.innerHTML;
         if (urduCol) rawUrdu = urduCol.innerHTML;
+
+        // Check for tables, pairing rows or list items for Match Columns, Word Meanings, Pairs
+        const tableRows = Array.from(doc.querySelectorAll('tr, .pair-row, .match-row, li.pair-item'));
+        let pairIndex = 1;
+        for (const tr of tableRows) {
+          if (pairIndex > 10) break;
+          const cells = Array.from(tr.querySelectorAll('td, th, .col-a, .col-b, .col-left, .col-right'));
+          if (cells.length >= 2) {
+            const leftContent = cleanHtmlContent(cells[0].innerHTML);
+            const rightContent = cleanHtmlContent(cells[1].innerHTML);
+            if (leftContent && rightContent && !/^(sr|no|#|column|کالم)/i.test(leftContent)) {
+              pairsObj[`Pair${pairIndex}_Left_EN`] = leftContent;
+              pairsObj[`Pair${pairIndex}_Right_EN`] = rightContent;
+              hasPairs = true;
+              pairIndex++;
+            }
+          }
+        }
       } catch (e) {
         console.error("DOMParser error:", e);
       }
@@ -302,18 +328,18 @@ export function parseMhtmlToQuestions(
         });
       }
 
-      if (!questionTextEn && !questionTextUr && !optA_EN && !optA_UR) continue;
+      if (!questionTextEn && !questionTextUr && !optA_EN && !optA_UR && !hasPairs) continue;
 
-      questions.push({
+      const questionRecord: ParsedMhtmlQuestion = {
         Board: finalBoard,
         Grade: finalGrade,
         Subject: finalSubject,
         Chapter: currentChapter,
         Topic: currentTopic,
-        Type: type,
+        Type: type as any,
         Difficulty: 'Medium',
         Marks: type === 'MCQ' || type === 'True/False' || type === 'Fill in the Blanks' || type === 'Spelling Check' || type === 'Missing Word' ? 1
-             : type === 'Short Answer' || type === 'Definitions' || type === 'Match Columns' ? 2
+             : type === 'Short Answer' || type === 'Definitions' || type === 'Match Columns' || type === 'Words / Meanings' || type === 'Pair of Words' ? 2
              : type === 'Long Answer' || type === 'Composition / Essay' || type === 'Letter Writing' || type === 'Story / Paragraph Writing' || type === 'Comprehension' ? 5
              : 3,
         QuestionText_EN: questionTextEn,
@@ -328,8 +354,11 @@ export function parseMhtmlToQuestions(
         OptionD_UR: optD_UR,
         CorrectAnswer: correctAnswer,
         Sources: source,
-        ImageURL: ''
-      });
+        ImageURL: '',
+        ...pairsObj
+      };
+
+      questions.push(questionRecord);
     }
   }
 

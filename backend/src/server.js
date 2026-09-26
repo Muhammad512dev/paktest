@@ -379,11 +379,10 @@ const sanitizeQuestionInput = (raw, schoolId) => {
         }
     }
 
-    // If one language is missing, mirror the other so Urdu-only/English-only views never look blank.
-    if (q.text === '' && q.textUrdu !== '')
+    // Respect original language input without automatic cross-language mirroring
+    if (!q.text && q.textUrdu) {
         q.text = q.textUrdu;
-    if (q.textUrdu === '' && q.text !== '')
-        q.textUrdu = q.text;
+    }
 
     q.options = ensureStringArray(q.options)
         .map((s) => extractAndSaveEmbeddedMedia(s.trim(), q.classLevel, q.subject))
@@ -405,13 +404,6 @@ const sanitizeQuestionInput = (raw, schoolId) => {
         q.imageUrl = extractAndSaveEmbeddedMedia(q.imageUrl, q.classLevel, q.subject);
     }
 
-    // If options exist in only one language, mirror them to the other side.
-    if (q.type === 'MCQ') {
-        if (q.options.length === 0 && q.optionsUrdu.length > 0)
-            q.options = [...q.optionsUrdu];
-        if (q.optionsUrdu.length === 0 && q.options.length > 0)
-            q.optionsUrdu = [...q.options];
-    }
     // Ensure arrays required by Prisma schema are always present
     q.sources = ensureStringArray(q.sources).map((s) => s.trim()).filter(Boolean);
     if (!q.source && q.sources.length > 0)
@@ -423,14 +415,7 @@ const sanitizeQuestionInput = (raw, schoolId) => {
     if (!q.source)
         q.source = q.sources[0];
     const inferredMedium = inferMedium(q);
-    // If client provided medium but it's inconsistent with available fields, prefer inferred.
-    if (q.medium === 'English' || q.medium === 'Urdu' || q.medium === 'Bilingual') {
-        if (q.medium !== inferredMedium)
-            q.medium = inferredMedium;
-    }
-    else {
-        q.medium = inferredMedium;
-    }
+    q.medium = inferredMedium;
     if (typeof q.subject !== 'string')
         q.subject = '';
     if (typeof q.classLevel !== 'string')

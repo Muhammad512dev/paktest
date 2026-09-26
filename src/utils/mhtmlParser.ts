@@ -6,7 +6,10 @@ export interface ParsedMhtmlQuestion {
   Subject: string;
   Chapter: string;
   Topic: string;
-  Type: 'MCQ' | 'Short Question' | 'Long Answer' | 'True/False' | 'Fill in the Blanks' | 'Match Columns';
+  Type: 'MCQ' | 'Short Answer' | 'Long Answer' | 'True/False' | 'Fill in the Blanks' | 'Match Columns' |
+        'Diagram Based' | 'Definitions' | 'Spelling Check' | 'Missing Word' | 'Comprehension' |
+        'Composition / Essay' | 'Translation' | 'Letter Writing' | 'Story / Paragraph Writing' |
+        'Direct / Indirect Speech' | 'Active / Passive Voice';
   Difficulty: 'Easy' | 'Medium' | 'Hard';
   Marks: number;
   QuestionText_EN: string;
@@ -97,7 +100,7 @@ export function parseMhtmlToQuestions(
     const titleTags = mainHtmlContent.match(/<(?:p|h\d|div|span)[^>]*class=["'][^"']*(?:modal-title|card-title|title|header|heading)[^"']*["'][^>]*>([\s\S]*?)<\/(?:p|h\d|div|span)>/gi) || [];
     for (const tag of titleTags) {
       const cleaned = cleanHtmlContent(tag);
-      const pairMatch = cleaned.match(/(?:Class|Grade)?\s*(\d{1,2})(?:TH|ST|ND|RD)?\s*(?:Class|Grade)?\s*[-–—:]\s*([A-Za-z\s]+)/i);
+      const pairMatch = cleaned.match(/(?:Class|Grade)?\s*(\d{1,2})(?:TH|ST|ND|RD)?\s*(?:Class|Grade)?\s*[-â€“â€”:]\s*([A-Za-z\s]+)/i);
       if (pairMatch) {
         if (!detectedGrade) {
           detectedGrade = `Class ${pairMatch[1].trim()}`;
@@ -115,7 +118,7 @@ export function parseMhtmlToQuestions(
 
   // 1b. Broad document search for patterns like "9TH - Biology" or "Class 10 - Physics"
   if (!detectedGrade || !detectedSubject) {
-    const broadMatch = mainHtmlContent.match(/\b(?:Class\s*)?(\d{1,2})(?:TH|ST|ND|RD)\s*[-–—]\s*([A-Za-z]+)\b/i);
+    const broadMatch = mainHtmlContent.match(/\b(?:Class\s*)?(\d{1,2})(?:TH|ST|ND|RD)\s*[-â€“â€”]\s*([A-Za-z]+)\b/i);
     if (broadMatch) {
       if (!detectedGrade) detectedGrade = `Class ${broadMatch[1].trim()}`;
       if (!detectedSubject) detectedSubject = broadMatch[2].trim();
@@ -191,8 +194,40 @@ export function parseMhtmlToQuestions(
 
     for (const qRow of qRows) {
       const isMcq = /multiple-options-col|class=["']abcd["']/i.test(qRow);
-      const isLong = /Long|تفصیلی/i.test(qRow);
-      const type: ParsedMhtmlQuestion['Type'] = isMcq ? 'MCQ' : isLong ? 'Long Answer' : 'Short Question';
+      const isMatch = /match.colum|column.a|column.b|pair.left|pair.right/i.test(qRow);
+      const isTrueFalse = /true.?false/i.test(qRow);
+      const isFillBlanks = /fill.in|blank/i.test(qRow);
+      const isDiagram = /diagram|figure/i.test(qRow);
+      const isDefinitions = /defin/i.test(qRow);
+      const isSpelling = /spelling|dictation/i.test(qRow);
+      const isMissingWord = /missing.word|fill.the.word/i.test(qRow);
+      const isComprehension = /comprehension|passage/i.test(qRow);
+      const isComposition = /composition|essay/i.test(qRow);
+      const isTranslation = /translat/i.test(qRow);
+      const isLetterWriting = /letter.writ|application.writ/i.test(qRow);
+      const isStoryWriting = /story.writ|paragraph.writ/i.test(qRow);
+      const isDirectIndirect = /direct.*indirect|indirect.*direct|direct.speech|indirect.speech/i.test(qRow);
+      const isActivePassive = /active.*passive|passive.*active|active.voice|passive.voice/i.test(qRow);
+      const isLong = /Long/i.test(qRow);
+
+      let type: ParsedMhtmlQuestion['Type'];
+      if (isMcq)               type = 'MCQ';
+      else if (isMatch)        type = 'Match Columns';
+      else if (isTrueFalse)    type = 'True/False';
+      else if (isFillBlanks)   type = 'Fill in the Blanks';
+      else if (isDiagram)      type = 'Diagram Based';
+      else if (isDefinitions)  type = 'Definitions';
+      else if (isSpelling)     type = 'Spelling Check';
+      else if (isMissingWord)  type = 'Missing Word';
+      else if (isComprehension) type = 'Comprehension';
+      else if (isComposition)  type = 'Composition / Essay';
+      else if (isTranslation)  type = 'Translation';
+      else if (isLetterWriting) type = 'Letter Writing';
+      else if (isStoryWriting)  type = 'Story / Paragraph Writing';
+      else if (isDirectIndirect) type = 'Direct / Indirect Speech';
+      else if (isActivePassive)  type = 'Active / Passive Voice';
+      else if (isLong)         type = 'Long Answer';
+      else                     type = 'Short Answer';
 
       // Source / Priority
       const sourceMatch = qRow.match(/<span[^>]*class=["'][^"']*questionperiority[^"']*["']>([\s\S]*?)<\/span>/i);
@@ -277,7 +312,10 @@ export function parseMhtmlToQuestions(
         Topic: currentTopic,
         Type: type,
         Difficulty: 'Medium',
-        Marks: isMcq ? 1 : type === 'Short Question' ? 2 : 4,
+        Marks: type === 'MCQ' || type === 'True/False' || type === 'Fill in the Blanks' || type === 'Spelling Check' || type === 'Missing Word' ? 1
+             : type === 'Short Answer' || type === 'Definitions' || type === 'Match Columns' ? 2
+             : type === 'Long Answer' || type === 'Composition / Essay' || type === 'Letter Writing' || type === 'Story / Paragraph Writing' || type === 'Comprehension' ? 5
+             : 3,
         QuestionText_EN: questionTextEn,
         QuestionText_UR: questionTextUr,
         OptionA_EN: optA_EN,
@@ -297,3 +335,4 @@ export function parseMhtmlToQuestions(
 
   return questions;
 }
+

@@ -59,13 +59,26 @@ export interface Transaction {
 }
 
 export enum QuestionType {
-  MCQ = 'MCQ',
-  SHORT = 'Short Answer',
-  LONG = 'Long Answer',
-  MATCH = 'Match Columns',
-  DIAGRAM = 'Diagram Based',
-  FILL_BLANKS = 'Fill in the Blanks',
-  TRUE_FALSE = 'True/False'
+  // --- Objective ---
+  MCQ            = 'MCQ',
+  MATCH          = 'Match Columns',
+  TRUE_FALSE     = 'True/False',
+  FILL_BLANKS    = 'Fill in the Blanks',
+  // --- Subjective ---
+  SHORT          = 'Short Answer',
+  LONG           = 'Long Answer',
+  DIAGRAM        = 'Diagram Based',
+  DEFINITIONS    = 'Definitions',
+  // --- Language Skills ---
+  SPELLING       = 'Spelling Check',
+  MISSING_WORD   = 'Missing Word',
+  COMPREHENSION  = 'Comprehension',
+  COMPOSITION    = 'Composition / Essay',
+  TRANSLATION    = 'Translation',
+  LETTER_WRITING = 'Letter Writing',
+  STORY_WRITING  = 'Story / Paragraph Writing',
+  DIRECT_INDIRECT= 'Direct / Indirect Speech',
+  ACTIVE_PASSIVE = 'Active / Passive Voice',
 }
 
 export enum Difficulty {

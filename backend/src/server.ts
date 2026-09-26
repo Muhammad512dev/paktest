@@ -392,10 +392,21 @@ const getPaginationParams = (req: any) => {
 
 const normalizeQuestionType = (type: any) => {
     const t = String(type ?? '').toLowerCase().trim();
-    if (t === 'mcq' || t.includes('mcq') || t.includes('multiple choice') || t.includes('multi choice')) return 'MCQ';
+    if (t === 'mcq' || t.includes('multiple choice') || t.includes('multi choice') || t.includes('objective')) return 'MCQ';
     if (t.includes('match') || t.includes('column')) return 'Match Columns';
     if (t.includes('true') || t.includes('false')) return 'True/False';
     if (t.includes('blank') || t.includes('fill')) return 'Fill in the Blanks';
+    if (t.includes('defin')) return 'Definitions';
+    if (t.includes('spelling') || t.includes('dictation')) return 'Spelling Check';
+    if (t.includes('missing') || t === 'missing word') return 'Missing Word';
+    if (t.includes('comprehension') || t.includes('passage')) return 'Comprehension';
+    if (t.includes('composition') || t.includes('essay')) return 'Composition / Essay';
+    if (t.includes('translat')) return 'Translation';
+    if (t.includes('letter') || t.includes('application writ')) return 'Letter Writing';
+    if (t.includes('story') || t.includes('paragraph writ')) return 'Story / Paragraph Writing';
+    if (t.includes('direct') || t.includes('indirect')) return 'Direct / Indirect Speech';
+    if (t.includes('active') || t.includes('passive')) return 'Active / Passive Voice';
+    if (t.includes('diagram')) return 'Diagram Based';
     if (t.includes('short')) return 'Short Answer';
     if (t.includes('long')) return 'Long Answer';
     return String(type ?? '').trim() || 'Short Answer';
@@ -2413,13 +2424,26 @@ registerCurriculumRoutes('sources', prisma.source);
 
 app.get('/api/curriculum/question-types', (req: any, res: any) => {
     res.json([
-        { id: 'MCQ', name: 'Multiple Choice', category: 'Objective' },
-        { id: 'Match Columns', name: 'Match Columns', category: 'Objective' },
-        { id: 'Fill in the Blanks', name: 'Fill in the Blanks', category: 'Objective' },
-        { id: 'True/False', name: 'True/False', category: 'Objective' },
-        { id: 'Short Answer', name: 'Short Answer', category: 'Subjective' },
-        { id: 'Long Answer', name: 'Long Answer', category: 'Subjective' },
-        { id: 'Diagram Based', name: 'Diagram Based', category: 'Subjective' },
+        // --- Objective ---
+        { id: 'MCQ',                      name: 'Multiple Choice (MCQ)',        category: 'Objective',  isBuiltIn: true },
+        { id: 'True/False',               name: 'True/False',                   category: 'Objective',  isBuiltIn: true },
+        { id: 'Fill in the Blanks',       name: 'Fill in the Blanks',           category: 'Objective',  isBuiltIn: true },
+        { id: 'Match Columns',            name: 'Match Columns',                category: 'Objective',  isBuiltIn: true },
+        // --- Subjective ---
+        { id: 'Short Answer',             name: 'Short Answer',                 category: 'Subjective', isBuiltIn: true },
+        { id: 'Long Answer',              name: 'Long Answer',                  category: 'Subjective', isBuiltIn: true },
+        { id: 'Diagram Based',            name: 'Diagram Based',                category: 'Subjective', isBuiltIn: true },
+        { id: 'Definitions',              name: 'Definitions',                  category: 'Subjective', isBuiltIn: true },
+        // --- Language Skills ---
+        { id: 'Spelling Check',           name: 'Spelling Check / Dictation',   category: 'Language',   isBuiltIn: true },
+        { id: 'Missing Word',             name: 'Missing Word',                 category: 'Language',   isBuiltIn: true },
+        { id: 'Comprehension',            name: 'Comprehension (Passage)',       category: 'Language',   isBuiltIn: true },
+        { id: 'Composition / Essay',      name: 'Composition / Essay Writing',  category: 'Language',   isBuiltIn: true },
+        { id: 'Translation',              name: 'Translation',                  category: 'Language',   isBuiltIn: true },
+        { id: 'Letter Writing',           name: 'Letter / Application Writing', category: 'Language',   isBuiltIn: true },
+        { id: 'Story / Paragraph Writing',name: 'Story / Paragraph Writing',    category: 'Language',   isBuiltIn: true },
+        { id: 'Direct / Indirect Speech', name: 'Direct / Indirect Speech',     category: 'Language',   isBuiltIn: true },
+        { id: 'Active / Passive Voice',   name: 'Active / Passive Voice',       category: 'Language',   isBuiltIn: true },
     ]);
 });
 

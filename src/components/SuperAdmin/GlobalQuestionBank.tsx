@@ -20,16 +20,49 @@ import * as XLSX from 'xlsx';
 import { parseMhtmlToQuestions } from '../../utils/mhtmlParser';
 import { autoDetectAndFormatEquations, autoDetectAndFormatRow } from '../../utils/equationDetector';
 
+const BUILT_IN_QUESTION_TYPES = [
+  { id: QuestionType.MCQ,             label: 'Multiple Choice (MCQ)',           icon: ListFilter,   color: 'text-indigo-600',  category: 'Objective' },
+  { id: QuestionType.TRUE_FALSE,       label: 'True / False',                    icon: ToggleLeft,   color: 'text-rose-600',    category: 'Objective' },
+  { id: QuestionType.FILL_BLANKS,      label: 'Fill in the Blanks',              icon: FormInput,    color: 'text-cyan-600',    category: 'Objective' },
+  { id: QuestionType.MATCH,            label: 'Match Columns',                   icon: Layers,       color: 'text-amber-600',   category: 'Objective' },
+  { id: QuestionType.SHORT,            label: 'Short Answer',                    icon: FileText,     color: 'text-emerald-600', category: 'Subjective' },
+  { id: QuestionType.LONG,             label: 'Long Answer',                     icon: FileCode,     color: 'text-blue-600',    category: 'Subjective' },
+  { id: QuestionType.DIAGRAM,          label: 'Diagram Based',                   icon: ImageIcon,    color: 'text-purple-600',  category: 'Subjective' },
+  { id: QuestionType.DEFINITIONS,      label: 'Definitions',                     icon: BookOpen,     color: 'text-teal-600',    category: 'Subjective' },
+  { id: QuestionType.SPELLING,         label: 'Spelling Check / Dictation',      icon: CheckCircle,  color: 'text-green-600',   category: 'Language' },
+  { id: QuestionType.MISSING_WORD,     label: 'Missing Word',                    icon: HelpCircle,   color: 'text-orange-600',  category: 'Language' },
+  { id: QuestionType.COMPREHENSION,    label: 'Comprehension (Passage)',          icon: BookOpen,     color: 'text-sky-600',     category: 'Language' },
+  { id: QuestionType.COMPOSITION,      label: 'Composition / Essay Writing',     icon: PenTool,      color: 'text-violet-600',  category: 'Language' },
+  { id: QuestionType.TRANSLATION,      label: 'Translation',                     icon: Languages,    color: 'text-lime-600',    category: 'Language' },
+  { id: QuestionType.LETTER_WRITING,   label: 'Letter / Application Writing',    icon: FileText,     color: 'text-pink-600',    category: 'Language' },
+  { id: QuestionType.STORY_WRITING,    label: 'Story / Paragraph Writing',       icon: FileCode,     color: 'text-fuchsia-600', category: 'Language' },
+  { id: QuestionType.DIRECT_INDIRECT,  label: 'Direct / Indirect Speech',        icon: ChevronRight, color: 'text-red-600',     category: 'Language' },
+  { id: QuestionType.ACTIVE_PASSIVE,   label: 'Active / Passive Voice',          icon: RefreshCw,    color: 'text-yellow-600',  category: 'Language' },
+  { id: 'Custom',                      label: 'Other / Custom Type',             icon: PenTool,      color: 'text-slate-600',   category: 'Custom' },
+];
+
+const ALL_BUILT_IN_TYPE_IDS = BUILT_IN_QUESTION_TYPES.filter(t => t.id !== 'Custom').map(t => t.id);
+
 const normalizeQuestionType = (type: string): string => {
   const t = (type || '').toLowerCase().trim();
-  if (t.includes('mcq') || t.includes('multiple choice') || t.includes('multi choice') || t.includes('objective')) return QuestionType.MCQ;
+  if (t === 'mcq' || t.includes('multiple choice') || t.includes('multi choice') || t.includes('objective')) return QuestionType.MCQ;
+  if (t.includes('match') || t.includes('column')) return QuestionType.MATCH;
+  if (t.includes('true') || t.includes('false')) return QuestionType.TRUE_FALSE;
+  if (t.includes('blank') || t.includes('fill')) return QuestionType.FILL_BLANKS;
   if (t.includes('short') || t === 'sq' || t === 'short answer') return QuestionType.SHORT;
   if (t.includes('long') || t === 'lq' || t === 'long answer') return QuestionType.LONG;
-  if (t.includes('match') || t.includes('column')) return QuestionType.MATCH;
   if (t.includes('diagram')) return QuestionType.DIAGRAM;
-  if (t.includes('blank') || t.includes('fill')) return QuestionType.FILL_BLANKS;
-  if (t.includes('true') || t.includes('false')) return QuestionType.TRUE_FALSE;
-  return type || QuestionType.SHORT; // Default
+  if (t.includes('defin')) return QuestionType.DEFINITIONS;
+  if (t.includes('spelling') || t.includes('dictation')) return QuestionType.SPELLING;
+  if (t.includes('missing') || t.includes('missing word')) return QuestionType.MISSING_WORD;
+  if (t.includes('comprehension') || t.includes('passage')) return QuestionType.COMPREHENSION;
+  if (t.includes('composition') || t.includes('essay')) return QuestionType.COMPOSITION;
+  if (t.includes('translat')) return QuestionType.TRANSLATION;
+  if (t.includes('letter') || t.includes('application')) return QuestionType.LETTER_WRITING;
+  if (t.includes('story') || t.includes('paragraph')) return QuestionType.STORY_WRITING;
+  if (t.includes('direct') || t.includes('indirect')) return QuestionType.DIRECT_INDIRECT;
+  if (t.includes('active') || t.includes('passive')) return QuestionType.ACTIVE_PASSIVE;
+  return type || QuestionType.SHORT;
 };
 
 const GlobalQuestionBank: React.FC = () => {
@@ -230,8 +263,7 @@ const GlobalQuestionBank: React.FC = () => {
     setFormStep('CONTENT');
     
     // Check if type is custom (not in default list)
-    const defaults = ['MCQ', 'Short Answer', 'Long Answer', 'Match Columns', 'Diagram Based', 'True/False', 'Fill in the Blanks', 'Spelling Check'];
-    if (!defaults.includes(q.type)) {
+    if (!ALL_BUILT_IN_TYPE_IDS.includes(q.type)) {
         setIsCustomType(true);
         // Determine format based on data
         if (q.options && q.options.length > 0) setCustomFormat('CHOICE');
@@ -1141,17 +1173,7 @@ const GlobalQuestionBank: React.FC = () => {
     }
   };
 
-  const questionTypesList = [
-     { id: 'MCQ', label: 'Multiple Choice', icon: ListFilter, color: 'text-indigo-600' },
-     { id: 'Short Answer', label: 'Short Answer', icon: FileText, color: 'text-emerald-600' },
-     { id: 'Long Answer', label: 'Long Answer', icon: FileCode, color: 'text-blue-600' },
-     { id: 'Match Columns', label: 'Match Columns', icon: Layers, color: 'text-amber-600' },
-     { id: 'Diagram Based', label: 'Diagram Based', icon: ImageIcon, color: 'text-purple-600' },
-     { id: 'True/False', label: 'True / False', icon: ToggleLeft, color: 'text-rose-600' },
-     { id: 'Fill in the Blanks', label: 'Fill in Blanks', icon: FormInput, color: 'text-cyan-600' },
-     { id: 'Spelling Check', label: 'Spelling Check', icon: CheckCircle, color: 'text-teal-600' },
-     { id: 'Custom', label: 'Other / Custom', icon: PenTool, color: 'text-slate-600' }, 
-  ];
+  const questionTypesList = BUILT_IN_QUESTION_TYPES;
 
   // Options Builder (Reusable)
   const renderOptionsBuilder = () => (

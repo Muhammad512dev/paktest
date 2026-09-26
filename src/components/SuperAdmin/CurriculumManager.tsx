@@ -108,7 +108,7 @@ const CurriculumManager: React.FC = () => {
 
   // Secure Delete Confirmation Modal State
   const [deleteTarget, setDeleteTarget] = useState<{
-    type: 'syllabuses' | 'classes' | 'subjects' | 'chapters' | 'topics' | 'sources';
+    type: 'syllabuses' | 'classes' | 'subjects' | 'chapters' | 'topics' | 'sources' | 'question-types';
     id: string;
     name: string;
   } | null>(null);

@@ -422,6 +422,8 @@ const inferMedium = (q: any): 'English' | 'Urdu' | 'Bilingual' => {
 
 /**
  * Automatically extracts embedded base64 data URIs (SVGs, PNGs, JPEGs) from question text / options
+/**
+ * Automatically extracts embedded base64 data URIs (SVGs, PNGs, JPEGs) and raw SVG strings from question text, options, and pairs
  * and writes them as permanent files organized cleanly in class and subject folders:
  * uploads/{Class_Name}/{Subject}/
  */
@@ -432,31 +434,73 @@ function extractAndSaveEmbeddedMedia(content: string, classLevel: string, subjec
     const subjFolder = (subject || 'General').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
     const targetDir = path.join(uploadDir, classFolder, subjFolder);
 
-    const dataUriRegex = /data:image\/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=]+)/g;
-    if (!dataUriRegex.test(content)) return content;
-    dataUriRegex.lastIndex = 0;
-
-    if (!fs.existsSync(targetDir)) {
-        try {
-            fs.mkdirSync(targetDir, { recursive: true });
-        } catch (dirErr) {
-            console.error('Error creating class upload directory:', dirErr);
+    const ensureDir = () => {
+        if (!fs.existsSync(targetDir)) {
+            try {
+                fs.mkdirSync(targetDir, { recursive: true });
+            } catch (dirErr) {
+                console.error('Error creating class upload directory:', dirErr);
+            }
         }
+    };
+
+    let result = content;
+
+    // 1. Base64 data URIs: data:image/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=]+)
+    const dataUriRegex = /data:image\/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=]+)/g;
+    if (dataUriRegex.test(result)) {
+        ensureDir();
+        dataUriRegex.lastIndex = 0;
+        result = result.replace(dataUriRegex, (_match, format, b64Data) => {
+            try {
+                const ext = format.includes('svg') ? '.svg' : format.includes('png') ? '.png' : format.includes('webp') ? '.webp' : '.jpg';
+                const uniqueName = `eq_${Date.now()}_${Math.round(Math.random() * 1e6)}${ext}`;
+                const filePath = path.join(targetDir, uniqueName);
+                const buffer = Buffer.from(b64Data, 'base64');
+                fs.writeFileSync(filePath, buffer);
+                return `/uploads/${classFolder}/${subjFolder}/${uniqueName}`;
+            } catch (err) {
+                console.error('Error saving embedded media to class folder:', err);
+                return _match;
+            }
+        });
     }
 
-    return content.replace(dataUriRegex, (_match, format, b64Data) => {
-        try {
-            const ext = format.includes('svg') ? '.svg' : format.includes('png') ? '.png' : format.includes('webp') ? '.webp' : '.jpg';
-            const uniqueName = `eq_${Date.now()}_${Math.round(Math.random() * 1e6)}${ext}`;
-            const filePath = path.join(targetDir, uniqueName);
-            const buffer = Buffer.from(b64Data, 'base64');
-            fs.writeFileSync(filePath, buffer);
-            return `/uploads/${classFolder}/${subjFolder}/${uniqueName}`;
-        } catch (err) {
-            console.error('Error saving embedded media to class folder:', err);
-            return _match;
-        }
-    });
+    // 2. Unencoded SVG Data URIs: data:image/svg+xml;utf8,<svg... or data:image/svg+xml,<svg...
+    const svgDataUriRegex = /data:image\/svg\+xml(?:;utf8)?,([\s\S]*?)(?=["'\s]|$)/gi;
+    if (svgDataUriRegex.test(result)) {
+        ensureDir();
+        svgDataUriRegex.lastIndex = 0;
+        result = result.replace(svgDataUriRegex, (_match, svgRaw) => {
+            try {
+                const uniqueName = `svg_${Date.now()}_${Math.round(Math.random() * 1e6)}.svg`;
+                const filePath = path.join(targetDir, uniqueName);
+                fs.writeFileSync(filePath, decodeURIComponent(svgRaw), 'utf-8');
+                return `/uploads/${classFolder}/${subjFolder}/${uniqueName}`;
+            } catch (err) {
+                return _match;
+            }
+        });
+    }
+
+    // 3. Raw SVG XML markup (<svg ...</svg>) passed as image/column cell
+    const rawSvgRegex = /<svg\b[^>]*>[\s\S]*?<\/svg>/gi;
+    if (rawSvgRegex.test(result) && !result.includes('/uploads/')) {
+        ensureDir();
+        rawSvgRegex.lastIndex = 0;
+        result = result.replace(rawSvgRegex, (svgBlock) => {
+            try {
+                const uniqueName = `svg_${Date.now()}_${Math.round(Math.random() * 1e6)}.svg`;
+                const filePath = path.join(targetDir, uniqueName);
+                fs.writeFileSync(filePath, svgBlock, 'utf-8');
+                return `/uploads/${classFolder}/${subjFolder}/${uniqueName}`;
+            } catch (err) {
+                return svgBlock;
+            }
+        });
+    }
+
+    return result;
 }
 
 const ensureStringArray = (val: any): string[] => {
@@ -482,11 +526,27 @@ const sanitizeQuestionInput = (raw: any, schoolId: string | null) => {
     q.text = typeof q.text === 'string' ? extractAndSaveEmbeddedMedia(q.text.trim(), q.classLevel, q.subject) : '';
     q.textUrdu = typeof q.textUrdu === 'string' ? extractAndSaveEmbeddedMedia(q.textUrdu.trim(), q.classLevel, q.subject) : '';
 
-    // For Match Columns, if statement is omitted, supply clean defaults so DB non-null requirement is met
+    // Handle Pair & Vocabulary questions where statements are omitted
+    const isPairOrWordType = [
+        'Match Columns', 'Match the Columns', 'Pair of Words', 'Words / Meanings', 'Words Meanings', 
+        'Words / Sentences', 'Missing Spelling', 'Missing Letters', 'Synonyms', 'Antonyms', 
+        'Definitions', 'Spelling Check', 'Missing Word', 'Fill in the Blanks'
+    ].some(t => q.type?.toLowerCase().includes(t.toLowerCase()));
+
     const isMatchColumns = q.type === 'Match Columns' || (Array.isArray(q.matchingPairs) && q.matchingPairs.length > 0);
-    if (isMatchColumns) {
-        if (!q.text) q.text = 'Match the Columns';
-        if (!q.textUrdu) q.textUrdu = 'کالم الف کو کالم ب سے ملائیں';
+    if (isMatchColumns || isPairOrWordType) {
+        if (!q.text && !q.textUrdu) {
+            if (isMatchColumns) {
+                q.text = 'Match the Columns';
+                q.textUrdu = 'کالم الف کو کالم ب سے ملائیں';
+            } else if (q.type?.includes('Word') || q.type?.includes('Meaning') || q.type?.includes('Pair')) {
+                q.text = q.type;
+                q.textUrdu = 'الفاظ و معانی / جوڑے';
+            } else {
+                q.text = q.type || 'Question';
+                q.textUrdu = q.type || 'سوال';
+            }
+        }
     }
 
     // If one language is missing, mirror the other so Urdu-only/English-only views never look blank.
@@ -499,6 +559,15 @@ const sanitizeQuestionInput = (raw: any, schoolId: string | null) => {
     q.optionsUrdu = ensureStringArray(q.optionsUrdu)
         .map((s: string) => extractAndSaveEmbeddedMedia(s.trim(), q.classLevel, q.subject))
         .filter(Boolean);
+
+    if (Array.isArray(q.matchingPairs)) {
+        q.matchingPairs = q.matchingPairs.map((pair: any) => ({
+            left: typeof pair.left === 'string' ? extractAndSaveEmbeddedMedia(pair.left, q.classLevel, q.subject) : (pair.left || ''),
+            right: typeof pair.right === 'string' ? extractAndSaveEmbeddedMedia(pair.right, q.classLevel, q.subject) : (pair.right || ''),
+            leftUrdu: typeof pair.leftUrdu === 'string' ? extractAndSaveEmbeddedMedia(pair.leftUrdu, q.classLevel, q.subject) : (pair.leftUrdu || ''),
+            rightUrdu: typeof pair.rightUrdu === 'string' ? extractAndSaveEmbeddedMedia(pair.rightUrdu, q.classLevel, q.subject) : (pair.rightUrdu || '')
+        }));
+    }
 
     if (q.imageUrl) {
         q.imageUrl = extractAndSaveEmbeddedMedia(q.imageUrl, q.classLevel, q.subject);
@@ -545,9 +614,14 @@ const validateQuestion = (question: any): { valid: boolean; errors: string[] } =
 
     const isMatch = question.type === 'Match Columns' || (Array.isArray(question.matchingPairs) && question.matchingPairs.length > 0);
     const hasPairs = Array.isArray(question.matchingPairs) && question.matchingPairs.length > 0;
+    const isPairOrWordType = [
+        'Match Columns', 'Match the Columns', 'Pair of Words', 'Words / Meanings', 'Words Meanings', 
+        'Words / Sentences', 'Missing Spelling', 'Missing Letters', 'Synonyms', 'Antonyms', 
+        'Definitions', 'Spelling Check', 'Missing Word', 'Fill in the Blanks'
+    ].some(t => String(question.type || '').toLowerCase().includes(t.toLowerCase()));
 
     if (question.medium === 'Urdu' || question.medium === 'Bilingual') {
-        if (!question.textUrdu && !isMatch && !hasPairs) {
+        if (!question.textUrdu && !isMatch && !hasPairs && !isPairOrWordType) {
             errors.push('Urdu text (textUrdu) cannot be empty');
         }
         if (question.type === 'MCQ' && (!Array.isArray(question.optionsUrdu) || question.optionsUrdu.length === 0)) {
@@ -556,7 +630,7 @@ const validateQuestion = (question: any): { valid: boolean; errors: string[] } =
     }
 
     if (question.medium === 'English' || question.medium === 'Bilingual') {
-        if (!question.text && !isMatch && !hasPairs) {
+        if (!question.text && !isMatch && !hasPairs && !isPairOrWordType) {
             errors.push('English text cannot be empty');
         }
         if (question.type === 'MCQ' && (!Array.isArray(question.options) || question.options.length === 0)) {

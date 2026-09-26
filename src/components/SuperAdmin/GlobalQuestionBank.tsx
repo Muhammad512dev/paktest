@@ -353,18 +353,49 @@ const GlobalQuestionBank: React.FC = () => {
   };
 
   const handleSaveQuestion = async () => {
-      if (!newQuestion.text || !newQuestion.subject || !newQuestion.classLevel || !newQuestion.type) {
-          alert("Minimum requirements: Question Text, Type, Subject, and Class.");
+      const isPairOrWordType = [
+          'Match Columns', 'Match the Columns', 'Pair of Words', 'Words / Meanings', 'Words Meanings', 
+          'Words / Sentences', 'Missing Spelling', 'Missing Letters', 'Synonyms', 'Antonyms', 
+          'Definitions', 'Spelling Check', 'Missing Word', 'Fill in the Blanks'
+      ].some(t => newQuestion.type?.toLowerCase().includes(t.toLowerCase()));
+      
+      const hasPairs = Array.isArray(newQuestion.matchingPairs) && newQuestion.matchingPairs.length > 0;
+      const hasText = Boolean(newQuestion.text?.trim() || newQuestion.textUrdu?.trim());
+
+      if ((!hasText && !hasPairs && !isPairOrWordType) || !newQuestion.subject || !newQuestion.classLevel || !newQuestion.type) {
+          alert("Minimum requirements: Question Type, Subject, and Class.");
           return;
       }
       
+      let text = (newQuestion.text || '').trim();
+      let textUrdu = (newQuestion.textUrdu || '').trim();
+
+      if (!text && !textUrdu) {
+          if (newQuestion.type === 'Match Columns' || hasPairs) {
+              text = 'Match the Columns';
+              textUrdu = 'کالم الف کو کالم ب سے ملائیں';
+          } else if (newQuestion.type?.includes('Word') || newQuestion.type?.includes('Meaning') || newQuestion.type?.includes('Pair')) {
+              text = newQuestion.type;
+              textUrdu = 'الفاظ و معانی / جوڑے';
+          } else {
+              text = newQuestion.type || 'Question';
+              textUrdu = newQuestion.type || 'سوال';
+          }
+      } else if (!text && textUrdu) {
+          text = textUrdu;
+      } else if (!textUrdu && text) {
+          textUrdu = text;
+      }
+
       const chapterName = chapters.find(c => c.id === selChapterId)?.name || newQuestion.chapter || 'General';
       const questionData: Question = {
           ...newQuestion,
+          text,
+          textUrdu,
           type: normalizeQuestionType(newQuestion.type),
           chapter: chapterName,
           source: newQuestion.sources?.[0] || QuestionSource.MODEL_PAPER,
-          medium: (newQuestion.text && newQuestion.textUrdu && newQuestion.text !== newQuestion.textUrdu) ? 'Bilingual' : newQuestion.textUrdu ? 'Urdu' : 'English'
+          medium: (text && textUrdu && text !== textUrdu) ? 'Bilingual' : textUrdu ? 'Urdu' : 'English'
       } as Question;
 
       try {
@@ -1089,6 +1120,264 @@ const GlobalQuestionBank: React.FC = () => {
         ModelAnswer_UR: "A' ∩ B'",
         ImageURL: "",
         Sources: "Textbook Summary"
+      },
+
+      // --- WORDS / MEANINGS EXAMPLE (STATEMENT OMITTED - WORD IN LEFT, MEANING IN RIGHT) ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "English",
+        Chapter: "Unit 1: The Saviour of Mankind",
+        Topic: "Vocabulary & Glossary",
+        QuestionText_EN: "",
+        QuestionText_UR: "",
+        Type: "Words / Meanings",
+        Marks: 5,
+        Difficulty: "Easy",
+        Pair1_Left_EN: "Unparalleled",
+        Pair1_Left_UR: "بے مثال",
+        Pair1_Right_EN: "Matchless, unequaled",
+        Pair1_Right_UR: "بے نظیر، لاجواب",
+        Pair2_Left_EN: "Dunes",
+        Pair2_Left_UR: "ریت کے ٹیلے",
+        Pair2_Right_EN: "Sandy hills formed by wind",
+        Pair2_Right_UR: "ریت کے پہاڑ / ٹیلے",
+        Pair3_Left_EN: "Eloquence",
+        Pair3_Left_UR: "فصاحت و بلاغت",
+        Pair3_Right_EN: "Fluent and powerful speech",
+        Pair3_Right_UR: "روانی اور اثر انگیز گفتگو",
+        Pair4_Left_EN: "Promulgation",
+        Pair4_Left_UR: "اشاعت و نفاذ",
+        Pair4_Right_EN: "Official proclamation or declaration",
+        Pair4_Right_UR: "سرکاری اعلان یا نفاذ",
+        Pair5_Left_EN: "Chaos",
+        Pair5_Left_UR: "افراتفری",
+        Pair5_Right_EN: "Complete disorder and confusion",
+        Pair5_Right_UR: "بدامنی اور طوائف الملوکی",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "1. Unparalleled: Matchless\n2. Dunes: Sandy hills\n3. Eloquence: Fluent speech\n4. Promulgation: Official proclamation\n5. Chaos: Complete disorder",
+        ModelAnswer_UR: "1. بے مثال: بے نظیر\n2. ریت کے ٹیلے: ریت کے پہاڑ\n3. فصاحت و بلاغت: اثر انگیز گفتگو\n4. اشاعت: نفاذ\n5. افراتفری: بدامنی",
+        ImageURL: "",
+        Sources: "Textbook Glossary|Past Board 2024"
+      },
+
+      // --- PAIR OF WORDS EXAMPLE (HOMOPHONES / CONFUSING WORDS) ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 10",
+        Subject: contextualSubject || "English",
+        Chapter: "Grammar & Vocabulary",
+        Topic: "Pairs of Confusing Words",
+        QuestionText_EN: "",
+        QuestionText_UR: "",
+        Type: "Pair of Words",
+        Marks: 5,
+        Difficulty: "Medium",
+        Pair1_Left_EN: "Accept / Except",
+        Pair1_Left_UR: "Accept (قبول کرنا) / Except (سوائے)",
+        Pair1_Right_EN: "Please accept my apology. / Everyone except Ali was present.",
+        Pair1_Right_UR: "براہ کرم میری معذرت قبول کریں۔ / علی کے علاوہ سب موجود تھے۔",
+        Pair2_Left_EN: "Affect / Effect",
+        Pair2_Left_UR: "Affect (اثر انداز ہونا) / Effect (اثر / نتیجہ)",
+        Pair2_Right_EN: "Smoking affects health. / The medicine had no effect.",
+        Pair2_Right_UR: "تمباکو نوشی صحت پر اثر انداز ہوتی ہے۔ / دوا کا کوئی اثر نہیں ہوا۔",
+        Pair3_Left_EN: "Advice / Advise",
+        Pair3_Left_UR: "Advice (نصیحت) / Advise (نصیحت کرنا)",
+        Pair3_Right_EN: "His advice was valuable. / The doctor advised him to rest.",
+        Pair3_Right_UR: "اس کی نصیحت قیمتی تھی۔ / ڈاکٹر نے اسے آرام کرنے کی نصیحت کی۔",
+        Pair4_Left_EN: "Altar / Alter",
+        Pair4_Left_UR: "Altar (قربان گاہ) / Alter (تبدیل کرنا)",
+        Pair4_Right_EN: "He made a sacrifice at the altar. / We cannot alter our plans.",
+        Pair4_Right_UR: "اس نے قربان گاہ پر نذرانہ پیش کیا۔ / ہم اپنے منصوبے تبدیل نہیں کر سکتے۔",
+        Pair5_Left_EN: "Brake / Break",
+        Pair5_Left_UR: "Brake (بریک) / Break (توڑنا)",
+        Pair5_Right_EN: "Apply the car brake immediately. / Do not break the glass.",
+        Pair5_Right_UR: "گاڑی کی بریک فوراً لگائیں۔ / شیشہ نہ توڑیں۔",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "Pairs used in meaningful sentences.",
+        ModelAnswer_UR: "الفاظ کے جوڑوں کے بامعنی جملے",
+        ImageURL: "",
+        Sources: "English Grammar & Composition|Board Important"
+      },
+
+      // --- WORDS / SENTENCES EXAMPLE ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "English",
+        Chapter: "Unit 3: Media and Its Impact",
+        Topic: "Sentence Making",
+        QuestionText_EN: "",
+        QuestionText_UR: "",
+        Type: "Words / Sentences",
+        Marks: 5,
+        Difficulty: "Easy",
+        Pair1_Left_EN: "Integrity",
+        Pair1_Left_UR: "دیانت داری",
+        Pair1_Right_EN: "We admire leaders of strong moral integrity.",
+        Pair1_Right_UR: "ہم مضبوط اخلاقی دیانت داری والے رہنماؤں کی قدر کرتے ہیں۔",
+        Pair2_Left_EN: "Invasion",
+        Pair2_Left_UR: "حملہ / چڑھائی",
+        Pair2_Right_EN: "The courageous army successfully repelled foreign invasion.",
+        Pair2_Right_UR: "بہادر فوج نے بیرونی حملے کو کامیابی سے پسپا کیا۔",
+        Pair3_Left_EN: "Global Village",
+        Pair3_Left_UR: "عالمی گاؤں",
+        Pair3_Right_EN: "Modern communication technology has turned the world into a global village.",
+        Pair3_Right_UR: "جدید مواصلاتی ٹیکنالوجی نے دنیا کو ایک عالمی گاؤں بنا دیا ہے۔",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "Sentences constructed appropriately.",
+        ModelAnswer_UR: "مناسب جملے",
+        ImageURL: "",
+        Sources: "Textbook Exercise"
+      },
+
+      // --- SPELLING CHECK / MISSING LETTERS EXAMPLE ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "English",
+        Chapter: "Spelling & Phonics",
+        Topic: "Missing Letters & Spelling Check",
+        QuestionText_EN: "Fill in the missing letters to complete the correct spellings of the following words:",
+        QuestionText_UR: "درج ذیل الفاظ میں خالی جگہوں میں درست حروف لگا کر املا مکمل کریں:",
+        Type: "Spelling Check",
+        Marks: 4,
+        Difficulty: "Easy",
+        Pair1_Left_EN: "c _ n f _ d e n c e",
+        Pair1_Left_UR: "c _ n f _ d e n c e",
+        Pair1_Right_EN: "confidence",
+        Pair1_Right_UR: "confidence",
+        Pair2_Left_EN: "m _ l _ c u l e",
+        Pair2_Left_UR: "m _ l _ c u l e",
+        Pair2_Right_EN: "molecule",
+        Pair2_Right_UR: "molecule",
+        Pair3_Left_EN: "e q u _ t _ o n",
+        Pair3_Left_UR: "e q u _ t _ o n",
+        Pair3_Right_EN: "equation",
+        Pair3_Right_UR: "equation",
+        Pair4_Left_EN: "p h _ t _ s y n t h _ s i s",
+        Pair4_Left_UR: "p h _ t _ s y n t h _ s i s",
+        Pair4_Right_EN: "photosynthesis",
+        Pair4_Right_UR: "photosynthesis",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "1. confidence\n2. molecule\n3. equation\n4. photosynthesis",
+        ModelAnswer_UR: "1. confidence\n2. molecule\n3. equation\n4. photosynthesis",
+        ImageURL: "",
+        Sources: "Primary & Secondary English Board Paper"
+      },
+
+      // --- DEFINITIONS EXAMPLE ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "Physics",
+        Chapter: "Work and Energy",
+        Topic: "Scientific Definitions",
+        QuestionText_EN: "Define the following terms:\n1. Kinetic Energy\n2. Potential Energy\n3. Power",
+        QuestionText_UR: "درج ذیل اصطلاحات کی تعریف کریں:\n1. کائنیٹک انرجی\n2. پوٹینشل انرجی\n3. پاور (Power)",
+        Type: "Definitions",
+        Marks: 3,
+        Difficulty: "Medium",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "1. Kinetic Energy: The energy possessed by a body due to its motion (Ek = 1/2 mv²).\n2. Potential Energy: The energy possessed by a body due to its position or configuration (Ep = mgh).\n3. Power: The rate of doing work (P = W/t, measured in Watts).",
+        ModelAnswer_UR: "1. کائنیٹک انرجی: کسی جسم میں اس کی حرکت کی وجہ سے پائی جانے والی انرجی۔\n2. پوٹینشل انرجی: کسی جسم میں اس کی پوزیشن کی وجہ سے ذخیرہ شدہ انرجی۔\n3. پاور: کام کرنے کی شرح کو پاور کہتے ہیں (P = W/t)۔",
+        ImageURL: "",
+        Sources: "Physics Definitions Chapter 6"
+      },
+
+      // --- COMPREHENSION EXAMPLE ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 10",
+        Subject: contextualSubject || "English",
+        Chapter: "Reading Comprehension",
+        Topic: "Passage Analysis",
+        QuestionText_EN: "Read the passage carefully and answer the questions that follow:\n\n'Early rising is a good habit. It gives us an early start in our day’s work. In the morning, the mind is fresh and there are few distractions, so the work done at this time is generally well done. Early risers also find time to take some exercise in the fresh morning air.'\n\nQuestions:\n1. What are the benefits of early rising?\n2. Why is work done in the morning generally well done?\n3. Suggest a suitable title for the passage.",
+        QuestionText_UR: "عبارت کو غور سے پڑھیں اور نیچے دیے گئے سوالات کے جوابات دیں:\n\n'صبح سویرے اٹھنا ایک اچھی عادت ہے۔ اس سے دن کے کاموں کا جلد آغاز ہوتا ہے۔ صبح کے وقت ذہن تروتازہ ہوتا ہے اور توجہ بٹانے والی چیزیں کم ہوتی ہیں۔'\n\nسوالات:\n1. صبح سویرے اٹھنے کے کیا فوائد ہیں؟\n2. صبح کا کیا گیا کام اچھا کیوں ہوتا ہے؟\n3. عبارت کے لیے مناسب عنوان تجویز کریں۔",
+        Type: "Comprehension",
+        Marks: 6,
+        Difficulty: "Medium",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "1. Early rising gives an early start to daily work and allows time for morning exercise.\n2. In the morning, the mind is fresh and free from distractions.\n3. Suitable title: 'Benefits of Early Rising'.",
+        ModelAnswer_UR: "1. صبح سویرے اٹھنے سے کام جلد شروع ہوتا ہے اور ورزش کا وقت ملتا ہے۔\n2. صبح کے وقت ذہن تروتازہ ہوتا ہے۔\n3. مناسب عنوان: صبح سویرے اٹھنے کے فوائد۔",
+        ImageURL: "",
+        Sources: "English Composition Comprehension Section"
+      },
+
+      // --- TRANSLATION EXAMPLE ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 10",
+        Subject: contextualSubject || "English",
+        Chapter: "Grammar & Translation",
+        Topic: "Tenses & Translation",
+        QuestionText_EN: "Translate the following Urdu sentences into English:\n1. بارش ہو رہی ہے۔\n2. ہم چائے پی چکے ہیں۔\n3. سورج مغرب میں غروب ہوتا ہے۔\n4. کیا تم نے اپنا سبق یاد کر لیا ہے؟",
+        QuestionText_UR: "درج ذیل اردو جملوں کا انگریزی میں ترجمہ کریں:\n1. بارش ہو رہی ہے۔\n2. ہم چائے پی چکے ہیں۔\n3. سورج مغرب میں غروب ہوتا ہے۔\n4. کیا تم نے اپنا سبق یاد کر لیا ہے؟",
+        Type: "Translation",
+        Marks: 5,
+        Difficulty: "Medium",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "1. It is raining.\n2. We have taken tea.\n3. The sun sets in the west.\n4. Have you learnt your lesson?",
+        ModelAnswer_UR: "1. It is raining.\n2. We have taken tea.\n3. The sun sets in the west.\n4. Have you learnt your lesson?",
+        ImageURL: "",
+        Sources: "Board Translation Exercises"
+      },
+
+      // --- DIRECT / INDIRECT SPEECH EXAMPLE ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 10",
+        Subject: contextualSubject || "English",
+        Chapter: "Direct and Indirect Narration",
+        Topic: "Assertive & Interrogative Sentences",
+        QuestionText_EN: "Change the following sentences into Indirect Speech:\n1. He said, 'I am writing a letter.'\n2. She said to me, 'Where do you live?'\n3. The teacher said, 'The earth revolves around the sun.'",
+        QuestionText_UR: "درج ذیل جملوں کو Direct سے Indirect Speech میں تبدیل کریں:\n1. He said, 'I am writing a letter.'\n2. She said to me, 'Where do you live?'\n3. The teacher said, 'The earth revolves around the sun.'",
+        Type: "Direct / Indirect Speech",
+        Marks: 3,
+        Difficulty: "Medium",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "1. He said that he was writing a letter.\n2. She asked me where I lived.\n3. The teacher said that the earth revolves around the sun.",
+        ModelAnswer_UR: "1. He said that he was writing a letter.\n2. She asked me where I lived.\n3. The teacher said that the earth revolves around the sun.",
+        ImageURL: "",
+        Sources: "English Grammar Narration Section"
+      },
+
+      // --- ACTIVE / PASSIVE VOICE EXAMPLE ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "English",
+        Chapter: "Active and Passive Voice",
+        Topic: "Voice Conversion",
+        QuestionText_EN: "Change the voice of the following sentences:\n1. The boy caught the ball.\n2. She has completed her project.\n3. Open the door.",
+        QuestionText_UR: "درج ذیل جملوں کی Voice تبدیل کریں (Active / Passive Voice):\n1. The boy caught the ball.\n2. She has completed her project.\n3. Open the door.",
+        Type: "Active / Passive Voice",
+        Marks: 3,
+        Difficulty: "Medium",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "1. The ball was caught by the boy.\n2. Her project has been completed by her.\n3. Let the door be opened.",
+        ModelAnswer_UR: "1. The ball was caught by the boy.\n2. Her project has been completed by her.\n3. Let the door be opened.",
+        ImageURL: "",
+        Sources: "English Grammar Voice Section"
+      },
+
+      // --- ESSAY / COMPOSITION EXAMPLE ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 10",
+        Subject: contextualSubject || "English",
+        Chapter: "Essay Writing",
+        Topic: "My Favourite Personality / Quaid-e-Azam",
+        QuestionText_EN: "Write a comprehensive essay (150-200 words) on 'My Favourite Personality' or 'Quaid-e-Azam Muhammad Ali Jinnah'.",
+        QuestionText_UR: "مضمون لکھیں: 'میری پسندیدہ شخصیت' یا 'قائد اعظم محمد علی جناح'۔",
+        Type: "Composition / Essay",
+        Marks: 15,
+        Difficulty: "Medium",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "Introduction: Birth, early life and education. Political struggle: Two-Nation Theory, leadership of Muslim League. Creation of Pakistan: 14 August 1947, role as Governor-General. Conclusion: Character, legacy, and inspiration for the youth.",
+        ModelAnswer_UR: "تعارف: ابتدائی زندگی اور تعلیم۔ سیاسی جدوجہد: دو قومی نظریہ اور مسلم لیگ کی قیادت۔ قیام پاکستان: 14 اگست 1947 اور بحیثیت گورنر جنرل کردار۔ نتیجہ: کردار اور میراث۔",
+        ImageURL: "",
+        Sources: "Board English Composition Part II"
       }
     ];
 
@@ -1096,8 +1385,15 @@ const GlobalQuestionBank: React.FC = () => {
       return allQuestions;
     }
 
-    const norm = normalizeQuestionType(filterType);
-    return allQuestions.filter(q => normalizeQuestionType(q.Type) === norm);
+    const norm = normalizeQuestionType(filterType).toLowerCase();
+    const filtered = allQuestions.filter(q => {
+      const qNorm = normalizeQuestionType(q.Type).toLowerCase();
+      return qNorm === norm || 
+             q.Type.toLowerCase() === filterType.toLowerCase() || 
+             q.Type.toLowerCase().includes(filterType.toLowerCase()) || 
+             filterType.toLowerCase().includes(q.Type.toLowerCase());
+    });
+    return filtered.length > 0 ? filtered : allQuestions;
   };
 
   const downloadTemplate = (format: 'CSV' | 'XLSX', type: string, contextual: boolean = false) => {
@@ -2368,24 +2664,41 @@ const GlobalQuestionBank: React.FC = () => {
                         {/* 4. DYNAMIC TYPE SPECIFIC SECTIONS */}
                         {(newQuestion.type === 'MCQ' || customFormat === 'CHOICE') && renderOptionsBuilder()}
 
-                        {newQuestion.type === 'Match Columns' && (
+                        {(newQuestion.type === 'Match Columns' || 
+                          newQuestion.type === 'Pair of Words' || 
+                          newQuestion.type === 'Words / Meanings' || 
+                          newQuestion.type === 'Words Meanings' || 
+                          newQuestion.type === 'Words / Sentences' || 
+                          newQuestion.type === 'Missing Spelling' || 
+                          newQuestion.type === 'Missing Letters' || 
+                          newQuestion.type === 'Spelling Check' || 
+                          newQuestion.type === 'Synonyms' || 
+                          newQuestion.type === 'Antonyms' || 
+                          (newQuestion.matchingPairs && newQuestion.matchingPairs.length > 0)) && (
                            <div className="space-y-6 pt-6 border-t border-slate-100">
-                              <h5 className="font-bold text-slate-800 text-sm uppercase tracking-widest">Bilingual Match Columns Pairing</h5>
+                              <div className="flex justify-between items-center">
+                                 <h5 className="font-bold text-slate-800 text-sm uppercase tracking-widest">
+                                    {newQuestion.type === 'Match Columns' ? 'Bilingual Match Columns Pairing' :
+                                     newQuestion.type?.includes('Word') ? 'Vocabulary Words & Meanings / Pairs' :
+                                     newQuestion.type?.includes('Spell') ? 'Spelling / Missing Letter Pairs' : 'Bilingual Item Pairs'}
+                                 </h5>
+                                 <span className="text-[10px] text-slate-400 font-bold uppercase">(Question statement optional for pairs/vocabulary)</span>
+                              </div>
                               <div className="space-y-4">
                                  {newQuestion.matchingPairs?.map((pair, i) => (
                                     <div key={i} className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-5 border border-slate-200 rounded-2xl bg-slate-50/50 relative group/pair shadow-sm">
                                        <button onClick={() => setNewQuestion({...newQuestion, matchingPairs: newQuestion.matchingPairs?.filter((_, idx) => idx !== i)})} className="absolute -top-3 -right-3 bg-red-500 text-white p-1 rounded-full shadow-lg opacity-0 group-hover/pair:opacity-100 transition-opacity"><X size={14}/></button>
                                        <div className="space-y-3">
                                           <div className="grid grid-cols-2 gap-2">
-                                             <input value={pair.left} onChange={e => { const pairs = [...(newQuestion.matchingPairs || [])]; pairs[i].left = e.target.value; setNewQuestion({...newQuestion, matchingPairs: pairs}); }} className="border border-slate-300 p-2.5 rounded-xl text-sm bg-white" placeholder={`Item ${i+1} A (EN)`} />
-                                             <input value={pair.right} onChange={e => { const pairs = [...(newQuestion.matchingPairs || [])]; pairs[i].right = e.target.value; setNewQuestion({...newQuestion, matchingPairs: pairs}); }} className="border border-slate-300 p-2.5 rounded-xl text-sm bg-white" placeholder={`Item ${i+1} B (EN)`} />
+                                             <input value={pair.left} onChange={e => { const pairs = [...(newQuestion.matchingPairs || [])]; pairs[i].left = e.target.value; setNewQuestion({...newQuestion, matchingPairs: pairs}); }} className="border border-slate-300 p-2.5 rounded-xl text-sm bg-white" placeholder={newQuestion.type?.includes('Meaning') ? `Word ${i+1} (EN)` : `Item ${i+1} A (EN)`} />
+                                             <input value={pair.right} onChange={e => { const pairs = [...(newQuestion.matchingPairs || [])]; pairs[i].right = e.target.value; setNewQuestion({...newQuestion, matchingPairs: pairs}); }} className="border border-slate-300 p-2.5 rounded-xl text-sm bg-white" placeholder={newQuestion.type?.includes('Meaning') ? `Meaning ${i+1} (EN)` : `Item ${i+1} B (EN)`} />
                                           </div>
                                        </div>
                                        {isBilingualMode && (
                                           <div className="space-y-3">
                                              <div className="grid grid-cols-2 gap-2">
-                                                <input dir="rtl" value={pair.leftUrdu || ''} onChange={e => { const pairs = [...(newQuestion.matchingPairs || [])]; pairs[i].leftUrdu = e.target.value; setNewQuestion({...newQuestion, matchingPairs: pairs}); }} className="border border-indigo-200 p-2.5 rounded-xl font-urdu text-lg bg-white text-right" placeholder="اردو (بائیں)" />
-                                                <input dir="rtl" value={pair.rightUrdu || ''} onChange={e => { const pairs = [...(newQuestion.matchingPairs || [])]; pairs[i].rightUrdu = e.target.value; setNewQuestion({...newQuestion, matchingPairs: pairs}); }} className="border border-indigo-200 p-2.5 rounded-xl font-urdu text-lg bg-white text-right" placeholder="اردو (دائیں)" />
+                                                <input dir="rtl" value={pair.leftUrdu || ''} onChange={e => { const pairs = [...(newQuestion.matchingPairs || [])]; pairs[i].leftUrdu = e.target.value; setNewQuestion({...newQuestion, matchingPairs: pairs}); }} className="border border-indigo-200 p-2.5 rounded-xl font-urdu text-lg bg-white text-right" placeholder={newQuestion.type?.includes('Meaning') ? `لفظ ${i+1} (اردو)` : "اردو (بائیں)"} />
+                                                <input dir="rtl" value={pair.rightUrdu || ''} onChange={e => { const pairs = [...(newQuestion.matchingPairs || [])]; pairs[i].rightUrdu = e.target.value; setNewQuestion({...newQuestion, matchingPairs: pairs}); }} className="border border-indigo-200 p-2.5 rounded-xl font-urdu text-lg bg-white text-right" placeholder={newQuestion.type?.includes('Meaning') ? `معنی ${i+1} (اردو)` : "اردو (دائیں)"} />
                                              </div>
                                           </div>
                                        )}

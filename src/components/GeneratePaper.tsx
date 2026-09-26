@@ -1650,13 +1650,19 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                        }}
                                        className="text-[10px] font-black uppercase tracking-wider text-slate-700 bg-transparent outline-none cursor-pointer"
                                     >
-                                       <option value="Multiple Choice">Multiple Choice</option>
-                                       <option value="Short Question">Short Question</option>
-                                       <option value="Long Answer">Long Answer</option>
-                                       <option value="Fill in the Blanks">Fill in Blanks</option>
-                                       <option value="True/False">True/False</option>
-                                       <option value="Translation">Translation</option>
-                                       <option value="Words/Sentences">Words/Sentences</option>
+                                       {questionTypes.length > 0 ? (
+                                          questionTypes.map((t: any) => {
+                                             const count = repoQuestions.filter((q: any) => q.type?.toLowerCase().trim() === t.name.toLowerCase().trim()).length;
+                                             const label = state.configMode === 'MANUAL' ? `${t.name} (${count})` : t.name;
+                                             return <option key={t.id} value={t.name}>{label}</option>;
+                                          })
+                                       ) : (
+                                          <>
+                                             <option value="Multiple Choice">Multiple Choice</option>
+                                             <option value="Short Question">Short Question</option>
+                                             <option value="Long Answer">Long Answer</option>
+                                          </>
+                                       )}
                                     </select>
                                  </div>
 
@@ -2432,13 +2438,19 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                              }}
                                              className="w-full h-9 px-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
                                           >
-                                             <option value="Multiple Choice">Multiple Choice (MCQ)</option>
-                                             <option value="Short Question">Short Question</option>
-                                             <option value="Long Answer">Long Answer</option>
-                                             <option value="Fill in the Blanks">Fill in the Blanks</option>
-                                             <option value="True/False">True / False</option>
-                                             <option value="Translation">Translation</option>
-                                             <option value="Words/Sentences">Words / Sentences</option>
+                                             {questionTypes.length > 0 ? (
+                                                questionTypes.map((t: any) => {
+                                                   const count = repoQuestions.filter((q: any) => q.type?.toLowerCase().trim() === t.name.toLowerCase().trim()).length;
+                                                   const label = state.configMode === 'MANUAL' ? `${t.name} (${count})` : t.name;
+                                                   return <option key={t.id} value={t.name}>{label}</option>;
+                                                })
+                                             ) : (
+                                                <>
+                                                   <option value="Multiple Choice">Multiple Choice (MCQ)</option>
+                                                   <option value="Short Question">Short Question</option>
+                                                   <option value="Long Answer">Long Answer</option>
+                                                </>
+                                             )}
                                           </select>
                                        </div>
 

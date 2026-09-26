@@ -337,18 +337,25 @@ const validateQuestion = (question) => {
     if (!question.topic || String(question.topic).trim() === '')
         errors.push('Topic (topic) is required');
     if (question.medium === 'Urdu' || question.medium === 'Bilingual') {
+        const hasUrduOptions = Array.isArray(question.optionsUrdu) && question.optionsUrdu.length > 0;
         if (!question.textUrdu || question.textUrdu.trim() === '') {
-            errors.push('Urdu text (textUrdu) cannot be empty');
+            // Allow empty text if it's an MCQ with options (e.g. spelling questions)
+            if (!(question.type === 'MCQ' && hasUrduOptions)) {
+                errors.push('Urdu text (textUrdu) cannot be empty');
+            }
         }
-        if (question.type === 'MCQ' && (!Array.isArray(question.optionsUrdu) || question.optionsUrdu.length === 0)) {
+        if (question.type === 'MCQ' && !hasUrduOptions) {
             errors.push('Urdu options (optionsUrdu) required for MCQ');
         }
     }
     if (question.medium === 'English' || question.medium === 'Bilingual') {
+        const hasEngOptions = Array.isArray(question.options) && question.options.length > 0;
         if (!question.text || question.text.trim() === '') {
-            errors.push('English text cannot be empty');
+            if (!(question.type === 'MCQ' && hasEngOptions)) {
+                errors.push('English text cannot be empty');
+            }
         }
-        if (question.type === 'MCQ' && (!Array.isArray(question.options) || question.options.length === 0)) {
+        if (question.type === 'MCQ' && !hasEngOptions) {
             errors.push('English options required for MCQ');
         }
     }

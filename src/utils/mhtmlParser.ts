@@ -237,8 +237,6 @@ export function parseMhtmlToQuestions(
       const questionTextEn = cleanHtmlContent(rawEng);
       const questionTextUr = cleanHtmlContent(rawUrdu);
 
-      if (!questionTextEn && !questionTextUr) continue;
-
       let optA_EN = '', optB_EN = '', optC_EN = '', optD_EN = '';
       let optA_UR = '', optB_UR = '', optC_UR = '', optD_UR = '';
       let correctAnswer = '';
@@ -268,6 +266,8 @@ export function parseMhtmlToQuestions(
           if (letter === 'D') { optD_EN = eTxt; optD_UR = uTxt; }
         });
       }
+
+      if (!questionTextEn && !questionTextUr && !optA_EN && !optA_UR) continue;
 
       questions.push({
         Board: finalBoard,

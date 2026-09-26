@@ -517,9 +517,9 @@ const GlobalQuestionBank: React.FC = () => {
         const options = [row.OptionA_EN, row.OptionB_EN, row.OptionC_EN, row.OptionD_EN].map(o => String(o || '')).filter(Boolean);
         const optionsUrdu = [row.OptionA_UR, row.OptionB_UR, row.OptionC_UR, row.OptionD_UR].map(o => String(o || '')).filter(Boolean);
 
-        // Validation: Must have at least one question text
-        if (!text && !textUrdu) {
-            console.warn(`Skipping row ${i}: Missing question text.`);
+        // Validation: Must have at least one question text OR have options (e.g. spelling MCQs)
+        if (!text && !textUrdu && options.length === 0 && optionsUrdu.length === 0) {
+            console.warn(`Skipping row ${i}: Missing question text and options.`);
             continue;
         }
 
@@ -547,7 +547,7 @@ const GlobalQuestionBank: React.FC = () => {
             source: sourcesValue ? String(sourcesValue).split('|')[0] : QuestionSource.MODEL_PAPER,
             options: type === 'MCQ' ? options : [],
             optionsUrdu: type === 'MCQ' ? optionsUrdu : [],
-            medium: (text && textUrdu) ? 'Bilingual' : textUrdu ? 'Urdu' : 'English'
+            medium: ((text || options.length > 0) && (textUrdu || optionsUrdu.length > 0)) ? 'Bilingual' : (textUrdu || optionsUrdu.length > 0) ? 'Urdu' : 'English'
         } as Question;
 
         finalQuestions.push(q);

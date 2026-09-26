@@ -304,7 +304,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [verticalSpacing, setVerticalSpacing] = useState<number>(2);
   const [questionGap, setQuestionGap] = useState<number>(0);
   const [bilingualInline, setBilingualInline] = useState(true);
-  const [boardExamFormat, setBoardExamFormat] = useState(true);
+  const [boardExamFormat, setBoardExamFormat] = useState(false); // Default to off as requested
+  const [matchColumnFontSize, setMatchColumnFontSize] = useState<number>(12); // Default 12pt for Match Columns and item pairs
   const [showQuestionMarks, setShowQuestionMarks] = useState(paper.showQuestionMarks ?? true);
   const [printViewMode, setPrintViewMode] = useState<'both' | 'objective' | 'subjective'>('both');
   useEffect(() => {
@@ -1040,6 +1041,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             <RangeControl label="Opt Gap" value={verticalSpacing} setValue={setVerticalSpacing} min={0} max={16} width="w-14" />
             <RangeControl label="Margin" value={pagePadding} setValue={setPagePadding} min={0} max={40} unit="mm" width="w-16" />
             <RangeControl label="MCQ Cols" value={mcqColumns} setValue={setMcqColumns} min={1} max={4} width="w-14" />
+            <RangeControl label="Pair Font" value={matchColumnFontSize} setValue={setMatchColumnFontSize} min={8} max={24} unit="pt" width="w-16" />
             <RangeControl label="Img Zoom" value={imageScale} setValue={setImageScale} min={0.5} max={3} step={0.1} width="w-16" />
           </div>
 
@@ -1438,7 +1440,15 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
      Sub-questions : (i) English text ............ Urdu text   (i)
   ───────────────────────────────────────────────────────── */
   function renderBoardExamSection(sec: PaperSectionConfig, secQuestions: Question[], qNum: number) {
-    if (isGridView || sec.questionType === 'Match Columns' || secQuestions.some(q => q.type === 'Match Columns')) {
+    const isPairOrVocab = sec.questionType === 'Match Columns' || 
+                          sec.questionType === 'Words / Meanings' || 
+                          sec.questionType === 'Words Meanings' || 
+                          sec.questionType === 'Pair of Words' || 
+                          sec.questionType === 'Words / Sentences' || 
+                          sec.questionType === 'Spelling Check' || 
+                          secQuestions.some(q => q.type === 'Match Columns' || (q.matchingPairs && q.matchingPairs.length > 0));
+
+    if (isGridView || isPairOrVocab) {
       return renderSection(sec, secQuestions, qNum);
     }
 
@@ -1946,13 +1956,25 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                   )}
 
                   {(() => {
-                    const isMatchColsWithPairs = q.type === 'Match Columns' && Boolean(q.matchingPairs && q.matchingPairs.length > 0);
-                    const isGenericMatchStatement = (text: string | undefined) => {
+                    const isPairOrVocabType = (
+                      q.type === 'Match Columns' || 
+                      q.type === 'Words / Meanings' || 
+                      q.type === 'Words Meanings' || 
+                      q.type === 'Pair of Words' || 
+                      q.type === 'Words / Sentences' || 
+                      q.type === 'Spelling Check' ||
+                      q.type === 'Missing Word'
+                    ) && Boolean(q.matchingPairs && q.matchingPairs.length > 0);
+
+                    const isGenericStatement = (text: string | undefined) => {
                       if (!text) return true;
                       const t = text.trim().toLowerCase();
-                      return t === '' || t === 'match the columns' || t === 'match columns' || t === 'match the column' || t === 'match column a with column b' || t === 'match column' || t === 'کالم الف کو کالم ب سے ملائیں' || t === 'کالم ملائیں' || t === 'کالم ملائیے';
+                      return t === '' || 
+                             t === 'match the columns' || t === 'match columns' || t === 'match the column' || t === 'match column a with column b' || t === 'match column' || 
+                             t === 'words / meanings' || t === 'words meanings' || t === 'pair of words' || t === 'words / sentences' || t === 'spelling check' ||
+                             t === 'کالم الف کو کالم ب سے ملائیں' || t === 'کالم ملائیں' || t === 'کالم ملائیے' || t === 'الفاظ و معانی / جوڑے' || t === 'الفاظ معنی' || t === 'الفاظ کے جوڑے';
                     };
-                    const skipStatementRow = isMatchColsWithPairs && isGenericMatchStatement(displayTextEn) && isGenericMatchStatement(displayTextUr);
+                    const skipStatementRow = isPairOrVocabType && isGenericStatement(displayTextEn) && isGenericStatement(displayTextUr);
 
                     if (skipStatementRow) return null;
 
@@ -2113,25 +2135,84 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     </div>
                   )}
 
+                  {/* HORIZONTAL MULTI-ITEM GRID FOR WORDS MEANINGS, PAIR OF WORDS, WORDS SENTENCES, SPELLING CHECK */}
+                  {(q.type === 'Words / Meanings' || 
+                    q.type === 'Words Meanings' || 
+                    q.type === 'Pair of Words' || 
+                    q.type === 'Words / Sentences' || 
+                    q.type === 'Spelling Check' || 
+                    q.type === 'Missing Word') && q.matchingPairs && q.matchingPairs.length > 0 && (
+                    <div className="mt-2 mb-3 break-inside-avoid">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 bg-slate-50/50 p-2.5 rounded-lg border border-slate-300">
+                        {q.matchingPairs.map((pair, pIdx) => {
+                          const itemNumber = `(${toRoman(pIdx + 1)})`;
+                          const promptEn = pair.left;
+                          const promptUr = pair.leftUrdu;
+                          const answerEn = pair.right;
+                          const answerUr = pair.rightUrdu;
+
+                          return (
+                            <div key={pIdx} className="flex flex-col p-2 bg-white rounded border border-slate-300 shadow-2xs">
+                              {/* Prompt word(s) printed on student question paper */}
+                              <div className="flex items-baseline gap-1.5 font-bold" style={{ fontSize: `${matchColumnFontSize}px` }}>
+                                <span className="font-black text-slate-700 text-xs shrink-0">{itemNumber}</span>
+                                <div className="flex-1 min-w-0">
+                                  {(languageMode === 'Bilingual' || languageMode === 'English') && promptEn && (
+                                    <MathRenderer text={promptEn} className="font-bold text-slate-900" />
+                                  )}
+                                  {(languageMode === 'Bilingual' || languageMode === 'Urdu') && promptUr && (
+                                    <div dir="rtl" className="font-urdu font-bold text-slate-900 text-right">
+                                      <MathRenderer text={promptUr} />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Student Answer Space / Blank Line */}
+                              {!showAnswersInline && (
+                                <div className="mt-2 border-b border-dashed border-slate-400 w-full min-h-[14px]"></div>
+                              )}
+
+                              {/* TEACHER COPY / ANSWER KEY: Only shown if showAnswersInline is true */}
+                              {showAnswersInline && (answerEn || answerUr) && (
+                                <div className="mt-1 pt-1 border-t border-green-200 text-green-800 text-xs bg-green-50 p-1 rounded">
+                                  <span className="font-black text-[9px] uppercase text-green-700 block">Ans:</span>
+                                  {(languageMode === 'Bilingual' || languageMode === 'English') && answerEn && (
+                                    <MathRenderer text={answerEn} inline />
+                                  )}
+                                  {(languageMode === 'Bilingual' || languageMode === 'Urdu') && answerUr && (
+                                    <div dir="rtl" className="font-urdu text-right mt-0.5">
+                                      <MathRenderer text={answerUr} inline />
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* MATCH COLUMNS TABLE RENDERING WITH CONFIGURABLE PAIR FONT SIZE */}
                   {q.type === 'Match Columns' && q.matchingPairs && (
-                    <div className="mt-6 mx-1 md:mx-4 break-inside-avoid">
-                      {/* Changed to Grid with Gap for separation */}
-                      <div className="grid grid-cols-2 gap-16">
+                    <div className="mt-4 mx-1 md:mx-2 break-inside-avoid">
+                      <div className="grid grid-cols-2 gap-8 md:gap-12">
                         {/* Column A */}
                         <div className="border-2 border-black rounded-lg overflow-hidden">
                           <div className="bg-slate-100 border-b-2 border-black p-2 text-center">
-                            <h4 className="font-black text-xs uppercase tracking-widest">Column A</h4>
+                            <h4 className="font-black uppercase tracking-widest" style={{ fontSize: `${matchColumnFontSize}px` }}>Column A / کالم الف</h4>
                           </div>
                           <div className="divide-y-2 divide-black bg-white">
                             {q.matchingPairs.map((pair, i) => (
-                              <div key={`left-${i}`} className="p-3 flex gap-3 items-center min-h-[40px]">
-                                <span className="font-bold text-xs w-5 shrink-0">({i + 1})</span>
-                                <div className={`flex-1 flex ${bilingualInline ? 'flex-col gap-1' : 'flex-col'}`}>
+                              <div key={`left-${i}`} className="p-2.5 flex gap-3 items-center min-h-[44px]">
+                                <span className="font-black shrink-0" style={{ fontSize: `${matchColumnFontSize}px`, width: '24px' }}>({i + 1})</span>
+                                <div className={`flex-1 flex ${bilingualInline ? 'flex-col gap-1' : 'flex-col'}`} style={{ fontSize: `${matchColumnFontSize}px` }}>
                                   {(languageMode === 'Bilingual' || languageMode === 'English') && pair.left && (q.medium !== 'Urdu' || languageMode === 'English') &&
-                                    (isManualEdit ? <span contentEditable suppressContentEditableWarning={true} className="text-xs font-bold leading-tight outline-none">{pair.left}</span> : <MathRenderer text={pair.left} className="text-xs font-bold leading-tight" />)
+                                    (isManualEdit ? <span contentEditable suppressContentEditableWarning={true} className="font-bold leading-snug outline-none">{pair.left}</span> : <MathRenderer text={pair.left} className="font-bold leading-snug" />)
                                   }
                                   {(languageMode === 'Bilingual' || languageMode === 'Urdu') && pair.leftUrdu &&
-                                    <div className="font-urdu text-right mt-1 leading-tight text-sm" dir="rtl">
+                                    <div className="font-urdu text-right leading-tight" dir="rtl" style={{ fontSize: `${matchColumnFontSize * 1.1}px` }}>
                                       {isManualEdit ? <span contentEditable suppressContentEditableWarning={true} className="outline-none">{pair.leftUrdu}</span> : <MathRenderer text={pair.leftUrdu} />}
                                     </div>
                                   }
@@ -2143,25 +2224,25 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                         {/* Column B - Shuffled Display for Exam */}
                         <div className="border-2 border-black rounded-lg overflow-hidden">
                           <div className="bg-slate-100 border-b-2 border-black p-2 text-center">
-                            <h4 className="font-black text-xs uppercase tracking-widest">Column B</h4>
+                            <h4 className="font-black uppercase tracking-widest" style={{ fontSize: `${matchColumnFontSize}px` }}>Column B / کالم ب</h4>
                           </div>
                           <div className="divide-y-2 divide-black bg-white">
                             {[...q.matchingPairs]
-                              .sort((a, b) => (showAnswersInline ? 0 : (a.right || '').localeCompare(b.right || ''))) // If showing answers, don't shuffle (or show matched)
+                              .sort((a, b) => (showAnswersInline ? 0 : (a.right || '').localeCompare(b.right || ''))) // If showing answers, don't shuffle
                               .map((pair, i) => (
-                                <div key={`right-${i}`} className={`p-3 flex gap-3 items-center min-h-[40px] ${showAnswersInline ? 'bg-green-50' : ''}`}>
-                                  <span style={{ fontSize: `${optionLabelSize}px` }} className="font-black w-5 shrink-0">({String.fromCharCode(65 + i)})</span>
-                                  <div className={`flex-1 flex ${bilingualInline ? 'flex-col gap-1' : 'flex-col'}`}>
+                                <div key={`right-${i}`} className={`p-2.5 flex gap-3 items-center min-h-[44px] ${showAnswersInline ? 'bg-green-50' : ''}`}>
+                                  <span className="font-black shrink-0" style={{ fontSize: `${matchColumnFontSize}px`, width: '24px' }}>({String.fromCharCode(65 + i)})</span>
+                                  <div className={`flex-1 flex ${bilingualInline ? 'flex-col gap-1' : 'flex-col'}`} style={{ fontSize: `${matchColumnFontSize}px` }}>
                                     {(languageMode === 'Bilingual' || languageMode === 'English') && pair.right && (q.medium !== 'Urdu' || languageMode === 'English') &&
-                                      (isManualEdit ? <span contentEditable suppressContentEditableWarning={true} className="text-xs font-bold leading-tight outline-none">{pair.right}</span> : <MathRenderer text={pair.right} className="text-xs font-bold leading-tight" />)
+                                      (isManualEdit ? <span contentEditable suppressContentEditableWarning={true} className="font-bold leading-snug outline-none">{pair.right}</span> : <MathRenderer text={pair.right} className="font-bold leading-snug" />)
                                     }
                                     {(languageMode === 'Bilingual' || languageMode === 'Urdu') && pair.rightUrdu &&
-                                      <div className="font-urdu text-right mt-1 leading-tight text-sm" dir="rtl">
+                                      <div className="font-urdu text-right leading-tight" dir="rtl" style={{ fontSize: `${matchColumnFontSize * 1.1}px` }}>
                                         {isManualEdit ? <span contentEditable suppressContentEditableWarning={true} className="outline-none">{pair.rightUrdu}</span> : <MathRenderer text={pair.rightUrdu} />}
                                       </div>
                                     }
                                   </div>
-                                  {showAnswersInline && <span className="text-[9px] font-bold text-green-600 border border-green-300 px-1 rounded">Matches ({i + 1})</span>}
+                                  {showAnswersInline && <span className="text-[9px] font-bold text-green-700 border border-green-300 px-1.5 py-0.5 rounded bg-white shrink-0">Matches ({i + 1})</span>}
                                 </div>
                               ))}
                           </div>

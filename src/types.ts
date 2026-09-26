@@ -69,7 +69,8 @@ export enum QuestionType {
   LONG           = 'Long Answer',
   DIAGRAM        = 'Diagram Based',
   DEFINITIONS    = 'Definitions',
-  // --- Language Skills ---
+  NUMERICAL      = 'Numerical Problem',
+  // --- Language Skills & Grammar ---
   SPELLING       = 'Spelling Check',
   MISSING_WORD   = 'Missing Word',
   COMPREHENSION  = 'Comprehension',
@@ -79,6 +80,13 @@ export enum QuestionType {
   STORY_WRITING  = 'Story / Paragraph Writing',
   DIRECT_INDIRECT= 'Direct / Indirect Speech',
   ACTIVE_PASSIVE = 'Active / Passive Voice',
+  FORMS_OF_VERBS = 'Forms of Verbs',
+  WORDS_OPPOSITES= 'Words & Opposites',
+  SINGULAR_PLURAL= 'Singular / Plural',
+  WORDS_MEANINGS = 'Words / Meanings',
+  WORDS_SENTENCES= 'Words / Sentences',
+  MASCULINE_FEMININE = 'Masculine / Feminine',
+  PAIR_OF_WORDS  = 'Pair of Words',
 }
 
 export enum Difficulty {

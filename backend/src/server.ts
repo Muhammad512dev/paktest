@@ -2508,6 +2508,7 @@ const BUILT_IN_QUESTION_TYPES = [
     { id: 'Long Answer',               name: 'Long Answer',                  category: 'Subjective', isBuiltIn: true },
     { id: 'Diagram Based',             name: 'Diagram Based',                category: 'Subjective', isBuiltIn: true },
     { id: 'Definitions',               name: 'Definitions',                  category: 'Subjective', isBuiltIn: true },
+    { id: 'Numerical Problem',         name: 'Numerical Problem',            category: 'Subjective', isBuiltIn: true },
     { id: 'Spelling Check',            name: 'Spelling Check / Dictation',   category: 'Language',   isBuiltIn: true },
     { id: 'Missing Word',              name: 'Missing Word',                 category: 'Language',   isBuiltIn: true },
     { id: 'Comprehension',             name: 'Comprehension (Passage)',       category: 'Language',   isBuiltIn: true },
@@ -2517,15 +2518,59 @@ const BUILT_IN_QUESTION_TYPES = [
     { id: 'Story / Paragraph Writing', name: 'Story / Paragraph Writing',    category: 'Language',   isBuiltIn: true },
     { id: 'Direct / Indirect Speech',  name: 'Direct / Indirect Speech',     category: 'Language',   isBuiltIn: true },
     { id: 'Active / Passive Voice',    name: 'Active / Passive Voice',       category: 'Language',   isBuiltIn: true },
+    { id: 'Forms of Verbs',            name: 'Forms of Verbs',               category: 'Language',   isBuiltIn: true },
+    { id: 'Words & Opposites',         name: 'Words & Opposites / Antonyms', category: 'Language',   isBuiltIn: true },
+    { id: 'Singular / Plural',         name: 'Singular & Plural (واحد جمع)', category: 'Language',   isBuiltIn: true },
+    { id: 'Words / Meanings',          name: 'Words & Meanings (الفاظ معانی)',category: 'Language',  isBuiltIn: true },
+    { id: 'Words / Sentences',         name: 'Words & Sentences (جملے بنائیں)',category: 'Language',  isBuiltIn: true },
+    { id: 'Masculine / Feminine',      name: 'Masculine & Feminine (مذکر مؤنث)',category: 'Language',isBuiltIn: true },
+    { id: 'Pair of Words',             name: 'Pair of Words (الفاظ کے جوڑے)', category: 'Language',  isBuiltIn: true },
 ];
-const BUILT_IN_TYPE_IDS = new Set(BUILT_IN_QUESTION_TYPES.map(t => t.id));
+const BUILT_IN_TYPE_IDS = new Set(BUILT_IN_QUESTION_TYPES.map(t => t.id.toLowerCase()));
+const BUILT_IN_NAMES_SET = new Set(BUILT_IN_QUESTION_TYPES.map(t => t.name.toLowerCase()));
+
+// Known aliases to prevent duplicate / messy custom entries in DB from cluttering the UI
+const KNOWN_TYPE_ALIASES: Record<string, string> = {
+    'singular plulrar': 'Singular / Plural',
+    'singular plural': 'Singular / Plural',
+    'singular / plural': 'Singular / Plural',
+    'word meaning': 'Words / Meanings',
+    'words meaning': 'Words / Meanings',
+    'words & meanings': 'Words / Meanings',
+    'words / meanings': 'Words / Meanings',
+    'word sentence': 'Words / Sentences',
+    'words sentence': 'Words / Sentences',
+    'words & sentences': 'Words / Sentences',
+    'words / sentences': 'Words / Sentences',
+    'words and sentences': 'Words / Sentences',
+    'forms of verb': 'Forms of Verbs',
+    'forms of verbs': 'Forms of Verbs',
+    'form of verbs': 'Forms of Verbs',
+    'words opposite': 'Words & Opposites',
+    'words & opposites': 'Words & Opposites',
+    'word opposite': 'Words & Opposites',
+    'masculine feminine': 'Masculine / Feminine',
+    'masculine / feminine': 'Masculine / Feminine',
+    'gender': 'Masculine / Feminine',
+    'application': 'Letter Writing',
+    'letter': 'Letter Writing',
+    'mcqs': 'MCQ',
+    'mcq': 'MCQ'
+};
 
 // GET – merge built-ins with user-added custom types from DB
 app.get('/api/curriculum/question-types', authenticate, async (req: any, res: any) => {
     try {
         const customTypes = await prisma.questionType.findMany({ orderBy: { name: 'asc' } });
         const custom = customTypes
-            .filter((t: any) => !BUILT_IN_TYPE_IDS.has(t.id) && !BUILT_IN_TYPE_IDS.has(t.name))
+            .filter((t: any) => {
+                const normId = (t.id || '').toLowerCase().trim();
+                const normName = (t.name || '').toLowerCase().trim();
+                return !BUILT_IN_TYPE_IDS.has(normId) && 
+                       !BUILT_IN_NAMES_SET.has(normName) && 
+                       !KNOWN_TYPE_ALIASES[normName] && 
+                       !KNOWN_TYPE_ALIASES[normId];
+            })
             .map((t: any) => ({ id: t.id, name: t.name, category: 'Custom', isBuiltIn: false }));
         res.json([...BUILT_IN_QUESTION_TYPES, ...custom]);
     } catch {

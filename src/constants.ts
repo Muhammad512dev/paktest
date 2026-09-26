@@ -3,13 +3,31 @@ import { Calculator, Book, FlaskConical, Globe, Languages, Code, History as Hist
 
 // --- QUESTION TYPES DEFINITION ---
 export const DEFAULT_QUESTION_TYPES = [
-  { id: 'MCQ', name: 'Multiple Choice', category: 'Objective' },
+  { id: 'MCQ', name: 'Multiple Choice (MCQ)', category: 'Objective' },
   { id: 'Match Columns', name: 'Match Columns', category: 'Objective' },
   { id: 'Fill in the Blanks', name: 'Fill in the Blanks', category: 'Objective' },
   { id: 'True/False', name: 'True/False', category: 'Objective' },
   { id: 'Short Answer', name: 'Short Answer', category: 'Subjective' },
   { id: 'Long Answer', name: 'Long Answer', category: 'Subjective' },
   { id: 'Diagram Based', name: 'Diagram Based', category: 'Subjective' },
+  { id: 'Definitions', name: 'Definitions', category: 'Subjective' },
+  { id: 'Numerical Problem', name: 'Numerical Problem', category: 'Subjective' },
+  { id: 'Forms of Verbs', name: 'Forms of Verbs', category: 'Language' },
+  { id: 'Words & Opposites', name: 'Words & Opposites', category: 'Language' },
+  { id: 'Singular / Plural', name: 'Singular / Plural', category: 'Language' },
+  { id: 'Words / Meanings', name: 'Words / Meanings', category: 'Language' },
+  { id: 'Words / Sentences', name: 'Words / Sentences', category: 'Language' },
+  { id: 'Masculine / Feminine', name: 'Masculine / Feminine', category: 'Language' },
+  { id: 'Pair of Words', name: 'Pair of Words', category: 'Language' },
+  { id: 'Spelling Check', name: 'Spelling Check', category: 'Language' },
+  { id: 'Missing Word', name: 'Missing Word', category: 'Language' },
+  { id: 'Translation', name: 'Translation', category: 'Language' },
+  { id: 'Comprehension', name: 'Comprehension', category: 'Language' },
+  { id: 'Composition / Essay', name: 'Composition / Essay', category: 'Language' },
+  { id: 'Letter Writing', name: 'Letter Writing', category: 'Language' },
+  { id: 'Story / Paragraph Writing', name: 'Story / Paragraph Writing', category: 'Language' },
+  { id: 'Direct / Indirect Speech', name: 'Direct / Indirect Speech', category: 'Language' },
+  { id: 'Active / Passive Voice', name: 'Active / Passive Voice', category: 'Language' },
 ] as const;
 
 export const MOCK_USERS: User[] = [

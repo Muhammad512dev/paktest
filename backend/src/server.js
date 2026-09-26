@@ -1873,38 +1873,83 @@ registerCurriculumRoutes('subjects', prisma.subject);
 registerCurriculumRoutes('chapters', prisma.chapter);
 registerCurriculumRoutes('topics', prisma.topic);
 registerCurriculumRoutes('sources', prisma.source);
+const BUILT_IN_QUESTION_TYPES_JS = [
+    { id: 'MCQ',                       name: 'Multiple Choice (MCQ)',        category: 'Objective',  isBuiltIn: true },
+    { id: 'True/False',                name: 'True/False',                   category: 'Objective',  isBuiltIn: true },
+    { id: 'Fill in the Blanks',        name: 'Fill in the Blanks',           category: 'Objective',  isBuiltIn: true },
+    { id: 'Match Columns',             name: 'Match Columns',                category: 'Objective',  isBuiltIn: true },
+    { id: 'Short Answer',              name: 'Short Answer',                 category: 'Subjective', isBuiltIn: true },
+    { id: 'Long Answer',               name: 'Long Answer',                  category: 'Subjective', isBuiltIn: true },
+    { id: 'Diagram Based',             name: 'Diagram Based',                category: 'Subjective', isBuiltIn: true },
+    { id: 'Definitions',               name: 'Definitions',                  category: 'Subjective', isBuiltIn: true },
+    { id: 'Numerical Problem',         name: 'Numerical Problem',            category: 'Subjective', isBuiltIn: true },
+    { id: 'Spelling Check',            name: 'Spelling Check / Dictation',   category: 'Language',   isBuiltIn: true },
+    { id: 'Missing Word',              name: 'Missing Word',                 category: 'Language',   isBuiltIn: true },
+    { id: 'Comprehension',             name: 'Comprehension (Passage)',       category: 'Language',   isBuiltIn: true },
+    { id: 'Composition / Essay',       name: 'Composition / Essay Writing',  category: 'Language',   isBuiltIn: true },
+    { id: 'Translation',               name: 'Translation',                  category: 'Language',   isBuiltIn: true },
+    { id: 'Letter Writing',            name: 'Letter / Application Writing', category: 'Language',   isBuiltIn: true },
+    { id: 'Story / Paragraph Writing', name: 'Story / Paragraph Writing',    category: 'Language',   isBuiltIn: true },
+    { id: 'Direct / Indirect Speech',  name: 'Direct / Indirect Speech',     category: 'Language',   isBuiltIn: true },
+    { id: 'Active / Passive Voice',    name: 'Active / Passive Voice',       category: 'Language',   isBuiltIn: true },
+    { id: 'Forms of Verbs',            name: 'Forms of Verbs',               category: 'Language',   isBuiltIn: true },
+    { id: 'Words & Opposites',         name: 'Words & Opposites / Antonyms', category: 'Language',   isBuiltIn: true },
+    { id: 'Singular / Plural',         name: 'Singular & Plural (واحد جمع)', category: 'Language',   isBuiltIn: true },
+    { id: 'Words / Meanings',          name: 'Words & Meanings (الفاظ معانی)',category: 'Language',  isBuiltIn: true },
+    { id: 'Words / Sentences',         name: 'Words & Sentences (جملے بنائیں)',category: 'Language',  isBuiltIn: true },
+    { id: 'Masculine / Feminine',      name: 'Masculine & Feminine (مذکر مؤنث)',category: 'Language',isBuiltIn: true },
+    { id: 'Pair of Words',             name: 'Pair of Words (الفاظ کے جوڑے)', category: 'Language',  isBuiltIn: true },
+];
+const BUILT_IN_TYPE_IDS_JS = new Set(BUILT_IN_QUESTION_TYPES_JS.map(t => t.id.toLowerCase()));
+const BUILT_IN_NAMES_SET_JS = new Set(BUILT_IN_QUESTION_TYPES_JS.map(t => t.name.toLowerCase()));
+
+const KNOWN_TYPE_ALIASES_JS = {
+    'singular plulrar': 'Singular / Plural',
+    'singular plural': 'Singular / Plural',
+    'singular / plural': 'Singular / Plural',
+    'word meaning': 'Words / Meanings',
+    'words meaning': 'Words / Meanings',
+    'words & meanings': 'Words / Meanings',
+    'words / meanings': 'Words / Meanings',
+    'word sentence': 'Words / Sentences',
+    'words sentence': 'Words / Sentences',
+    'words & sentences': 'Words / Sentences',
+    'words / sentences': 'Words / Sentences',
+    'words and sentences': 'Words / Sentences',
+    'forms of verb': 'Forms of Verbs',
+    'forms of verbs': 'Forms of Verbs',
+    'form of verbs': 'Forms of Verbs',
+    'words opposite': 'Words & Opposites',
+    'words & opposites': 'Words & Opposites',
+    'word opposite': 'Words & Opposites',
+    'masculine feminine': 'Masculine / Feminine',
+    'masculine / feminine': 'Masculine / Feminine',
+    'gender': 'Masculine / Feminine',
+    'application': 'Letter Writing',
+    'letter': 'Letter Writing',
+    'mcqs': 'MCQ',
+    'mcq': 'MCQ'
+};
+
 app.get('/api/curriculum/question-types', async (req, res) => {
     try {
-        const hardcoded = [
-            { id: 'MCQ', name: 'MCQ' },
-            { id: 'Short Question', name: 'Short Question' },
-            { id: 'Long Answer', name: 'Long Answer' },
-            { id: 'Fill in the Blank', name: 'Fill in the Blank' },
-            { id: 'True/False', name: 'True/False' },
-            { id: 'Match Columns', name: 'Match Columns' },
-            { id: 'Numerical', name: 'Numerical' },
-            { id: 'Derivation', name: 'Derivation' },
-        ];
-        
         let customTypes = [];
         try {
             customTypes = await prisma.questionType.findMany({ select: { name: true, id: true } });
         } catch (e) { /* fallback if schema out of sync locally */ }
 
-        // Find any new types in the database
-        const dbTypes = await prisma.question.findMany({
-            distinct: ['type'],
-            select: { type: true },
-            where: { type: { notIn: hardcoded.map(h => h.id), not: '' } }
-        });
+        const custom = customTypes
+            .filter(t => {
+                const normId = (t.id || '').toLowerCase().trim();
+                const normName = (t.name || '').toLowerCase().trim();
+                return !BUILT_IN_TYPE_IDS_JS.has(normId) && 
+                       !BUILT_IN_NAMES_SET_JS.has(normName) && 
+                       !KNOWN_TYPE_ALIASES_JS[normName] && 
+                       !KNOWN_TYPE_ALIASES_JS[normId];
+            })
+            .map(t => ({ id: t.id, name: t.name, category: 'Custom', isBuiltIn: false }));
 
-        const newTypes = dbTypes.map(t => ({ id: t.type, name: t.type }));
-        const customMapped = customTypes.map(t => ({ id: t.id, name: t.name }));
-        
-        const merged = [...hardcoded, ...customMapped, ...newTypes];
-        const unique = merged.filter((v, i, a) => a.findIndex(t => (t.name.toLowerCase() === v.name.toLowerCase())) === i);
-
-        res.json(unique);
+        res.json([...BUILT_IN_QUESTION_TYPES_JS, ...custom]);
     } catch (e) {
         res.status(500).json({ error: "Failed to fetch question types" });
     }

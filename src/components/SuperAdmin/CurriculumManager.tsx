@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import { 
   BookOpen, 
   GraduationCap, 
@@ -35,7 +36,12 @@ import {
   CheckSquare,
   Square,
   Paperclip,
-  Trash
+  Trash,
+  Eye,
+  FileDown,
+  Copy,
+  HelpCircle,
+  Calculator
 } from 'lucide-react';
 import { 
   getSyllabuses, addSyllabus, deleteSyllabus,
@@ -50,6 +56,156 @@ import {
 import { Syllabus, ClassLevel, Subject, QuestionSource } from '../../types';
 
 const CurriculumManager: React.FC = () => {
+  
+  // --- QUESTION TYPE TEMPLATE GENERATOR ---
+  const [previewTemplateType, setPreviewTemplateType] = useState<any | null>(null);
+
+  const getQuestionTypeSample = (typeName: string) => {
+    const t = (typeName || '').toLowerCase();
+    if (t.includes('mcq')) {
+      return {
+        Board: 'Punjab Board (PCTB)', Grade: 'Class 9', Subject: 'Chemistry', Chapter: 'Structure of Molecules', Topic: 'Covalent Bonds',
+        QuestionText_EN: 'Which of the following diatomic gas molecules contains a triple covalent bond?',
+        QuestionText_UR: 'درج ذیل میں سے کس مالیکیول میں ٹرپل کوویلنٹ بانڈ موجود ہوتا ہے؟',
+        Type: 'MCQ', Marks: 1, Difficulty: 'Medium',
+        OptionA_EN: 'N₂ (Nitrogen)', OptionA_UR: 'N₂ (نائٹروجن)',
+        OptionB_EN: 'O₂ (Oxygen)', OptionB_UR: 'O₂ (آکسیجن)',
+        OptionC_EN: 'Cl₂ (Chlorine)', OptionC_UR: 'Cl₂ (کلورین)',
+        OptionD_EN: 'H₂ (Hydrogen)', OptionD_UR: 'H₂ (ہائیڈروجن)',
+        CorrectAnswer_Letter: 'A', ModelAnswer_EN: 'N₂ has a triple covalent bond.', ModelAnswer_UR: 'نائٹروجن میں ٹرپل بانڈ ہوتا ہے۔',
+        Sources: 'Textbook Exercise'
+      };
+    }
+    if (t.includes('verb')) {
+      return {
+        Board: 'Punjab Board (PCTB)', Grade: 'Class 9', Subject: 'English', Chapter: 'Grammar', Topic: 'Forms of Verbs',
+        QuestionText_EN: 'Write the 2nd and 3rd forms of the following verbs:',
+        QuestionText_UR: 'درج ذیل افعال کی دوسری اور تیسری فارم لکھیں:',
+        Type: 'Forms of Verbs', Marks: 5, Difficulty: 'Easy',
+        Pair1_Left_EN: 'Go', Pair1_Right_EN: 'went | gone', Pair1_Left_UR: 'Go (جانا)', Pair1_Right_UR: 'went | gone',
+        Pair2_Left_EN: 'Write', Pair2_Right_EN: 'wrote | written', Pair2_Left_UR: 'Write (لکھنا)', Pair2_Right_UR: 'wrote | written',
+        Pair3_Left_EN: 'Take', Pair3_Right_EN: 'took | taken', Pair3_Left_UR: 'Take (لینا)', Pair3_Right_UR: 'took | taken',
+        Pair4_Left_EN: 'Drive', Pair4_Right_EN: 'drove | driven', Pair4_Left_UR: 'Drive (چلانا)', Pair4_Right_UR: 'drove | driven',
+        Pair5_Left_EN: 'Sing', Pair5_Right_EN: 'sang | sung', Pair5_Left_UR: 'Sing (گانا)', Pair5_Right_UR: 'sang | sung',
+        ModelAnswer_EN: '1. Go: went | gone\n2. Write: wrote | written\n3. Take: took | taken\n4. Drive: drove | driven\n5. Sing: sang | sung',
+        Sources: 'Grammar & Composition'
+      };
+    }
+    if (t.includes('opposite') || t.includes('antonym')) {
+      return {
+        Board: 'Punjab Board (PCTB)', Grade: 'Class 9', Subject: 'English', Chapter: 'Vocabulary', Topic: 'Antonyms',
+        QuestionText_EN: 'Write the opposites (antonyms) of the following words:',
+        QuestionText_UR: 'درج ذیل الفاظ کے متضاد لکھیں:',
+        Type: 'Words & Opposites', Marks: 5, Difficulty: 'Easy',
+        Pair1_Left_EN: 'Ancient', Pair1_Right_EN: 'Modern', Pair1_Left_UR: 'قدیم', Pair1_Right_UR: 'جدید',
+        Pair2_Left_EN: 'Victory', Pair2_Right_EN: 'Defeat', Pair2_Left_UR: 'فتح', Pair2_Right_UR: 'شکست',
+        Pair3_Left_EN: 'Virtue', Pair3_Right_EN: 'Vice', Pair3_Left_UR: 'نیکی', Pair3_Right_UR: 'بدی',
+        Pair4_Left_EN: 'Permanent', Pair4_Right_EN: 'Temporary', Pair4_Left_UR: 'مستقل', Pair4_Right_UR: 'عارضی',
+        Pair5_Left_EN: 'Courageous', Pair5_Right_EN: 'Cowardly', Pair5_Left_UR: 'بہادر', Pair5_Right_UR: 'بزدل',
+        Sources: 'Vocabulary Section'
+      };
+    }
+    if (t.includes('singular') || t.includes('plural') || t.includes('plulrar')) {
+      return {
+        Board: 'Punjab Board (PCTB)', Grade: 'Class 9', Subject: 'English', Chapter: 'Grammar', Topic: 'Singular and Plural',
+        QuestionText_EN: 'Write the plural of the following singular words:',
+        QuestionText_UR: 'درج ذیل واحد الفاظ کی جمع لکھیں:',
+        Type: 'Singular / Plural', Marks: 5, Difficulty: 'Easy',
+        Pair1_Left_EN: 'Child', Pair1_Right_EN: 'Children', Pair1_Left_UR: 'شجر', Pair1_Right_UR: 'اشجار',
+        Pair2_Left_EN: 'Leaf', Pair2_Right_EN: 'Leaves', Pair2_Left_UR: 'سبب', Pair2_Right_UR: 'اسباب',
+        Pair3_Left_EN: 'Mouse', Pair3_Right_EN: 'Mice', Pair3_Left_UR: 'علم', Pair3_Right_UR: 'علوم',
+        Pair4_Left_EN: 'Radius', Pair4_Right_EN: 'Radii', Pair4_Left_UR: 'قاعدہ', Pair4_Right_UR: 'قواعد',
+        Pair5_Left_EN: 'Crisis', Pair5_Right_EN: 'Crises', Pair5_Left_UR: 'نکتہ', Pair5_Right_UR: 'نکات',
+        Sources: 'Urdu & English Grammar'
+      };
+    }
+    if (t.includes('meaning')) {
+      return {
+        Board: 'Punjab Board (PCTB)', Grade: 'Class 9', Subject: 'English', Chapter: 'Unit 1', Topic: 'Glossary',
+        QuestionText_EN: 'Write meanings of the following words:',
+        QuestionText_UR: 'درج ذیل الفاظ کے معانی لکھیں:',
+        Type: 'Words / Meanings', Marks: 5, Difficulty: 'Easy',
+        Pair1_Left_EN: 'Unparalleled', Pair1_Right_EN: 'Matchless, unequaled', Pair1_Left_UR: 'بے مثال', Pair1_Right_UR: 'بے نظیر',
+        Pair2_Left_EN: 'Eloquence', Pair2_Right_EN: 'Fluent and powerful speech', Pair2_Left_UR: 'فصاحت', Pair2_Right_UR: 'روانی',
+        Pair3_Left_EN: 'Chaos', Pair3_Right_EN: 'Complete disorder', Pair3_Left_UR: 'افراتفری', Pair3_Right_UR: 'بدامنی',
+        Sources: 'Glossary'
+      };
+    }
+    if (t.includes('sentence')) {
+      return {
+        Board: 'Punjab Board (PCTB)', Grade: 'Class 9', Subject: 'English', Chapter: 'Unit 3', Topic: 'Sentence Construction',
+        QuestionText_EN: 'Use the following words in meaningful sentences:',
+        QuestionText_UR: 'درج ذیل الفاظ کو بامعنی جملوں میں استعمال کریں:',
+        Type: 'Words / Sentences', Marks: 5, Difficulty: 'Easy',
+        Pair1_Left_EN: 'Integrity', Pair1_Right_EN: 'We admire leaders of strong integrity.', Pair1_Left_UR: 'دیانت داری', Pair1_Right_UR: 'ہم دیانت دار قائدین کی قدر کرتے ہیں۔',
+        Pair2_Left_EN: 'Global Village', Pair2_Right_EN: 'Technology turned the world into a global village.', Pair2_Left_UR: 'عالمی گاؤں', Pair2_Right_UR: 'ٹیکنالوجی نے دنیا کو عالمی گاؤں بنا دیا ہے۔',
+        Sources: 'Textbook Exercises'
+      };
+    }
+    if (t.includes('gender') || t.includes('masculine') || t.includes('feminine')) {
+      return {
+        Board: 'Punjab Board (PCTB)', Grade: 'Class 9', Subject: 'English', Chapter: 'Grammar', Topic: 'Gender',
+        QuestionText_EN: 'Write the feminine of the following words:',
+        QuestionText_UR: 'درج ذیل الفاظ کے مؤنث لکھیں:',
+        Type: 'Masculine / Feminine', Marks: 4, Difficulty: 'Easy',
+        Pair1_Left_EN: 'King', Pair1_Right_EN: 'Queen', Pair1_Left_UR: 'استاد', Pair1_Right_UR: 'استانی',
+        Pair2_Left_EN: 'Hero', Pair2_Right_EN: 'Heroine', Pair2_Left_UR: 'شاعر', Pair2_Right_UR: 'شاعرہ',
+        Pair3_Left_EN: 'Prince', Pair3_Right_EN: 'Princess', Pair3_Left_UR: 'مرد', Pair3_Right_UR: 'عورت',
+        Sources: 'Grammar'
+      };
+    }
+    if (t.includes('numerical') || t.includes('problem')) {
+      return {
+        Board: 'Punjab Board (PCTB)', Grade: 'Class 10', Subject: 'Physics', Chapter: 'Kinematics', Topic: 'Motion Equations',
+        QuestionText_EN: 'A car starts from rest with acceleration $2\\,\\text{m/s}^2$ for $5\\,\\text{s}$. Calculate final velocity ($v_f$) and distance ($S$).',
+        QuestionText_UR: 'ایک کار ساکن حالت سے چل کر $5\\,\\text{s}$ تک $2\\,\\text{m/s}^2$ کے ایکسیلریشن سے چلتی ہے۔ آخری ویلاسٹی ($v_f$) اور فاصلہ ($S$) معلوم کریں۔',
+        Type: 'Numerical Problem', Marks: 5, Difficulty: 'Medium',
+        ModelAnswer_EN: 'Using $v_f = v_i + at = 0 + (2)(5) = 10\\,\\text{m/s}$ and $S = v_i t + \\frac{1}{2}at^2 = 25\\,\\text{m}$.',
+        ModelAnswer_UR: 'فارمولا $v_f = v_i + at = 10\\,\\text{m/s}$ اور $S = 25\\,\\text{m}$۔',
+        Sources: 'Physics Numerical Exercises'
+      };
+    }
+    // Default / Short / Long answer
+    return {
+      Board: 'Punjab Board (PCTB)', Grade: 'Class 9', Subject: 'Mathematics', Chapter: 'Quadratic Equations', Topic: 'Derivation',
+      QuestionText_EN: 'Derive the quadratic formula $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$ from standard form $ax^2 + bx + c = 0$.',
+      QuestionText_UR: 'معیاری شکل $ax^2 + bx + c = 0$ سے دو درجی فارمولا $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$ اخذ کریں۔',
+      Type: typeName || 'Short Answer', Marks: 4, Difficulty: 'Medium',
+      ModelAnswer_EN: 'Divide by a: $x^2 + (b/a)x = -c/a$. Complete the square: $(x + b/2a)^2 = (b^2 - 4ac)/4a^2$. Take square root to get $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$.',
+      ModelAnswer_UR: 'مربع مکمل کرنے کے طریقے سے دو درجی فارمولا اخذ کیا گیا۔',
+      Sources: 'Textbook Exercise'
+    };
+  };
+
+  const downloadSingleTypeCsv = (typeName: string) => {
+    const sample = getQuestionTypeSample(typeName);
+    const ws = XLSX.utils.json_to_sheet([sample]);
+    const csv = XLSX.utils.sheet_to_csv(ws);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Template_${(typeName || 'Question').replace(/\\s+/g, '_')}.csv`;
+    a.click();
+  };
+
+  const downloadMasterCsvAllTypes = () => {
+    const types = [
+      'MCQ', 'Short Answer', 'Long Answer', 'Numerical Problem', 'Match Columns', 'True/False', 'Fill in the Blanks',
+      'Forms of Verbs', 'Words & Opposites', 'Singular / Plural', 'Words / Meanings', 'Words / Sentences', 
+      'Masculine / Feminine', 'Pair of Words', 'Spelling Check', 'Comprehension', 'Translation', 'Definitions'
+    ];
+    const samples = types.map(t => getQuestionTypeSample(t));
+    const ws = XLSX.utils.json_to_sheet(samples);
+    const csv = XLSX.utils.sheet_to_csv(ws);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'PakParcha_Master_Question_Template_All_Types.csv';
+    a.click();
+  };
+
   const [activeTab, setActiveTab] = useState<'SYLLABUS' | 'CLASS' | 'SUBJECT' | 'CHAPTER' | 'TOPIC' | 'SOURCE' | 'TYPE'>('SYLLABUS');
   
   // --- DATA STATES ---

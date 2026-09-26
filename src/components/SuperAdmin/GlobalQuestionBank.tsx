@@ -11,7 +11,8 @@ import {
   HelpCircle, ChevronRight, Image as ImageIcon, ListFilter,
   BookOpen, GraduationCap, Library, Layers, FileText, CloudDownload,
   FileCode, Table, AlertCircle, FileUp, Info, CheckSquare, ChevronDown,
-  Tag, List, ToggleLeft, FormInput, Database, FileCheck, Loader2, Eye, Filter, Edit2, Check, PenTool, FileDown, Copy
+  Tag, List, ToggleLeft, FormInput, Database, FileCheck, Loader2, Eye, Filter, Edit2, Check, PenTool, FileDown, Copy,
+  Calculator, Users
 } from 'lucide-react';
 import { Difficulty, Question, QuestionSource, QuestionType, MatchingPair, Syllabus, ClassLevel, Subject } from '../../types';
 import { generateQuestionsAI, translateToUrdu } from '../../services/geminiService';
@@ -29,6 +30,14 @@ const BUILT_IN_QUESTION_TYPES = [
   { id: QuestionType.LONG,             label: 'Long Answer',                     icon: FileCode,     color: 'text-blue-600',    category: 'Subjective' },
   { id: QuestionType.DIAGRAM,          label: 'Diagram Based',                   icon: ImageIcon,    color: 'text-purple-600',  category: 'Subjective' },
   { id: QuestionType.DEFINITIONS,      label: 'Definitions',                     icon: BookOpen,     color: 'text-teal-600',    category: 'Subjective' },
+  { id: QuestionType.NUMERICAL,        label: 'Numerical Problem',               icon: Calculator,   color: 'text-orange-600',  category: 'Subjective' },
+  { id: QuestionType.FORMS_OF_VERBS,   label: 'Forms of Verbs',                  icon: PenTool,      color: 'text-indigo-500',  category: 'Language' },
+  { id: QuestionType.WORDS_OPPOSITES,  label: 'Words & Opposites / Antonyms',    icon: RefreshCw,    color: 'text-rose-500',    category: 'Language' },
+  { id: QuestionType.SINGULAR_PLURAL,  label: 'Singular & Plural (واحد جمع)',    icon: Layers,       color: 'text-emerald-500', category: 'Language' },
+  { id: QuestionType.WORDS_MEANINGS,   label: 'Words & Meanings (الفاظ معانی)',  icon: BookOpen,     color: 'text-sky-500',     category: 'Language' },
+  { id: QuestionType.WORDS_SENTENCES,  label: 'Words & Sentences (جملے بنائیں)',  icon: FileText,     color: 'text-teal-500',    category: 'Language' },
+  { id: QuestionType.MASCULINE_FEMININE,label: 'Masculine & Feminine (مذکر مؤنث)',icon: Users,      color: 'text-pink-500',    category: 'Language' },
+  { id: QuestionType.PAIR_OF_WORDS,    label: 'Pair of Words (الفاظ کے جوڑے)',   icon: Copy,         color: 'text-amber-500',   category: 'Language' },
   { id: QuestionType.SPELLING,         label: 'Spelling Check / Dictation',      icon: CheckCircle,  color: 'text-green-600',   category: 'Language' },
   { id: QuestionType.MISSING_WORD,     label: 'Missing Word',                    icon: HelpCircle,   color: 'text-orange-600',  category: 'Language' },
   { id: QuestionType.COMPREHENSION,    label: 'Comprehension (Passage)',          icon: BookOpen,     color: 'text-sky-600',     category: 'Language' },
@@ -49,6 +58,14 @@ const normalizeQuestionType = (type: string): string => {
   if (t.includes('match') || t.includes('column')) return QuestionType.MATCH;
   if (t.includes('true') || t.includes('false')) return QuestionType.TRUE_FALSE;
   if (t.includes('blank') || t.includes('fill')) return QuestionType.FILL_BLANKS;
+  if (t.includes('verb')) return QuestionType.FORMS_OF_VERBS;
+  if (t.includes('opposite') || t.includes('antonym')) return QuestionType.WORDS_OPPOSITES;
+  if (t.includes('singular') || t.includes('plural') || t.includes('plulrar')) return QuestionType.SINGULAR_PLURAL;
+  if (t.includes('meaning') || t.includes('vocab')) return QuestionType.WORDS_MEANINGS;
+  if (t.includes('sentence')) return QuestionType.WORDS_SENTENCES;
+  if (t.includes('gender') || t.includes('masculine') || t.includes('feminine')) return QuestionType.MASCULINE_FEMININE;
+  if (t.includes('pair of word') || t.includes('pairs of word') || t.includes('homophone')) return QuestionType.PAIR_OF_WORDS;
+  if (t.includes('numerical') || t.includes('problem')) return QuestionType.NUMERICAL;
   if (t.includes('short') || t === 'sq' || t === 'short answer') return QuestionType.SHORT;
   if (t.includes('long') || t === 'lq' || t === 'long answer') return QuestionType.LONG;
   if (t.includes('diagram')) return QuestionType.DIAGRAM;
@@ -1231,6 +1248,177 @@ const GlobalQuestionBank: React.FC = () => {
         Sources: "Textbook Exercise"
       },
 
+      // --- FORMS OF VERBS EXAMPLE (2ND & 3RD FORM WRITING) ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "English",
+        Chapter: "Grammar & Verbs",
+        Topic: "Forms of Verbs (2nd and 3rd Forms)",
+        QuestionText_EN: "Write the 2nd and 3rd forms of the following verbs:",
+        QuestionText_UR: "درج ذیل افعال کی دوسری اور تیسری فارم لکھیں:",
+        Type: "Forms of Verbs",
+        Marks: 5,
+        Difficulty: "Easy",
+        Pair1_Left_EN: "Go",
+        Pair1_Left_UR: "Go (جانا)",
+        Pair1_Right_EN: "went | gone",
+        Pair1_Right_UR: "went | gone",
+        Pair2_Left_EN: "Write",
+        Pair2_Left_UR: "Write (لکھنا)",
+        Pair2_Right_EN: "wrote | written",
+        Pair2_Right_UR: "wrote | written",
+        Pair3_Left_EN: "Take",
+        Pair3_Left_UR: "Take (لینا)",
+        Pair3_Right_EN: "took | taken",
+        Pair3_Right_UR: "took | taken",
+        Pair4_Left_EN: "Sing",
+        Pair4_Left_UR: "Sing (گانا)",
+        Pair4_Right_EN: "sang | sung",
+        Pair4_Right_UR: "sang | sung",
+        Pair5_Left_EN: "Drive",
+        Pair5_Left_UR: "Drive (چلانا)",
+        Pair5_Right_EN: "drove | driven",
+        Pair5_Right_UR: "drove | driven",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "1. Go: went | gone\n2. Write: wrote | written\n3. Take: took | taken\n4. Sing: sang | sung\n5. Drive: drove | driven",
+        ModelAnswer_UR: "1. Go: went | gone\n2. Write: wrote | written\n3. Take: took | taken\n4. Sing: sang | sung\n5. Drive: drove | driven",
+        ImageURL: "",
+        Sources: "English Grammar Section|Board Important"
+      },
+
+      // --- WORDS & OPPOSITES / ANTONYMS EXAMPLE ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "English",
+        Chapter: "Vocabulary & Antonyms",
+        Topic: "Words and Opposites",
+        QuestionText_EN: "Write the opposites (antonyms) of the following words:",
+        QuestionText_UR: "درج ذیل الفاظ کے متضاد لکھیں:",
+        Type: "Words & Opposites",
+        Marks: 5,
+        Difficulty: "Easy",
+        Pair1_Left_EN: "Ancient",
+        Pair1_Left_UR: "قدیم",
+        Pair1_Right_EN: "Modern",
+        Pair1_Right_UR: "جدید",
+        Pair2_Left_EN: "Victory",
+        Pair2_Left_UR: "فتح",
+        Pair2_Right_EN: "Defeat",
+        Pair2_Right_UR: "شکست",
+        Pair3_Left_EN: "Courageous",
+        Pair3_Left_UR: "بہادر",
+        Pair3_Right_EN: "Cowardly",
+        Pair3_Right_UR: "بزدل",
+        Pair4_Left_EN: "Virtue",
+        Pair4_Left_UR: "نیکی",
+        Pair4_Right_EN: "Vice",
+        Pair4_Right_UR: "بدی",
+        Pair5_Left_EN: "Permanent",
+        Pair5_Left_UR: "مستقل",
+        Pair5_Right_EN: "Temporary",
+        Pair5_Right_UR: "عارضی",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "1. Ancient: Modern\n2. Victory: Defeat\n3. Courageous: Cowardly\n4. Virtue: Vice\n5. Permanent: Temporary",
+        ModelAnswer_UR: "1. قدیم: جدید\n2. فتح: شکست\n3. بہادر: بزدل\n4. نیکی: بدی\n5. مستقل: عارضی",
+        ImageURL: "",
+        Sources: "Textbook Antonyms & Synonyms"
+      },
+
+      // --- SINGULAR / PLURAL EXAMPLE (واحد جمع) ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "English",
+        Chapter: "Grammar & Nouns",
+        Topic: "Singular and Plural Nouns",
+        QuestionText_EN: "Write the plural of the following singular words:",
+        QuestionText_UR: "درج ذیل واحد الفاظ کی جمع لکھیں:",
+        Type: "Singular / Plural",
+        Marks: 5,
+        Difficulty: "Easy",
+        Pair1_Left_EN: "Child",
+        Pair1_Left_UR: "شجر",
+        Pair1_Right_EN: "Children",
+        Pair1_Right_UR: "اشجار",
+        Pair2_Left_EN: "Leaf",
+        Pair2_Left_UR: "سبب",
+        Pair2_Right_EN: "Leaves",
+        Pair2_Right_UR: "اسباب",
+        Pair3_Left_EN: "Mouse",
+        Pair3_Left_UR: "علم",
+        Pair3_Right_EN: "Mice",
+        Pair3_Right_UR: "علوم",
+        Pair4_Left_EN: "Radius",
+        Pair4_Left_UR: "قاعدہ",
+        Pair4_Right_EN: "Radii",
+        Pair4_Right_UR: "قواعد",
+        Pair5_Left_EN: "Crisis",
+        Pair5_Left_UR: "نکتہ",
+        Pair5_Right_EN: "Crises",
+        Pair5_Right_UR: "نکات",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "1. Child: Children\n2. Leaf: Leaves\n3. Mouse: Mice\n4. Radius: Radii\n5. Crisis: Crises",
+        ModelAnswer_UR: "1. شجر: اشجار\n2. سبب: اسباب\n3. علم: علوم\n4. قاعدہ: قواعد\n5. نکتہ: نکات",
+        ImageURL: "",
+        Sources: "English & Urdu Grammar"
+      },
+
+      // --- MASCULINE / FEMININE EXAMPLE (مذکر مؤنث) ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "English",
+        Chapter: "Grammar & Gender",
+        Topic: "Masculine and Feminine Gender",
+        QuestionText_EN: "Write the feminine gender for the following masculine words:",
+        QuestionText_UR: "درج ذیل مذکر الفاظ کے مؤنث لکھیں:",
+        Type: "Masculine / Feminine",
+        Marks: 4,
+        Difficulty: "Easy",
+        Pair1_Left_EN: "King",
+        Pair1_Left_UR: "استاد",
+        Pair1_Right_EN: "Queen",
+        Pair1_Right_UR: "استانی",
+        Pair2_Left_EN: "Hero",
+        Pair2_Left_UR: "شاعر",
+        Pair2_Right_EN: "Heroine",
+        Pair2_Right_UR: "شاعرہ",
+        Pair3_Left_EN: "Prince",
+        Pair3_Left_UR: "مرد",
+        Pair3_Right_EN: "Princess",
+        Pair3_Right_UR: "عورت",
+        Pair4_Left_EN: "Host",
+        Pair4_Left_UR: "چچا",
+        Pair4_Right_EN: "Hostess",
+        Pair4_Right_UR: "چچی",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "1. King: Queen\n2. Hero: Heroine\n3. Prince: Princess\n4. Host: Hostess",
+        ModelAnswer_UR: "1. استاد: استانی\n2. شاعر: شاعرہ\n3. مرد: عورت\n4. چچا: چچی",
+        ImageURL: "",
+        Sources: "Primary & Middle Grammar"
+      },
+
+      // --- NUMERICAL PROBLEM (PHYSICS & CHEMISTRY EQUATIONS & CALCULATIONS) ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 10",
+        Subject: contextualSubject || "Physics",
+        Chapter: "Kinematics & Dynamics",
+        Topic: "Calculations using Equations of Motion",
+        QuestionText_EN: "A car starts from rest and moves with a uniform acceleration of $2\\,\\text{m/s}^2$ for $5\\,\\text{s}$. Calculate:\n(a) Its final velocity ($v_f$)\n(b) Total distance traveled ($S$)",
+        QuestionText_UR: "ایک کار ساکن حالت سے چل کر $5\\,\\text{s}$ تک $2\\,\\text{m/s}^2$ کے یکساں ایکسیلریشن سے حرکت کرتی ہے۔ معلوم کریں:\n(الف) کار کی آخری ویلاسٹی ($v_f$)\n(ب) طے کردہ کل فاصلہ ($S$)",
+        Type: "Numerical Problem",
+        Marks: 5,
+        Difficulty: "Medium",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "Given: $v_i = 0$, $a = 2\\,\\text{m/s}^2$, $t = 5\\,\\text{s}$.\n(a) $v_f = v_i + at = 0 + (2)(5) = 10\\,\\text{m/s}$.\n(b) $S = v_i t + \\frac{1}{2} a t^2 = (0)(5) + \\frac{1}{2}(2)(5)^2 = 25\\,\\text{m}$.\nFinal Answers: $v_f = 10\\,\\text{m/s}$, $S = 25\\,\\text{m}$.",
+        ModelAnswer_UR: "معلوم ہے: $v_i = 0$, $a = 2\\,\\text{m/s}^2$, $t = 5\\,\\text{s}$۔\n(الف) $v_f = v_i + at = 0 + (2)(5) = 10\\,\\text{m/s}$۔\n(ب) $S = v_i t + \\frac{1}{2} a t^2 = 0 + \\frac{1}{2}(2)(25) = 25\\,\\text{m}$۔\nجواب: $v_f = 10\\,\\text{m/s}$ اور $S = 25\\,\\text{m}$۔",
+        ImageURL: "",
+        Sources: "Physics Numerical Problems|Board Exam"
+      },
+
       // --- SPELLING CHECK / MISSING LETTERS EXAMPLE ---
       {
         Board: defaultBoard,
@@ -1907,6 +2095,18 @@ const GlobalQuestionBank: React.FC = () => {
                                { type: 'Match Columns', label: 'Match Columns', sub: 'Acid-Source & Biology Organelle Pairs' },
                                { type: 'True/False', label: 'True / False', sub: 'Physics & General Science Facts' },
                                { type: 'Fill in the Blanks', label: 'Fill in Blanks', sub: 'Math Sets & Chemical Formulas' },
+                                { type: 'Forms of Verbs', label: 'Forms of Verbs (اشکال فعل)', sub: '1st Form with 2nd & 3rd Forms (went | gone)' },
+                                { type: 'Words & Opposites', label: 'Words & Opposites (الفاظ متضاد)', sub: 'Antonyms Pairs (Ancient -> Modern)' },
+                                { type: 'Singular / Plural', label: 'Singular & Plural (واحد جمع)', sub: 'Singular to Plural Pairs (Child -> Children)' },
+                                { type: 'Words / Meanings', label: 'Words & Meanings (الفاظ معانی)', sub: 'Vocabulary & Meanings (Unparalleled -> Matchless)' },
+                                { type: 'Words / Sentences', label: 'Words & Sentences (جملے بنائیں)', sub: 'Word to Sentence Construction' },
+                                { type: 'Masculine / Feminine', label: 'Masculine & Feminine (مذکر مؤنث)', sub: 'Gender Pairs (King -> Queen)' },
+                                { type: 'Pair of Words', label: 'Pair of Words (الفاظ کے جوڑے)', sub: 'Homophones & Sentence Making (Accept / Except)' },
+                                { type: 'Spelling Check', label: 'Spelling Check / Missing Letters', sub: 'Missing Letters (c _ n f _ d e n c e)' },
+                                { type: 'Comprehension', label: 'Comprehension (Passage)', sub: 'Reading Comprehension with Q/A' },
+                                { type: 'Translation', label: 'Translation (ترجمہ)', sub: 'Urdu to English & English to Urdu' },
+                                { type: 'Numerical Problem', label: 'Numerical Problems', sub: 'Physics Motion & Energy Equations (S = vi*t + 0.5*a*t^2)' },
+                                { type: 'Definitions', label: 'Scientific Definitions', sub: 'Physics, Chemistry & Biology Definitions' },
                             ].map(item => (
                                 <div key={item.type} className="flex items-center justify-between p-2.5 border border-gray-200 rounded-lg hover:border-indigo-200 hover:bg-gray-50/80 transition-all text-left">
                                     <div className="flex items-center gap-2.5">

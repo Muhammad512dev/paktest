@@ -1847,7 +1847,8 @@ app.post('/api/curriculum/sync', authenticate, async (req, res) => {
 // Questions
 app.get('/api/metadata', authenticate, async (req, res) => {
     try {
-        const [typesData, sourcesData] = await Promise.all([
+        const [questionTypesData, distinctTypesData, sourcesData] = await Promise.all([
+            prisma.questionType.findMany({ select: { name: true } }),
             prisma.question.findMany({
                 where: req.user?.role !== 'SUPER_ADMIN' ? { OR: [{ schoolId: null }, { schoolId: req.user?.schoolId }] } : undefined,
                 select: { type: true },
@@ -1857,8 +1858,23 @@ app.get('/api/metadata', authenticate, async (req, res) => {
                 select: { name: true }
             })
         ]);
-        const types = typesData.map(t => t.type).filter(Boolean);
-        const sources = sourcesData.map(s => s.name).filter(Boolean);
+
+        const defaultTypes = ['Multiple Choice', 'Short Question', 'Long Answer', 'Fill in the Blanks', 'True/False', 'Translation', 'Words/Sentences'];
+        const typeSet = new Set([
+            ...defaultTypes,
+            ...questionTypesData.map(t => t.name),
+            ...distinctTypesData.map(t => t.type)
+        ].filter(Boolean));
+
+        const types = Array.from(typeSet);
+        
+        const defaultSources = ['Past Paper', 'Textbook', 'Model Paper', 'Exercise'];
+        const sourceSet = new Set([
+            ...defaultSources,
+            ...sourcesData.map(s => s.name)
+        ].filter(Boolean));
+        
+        const sources = Array.from(sourceSet);
         res.json({ types, sources });
     } catch (err) {
         console.error("Metadata fetch error:", err);
@@ -1900,15 +1916,17 @@ app.get('/api/questions', authenticate, async (req, res) => {
         }
         // Add question type filter if provided
         if (req.query.type) {
-            where.type = { equals: req.query.type, mode: 'insensitive' };
+            const types = Array.isArray(req.query.type) ? req.query.type : [req.query.type];
+            where.type = { in: types, mode: 'insensitive' };
         }
         if (req.query.difficulty) {
             where.difficulty = req.query.difficulty;
         }
         // Add source filter if provided
         if (req.query.source) {
+            const sources = Array.isArray(req.query.source) ? req.query.source : [req.query.source];
             where.sources = {
-                has: req.query.source
+                hasSome: sources
             };
         }
         const [questions, total] = await Promise.all([

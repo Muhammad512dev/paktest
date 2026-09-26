@@ -2730,10 +2730,28 @@ app.get('/api/questions', authenticate, questionLimiter as any, async (req: any,
         if (req.query.medium) where.medium = req.query.medium;
         
         if (req.query.subject) {
-            where.subject = Array.isArray(req.query.subject) ? { in: req.query.subject } : req.query.subject;
+            const rawSub = req.query.subject;
+            if (Array.isArray(rawSub)) {
+                where.subject = { in: rawSub };
+            } else {
+                where.subject = { equals: rawSub, mode: 'insensitive' };
+            }
         }
         if (req.query.classLevel) {
-            where.classLevel = Array.isArray(req.query.classLevel) ? { in: req.query.classLevel } : req.query.classLevel;
+            const rawCls = req.query.classLevel;
+            const inputArr = (Array.isArray(rawCls) ? rawCls : [rawCls]).filter(Boolean);
+            const expandCls = (val: string): string[] => {
+                if (!val) return [];
+                const trimmed = String(val).trim();
+                const numMatch = trimmed.match(/\b([1-9]|1[0-2])\b/);
+                if (numMatch) {
+                    const n = numMatch[1];
+                    return [trimmed, n, `Class ${n}`, `Grade ${n}`, `class ${n}`, `grade ${n}`];
+                }
+                return [trimmed];
+            };
+            const expanded = Array.from(new Set(inputArr.flatMap((c: string) => expandCls(c))));
+            where.classLevel = expanded.length === 1 ? expanded[0] : { in: expanded };
         }
         if (req.query.type) {
             where.type = Array.isArray(req.query.type) ? { in: req.query.type } : req.query.type;

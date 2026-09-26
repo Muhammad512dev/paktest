@@ -230,6 +230,39 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
     return t === 'mcq' || t.includes('mcq') || t.includes('multiple choice') || t.includes('multi choice');
   };
 
+  const isVocabQuestionType = (t?: string): boolean => {
+    if (!t) return false;
+    const val = t.toLowerCase().trim();
+    return val.includes('word') ||
+           val.includes('meaning') ||
+           val.includes('pair') ||
+           val.includes('sentence') ||
+           val.includes('singular') ||
+           val.includes('plural') ||
+           val.includes('opposite') ||
+           val.includes('antonym') ||
+           val.includes('synonym') ||
+           val.includes('masculine') ||
+           val.includes('feminine') ||
+           val.includes('gender') ||
+           val.includes('verb') ||
+           val.includes('spelling') ||
+           val.includes('missing word') ||
+           val.includes('missing letter') ||
+           val.includes('واحد') ||
+           val.includes('جمع') ||
+           val.includes('معنی') ||
+           val.includes('معانی') ||
+           val.includes('متضاد') ||
+           val.includes('مترادف') ||
+           val.includes('جوڑے') ||
+           val.includes('مذکر') ||
+           val.includes('مؤنث') ||
+           val.includes('مونث') ||
+           val.includes('محاورات') ||
+           val.includes('جملے');
+  };
+
   const getMcqOptions = (q: any): string[] => {
     const english = Array.isArray(q?.options) ? q.options : [];
     if (english.length > 0) return english;
@@ -1746,7 +1779,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       linesCount = sec.blankLines;
                     } else if (q.type?.toLowerCase().includes('long') || q.type?.toLowerCase().includes('essay') || q.type?.toLowerCase().includes('composition') || q.type?.toLowerCase().includes('letter') || q.type?.toLowerCase().includes('story')) {
                       linesCount = longEmptyLines;
-                    } else if (q.type?.toLowerCase().includes('word') || q.type?.toLowerCase().includes('pair') || q.type?.toLowerCase().includes('spelling') || q.type?.toLowerCase().includes('meaning')) {
+                    } else if (isVocabQuestionType(q.type) || isVocabQuestionType(sec.questionType)) {
                       linesCount = wordsEmptyLines;
                     } else if (q.type?.toLowerCase().includes('translat') || q.type?.toLowerCase().includes('paragraph') || q.type?.toLowerCase().includes('comprehension')) {
                       linesCount = translationEmptyLines;
@@ -1943,93 +1976,97 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
           </table>
         ) : (
           /* STANDARD LIST MODE */
-          <div className={`space-y-4 ${sec.questionsPerLine ? 'grid grid-cols-2 gap-x-8 gap-y-4 space-y-0' : ''}`} style={{ rowGap: `${questionGap}px`, lineHeight }}>
-            {secQuestions.map((q, idx) => {
-              const cleanStandardPartText = (text: string | undefined) => {
-                if (!text || !sec.hasParts) return text || '';
-                let cleaned = text.trim();
-                for (let pass = 0; pass < 2; pass += 1) {
-                  cleaned = cleaned
-                    .replace(/^\s*Q\s*[.\-]?\s*\d+\s*(?:[.\-:]\s*)?(?:\(?\s*[a-z]\s*[).:]?\s*)?/i, '')
-                    .replace(/^\s*\d+\s*[.\-:]\s*(?:\(?\s*[a-z]\s*[).:]?\s*)/i, '')
-                    .replace(/^\s*\d+\s+(?:\(?\s*[a-z]\s*[).:]?\s*)/i, '')
-                    .replace(/^\s*\([a-z\u0600-\u06FF]\)\s*/i, '')
-                    .trim();
-                }
-                return cleaned;
-              };
-              const displayTextEn = cleanStandardPartText(q.text);
-              const displayTextUr = cleanStandardPartText(q.textUrdu);
-              const showEn = (languageMode === 'Bilingual' || languageMode === 'English') && displayTextEn && (q.medium !== 'Urdu' || languageMode === 'English');
-              const showUr = (languageMode === 'Bilingual' || languageMode === 'Urdu') && displayTextUr;
-              const isBilingual = showEn && showUr;
+          (() => {
+            const isVocabSec = isVocabQuestionType(sec.questionType) || Boolean(sec.questionsPerLine);
+            const gridContainerClass = isVocabSec
+              ? (vocabGridCols === 2 ? 'grid grid-cols-2 gap-x-8 gap-y-4 space-y-0' : vocabGridCols === 3 ? 'grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 space-y-0' : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-3 space-y-0')
+              : (sec.questionsPerLine ? 'grid grid-cols-2 gap-x-8 gap-y-4 space-y-0' : 'space-y-4');
 
-              const partCountForDisplay = Math.max(1, sec.longPartCount || (sec.parts || []).length || 1);
-              const partLabelEn = ['a', 'b', 'c', 'd', 'e', 'f', 'g'][idx % partCountForDisplay] || 'a';
-              const partLabelUrMapping: Record<string, string> = { a: 'الف', b: 'ب', c: 'ج', d: 'د', e: 'ہ' };
-              const partLabelUr = partLabelUrMapping[partLabelEn] || 'الف';
+            return (
+              <div className={gridContainerClass} style={{ rowGap: `${questionGap}px`, lineHeight }}>
+                {secQuestions.map((q, idx) => {
+                  const cleanStandardPartText = (text: string | undefined) => {
+                    if (!text || !sec.hasParts) return text || '';
+                    let cleaned = text.trim();
+                    for (let pass = 0; pass < 2; pass += 1) {
+                      cleaned = cleaned
+                        .replace(/^\s*Q\s*[.\-]?\s*\d+\s*(?:[.\-:]\s*)?(?:\(?\s*[a-z]\s*[).:]?\s*)?/i, '')
+                        .replace(/^\s*\d+\s*[.\-:]\s*(?:\(?\s*[a-z]\s*[).:]?\s*)/i, '')
+                        .replace(/^\s*\d+\s+(?:\(?\s*[a-z]\s*[).:]?\s*)/i, '')
+                        .replace(/^\s*\([a-z\u0600-\u06FF]\)\s*/i, '')
+                        .trim();
+                    }
+                    return cleaned;
+                  };
+                  const displayTextEn = cleanStandardPartText(q.text);
+                  const displayTextUr = cleanStandardPartText(q.textUrdu);
+                  const showEn = (languageMode === 'Bilingual' || languageMode === 'English') && displayTextEn && (q.medium !== 'Urdu' || languageMode === 'English');
+                  const showUr = (languageMode === 'Bilingual' || languageMode === 'Urdu') && displayTextUr;
+                  const isBilingual = showEn && showUr;
 
-              const standardMainNumber = sec.questionNumber || questionNumber || idx + 1;
-              const partNumber = sec.hasParts
-                ? Math.floor(idx / Math.max(1, sec.longPartCount || (sec.parts || []).length || 1))
-                : 0;
-              const numEn = sec.hasParts
-                ? `${standardMainNumber + partNumber}. ${partLabelEn})`
-                : (sec.subQuestionNumbering === 'Roman'
-                  ? `(${getSubQuestionLabel(idx, true)})`
-                  : `${idx + 1}.`);
+                  const partCountForDisplay = Math.max(1, sec.longPartCount || (sec.parts || []).length || 1);
+                  const partLabelEn = ['a', 'b', 'c', 'd', 'e', 'f', 'g'][idx % partCountForDisplay] || 'a';
+                  const partLabelUrMapping: Record<string, string> = { a: 'الف', b: 'ب', c: 'ج', d: 'د', e: 'ہ' };
+                  const partLabelUr = partLabelUrMapping[partLabelEn] || 'الف';
 
-              const numUr = sec.hasParts
-                ? `${partLabelUr}) ${standardMainNumber + partNumber}.`
-                : (sec.subQuestionNumbering === 'Roman'
-                  ? `(${getSubQuestionLabel(idx, true)})`
-                  : `${idx + 1}.`);
+                  const standardMainNumber = sec.questionNumber || questionNumber || idx + 1;
+                  const partNumber = sec.hasParts
+                    ? Math.floor(idx / Math.max(1, sec.longPartCount || (sec.parts || []).length || 1))
+                    : 0;
+                  const numEn = sec.hasParts
+                    ? `${standardMainNumber + partNumber}. ${partLabelEn})`
+                    : (sec.subQuestionNumbering === 'Roman'
+                      ? `(${getSubQuestionLabel(idx, true)})`
+                      : `${idx + 1}.`);
 
-              return (
-                <div key={q.id} className="relative break-inside-avoid group/q" style={{ marginBottom: `${questionGap}px` }}>
-                  {isManualEdit && (
-                    <div className="absolute -left-12 top-0 flex flex-col gap-1 print:hidden opacity-0 group-hover/q:opacity-100">
-                      <button onClick={() => togglePageBreak(q.id)} className={`p-1.5 rounded transition-colors shadow-sm ${q.pageBreakAfter ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><Scissors size={14} /></button>
-                      <button onClick={() => removeQuestion(q.id)} className="p-1.5 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors shadow-sm"><Trash2 size={14} /></button>
-                      {isMCQType(q.type) && (
-                        <div className="flex flex-col gap-1 items-center bg-white border border-slate-200 rounded p-1 shadow-sm mt-1">
-                          {[1, 2, 4].map(c => (
-                            <button key={c} onClick={() => updateQuestionMcqCols(q.id, c)} className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${((q as any).mcqColsOverride === c) || (!(q as any).mcqColsOverride && mcqColumns === c) ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>{c}C</button>
-                          ))}
+                  const numUr = sec.hasParts
+                    ? `${partLabelUr}) ${standardMainNumber + partNumber}.`
+                    : (sec.subQuestionNumbering === 'Roman'
+                      ? `(${getSubQuestionLabel(idx, true)})`
+                      : `${idx + 1}.`);
+
+                  return (
+                    <div key={q.id} className="relative break-inside-avoid group/q" style={{ marginBottom: `${questionGap}px` }}>
+                      {isManualEdit && (
+                        <div className="absolute -left-12 top-0 flex flex-col gap-1 print:hidden opacity-0 group-hover/q:opacity-100">
+                          <button onClick={() => togglePageBreak(q.id)} className={`p-1.5 rounded transition-colors shadow-sm ${q.pageBreakAfter ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><Scissors size={14} /></button>
+                          <button onClick={() => removeQuestion(q.id)} className="p-1.5 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors shadow-sm"><Trash2 size={14} /></button>
+                          {isMCQType(q.type) && (
+                            <div className="flex flex-col gap-1 items-center bg-white border border-slate-200 rounded p-1 shadow-sm mt-1">
+                              {[1, 2, 4].map(c => (
+                                <button key={c} onClick={() => updateQuestionMcqCols(q.id, c)} className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${((q as any).mcqColsOverride === c) || (!(q as any).mcqColsOverride && mcqColumns === c) ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>{c}C</button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
-                    </div>
-                  )}
 
-                  {sec.hasParts && sec.showQuestionStatement === true && idx % Math.max(1, sec.longPartCount || (sec.parts || []).length || 1) === 0 && (
-                    <div className="mb-1 flex justify-between gap-4 border-b border-slate-300 pb-1 italic font-bold">
-                      {(languageMode === 'English' || languageMode === 'Bilingual') && <span>{sec.instruction || paper.longQuestionInstruction}</span>}
-                      {(languageMode === 'Urdu' || languageMode === 'Bilingual') && <span dir="rtl" className="font-urdu text-right">{sec.instructionUrdu || paper.longQuestionInstructionUrdu}</span>}
-                    </div>
-                  )}
+                      {sec.hasParts && sec.showQuestionStatement === true && idx % Math.max(1, sec.longPartCount || (sec.parts || []).length || 1) === 0 && (
+                        <div className="mb-1 flex justify-between gap-4 border-b border-slate-300 pb-1 italic font-bold">
+                          {(languageMode === 'English' || languageMode === 'Bilingual') && <span>{sec.instruction || paper.longQuestionInstruction}</span>}
+                          {(languageMode === 'Urdu' || languageMode === 'Bilingual') && <span dir="rtl" className="font-urdu text-right">{sec.instructionUrdu || paper.longQuestionInstructionUrdu}</span>}
+                        </div>
+                      )}
 
-                  {(() => {
-                    const isPairOrVocabType = (
-                      q.type === 'Match Columns' || 
-                      q.type === 'Words / Meanings' || 
-                      q.type === 'Words Meanings' || 
-                      q.type === 'Pair of Words' || 
-                      q.type === 'Words / Sentences' || 
-                      q.type === 'Spelling Check' ||
-                      q.type === 'Missing Word'
-                    ) && Boolean(q.matchingPairs && q.matchingPairs.length > 0);
+                      {(() => {
+                        const isPairOrVocabType = (
+                          q.type === 'Match Columns' || 
+                          isVocabQuestionType(q.type) ||
+                          isVocabQuestionType(sec.questionType)
+                        ) && Boolean(q.matchingPairs && q.matchingPairs.length > 0);
 
-                    const isGenericStatement = (text: string | undefined) => {
-                      if (!text) return true;
-                      const t = text.trim().toLowerCase();
-                      return t === '' || 
-                             t === 'match the columns' || t === 'match columns' || t === 'match the column' || t === 'match column a with column b' || t === 'match column' || 
-                             t === 'words / meanings' || t === 'words meanings' || t === 'pair of words' || t === 'words / sentences' || t === 'spelling check' ||
-                             t === 'کالم الف کو کالم ب سے ملائیں' || t === 'کالم ملائیں' || t === 'کالم ملائیے' || t === 'الفاظ و معانی / جوڑے' || t === 'الفاظ معنی' || t === 'الفاظ کے جوڑے';
-                    };
-                    const skipStatementRow = isPairOrVocabType && isGenericStatement(displayTextEn) && isGenericStatement(displayTextUr);
+                        const isGenericStatement = (text: string | undefined) => {
+                          if (!text) return true;
+                          const t = text.trim().toLowerCase();
+                          return t === '' || 
+                                 t === 'match the columns' || t === 'match columns' || t === 'match the column' || t === 'match column a with column b' || t === 'match column' || 
+                                 t === 'words / meanings' || t === 'words meanings' || t === 'pair of words' || t === 'words / sentences' || t === 'spelling check' ||
+                                 t === 'singular / plural' || t === 'singular and plural' || t === 'singular plural' || t === 'words / opposites' || t === 'words opposites' || t === 'masculine / feminine' ||
+                                 t === 'کالم الف کو کالم ب سے ملائیں' || t === 'کالم ملائیں' || t === 'کالم ملائیے' || t === 'الفاظ و معانی / جوڑے' || t === 'الفاظ معنی' || t === 'الفاظ کے جوڑے' || t === 'واحد جمع' || t === 'واحد / جمع' || t === 'مذکر مؤنث' || t === 'الفاظ متضاد' || t === 'الفاظ مترادف';
+                        };
+                        const skipStatementRow = isPairOrVocabType && isGenericStatement(displayTextEn) && isGenericStatement(displayTextUr);
 
-                    if (skipStatementRow) return null;
+                        if (skipStatementRow) return null;
 
                     if (isBilingual) {
                       return (
@@ -2188,17 +2225,12 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     </div>
                   )}
 
-                  {/* HORIZONTAL MULTI-ITEM GRID FOR WORDS MEANINGS, PAIR OF WORDS, WORDS SENTENCES, SPELLING CHECK */}
-                  {(q.type === 'Words / Meanings' || 
-                    q.type === 'Words Meanings' || 
-                    q.type === 'Pair of Words' || 
-                    q.type === 'Words / Sentences' || 
-                    q.type === 'Spelling Check' || 
-                    q.type === 'Missing Word') && q.matchingPairs && q.matchingPairs.length > 0 && (
+                  {/* HORIZONTAL MULTI-ITEM GRID FOR WORDS MEANINGS, PAIR OF WORDS, SINGULAR/PLURAL, WORDS SENTENCES, SPELLING CHECK */}
+                  {(isVocabQuestionType(q.type) || isVocabQuestionType(sec.questionType)) && q.matchingPairs && q.matchingPairs.length > 0 && (
                     <div className="mt-2 mb-3 break-inside-avoid">
                       <div className={`grid grid-cols-2 ${vocabGridCols === 2 ? 'sm:grid-cols-2' : vocabGridCols === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-3 md:grid-cols-4'} gap-3 bg-slate-50/50 p-2.5 rounded-lg border border-slate-300`}>
                         {q.matchingPairs.map((pair, pIdx) => {
-                          const itemNumber = `(${toRoman(pIdx + 1)})`;
+                          const itemNumber = `(${getSubQuestionLabel(pIdx, true)})`;
                           const promptEn = pair.left;
                           const promptUr = pair.leftUrdu;
                           const answerEn = pair.right;
@@ -2310,7 +2342,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       linesCount = sec.blankLines;
                     } else if (q.type?.toLowerCase().includes('long') || q.type?.toLowerCase().includes('essay') || q.type?.toLowerCase().includes('composition') || q.type?.toLowerCase().includes('letter') || q.type?.toLowerCase().includes('story')) {
                       linesCount = longEmptyLines;
-                    } else if (q.type?.toLowerCase().includes('word') || q.type?.toLowerCase().includes('pair') || q.type?.toLowerCase().includes('spelling') || q.type?.toLowerCase().includes('meaning')) {
+                    } else if (isVocabQuestionType(q.type) || isVocabQuestionType(sec.questionType)) {
                       linesCount = wordsEmptyLines;
                     } else if (q.type?.toLowerCase().includes('translat') || q.type?.toLowerCase().includes('paragraph') || q.type?.toLowerCase().includes('comprehension')) {
                       linesCount = translationEmptyLines;
@@ -2341,6 +2373,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               );
             })}
           </div>
+            );
+          })()
         )}
       </section>
     );

@@ -456,16 +456,39 @@ const CurriculumManager: React.FC = () => {
             </div>
          )}
          {activeTab === 'TYPE' && (
-            <div className="p-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-               {questionTypes.map(t => (
-                  <div key={t.id} className="p-4 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between group">
-                     <span className="font-bold text-gray-700 text-sm">{t.name}</span>
-                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                       <button onClick={() => openEditModal('question-types', t)} className="text-gray-400 hover:text-indigo-600" title="Edit Type"><Edit2 size={14}/></button>
-                       <button onClick={() => handleDeleteItem('question-types', t.id, t.name)} className="text-gray-400 hover:text-red-500" title="Delete Type"><Trash2 size={14}/></button>
-                     </div>
-                  </div>
-               ))}
+            <div className="p-6 space-y-6">
+               {/* Group types by category */}
+               {(['Objective', 'Subjective', 'Language', 'Custom'] as const).map(category => {
+                  const categoryTypes = questionTypes.filter((t: any) => (t.category || 'Custom') === category);
+                  if (categoryTypes.length === 0) return null;
+                  return (
+                    <div key={category}>
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3 px-1 flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${category === 'Objective' ? 'bg-indigo-500' : category === 'Subjective' ? 'bg-emerald-500' : category === 'Language' ? 'bg-amber-500' : 'bg-gray-400'}`}></span>
+                        {category} Types
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {categoryTypes.map((t: any) => (
+                          <div key={t.id} className={`p-3 border rounded-xl flex items-center justify-between group ${t.isBuiltIn ? 'bg-gray-50 border-gray-200' : 'bg-white border-indigo-200'}`}>
+                            <div className="flex items-center gap-2 min-w-0">
+                              {t.isBuiltIn
+                                ? <span className="text-[9px] bg-blue-100 text-blue-600 font-bold px-1.5 py-0.5 rounded shrink-0">BUILT-IN</span>
+                                : <span className="text-[9px] bg-purple-100 text-purple-600 font-bold px-1.5 py-0.5 rounded shrink-0">CUSTOM</span>
+                              }
+                              <span className="font-semibold text-gray-700 text-xs truncate">{t.name}</span>
+                            </div>
+                            {!t.isBuiltIn && (
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                <button onClick={() => openEditModal('question-types', t)} className="text-gray-400 hover:text-indigo-600" title="Edit Type"><Edit2 size={13}/></button>
+                                <button onClick={() => handleDeleteItem('question-types', t.id, t.name)} className="text-gray-400 hover:text-red-500" title="Delete Type"><Trash2 size={13}/></button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+               })}
             </div>
          )}
 

@@ -2422,29 +2422,121 @@ registerCurriculumRoutes('chapters', prisma.chapter);
 registerCurriculumRoutes('topics', prisma.topic);
 registerCurriculumRoutes('sources', prisma.source);
 
-app.get('/api/curriculum/question-types', (req: any, res: any) => {
-    res.json([
-        // --- Objective ---
-        { id: 'MCQ',                      name: 'Multiple Choice (MCQ)',        category: 'Objective',  isBuiltIn: true },
-        { id: 'True/False',               name: 'True/False',                   category: 'Objective',  isBuiltIn: true },
-        { id: 'Fill in the Blanks',       name: 'Fill in the Blanks',           category: 'Objective',  isBuiltIn: true },
-        { id: 'Match Columns',            name: 'Match Columns',                category: 'Objective',  isBuiltIn: true },
-        // --- Subjective ---
-        { id: 'Short Answer',             name: 'Short Answer',                 category: 'Subjective', isBuiltIn: true },
-        { id: 'Long Answer',              name: 'Long Answer',                  category: 'Subjective', isBuiltIn: true },
-        { id: 'Diagram Based',            name: 'Diagram Based',                category: 'Subjective', isBuiltIn: true },
-        { id: 'Definitions',              name: 'Definitions',                  category: 'Subjective', isBuiltIn: true },
-        // --- Language Skills ---
-        { id: 'Spelling Check',           name: 'Spelling Check / Dictation',   category: 'Language',   isBuiltIn: true },
-        { id: 'Missing Word',             name: 'Missing Word',                 category: 'Language',   isBuiltIn: true },
-        { id: 'Comprehension',            name: 'Comprehension (Passage)',       category: 'Language',   isBuiltIn: true },
-        { id: 'Composition / Essay',      name: 'Composition / Essay Writing',  category: 'Language',   isBuiltIn: true },
-        { id: 'Translation',              name: 'Translation',                  category: 'Language',   isBuiltIn: true },
-        { id: 'Letter Writing',           name: 'Letter / Application Writing', category: 'Language',   isBuiltIn: true },
-        { id: 'Story / Paragraph Writing',name: 'Story / Paragraph Writing',    category: 'Language',   isBuiltIn: true },
-        { id: 'Direct / Indirect Speech', name: 'Direct / Indirect Speech',     category: 'Language',   isBuiltIn: true },
-        { id: 'Active / Passive Voice',   name: 'Active / Passive Voice',       category: 'Language',   isBuiltIn: true },
-    ]);
+// ─── Built-in question types (hardcoded, always available, cannot be deleted) ───
+const BUILT_IN_QUESTION_TYPES = [
+    { id: 'MCQ',                       name: 'Multiple Choice (MCQ)',        category: 'Objective',  isBuiltIn: true },
+    { id: 'True/False',                name: 'True/False',                   category: 'Objective',  isBuiltIn: true },
+    { id: 'Fill in the Blanks',        name: 'Fill in the Blanks',           category: 'Objective',  isBuiltIn: true },
+    { id: 'Match Columns',             name: 'Match Columns',                category: 'Objective',  isBuiltIn: true },
+    { id: 'Short Answer',              name: 'Short Answer',                 category: 'Subjective', isBuiltIn: true },
+    { id: 'Long Answer',               name: 'Long Answer',                  category: 'Subjective', isBuiltIn: true },
+    { id: 'Diagram Based',             name: 'Diagram Based',                category: 'Subjective', isBuiltIn: true },
+    { id: 'Definitions',               name: 'Definitions',                  category: 'Subjective', isBuiltIn: true },
+    { id: 'Spelling Check',            name: 'Spelling Check / Dictation',   category: 'Language',   isBuiltIn: true },
+    { id: 'Missing Word',              name: 'Missing Word',                 category: 'Language',   isBuiltIn: true },
+    { id: 'Comprehension',             name: 'Comprehension (Passage)',       category: 'Language',   isBuiltIn: true },
+    { id: 'Composition / Essay',       name: 'Composition / Essay Writing',  category: 'Language',   isBuiltIn: true },
+    { id: 'Translation',               name: 'Translation',                  category: 'Language',   isBuiltIn: true },
+    { id: 'Letter Writing',            name: 'Letter / Application Writing', category: 'Language',   isBuiltIn: true },
+    { id: 'Story / Paragraph Writing', name: 'Story / Paragraph Writing',    category: 'Language',   isBuiltIn: true },
+    { id: 'Direct / Indirect Speech',  name: 'Direct / Indirect Speech',     category: 'Language',   isBuiltIn: true },
+    { id: 'Active / Passive Voice',    name: 'Active / Passive Voice',       category: 'Language',   isBuiltIn: true },
+];
+const BUILT_IN_TYPE_IDS = new Set(BUILT_IN_QUESTION_TYPES.map(t => t.id));
+
+// GET – merge built-ins with user-added custom types from DB
+app.get('/api/curriculum/question-types', authenticate, async (req: any, res: any) => {
+    try {
+        const customTypes = await prisma.questionType.findMany({ orderBy: { name: 'asc' } });
+        const custom = customTypes
+            .filter((t: any) => !BUILT_IN_TYPE_IDS.has(t.id) && !BUILT_IN_TYPE_IDS.has(t.name))
+            .map((t: any) => ({ id: t.id, name: t.name, category: 'Custom', isBuiltIn: false }));
+        res.json([...BUILT_IN_QUESTION_TYPES, ...custom]);
+    } catch {
+        res.json(BUILT_IN_QUESTION_TYPES);
+    }
+});
+
+// POST – add a new custom question type
+app.post('/api/curriculum/question-types', authenticate, async (req: any, res: any) => {
+    if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+    const { name } = req.body;
+    if (!name || String(name).trim() === '') return res.status(400).json({ error: 'Name is required' });
+    const trimmed = String(name).trim();
+    if (BUILT_IN_TYPE_IDS.has(trimmed)) return res.status(409).json({ error: 'This is a built-in type and cannot be duplicated' });
+    try {
+        const created = await prisma.questionType.upsert({
+            where: { name: trimmed },
+            update: {},
+            create: { id: trimmed, name: trimmed }
+        });
+        res.json({ ...created, category: 'Custom', isBuiltIn: false });
+    } catch (e: any) {
+        res.status(500).json({ error: 'Failed to create question type', details: e?.message });
+    }
+});
+
+// PUT – update a custom question type
+app.put('/api/curriculum/question-types/:id', authenticate, async (req: any, res: any) => {
+    if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+    const { id } = req.params;
+    if (BUILT_IN_TYPE_IDS.has(id)) return res.status(403).json({ error: 'Built-in types cannot be modified' });
+    const { name } = req.body;
+    try {
+        const updated = await prisma.questionType.update({ where: { id }, data: { name } });
+        res.json({ ...updated, category: 'Custom', isBuiltIn: false });
+    } catch (e: any) {
+        res.status(500).json({ error: 'Failed to update', details: e?.message });
+    }
+});
+
+// DELETE – delete a custom question type only
+app.delete('/api/curriculum/question-types/:id', authenticate, async (req: any, res: any) => {
+    if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
+    const { id } = req.params;
+    if (BUILT_IN_TYPE_IDS.has(id)) return res.status(403).json({ error: 'Built-in types cannot be deleted' });
+    try {
+        await prisma.questionType.delete({ where: { id } });
+        res.json({ success: true });
+    } catch (e: any) {
+        res.status(500).json({ error: 'Failed to delete', details: e?.message });
+    }
+});
+
+// ─── /api/metadata – provides distinct types & sources for filter dropdowns ───
+app.get('/api/metadata', authenticate, async (req: any, res: any) => {
+    try {
+        const [distinctTypes, distinctSources, customTypes, sources] = await Promise.all([
+            prisma.question.findMany({ select: { type: true }, distinct: ['type'] }),
+            prisma.question.findMany({ select: { source: true }, distinct: ['source'] }),
+            prisma.questionType.findMany({ select: { name: true } }),
+            prisma.source.findMany({ select: { name: true } }),
+        ]);
+
+        // Merge built-in type ids with any types actually used in questions + custom types from DB
+        const typeSet = new Set<string>([
+            ...BUILT_IN_QUESTION_TYPES.map(t => t.id),
+            ...distinctTypes.map((t: any) => t.type).filter(Boolean),
+            ...customTypes.map((t: any) => t.name).filter(Boolean),
+        ]);
+
+        // Merge source table + distinct sources from questions
+        const sourceSet = new Set<string>([
+            ...sources.map((s: any) => s.name).filter(Boolean),
+            ...distinctSources.map((s: any) => s.source).filter(Boolean),
+        ]);
+
+        res.json({
+            types: Array.from(typeSet).sort(),
+            sources: Array.from(sourceSet).sort(),
+        });
+    } catch (e: any) {
+        // Graceful fallback — at minimum return built-in types
+        res.json({
+            types: BUILT_IN_QUESTION_TYPES.map(t => t.id),
+            sources: [],
+        });
+    }
 });
 
 app.post('/api/curriculum/sync', authenticate, async (req: any, res: any) => {

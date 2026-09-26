@@ -1818,6 +1818,27 @@ app.post('/api/curriculum/sync', authenticate, async (req, res) => {
     }
 });
 // Questions
+app.get('/api/metadata', authenticate, async (req, res) => {
+    try {
+        const [typesData, sourcesData] = await Promise.all([
+            prisma.question.findMany({
+                where: req.user?.role !== 'SUPER_ADMIN' ? { OR: [{ schoolId: null }, { schoolId: req.user?.schoolId }] } : undefined,
+                select: { type: true },
+                distinct: ['type']
+            }),
+            prisma.source.findMany({
+                select: { name: true }
+            })
+        ]);
+        const types = typesData.map(t => t.type).filter(Boolean);
+        const sources = sourcesData.map(s => s.name).filter(Boolean);
+        res.json({ types, sources });
+    } catch (err) {
+        console.error("Metadata fetch error:", err);
+        res.status(500).json({ error: 'Failed to fetch metadata' });
+    }
+});
+
 app.get('/api/questions', authenticate, async (req, res) => {
     try {
         const { skip, pageSize, page } = getPaginationParams(req);
@@ -1856,6 +1877,12 @@ app.get('/api/questions', authenticate, async (req, res) => {
         }
         if (req.query.difficulty) {
             where.difficulty = req.query.difficulty;
+        }
+        // Add source filter if provided
+        if (req.query.source) {
+            where.sources = {
+                has: req.query.source
+            };
         }
         const [questions, total] = await Promise.all([
             prisma.question.findMany({

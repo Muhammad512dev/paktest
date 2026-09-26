@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
-  getQuestionsPage, addQuestion, addQuestionsBulk, deleteQuestion, updateQuestion,
+  getQuestionsPage, addQuestion, addQuestionsBulk, deleteQuestion, updateQuestion, getMetadata,
   getSyllabuses, getClasses, getSubjects, getChapters, getTopics,
   ensureCurriculumPath, uploadFile
 } from '../../services/dataService';
@@ -43,6 +43,7 @@ const GlobalQuestionBank: React.FC = () => {
   const [filterClass, setFilterClass] = useState('All');
   const [filterSubject, setFilterSubject] = useState('All');
   const [filterType, setFilterType] = useState('All');
+  const [filterSource, setFilterSource] = useState('All');
   const [filterDifficulty, setFilterDifficulty] = useState('All');
 
   // Curriculum Data
@@ -60,20 +61,24 @@ const GlobalQuestionBank: React.FC = () => {
   const [refreshCounter, setRefreshCounter] = useState(0);
   const pageSize = typeof viewLimit === 'number' ? viewLimit : 50;
 
+  const [metadata, setMetadata] = useState<{types: string[], sources: string[]}>({ types: [], sources: [] });
+
   /* Load curriculum data asynchronously on mount */
   const loadCurriculumData = async () => {
-    const [syls, clss, subs, chs, tops] = await Promise.all([
+    const [syls, clss, subs, chs, tops, meta] = await Promise.all([
       getSyllabuses(),
       getClasses(),
       getSubjects(),
       getChapters(),
-      getTopics()
+      getTopics(),
+      getMetadata()
     ]);
     setSyllabuses(syls);
     setClasses(clss);
     setSubjects(subs);
     setChapters(chs);
     setTopics(tops);
+    setMetadata(meta);
   };
 
   useEffect(() => { 
@@ -159,6 +164,7 @@ const GlobalQuestionBank: React.FC = () => {
           classLevel: classLevelQuery,
           subject: filterSubject !== 'All' ? filterSubject : undefined,
           type: filterType !== 'All' ? filterType : undefined,
+          source: filterSource !== 'All' ? filterSource : undefined,
           difficulty: filterDifficulty !== 'All' ? filterDifficulty : undefined,
         });
         setQuestions(res.data || []);
@@ -177,12 +183,12 @@ const GlobalQuestionBank: React.FC = () => {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [currentPage, pageSize, searchTerm, filterSyllabus, filterClass, filterSubject, filterType, filterDifficulty, classes, refreshCounter]);
+  }, [currentPage, pageSize, searchTerm, filterSyllabus, filterClass, filterSubject, filterType, filterSource, filterDifficulty, classes, refreshCounter]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterSyllabus, filterClass, filterSubject, filterType, filterDifficulty]);
+  }, [searchTerm, filterSyllabus, filterClass, filterSubject, filterType, filterSource, filterDifficulty]);
 
   // Dynamic Options for Filters
   const classOptions = useMemo(() => {
@@ -249,6 +255,7 @@ const GlobalQuestionBank: React.FC = () => {
     setFilterClass('All');
     setFilterSubject('All');
     setFilterType('All');
+    setFilterSource('All');
     setFilterDifficulty('All');
     setSearchTerm('');
   };
@@ -1362,8 +1369,16 @@ const GlobalQuestionBank: React.FC = () => {
                  onChange={(e) => setFilterType(e.target.value)}
               >
                  <option value="All">All Types</option>
-                 {/* Dynamically populate this from available types if needed, for now using static list minus Custom */}
-                 {questionTypesList.filter(t => t.id !== 'Custom').map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                 {metadata.types.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+
+              <select 
+                 className="px-3 py-2 border border-gray-300 rounded-lg text-xs font-medium outline-none bg-white focus:border-indigo-500"
+                 value={filterSource}
+                 onChange={(e) => setFilterSource(e.target.value)}
+              >
+                 <option value="All">All Sources</option>
+                 {metadata.sources.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
 
               <select 
@@ -2117,14 +2132,21 @@ const GlobalQuestionBank: React.FC = () => {
                               <div className="grid grid-cols-3 gap-3">
                                  <div className="space-y-1.5">
                                     <label className="text-[10px] font-bold text-slate-500 uppercase">Type</label>
-                                    <select value={newQuestion.type} onChange={e => {
-                                       setNewQuestion({...newQuestion, type: e.target.value});
-                                       if (e.target.value === 'MCQ') setCustomFormat('CHOICE');
-                                    }} className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-sm outline-none">
-                                       {['MCQ', 'Short Question', 'Long Answer', 'Fill in the Blank', 'True/False', 'Match Columns', 'Numerical', 'Derivation'].map(t => (
+                                    <input 
+                                       list="add-question-types"
+                                       value={newQuestion.type} 
+                                       onChange={e => {
+                                          setNewQuestion({...newQuestion, type: e.target.value});
+                                          if (e.target.value === 'MCQ') setCustomFormat('CHOICE');
+                                       }} 
+                                       className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-sm outline-none"
+                                       placeholder="Type or select type"
+                                    />
+                                    <datalist id="add-question-types">
+                                       {metadata.types.map(t => (
                                           <option key={t} value={t}>{t}</option>
                                        ))}
-                                    </select>
+                                    </datalist>
                                  </div>
                                  <div className="space-y-1.5">
                                     <label className="text-[10px] font-bold text-slate-500 uppercase">Marks</label>

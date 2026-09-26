@@ -381,6 +381,11 @@ export const getQuestionTypes = async () => {
   return handleResponse(res);
 };
 
+export const getMetadata = async (): Promise<{ types: string[], sources: string[] }> => {
+  const res = await fetch(`${API_URL}/api/metadata`, { headers: getHeaders() });
+  return handleResponse(res);
+};
+
 // --- QUESTIONS ---
 export const getQuestionsPage = async (params?: {
   page?: number;
@@ -390,6 +395,7 @@ export const getQuestionsPage = async (params?: {
   subject?: string | string[];
   classLevel?: string | string[];
   type?: string | string[];
+  source?: string | string[];
   difficulty?: string | string[];
 }): Promise<{ data: Question[]; pagination: any }> => {
   const sp = new URLSearchParams();
@@ -409,6 +415,10 @@ export const getQuestionsPage = async (params?: {
   if (params?.type) {
     if (Array.isArray(params.type)) params.type.forEach(t => sp.append('type', t));
     else sp.set('type', params.type);
+  }
+  if (params?.source) {
+    if (Array.isArray(params.source)) params.source.forEach(t => sp.append('source', t));
+    else sp.set('source', params.source);
   }
   if (params?.difficulty) {
     if (Array.isArray(params.difficulty)) params.difficulty.forEach(d => sp.append('difficulty', d));

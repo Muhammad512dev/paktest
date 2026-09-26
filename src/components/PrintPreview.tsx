@@ -263,6 +263,24 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
            val.includes('جملے');
   };
 
+  const isBlanksOrMissingType = (t?: string): boolean => {
+    if (!t) return false;
+    const val = t.toLowerCase().trim();
+    return val.includes('blank') ||
+           val.includes('missing') ||
+           val.includes('spelling') ||
+           val.includes('dictation') ||
+           val.includes('خالی') ||
+           val.includes('جگہ') ||
+           val.includes('املا');
+  };
+
+  const isSentenceType = (t?: string): boolean => {
+    if (!t) return false;
+    const val = t.toLowerCase().trim();
+    return val.includes('sentence') || val.includes('جملے') || val.includes('جملوں');
+  };
+
   const getMcqOptions = (q: any): string[] => {
     const english = Array.isArray(q?.options) ? q.options : [];
     if (english.length > 0) return english;
@@ -396,6 +414,12 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
     }
   };
 
+  const [sectionColsOverrides, setSectionColsOverrides] = useState<Record<string, number>>({});
+
+  const updateSectionCols = (sectionId: string, cols: number) => {
+    setSectionColsOverrides(prev => ({ ...prev, [sectionId]: cols }));
+  };
+
   const updateQuestionImageDims = (qId: string, dims: ImageDims) => {
     setQuestions(prev => prev.map(q =>
       q.id === qId ? { ...q, imageWidth: dims.w, imageHeight: dims.h, imageX: dims.x, imageY: dims.y } as any : q
@@ -404,8 +428,39 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
 
   const updateQuestionMcqCols = (qId: string, cols: number) => {
     setQuestions(prev => prev.map(q =>
-      q.id === qId ? { ...q, mcqColsOverride: cols } as any : q
+      q.id === qId ? { ...q, mcqColsOverride: cols, colsOverride: cols } as any : q
     ));
+  };
+
+  const updateQuestionCols = (qId: string, cols: number) => {
+    setQuestions(prev => prev.map(q =>
+      q.id === qId ? { ...q, colsOverride: cols, mcqColsOverride: cols } as any : q
+    ));
+  };
+
+  const getSectionGridCols = (sec: PaperSectionConfig): number => {
+    if (sectionColsOverrides[sec.id]) return sectionColsOverrides[sec.id];
+    if (sec.questionsPerLine) return 2;
+    const isVocab = isVocabQuestionType(sec.questionType);
+    const isBlanks = isBlanksOrMissingType(sec.questionType);
+    const isSent = isSentenceType(sec.questionType);
+
+    if (!isVocab && !isBlanks && !isSent) return 1;
+
+    // When Student Lines are enabled
+    if (studentAnswerLinesEnabled) {
+      if (isSent) return 1; // Sentence questions need full line width for writing
+      if (isBlanks || isVocab) return Math.min(vocabGridCols, 3); // 2 or 3 cols with student blank line
+      return 1;
+    }
+
+    // When Student Lines are disabled (Compact mode)
+    if (isBlanks || isVocab) {
+      if (isSent) return Math.min(vocabGridCols, 2);
+      return vocabGridCols; // 3 or 4 cols for short single words / missing values
+    }
+
+    return 1;
   };
 
   const removeSection = (sectionId: string) => {
@@ -1820,7 +1875,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               {isManualEdit && <button onClick={() => removeSection(sec.id)} className="absolute -left-8 top-1 p-1 bg-red-500 text-white rounded-md z-20 shadow-lg print:hidden opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all"><Trash2 size={12} /></button>}
 
               {/* Question number and English statement share one heading line. */}
-              <h3 style={{ fontSize: `${sectionHeaderSize}px`, fontWeight: 900 }} className="flex min-w-0 items-baseline gap-2 outline-none">
+              <h3 style={{ fontSize: `${sectionHeaderSize}px`, fontWeight: 900 }} className="flex min-w-0 items-baseline gap-2 outline-none flex-1">
                 <span className="shrink-0 uppercase tracking-tighter">{questionNumber ? `Q-${questionNumber}` : sec.title.replace(/^\s*Q\s*[.\-]?\s*\d+\s*/i, '')}</span>
                 {(languageMode === 'Bilingual' || languageMode === 'English') && (
                   <span contentEditable={isManualEdit} suppressContentEditableWarning={true} className="font-bold italic normal-case tracking-normal whitespace-pre-line">
@@ -1829,8 +1884,29 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                 )}
               </h3>
 
+              {/* Quick Section Grid Override */}
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-300 print:hidden shrink-0">
+                <span className="text-[9px] font-black text-slate-500 uppercase px-1">Cols:</span>
+                {[1, 2, 3, 4].map(c => {
+                  const activeCols = getSectionGridCols(sec);
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => updateSectionCols(sec.id, c)}
+                      className={`text-[9px] font-black px-1.5 py-0.5 rounded transition-all ${
+                        activeCols === c ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-slate-600 hover:bg-slate-200'
+                      }`}
+                      title={`Set Section Grid to ${c} Column${c > 1 ? 's' : ''}`}
+                    >
+                      {c}C
+                    </button>
+                  );
+                })}
+              </div>
+
               {/* Right: Attempt count + marks */}
-              <div className="flex flex-col items-end justify-center gap-0.5 shrink-0 pl-4">
+              <div className="flex flex-col items-end justify-center gap-0.5 shrink-0 pl-2">
                 {/* Attempt counts */}
                 {sec.totalCount > 0 && sec.selectCount !== sec.totalCount && (
                   <span className="text-[9px] font-black text-black uppercase tracking-tight leading-none">
@@ -1977,10 +2053,14 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
         ) : (
           /* STANDARD LIST MODE */
           (() => {
-            const isVocabSec = isVocabQuestionType(sec.questionType) || Boolean(sec.questionsPerLine);
-            const gridContainerClass = isVocabSec
-              ? (vocabGridCols === 2 ? 'grid grid-cols-2 gap-x-8 gap-y-4 space-y-0' : vocabGridCols === 3 ? 'grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 space-y-0' : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-3 space-y-0')
-              : (sec.questionsPerLine ? 'grid grid-cols-2 gap-x-8 gap-y-4 space-y-0' : 'space-y-4');
+            const sectionCols = getSectionGridCols(sec);
+            const gridContainerClass = sectionCols === 1
+              ? 'space-y-4'
+              : sectionCols === 2
+              ? 'grid grid-cols-2 gap-x-8 gap-y-4 space-y-0'
+              : sectionCols === 3
+              ? 'grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 space-y-0'
+              : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-3 space-y-0';
 
             return (
               <div className={gridContainerClass} style={{ rowGap: `${questionGap}px`, lineHeight }}>
@@ -2025,19 +2105,30 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       ? `(${getSubQuestionLabel(idx, true)})`
                       : `${idx + 1}.`);
 
+                  const qColsOverride = (q as any).colsOverride || (q as any).mcqColsOverride;
+
                   return (
-                    <div key={q.id} className="relative break-inside-avoid group/q" style={{ marginBottom: `${questionGap}px` }}>
+                    <div key={q.id} className={`relative break-inside-avoid group/q ${qColsOverride === 1 && sectionCols > 1 ? 'col-span-full' : ''}`} style={{ marginBottom: `${questionGap}px` }}>
                       {isManualEdit && (
-                        <div className="absolute -left-12 top-0 flex flex-col gap-1 print:hidden opacity-0 group-hover/q:opacity-100">
-                          <button onClick={() => togglePageBreak(q.id)} className={`p-1.5 rounded transition-colors shadow-sm ${q.pageBreakAfter ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><Scissors size={14} /></button>
-                          <button onClick={() => removeQuestion(q.id)} className="p-1.5 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors shadow-sm"><Trash2 size={14} /></button>
-                          {isMCQType(q.type) && (
-                            <div className="flex flex-col gap-1 items-center bg-white border border-slate-200 rounded p-1 shadow-sm mt-1">
-                              {[1, 2, 4].map(c => (
-                                <button key={c} onClick={() => updateQuestionMcqCols(q.id, c)} className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${((q as any).mcqColsOverride === c) || (!(q as any).mcqColsOverride && mcqColumns === c) ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>{c}C</button>
-                              ))}
-                            </div>
-                          )}
+                        <div className="absolute -left-12 top-0 flex flex-col gap-1 print:hidden opacity-0 group-hover/q:opacity-100 z-30">
+                          <button onClick={() => togglePageBreak(q.id)} className={`p-1.5 rounded transition-colors shadow-sm ${q.pageBreakAfter ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`} title="Toggle Page Break"><Scissors size={14} /></button>
+                          <button onClick={() => removeQuestion(q.id)} className="p-1.5 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors shadow-sm" title="Remove Question"><Trash2 size={14} /></button>
+                          <div className="flex flex-col gap-1 items-center bg-white border border-slate-200 rounded p-1 shadow-sm mt-1">
+                            {[1, 2, 3, 4].map(c => (
+                              <button
+                                key={c}
+                                onClick={() => updateQuestionCols(q.id, c)}
+                                title={`Set to ${c} Column${c > 1 ? 's' : ''}`}
+                                className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                                  (qColsOverride === c || (!qColsOverride && (isMCQType(q.type) ? mcqColumns === c : sectionCols === c)))
+                                    ? 'bg-indigo-500 text-white'
+                                    : 'text-slate-400 hover:bg-slate-100'
+                                }`}
+                              >
+                                {c}C
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       )}
 
@@ -2226,15 +2317,25 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                   )}
 
                   {/* HORIZONTAL MULTI-ITEM GRID FOR WORDS MEANINGS, PAIR OF WORDS, SINGULAR/PLURAL, WORDS SENTENCES, SPELLING CHECK */}
-                  {(isVocabQuestionType(q.type) || isVocabQuestionType(sec.questionType)) && q.matchingPairs && q.matchingPairs.length > 0 && (
-                    <div className="mt-2 mb-3 break-inside-avoid">
-                      <div className={`grid grid-cols-2 ${vocabGridCols === 2 ? 'sm:grid-cols-2' : vocabGridCols === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-3 md:grid-cols-4'} gap-3 bg-slate-50/50 p-2.5 rounded-lg border border-slate-300`}>
-                        {q.matchingPairs.map((pair, pIdx) => {
-                          const itemNumber = `(${getSubQuestionLabel(pIdx, true)})`;
-                          const promptEn = pair.left;
-                          const promptUr = pair.leftUrdu;
-                          const answerEn = pair.right;
-                          const answerUr = pair.rightUrdu;
+                  {(isVocabQuestionType(q.type) || isVocabQuestionType(sec.questionType)) && q.matchingPairs && q.matchingPairs.length > 0 && (() => {
+                    const activeSubCols = (q as any).colsOverride || vocabGridCols;
+                    const subGridClass = activeSubCols === 1
+                      ? 'grid grid-cols-1 gap-2 bg-slate-50/50 p-2.5 rounded-lg border border-slate-300'
+                      : activeSubCols === 2
+                      ? 'grid grid-cols-2 gap-3 bg-slate-50/50 p-2.5 rounded-lg border border-slate-300'
+                      : activeSubCols === 3
+                      ? 'grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50/50 p-2.5 rounded-lg border border-slate-300'
+                      : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 bg-slate-50/50 p-2.5 rounded-lg border border-slate-300';
+
+                    return (
+                      <div className="mt-2 mb-3 break-inside-avoid">
+                        <div className={subGridClass}>
+                          {q.matchingPairs.map((pair, pIdx) => {
+                            const itemNumber = `(${getSubQuestionLabel(pIdx, true)})`;
+                            const promptEn = pair.left;
+                            const promptUr = pair.leftUrdu;
+                            const answerEn = pair.right;
+                            const answerUr = pair.rightUrdu;
 
                           return (
                             <div key={pIdx} className="flex flex-col p-2 bg-white rounded border border-slate-300 shadow-2xs">
@@ -2277,7 +2378,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                         })}
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
 
                   {/* MATCH COLUMNS TABLE RENDERING WITH CONFIGURABLE PAIR FONT SIZE */}
                   {q.type === 'Match Columns' && q.matchingPairs && (

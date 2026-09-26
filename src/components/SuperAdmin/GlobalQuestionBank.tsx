@@ -563,9 +563,26 @@ const GlobalQuestionBank: React.FC = () => {
         const options = [row.OptionA_EN, row.OptionB_EN, row.OptionC_EN, row.OptionD_EN].map(o => String(o || '')).filter(Boolean);
         const optionsUrdu = [row.OptionA_UR, row.OptionB_UR, row.OptionC_UR, row.OptionD_UR].map(o => String(o || '')).filter(Boolean);
 
-        // Validation: Must have at least one question text OR have options (e.g. spelling MCQs)
-        if (!text && !textUrdu && options.length === 0 && optionsUrdu.length === 0) {
-            console.warn(`Skipping row ${i}: Missing question text and options.`);
+        // Parse matching pairs for Match Columns (supports text, LaTeX equations, and SVGs/pictures)
+        const matchingPairs: any[] = [];
+        for (let p = 1; p <= 10; p++) {
+          const left = String(row[`Pair${p}_Left_EN`] || row[`Pair${p}_Left`] || row[`Pair${p}_A`] || row[`ColumnA_${p}`] || '').trim();
+          const right = String(row[`Pair${p}_Right_EN`] || row[`Pair${p}_Right`] || row[`Pair${p}_B`] || row[`ColumnB_${p}`] || '').trim();
+          const leftUrdu = String(row[`Pair${p}_Left_UR`] || row[`Pair${p}_LeftUrdu`] || '').trim();
+          const rightUrdu = String(row[`Pair${p}_Right_UR`] || row[`Pair${p}_RightUrdu`] || '').trim();
+          if (left || right || leftUrdu || rightUrdu) {
+            matchingPairs.push({
+              left: autoDetectEquations ? autoDetectAndFormatEquations(left, { isUrdu: false, subject: path.subject.name }) : left,
+              right: autoDetectEquations ? autoDetectAndFormatEquations(right, { isUrdu: false, subject: path.subject.name }) : right,
+              leftUrdu: autoDetectEquations && leftUrdu ? autoDetectAndFormatEquations(leftUrdu, { isUrdu: true, subject: path.subject.name }) : leftUrdu,
+              rightUrdu: autoDetectEquations && rightUrdu ? autoDetectAndFormatEquations(rightUrdu, { isUrdu: true, subject: path.subject.name }) : rightUrdu,
+            });
+          }
+        }
+
+        // Validation: Must have at least one question text OR options OR matching pairs
+        if (!text && !textUrdu && options.length === 0 && optionsUrdu.length === 0 && matchingPairs.length === 0) {
+            console.warn(`Skipping row ${i}: Missing question text, options, and pairs.`);
             continue;
         }
 
@@ -581,7 +598,7 @@ const GlobalQuestionBank: React.FC = () => {
             text: text,
             textUrdu: textUrdu,
             type: type,
-            marks: parseInt(row.Marks) || 1,
+            marks: parseInt(row.Marks) || (type === 'MCQ' ? 1 : type === 'Short Answer' ? 2 : type === 'Match Columns' ? 4 : 5),
             difficulty: (row.Difficulty || Difficulty.MEDIUM) as Difficulty,
             subject: path.subject.name,
             classLevel: path.grade || (path.class ? path.class.name : grade),
@@ -589,11 +606,12 @@ const GlobalQuestionBank: React.FC = () => {
             chapter: path.chapter.name,
             imageUrl: row.ImageURL || '',
             correctAnswer: String(row.CorrectAnswer_Letter || row.CorrectAnswer || ''),
-            sources: sourcesValue ? String(sourcesValue).split('|') : [QuestionSource.MODEL_PAPER],
-            source: sourcesValue ? String(sourcesValue).split('|')[0] : QuestionSource.MODEL_PAPER,
-            options: type === 'MCQ' ? options : [],
-            optionsUrdu: type === 'MCQ' ? optionsUrdu : [],
-            medium: ((text || options.length > 0) && (textUrdu || optionsUrdu.length > 0)) ? 'Bilingual' : (textUrdu || optionsUrdu.length > 0) ? 'Urdu' : 'English'
+            sources: sourcesValue ? String(sourcesValue).split('|').map((s: string) => s.trim()).filter(Boolean) : [QuestionSource.MODEL_PAPER],
+            source: sourcesValue ? String(sourcesValue).split('|')[0]?.trim() : QuestionSource.MODEL_PAPER,
+            options: options.length > 0 ? options : (type === 'MCQ' ? options : []),
+            optionsUrdu: optionsUrdu.length > 0 ? optionsUrdu : (type === 'MCQ' ? optionsUrdu : []),
+            matchingPairs: matchingPairs.length > 0 ? matchingPairs : undefined,
+            medium: ((text || options.length > 0 || matchingPairs.some(p => p.left || p.right)) && (textUrdu || optionsUrdu.length > 0 || matchingPairs.some(p => p.leftUrdu || p.rightUrdu))) ? 'Bilingual' : (textUrdu || optionsUrdu.length > 0) ? 'Urdu' : 'English'
         } as Question;
 
         finalQuestions.push(q);
@@ -963,7 +981,7 @@ const GlobalQuestionBank: React.FC = () => {
         Sources: "Textbook Exercise|Model Paper"
       },
 
-      // --- MATCH COLUMNS EXAMPLE ---
+      // --- MATCH COLUMNS (TEXT EXAMPLE) ---
       {
         Board: defaultBoard,
         Grade: contextualGrade || "Class 9",
@@ -996,6 +1014,41 @@ const GlobalQuestionBank: React.FC = () => {
         ModelAnswer_UR: "",
         ImageURL: "",
         Sources: "Textbook Table|Practical Chemistry"
+      },
+
+      // --- MATCH COLUMNS (PICTURES / SVG SHAPES EXAMPLE FOR JUNIOR / PRIMARY) ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 5",
+        Subject: contextualSubject || "General Science",
+        Chapter: "Shapes and Geometry",
+        Topic: "Identify 2D Geometric Shapes",
+        QuestionText_EN: "Match each shape image in Column A with its correct name in Column B.",
+        QuestionText_UR: "کالم الف میں دی گئی تصاویر / اشکال کو کالم ب میں ان کے درست ناموں سے ملائیں۔",
+        Type: "Match Columns",
+        Marks: 4,
+        Difficulty: "Easy",
+        Pair1_Left_EN: '<svg width="48" height="48" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="#4F46E5" stroke="#312E81" stroke-width="2"/></svg>',
+        Pair1_Left_UR: '<svg width="48" height="48" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="#4F46E5" stroke="#312E81" stroke-width="2"/></svg>',
+        Pair1_Right_EN: "Circle",
+        Pair1_Right_UR: "دائرہ (Circle)",
+        Pair2_Left_EN: '<svg width="48" height="48" viewBox="0 0 48 48"><polygon points="24,4 44,42 4,42" fill="#10B981" stroke="#065F46" stroke-width="2"/></svg>',
+        Pair2_Left_UR: '<svg width="48" height="48" viewBox="0 0 48 48"><polygon points="24,4 44,42 4,42" fill="#10B981" stroke="#065F46" stroke-width="2"/></svg>',
+        Pair2_Right_EN: "Triangle",
+        Pair2_Right_UR: "مثلث (Triangle)",
+        Pair3_Left_EN: '<svg width="48" height="48" viewBox="0 0 48 48"><rect x="6" y="6" width="36" height="36" rx="4" fill="#F59E0B" stroke="#B45309" stroke-width="2"/></svg>',
+        Pair3_Left_UR: '<svg width="48" height="48" viewBox="0 0 48 48"><rect x="6" y="6" width="36" height="36" rx="4" fill="#F59E0B" stroke="#B45309" stroke-width="2"/></svg>',
+        Pair3_Right_EN: "Square",
+        Pair3_Right_UR: "مربع (Square)",
+        Pair4_Left_EN: '<svg width="48" height="48" viewBox="0 0 48 48"><polygon points="24,2 29,18 46,18 32,28 37,44 24,34 11,44 16,28 2,18 19,18" fill="#EC4899" stroke="#BE185D" stroke-width="2"/></svg>',
+        Pair4_Left_UR: '<svg width="48" height="48" viewBox="0 0 48 48"><polygon points="24,2 29,18 46,18 32,28 37,44 24,34 11,44 16,28 2,18 19,18" fill="#EC4899" stroke="#BE185D" stroke-width="2"/></svg>',
+        Pair4_Right_EN: "Star",
+        Pair4_Right_UR: "ستارہ (Star)",
+        OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
+        ModelAnswer_EN: "",
+        ModelAnswer_UR: "",
+        ImageURL: "",
+        Sources: "Primary Activity Book|Visual Math"
       },
 
       // --- TRUE / FALSE EXAMPLE ---
@@ -1419,7 +1472,7 @@ const GlobalQuestionBank: React.FC = () => {
                  {Object.values(Difficulty).map(d => <option key={d} value={d}>{d}</option>)}
               </select>
 
-              {(filterSyllabus !== 'All' || filterClass !== 'All' || filterSubject !== 'All' || filterType !== 'All' || filterDifficulty !== 'All' || searchTerm) && (
+              {(filterSyllabus !== 'All' || filterClass !== 'All' || filterSubject !== 'All' || filterType !== 'All' || filterSource !== 'All' || filterDifficulty !== 'All' || searchTerm) && (
                  <button 
                     onClick={clearFilters}
                     className="px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1"

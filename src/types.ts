@@ -196,50 +196,113 @@ export interface PaperSectionConfig {
 export const getDefaultSectionInstruction = (type: string, selectCount: number, totalCount: number): string => {
   const isAll = selectCount >= totalCount;
   const normType = String(type || '').trim().toLowerCase();
+  const chooseStr = isAll ? '' : ` (attempt any ${selectCount} out of ${totalCount})`;
+  const chooseAny = isAll ? 'all' : `any ${selectCount} out of ${totalCount}`;
 
   if (normType.includes('mcq') || normType.includes('multiple choice')) {
-    return 'Choose the correct option.';
+    return `Choose the correct option.`;
+  } else if (normType.includes('true') || normType.includes('false')) {
+    return `Mark the following statements as True or False.`;
+  } else if (normType.includes('blank') || normType.includes('fill')) {
+    return `Fill in the blanks with appropriate words${chooseStr}.`;
+  } else if (normType.includes('match') || normType.includes('column')) {
+    return `Match the items in Column A with Column B.`;
   } else if (normType.includes('short')) {
     return isAll
-      ? 'Write short answers to all questions.'
-      : `Write short answers to any ${selectCount} out of ${totalCount} questions.`;
-  } else if (normType.includes('long') || normType.includes('essay') || normType.includes('subjective')) {
+      ? 'Write short answers to all of the following questions.'
+      : `Write short answers to any ${selectCount} out of the following ${totalCount} questions.`;
+  } else if (normType.includes('long') || normType.includes('detail')) {
     return isAll
       ? 'Answer all of the following questions in detail.'
-      : `Answer any ${selectCount} out of ${totalCount} questions in detail.`;
-  } else if (normType.includes('blank')) {
-    return 'Fill in the blanks with appropriate words.';
-  } else if (normType.includes('true') || normType.includes('false')) {
-    return 'Mark the following statements as True or False.';
-  } else if (normType.includes('match') || normType.includes('column')) {
-    return 'Match the items in Column A with Column B.';
+      : `Answer any ${selectCount} out of the following ${totalCount} questions in detail.`;
+  } else if (normType.includes('diagram')) {
+    return `Draw and label the diagram${chooseStr}.`;
+  } else if (normType.includes('defin')) {
+    return `Define the following terms${chooseStr}.`;
+  } else if (normType.includes('spelling') || normType.includes('dictation')) {
+    return `Write the correct spellings of the following words${chooseStr}.`;
+  } else if (normType.includes('missing') || normType === 'missing word') {
+    return `Fill in the missing words in the following sentences${chooseStr}.`;
+  } else if (normType.includes('comprehension') || normType.includes('passage')) {
+    return isAll
+      ? 'Read the passage and answer all of the following questions.'
+      : `Read the passage and answer any ${selectCount} out of the following ${totalCount} questions.`;
+  } else if (normType.includes('composition') || normType.includes('essay')) {
+    return isAll
+      ? 'Write a composition / essay on the following topic.'
+      : `Write a composition / essay on any ${selectCount} of the following ${totalCount} topics.`;
+  } else if (normType.includes('translat')) {
+    return `Translate the following into English / Urdu${chooseStr}.`;
+  } else if (normType.includes('letter') || normType.includes('application')) {
+    return isAll
+      ? 'Write a letter / application as directed.'
+      : `Write a letter / application on any ${selectCount} of the following ${totalCount} topics.`;
+  } else if (normType.includes('story') || normType.includes('paragraph')) {
+    return isAll
+      ? 'Write a story / paragraph as directed.'
+      : `Write a story / paragraph on any ${selectCount} of the following ${totalCount} topics.`;
+  } else if (normType.includes('direct') || normType.includes('indirect')) {
+    return `Change the following sentences into Indirect / Direct Speech${chooseStr}.`;
+  } else if (normType.includes('active') || normType.includes('passive')) {
+    return `Change the following sentences into Active / Passive Voice${chooseStr}.`;
   } else {
     return isAll
       ? `Answer all of the following ${type} questions.`
-      : `Attempt any ${selectCount} out of ${totalCount} questions.`;
+      : `Attempt any ${selectCount} out of the following ${totalCount} questions.`;
   }
 };
 
 export const getDefaultSectionInstructionUrdu = (type: string, selectCount: number, totalCount: number): string => {
   const isAll = selectCount >= totalCount;
   const normType = String(type || '').trim().toLowerCase();
+  const chooseAnyUrdu = isAll ? 'تمام' : `کوئی بھی ${selectCount} (کل ${totalCount} میں سے)`;
 
   if (normType.includes('mcq') || normType.includes('multiple choice')) {
     return 'درست آپشن کا انتخاب کریں۔';
-  } else if (normType.includes('short')) {
-    return isAll
-      ? 'تمام سوالات کے مختصر جوابات لکھیں۔'
-      : `کوئی بھی ${selectCount} سوالات کے مختصر جوابات لکھیں (کل ${totalCount} میں سے)۔`;
-  } else if (normType.includes('long') || normType.includes('essay') || normType.includes('subjective')) {
-    return isAll
-      ? 'درج ذیل تمام سوالات کے تفصیلی جوابات دیں۔'
-      : `کوئی بھی ${selectCount} سوالات کے تفصیلی جوابات دیں (کل ${totalCount} میں سے)۔`;
-  } else if (normType.includes('blank')) {
-    return 'خالی جگہوں کو مناسب الفاظ سے پُر کریں۔';
   } else if (normType.includes('true') || normType.includes('false')) {
-    return 'درج ذیل بیانات کو درست یا غلط لکھیں۔';
+    return 'درج ذیل جملوں کو درست یا غلط لکھیں۔';
+  } else if (normType.includes('blank') || normType.includes('fill')) {
+    return `خالی جگہوں کو مناسب الفاظ سے پُر کریں (${chooseAnyUrdu})۔`;
   } else if (normType.includes('match') || normType.includes('column')) {
     return 'کالم الف کو کالم ب سے ملائیں۔';
+  } else if (normType.includes('short')) {
+    return isAll
+      ? 'درج ذیل تمام سوالات کے مختصر جوابات لکھیں۔'
+      : `درج ذیل میں سے ${selectCount} سوالات کے مختصر جوابات لکھیں (کل ${totalCount} میں سے)۔`;
+  } else if (normType.includes('long') || normType.includes('detail')) {
+    return isAll
+      ? 'درج ذیل تمام سوالات کے تفصیلی جوابات دیں۔'
+      : `درج ذیل میں سے ${selectCount} سوالات کے تفصیلی جوابات دیں (کل ${totalCount} میں سے)۔`;
+  } else if (normType.includes('diagram')) {
+    return `درج ذیل خاکہ بنائیں اور لیبل لگائیں (${chooseAnyUrdu})۔`;
+  } else if (normType.includes('defin')) {
+    return `درج ذیل اصطلاحات کی تعریف کریں (${chooseAnyUrdu})۔`;
+  } else if (normType.includes('spelling') || normType.includes('dictation')) {
+    return `درج ذیل الفاظ کی درست ہجے لکھیں (${chooseAnyUrdu})۔`;
+  } else if (normType.includes('missing')) {
+    return `درج ذیل جملوں میں لاپتہ الفاظ بھریں (${chooseAnyUrdu})۔`;
+  } else if (normType.includes('comprehension') || normType.includes('passage')) {
+    return isAll
+      ? 'عبارت پڑھیں اور درج ذیل تمام سوالات کے جوابات دیں۔'
+      : `عبارت پڑھیں اور ${selectCount} سوالات کے جوابات دیں (کل ${totalCount} میں سے)۔`;
+  } else if (normType.includes('composition') || normType.includes('essay')) {
+    return isAll
+      ? 'درج ذیل موضوع پر مضمون / تحریر لکھیں۔'
+      : `درج ذیل ${totalCount} موضوعات میں سے ${selectCount} پر مضمون / تحریر لکھیں۔`;
+  } else if (normType.includes('translat')) {
+    return `درج ذیل کا انگریزی / اردو میں ترجمہ کریں (${chooseAnyUrdu})۔`;
+  } else if (normType.includes('letter') || normType.includes('application')) {
+    return isAll
+      ? 'ہدایت کے مطابق خط / درخواست لکھیں۔'
+      : `درج ذیل ${totalCount} موضوعات میں سے ${selectCount} پر خط / درخواست لکھیں۔`;
+  } else if (normType.includes('story') || normType.includes('paragraph')) {
+    return isAll
+      ? 'ہدایت کے مطابق کہانی / پیراگراف لکھیں۔'
+      : `درج ذیل ${totalCount} موضوعات میں سے ${selectCount} پر کہانی / پیراگراف لکھیں۔`;
+  } else if (normType.includes('direct') || normType.includes('indirect')) {
+    return `درج ذیل جملوں کو بالواسطہ / براہ راست کلام میں بدلیں (${chooseAnyUrdu})۔`;
+  } else if (normType.includes('active') || normType.includes('passive')) {
+    return `درج ذیل جملوں کو فاعلی / مفعولی فعل میں بدلیں (${chooseAnyUrdu})۔`;
   } else {
     return isAll
       ? `درج ذیل تمام سوالات حل کریں۔`

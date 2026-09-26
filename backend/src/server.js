@@ -336,11 +336,15 @@ const validateQuestion = (question) => {
         errors.push('Class level (classLevel) is required');
     if (!question.topic || String(question.topic).trim() === '')
         errors.push('Topic (topic) is required');
+    
+    const isMatch = question.type === 'Match Columns' || (Array.isArray(question.matchingPairs) && question.matchingPairs.length > 0);
+    const hasPairs = Array.isArray(question.matchingPairs) && question.matchingPairs.length > 0;
+
     if (question.medium === 'Urdu' || question.medium === 'Bilingual') {
         const hasUrduOptions = Array.isArray(question.optionsUrdu) && question.optionsUrdu.length > 0;
         if (!question.textUrdu || question.textUrdu.trim() === '') {
-            // Allow empty text if it's an MCQ with options (e.g. spelling questions)
-            if (!(question.type === 'MCQ' && hasUrduOptions)) {
+            // Allow empty text if it's an MCQ with options or Match Columns with pairs
+            if (!(question.type === 'MCQ' && hasUrduOptions) && !isMatch && !hasPairs) {
                 errors.push('Urdu text (textUrdu) cannot be empty');
             }
         }
@@ -351,7 +355,7 @@ const validateQuestion = (question) => {
     if (question.medium === 'English' || question.medium === 'Bilingual') {
         const hasEngOptions = Array.isArray(question.options) && question.options.length > 0;
         if (!question.text || question.text.trim() === '') {
-            if (!(question.type === 'MCQ' && hasEngOptions)) {
+            if (!(question.type === 'MCQ' && hasEngOptions) && !isMatch && !hasPairs) {
                 errors.push('English text cannot be empty');
             }
         }
@@ -1886,21 +1890,27 @@ app.get('/api/questions', authenticate, async (req, res) => {
     try {
         const { skip, pageSize, page } = getPaginationParams(req);
         const where = {};
+        const AND = [];
+
         if (req.user?.role !== 'SUPER_ADMIN') {
-            where.OR = [{ schoolId: null }, { schoolId: req.user?.schoolId }];
+            AND.push({
+                OR: [{ schoolId: null }, { schoolId: req.user?.schoolId }]
+            });
         }
         const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
         if (q) {
-            where.OR = [
-                ...(where.OR || []),
-                { text: { contains: q, mode: 'insensitive' } },
-                { textUrdu: { contains: q, mode: 'insensitive' } },
-                { subject: { contains: q, mode: 'insensitive' } },
-                { classLevel: { contains: q, mode: 'insensitive' } },
-                { topic: { contains: q, mode: 'insensitive' } },
-                { chapter: { contains: q, mode: 'insensitive' } },
-                { type: { contains: q, mode: 'insensitive' } }
-            ];
+            AND.push({
+                OR: [
+                    { text: { contains: q, mode: 'insensitive' } },
+                    { textUrdu: { contains: q, mode: 'insensitive' } },
+                    { subject: { contains: q, mode: 'insensitive' } },
+                    { classLevel: { contains: q, mode: 'insensitive' } },
+                    { topic: { contains: q, mode: 'insensitive' } },
+                    { chapter: { contains: q, mode: 'insensitive' } },
+                    { type: { contains: q, mode: 'insensitive' } },
+                    { source: { contains: q, mode: 'insensitive' } }
+                ]
+            });
         }
         // Add medium filter if provided
         if (req.query.medium) {
@@ -1908,11 +1918,11 @@ app.get('/api/questions', authenticate, async (req, res) => {
         }
         // Add subject filter if provided
         if (req.query.subject) {
-            where.subject = req.query.subject;
+            where.subject = Array.isArray(req.query.subject) ? { in: req.query.subject } : req.query.subject;
         }
         // Add classLevel filter if provided
         if (req.query.classLevel) {
-            where.classLevel = req.query.classLevel;
+            where.classLevel = Array.isArray(req.query.classLevel) ? { in: req.query.classLevel } : req.query.classLevel;
         }
         // Add question type filter if provided
         if (req.query.type) {
@@ -1920,14 +1930,23 @@ app.get('/api/questions', authenticate, async (req, res) => {
             where.type = { in: types, mode: 'insensitive' };
         }
         if (req.query.difficulty) {
-            where.difficulty = req.query.difficulty;
+            where.difficulty = Array.isArray(req.query.difficulty) ? { in: req.query.difficulty } : req.query.difficulty;
         }
         // Add source filter if provided
         if (req.query.source) {
-            const sources = Array.isArray(req.query.source) ? req.query.source : [req.query.source];
-            where.sources = {
-                hasSome: sources
-            };
+            const srcVal = req.query.source;
+            const srcArr = (Array.isArray(srcVal) ? srcVal : [srcVal]).filter((s) => s && s !== 'All');
+            if (srcArr.length > 0) {
+                const sourceConditions = [];
+                for (const s of srcArr) {
+                    sourceConditions.push({ source: { contains: s, mode: 'insensitive' } });
+                    sourceConditions.push({ sources: { has: s } });
+                }
+                AND.push({ OR: sourceConditions });
+            }
+        }
+        if (AND.length > 0) {
+            where.AND = AND;
         }
         const [questions, total] = await Promise.all([
             prisma.question.findMany({

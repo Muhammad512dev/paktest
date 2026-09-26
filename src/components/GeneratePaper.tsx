@@ -338,11 +338,14 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
          const type = updates.questionType || currentSec?.questionType || 'MCQ';
          const sel = updates.selectCount !== undefined ? updates.selectCount : (currentSec?.selectCount || 5);
          const tot = updates.totalCount !== undefined ? updates.totalCount : (currentSec?.totalCount || 5);
-         if (!updates.instruction) {
-            finalUpdates.instruction = getDefaultSectionInstruction(type, sel, tot);
+         if (!updates.instruction || updates.questionType) {
+            finalUpdates.instruction = updates.instruction || getDefaultSectionInstruction(type, sel, tot);
+         }
+         if (!updates.instructionUrdu || updates.questionType) {
+            finalUpdates.instructionUrdu = updates.instructionUrdu || getDefaultSectionInstructionUrdu(type, sel, tot);
          }
          if (updates.category === undefined) {
-            const isObjective = ['MCQ', 'Match Columns', 'Fill in the Blanks', 'True/False', 'Spelling Check'].includes(type);
+            const isObjective = ['MCQ', 'Match Columns', 'Fill in the Blanks', 'True/False', 'Spelling Check'].some(t => type.toLowerCase().includes(t.toLowerCase()));
             finalUpdates.category = isObjective ? 'Objective' : 'Subjective';
          }
       }
@@ -365,10 +368,11 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
 
       const newSec: PaperSectionConfig = {
          id: id,
-         title: `Q.${nextNum} New Section`,
+         title: `Q.${nextNum} ${defaultType}`,
          instruction: getDefaultSectionInstruction(defaultType, 5, 5),
+         instructionUrdu: getDefaultSectionInstructionUrdu(defaultType, 5, 5),
          questionType: defaultType,
-         marksPerQuestion: 1,
+         marksPerQuestion: defaultType === 'MCQ' ? 1 : (defaultType.includes('Short') ? 2 : defaultType.includes('Match') ? 4 : 5),
          totalCount: 5,
          selectCount: 5,
          blankLines: 0,
@@ -377,7 +381,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
          languageMedium: 'Bilingual',
          sourceFilter: [],
          category: isObjective ? 'Objective' : 'Subjective',
-         subQuestionNumbering: 'Numeric'
+         subQuestionNumbering: defaultType === 'MCQ' ? 'Numeric' : 'Alpha'
       };
       setState(prev => ({
          ...prev,

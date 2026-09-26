@@ -1438,8 +1438,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
      Sub-questions : (i) English text ............ Urdu text   (i)
   ───────────────────────────────────────────────────────── */
   function renderBoardExamSection(sec: PaperSectionConfig, secQuestions: Question[], qNum: number) {
-    if (isGridView) {
-      return renderSection(sec, secQuestions);
+    if (isGridView || sec.questionType === 'Match Columns' || secQuestions.some(q => q.type === 'Match Columns')) {
+      return renderSection(sec, secQuestions, qNum);
     }
 
     const romanNums = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', 'xi', 'xii', 'xiii', 'xiv', 'xv'];
@@ -1945,83 +1945,101 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     </div>
                   )}
 
-                  {isBilingual ? (
-                    /* BILINGUAL: English on Left, Urdu on Right on Same Line */
-                    <div dir="ltr" className="flex justify-between items-start gap-6 w-full">
-                      {/* Left: English text */}
-                      <div className="flex-1 flex gap-2 items-start text-left">
-                        <span className="font-black text-sm min-w-[22px] pt-0.5 text-slate-900 shrink-0">
-                          {numEn}
-                        </span>
-                        <div className="flex-1 space-y-1 question-content">
-                          {isManualEdit ? (
-                            <p contentEditable suppressContentEditableWarning={true} className="leading-relaxed outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-1 font-bold">{displayTextEn}</p>
-                          ) : (
-                            <MathRenderer text={displayTextEn} className="leading-relaxed font-bold" />
-                          )}
-                          {showQuestionMarks && (
-                            <span contentEditable={isManualEdit} suppressContentEditableWarning={true} className="text-[10px] font-black text-slate-500 pt-0.5 inline-block">[{q.marks}]</span>
-                          )}
-                        </div>
-                      </div>
+                  {(() => {
+                    const isMatchColsWithPairs = q.type === 'Match Columns' && Boolean(q.matchingPairs && q.matchingPairs.length > 0);
+                    const isGenericMatchStatement = (text: string | undefined) => {
+                      if (!text) return true;
+                      const t = text.trim().toLowerCase();
+                      return t === '' || t === 'match the columns' || t === 'match columns' || t === 'match the column' || t === 'match column a with column b' || t === 'match column' || t === 'کالم الف کو کالم ب سے ملائیں' || t === 'کالم ملائیں' || t === 'کالم ملائیے';
+                    };
+                    const skipStatementRow = isMatchColsWithPairs && isGenericMatchStatement(displayTextEn) && isGenericMatchStatement(displayTextUr);
 
-                      {/* Right: Urdu text */}
-                      <div dir="rtl" style={{ fontFamily: urduFont }} className="flex-1 flex gap-2 items-start text-right font-urdu justify-start min-w-0">
-                        <span className="font-black text-sm min-w-[28px] w-[28px] pt-0.5 text-slate-900 shrink-0 text-right" dir="ltr">
-                          {numUr}
-                        </span>
-                        <div className="flex-1 min-w-0 space-y-1 question-content">
-                          {isManualEdit ? (
-                            <p contentEditable suppressContentEditableWarning={true} style={{ fontSize: `${urduFontSize}px` }} className="bg-amber-50 rounded border-dashed border border-amber-300 p-1 outline-none font-bold text-black leading-[1.8]">{displayTextUr}</p>
-                          ) : (
-                            <div style={{ fontSize: `${urduFontSize}px` }} className="font-bold text-black leading-[1.8]">
-                              <MathRenderer text={displayTextUr} />
+                    if (skipStatementRow) return null;
+
+                    if (isBilingual) {
+                      return (
+                        /* BILINGUAL: English on Left, Urdu on Right on Same Line */
+                        <div dir="ltr" className="flex justify-between items-start gap-6 w-full">
+                          {/* Left: English text */}
+                          <div className="flex-1 flex gap-2 items-start text-left">
+                            <span className="font-black text-sm min-w-[22px] pt-0.5 text-slate-900 shrink-0">
+                              {numEn}
+                            </span>
+                            <div className="flex-1 space-y-1 question-content">
+                              {isManualEdit ? (
+                                <p contentEditable suppressContentEditableWarning={true} className="leading-relaxed outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-1 font-bold">{displayTextEn}</p>
+                              ) : (
+                                <MathRenderer text={displayTextEn} className="leading-relaxed font-bold" />
+                              )}
+                              {showQuestionMarks && (
+                                <span contentEditable={isManualEdit} suppressContentEditableWarning={true} className="text-[10px] font-black text-slate-500 pt-0.5 inline-block">[{q.marks}]</span>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ) : showUr ? (
-                    /* URDU ONLY: Aligned to Right */
-                    <div dir="rtl" style={{ fontFamily: urduFont }} className="flex gap-2 items-start text-right font-urdu w-full justify-start">
-                      <span className="font-black text-sm min-w-[22px] pt-0.5 text-slate-900 shrink-0" dir="ltr">
-                        {numUr}
-                      </span>
-                      <div className="flex-1 space-y-1 question-content">
-                        <div className="flex justify-between items-start">
-                          {isManualEdit ? (
-                            <p contentEditable suppressContentEditableWarning={true} style={{ fontSize: `${urduFontSize}px` }} className="bg-amber-50 rounded border-dashed border border-amber-300 p-1 outline-none font-bold text-black leading-[1.8] flex-1">{displayTextUr}</p>
-                          ) : (
-                            <div style={{ fontSize: `${urduFontSize}px` }} className="font-bold text-black leading-[1.8] flex-1">
-                              <MathRenderer text={displayTextUr} />
+                          </div>
+
+                          {/* Right: Urdu text */}
+                          <div dir="rtl" style={{ fontFamily: urduFont }} className="flex-1 flex gap-2 items-start text-right font-urdu justify-start min-w-0">
+                            <span className="font-black text-sm min-w-[28px] w-[28px] pt-0.5 text-slate-900 shrink-0 text-right" dir="ltr">
+                              {numUr}
+                            </span>
+                            <div className="flex-1 min-w-0 space-y-1 question-content">
+                              {isManualEdit ? (
+                                <p contentEditable suppressContentEditableWarning={true} style={{ fontSize: `${urduFontSize}px` }} className="bg-amber-50 rounded border-dashed border border-amber-300 p-1 outline-none font-bold text-black leading-[1.8]">{displayTextUr}</p>
+                              ) : (
+                                <div style={{ fontSize: `${urduFontSize}px` }} className="font-bold text-black leading-[1.8]">
+                                  <MathRenderer text={displayTextUr} />
+                                </div>
+                              )}
                             </div>
-                          )}
-                          {showQuestionMarks && (
-                            <span contentEditable={isManualEdit} suppressContentEditableWarning={true} className="text-[10px] font-black text-slate-500 pt-0.5 shrink-0 ml-3">[{q.marks}]</span>
-                          )}
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  ) : (
-                    /* ENGLISH ONLY: Aligned to Left */
-                    <div className="flex gap-2 items-start text-left w-full">
-                      <span className="font-black text-sm min-w-[22px] pt-0.5 text-slate-900 shrink-0">
-                        {numEn}
-                      </span>
-                      <div className="flex-1 space-y-1 question-content">
-                        <div className="flex justify-between items-start">
-                          {isManualEdit ? (
-                            <p contentEditable suppressContentEditableWarning={true} className="leading-relaxed outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-1 font-bold flex-1">{displayTextEn}</p>
-                          ) : (
-                            <MathRenderer text={displayTextEn} className="leading-relaxed font-bold flex-1" />
-                          )}
-                          {showQuestionMarks && (
-                            <span contentEditable={isManualEdit} suppressContentEditableWarning={true} className="text-[10px] font-black text-slate-500 pt-0.5 shrink-0 ml-3">[{q.marks}]</span>
-                          )}
+                      );
+                    } else if (showUr) {
+                      return (
+                        /* URDU ONLY: Aligned to Right */
+                        <div dir="rtl" style={{ fontFamily: urduFont }} className="flex gap-2 items-start text-right font-urdu w-full justify-start">
+                          <span className="font-black text-sm min-w-[22px] pt-0.5 text-slate-900 shrink-0" dir="ltr">
+                            {numUr}
+                          </span>
+                          <div className="flex-1 space-y-1 question-content">
+                            <div className="flex justify-between items-start">
+                              {isManualEdit ? (
+                                <p contentEditable suppressContentEditableWarning={true} style={{ fontSize: `${urduFontSize}px` }} className="bg-amber-50 rounded border-dashed border border-amber-300 p-1 outline-none font-bold text-black leading-[1.8] flex-1">{displayTextUr}</p>
+                              ) : (
+                                <div style={{ fontSize: `${urduFontSize}px` }} className="font-bold text-black leading-[1.8] flex-1">
+                                  <MathRenderer text={displayTextUr} />
+                                </div>
+                              )}
+                              {showQuestionMarks && (
+                                <span contentEditable={isManualEdit} suppressContentEditableWarning={true} className="text-[10px] font-black text-slate-500 pt-0.5 shrink-0 ml-3">[{q.marks}]</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  )}
+                      );
+                    } else {
+                      return (
+                        /* ENGLISH ONLY: Aligned to Left */
+                        <div className="flex gap-2 items-start text-left w-full">
+                          <span className="font-black text-sm min-w-[22px] pt-0.5 text-slate-900 shrink-0">
+                            {numEn}
+                          </span>
+                          <div className="flex-1 space-y-1 question-content">
+                            <div className="flex justify-between items-start">
+                              {isManualEdit ? (
+                                <p contentEditable suppressContentEditableWarning={true} className="leading-relaxed outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-1 font-bold flex-1">{displayTextEn}</p>
+                              ) : (
+                                <MathRenderer text={displayTextEn} className="leading-relaxed font-bold flex-1" />
+                              )}
+                              {showQuestionMarks && (
+                                <span contentEditable={isManualEdit} suppressContentEditableWarning={true} className="text-[10px] font-black text-slate-500 pt-0.5 shrink-0 ml-3">[{q.marks}]</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                  })()}
 
                   {q.imageUrl && (
                     <div className="my-3 flex justify-center">

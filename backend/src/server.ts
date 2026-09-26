@@ -482,6 +482,13 @@ const sanitizeQuestionInput = (raw: any, schoolId: string | null) => {
     q.text = typeof q.text === 'string' ? extractAndSaveEmbeddedMedia(q.text.trim(), q.classLevel, q.subject) : '';
     q.textUrdu = typeof q.textUrdu === 'string' ? extractAndSaveEmbeddedMedia(q.textUrdu.trim(), q.classLevel, q.subject) : '';
 
+    // For Match Columns, if statement is omitted, supply clean defaults so DB non-null requirement is met
+    const isMatchColumns = q.type === 'Match Columns' || (Array.isArray(q.matchingPairs) && q.matchingPairs.length > 0);
+    if (isMatchColumns) {
+        if (!q.text) q.text = 'Match the Columns';
+        if (!q.textUrdu) q.textUrdu = 'کالم الف کو کالم ب سے ملائیں';
+    }
+
     // If one language is missing, mirror the other so Urdu-only/English-only views never look blank.
     if (q.text === '' && q.textUrdu !== '') q.text = q.textUrdu;
     if (q.textUrdu === '' && q.text !== '') q.textUrdu = q.text;
@@ -536,8 +543,11 @@ const validateQuestion = (question: any): { valid: boolean; errors: string[] } =
     if (!question.classLevel || String(question.classLevel).trim() === '') errors.push('Class level (classLevel) is required');
     if (!question.topic || String(question.topic).trim() === '') errors.push('Topic (topic) is required');
 
+    const isMatch = question.type === 'Match Columns' || (Array.isArray(question.matchingPairs) && question.matchingPairs.length > 0);
+    const hasPairs = Array.isArray(question.matchingPairs) && question.matchingPairs.length > 0;
+
     if (question.medium === 'Urdu' || question.medium === 'Bilingual') {
-        if (!question.textUrdu || question.textUrdu.trim() === '') {
+        if (!question.textUrdu && !isMatch && !hasPairs) {
             errors.push('Urdu text (textUrdu) cannot be empty');
         }
         if (question.type === 'MCQ' && (!Array.isArray(question.optionsUrdu) || question.optionsUrdu.length === 0)) {
@@ -546,7 +556,7 @@ const validateQuestion = (question: any): { valid: boolean; errors: string[] } =
     }
 
     if (question.medium === 'English' || question.medium === 'Bilingual') {
-        if (!question.text || question.text.trim() === '') {
+        if (!question.text && !isMatch && !hasPairs) {
             errors.push('English text cannot be empty');
         }
         if (question.type === 'MCQ' && (!Array.isArray(question.options) || question.options.length === 0)) {
@@ -2506,11 +2516,11 @@ app.delete('/api/curriculum/question-types/:id', authenticate, async (req: any, 
 // ─── /api/metadata – provides distinct types & sources for filter dropdowns ───
 app.get('/api/metadata', authenticate, async (req: any, res: any) => {
     try {
-        const [distinctTypes, distinctSources, customTypes, sources] = await Promise.all([
+        const [distinctTypes, distinctQuestions, customTypes, sources] = await Promise.all([
             prisma.question.findMany({ select: { type: true }, distinct: ['type'] }),
-            prisma.question.findMany({ select: { source: true }, distinct: ['source'] }),
+            prisma.question.findMany({ select: { source: true, sources: true }, take: 1000 }),
             prisma.questionType.findMany({ select: { name: true } }),
-            prisma.source.findMany({ select: { name: true } }),
+            prisma.source ? prisma.source.findMany({ select: { name: true } }).catch(() => []) : Promise.resolve([]),
         ]);
 
         // Merge built-in type ids with any types actually used in questions + custom types from DB
@@ -2520,10 +2530,17 @@ app.get('/api/metadata', authenticate, async (req: any, res: any) => {
             ...customTypes.map((t: any) => t.name).filter(Boolean),
         ]);
 
-        // Merge source table + distinct sources from questions
+        const defaultSources = [
+            'Past Paper', 'Model Paper', 'Textbook Exercise', 'Review Exercise', 'Important Concept',
+            'Past Board 2024', 'Past Board 2023', 'Past Board 2022', 'Past Board 2021', 'FBISE Board', 'Punjab Board', 'Sindh Board', 'KPK Board'
+        ];
+
+        // Merge source table + distinct sources from questions + default sources
         const sourceSet = new Set<string>([
+            ...defaultSources,
             ...sources.map((s: any) => s.name).filter(Boolean),
-            ...distinctSources.map((s: any) => s.source).filter(Boolean),
+            ...distinctQuestions.map((s: any) => s.source).filter(Boolean),
+            ...distinctQuestions.flatMap((s: any) => Array.isArray(s.sources) ? s.sources : []).filter(Boolean),
         ]);
 
         res.json({
@@ -2575,22 +2592,28 @@ app.get('/api/questions', authenticate, questionLimiter as any, async (req: any,
     try {
         const { skip, pageSize, page } = getPaginationParams(req);
         const where: any = {};
+        const AND: any[] = [];
+
         if (req.user?.role !== 'SUPER_ADMIN') {
-            where.OR = [{ schoolId: null }, { schoolId: req.user?.schoolId }];
+            AND.push({
+                OR: [{ schoolId: null }, { schoolId: req.user?.schoolId }]
+            });
         }
 
         const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
         if (q) {
-            where.OR = [
-                ...(where.OR || []),
-                { text: { contains: q, mode: 'insensitive' } },
-                { textUrdu: { contains: q, mode: 'insensitive' } },
-                { subject: { contains: q, mode: 'insensitive' } },
-                { classLevel: { contains: q, mode: 'insensitive' } },
-                { topic: { contains: q, mode: 'insensitive' } },
-                { chapter: { contains: q, mode: 'insensitive' } },
-                { type: { contains: q, mode: 'insensitive' } }
-            ];
+            AND.push({
+                OR: [
+                    { text: { contains: q, mode: 'insensitive' } },
+                    { textUrdu: { contains: q, mode: 'insensitive' } },
+                    { subject: { contains: q, mode: 'insensitive' } },
+                    { classLevel: { contains: q, mode: 'insensitive' } },
+                    { topic: { contains: q, mode: 'insensitive' } },
+                    { chapter: { contains: q, mode: 'insensitive' } },
+                    { type: { contains: q, mode: 'insensitive' } },
+                    { source: { contains: q, mode: 'insensitive' } }
+                ]
+            });
         }
 
         if (req.query.medium) where.medium = req.query.medium;
@@ -2607,12 +2630,29 @@ app.get('/api/questions', authenticate, questionLimiter as any, async (req: any,
         if (req.query.difficulty) {
             where.difficulty = Array.isArray(req.query.difficulty) ? { in: req.query.difficulty } : req.query.difficulty;
         }
+        // ── Source filter: support both string source and sources array ──
+        if (req.query.source) {
+            const srcVal = req.query.source;
+            const srcArr = (Array.isArray(srcVal) ? srcVal : [srcVal]).filter((s: string) => s && s !== 'All');
+            if (srcArr.length > 0) {
+                const sourceConditions: any[] = [];
+                for (const s of srcArr) {
+                    sourceConditions.push({ source: { contains: s, mode: 'insensitive' } });
+                    sourceConditions.push({ sources: { has: s } });
+                }
+                AND.push({ OR: sourceConditions });
+            }
+        }
 
-        // â”€â”€â”€ Redis Cache: skip cache for text searches (always unique)
+        if (AND.length > 0) {
+            where.AND = AND;
+        }
+
+        // ─── Redis Cache: skip cache for text searches or source filters ───
         const schoolKey = req.user?.schoolId || 'global';
-        const useCache = !q; // Don't cache free-text searches
-        const cacheKey = `questions:${schoolKey}:p${page}:ps${pageSize}:sub=${req.query.subject || ''}:cls=${req.query.classLevel || ''}:typ=${req.query.type || ''}:dif=${req.query.difficulty || ''}:med=${req.query.medium || ''}`;
-
+        const useCache = !q && !req.query.source; // Don't cache free-text or dynamic source queries
+        const cacheKey = `questions:${schoolKey}:p${page}:ps${pageSize}:sub=${req.query.subject || ''}:cls=${req.query.classLevel || ''}:typ=${req.query.type || ''}:dif=${req.query.difficulty || ''}:med=${req.query.medium || ''}:src=${req.query.source || ''}`;
+        // Bypass cache if source filter applied (sources array needs fresh data)
         const result = await getOrSet(
             cacheKey,
             useCache ? 600 : 0, // 10 min TTL for filtered queries, 0 for searches (bypasses cache)

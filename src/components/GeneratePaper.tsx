@@ -4,7 +4,7 @@ import {
    ChevronRight, Check, ArrowLeft, BookOpen, GraduationCap, Settings,
    Sparkles, Filter, Eye, X, Plus, Trash2, CloudLightning,
    Layers, FileText, CheckCircle2, ChevronDown, MonitorPlay, Layout, Library, Settings2,
-   Hash, Info, Edit3, Tag, RefreshCw, Zap, Upload, FileUp, Briefcase, Wand2, FileCode, Paperclip, Database, Shuffle
+   Hash, Info, Edit3, Tag, RefreshCw, Zap, Upload, FileUp, Briefcase, Wand2, FileCode, Paperclip, Database, Shuffle, Globe
 } from 'lucide-react';
 import { WizardState, Question, Difficulty, PaperStructure, PaperSectionConfig, User, WatermarkType, PaperLayoutMode, School, UserRole, getDefaultSectionInstruction, getDefaultSectionInstructionUrdu, PairingScheme, SchemeSectionDef, SchemeVersion } from '../types';
 import {
@@ -196,6 +196,34 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
       fetchSubjectQuestions();
    }, [state.selectedSubject, state.selectedClass, subjects, classes]);
 
+   const normalizeQType = (t: string) => {
+      const val = (t || '').toLowerCase().trim();
+      if (val.includes('mcq') || val.includes('multiple choice') || val.includes('multi choice')) return 'mcq';
+      if (val.includes('short')) return 'short';
+      if (val.includes('long') || val.includes('essay') || val.includes('composition')) return 'long';
+      if (val.includes('blank')) return 'blank';
+      if (val.includes('true') || val.includes('false')) return 'true_false';
+      if (val.includes('translation')) return 'translation';
+      if (val.includes('words') || val.includes('sentence') || val.includes('meaning') || val.includes('pair')) return 'words';
+      if (val.includes('match') || val.includes('column')) return 'match_columns';
+      if (val.includes('spelling') || val.includes('dictation')) return 'spelling';
+      return val;
+   };
+
+   const matchesSectionType = (qType: string, secType: string) => {
+      if (!qType || !secType) return false;
+      if (qType === secType) return true;
+      return normalizeQType(qType) === normalizeQType(secType);
+   };
+
+   const matchesSectionMedium = (q: any, sectionMedium: 'English' | 'Urdu' | 'Bilingual') => {
+      const qm = q?.medium as string | undefined;
+      if (sectionMedium === 'Bilingual') return true;
+      if (sectionMedium === 'English') return (qm !== 'Urdu') && !!q.text;
+      if (sectionMedium === 'Urdu') return (qm !== 'English') && (!!q.textUrdu || qm === 'Urdu');
+      return true;
+   };
+
    // Filtering Logic for Wizard
    const filteredClasses = useMemo(() => classes.filter(c => c.syllabusId === state.selectedSyllabus), [classes, state.selectedSyllabus]);
    const filteredSubjects = useMemo(() => subjects.filter(s => s.classId === state.selectedClass), [subjects, state.selectedClass]);
@@ -222,24 +250,25 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
 
       const relevant = repoQuestions.filter(q => {
          const matchSub = !currentSubject || q.subject === currentSubject;
-         // Soft match for classLevel (allow if question has no classLevel specified)
          const matchCls = !currentClass || !q.classLevel || q.classLevel === currentClass;
-
-         // Filter by chapters if any are selected (using names for matching as stored in state)
          const matchChap = state.selectedChapters.length === 0 ||
             (q.chapter && state.selectedChapters.some(cName => cName.toLowerCase() === q.chapter?.toLowerCase()));
+         const matchLang = matchesSectionMedium(q, state.languageMedium || 'Bilingual');
 
-         return matchSub && matchCls && matchChap;
+         return matchSub && matchCls && matchChap && matchLang;
       });
 
       if (relevant.length === 0) {
-         console.warn("No questions found matching criteria for type filtering", { currentSubject, currentClass, selectedChapters: state.selectedChapters });
-         return questionTypes; // Fallback to all types if filtering is too strict
+         return questionTypes;
       }
 
       const typeSet = new Set(relevant.map(q => q.type));
-      return questionTypes.filter(t => typeSet.has(t.id));
-   }, [repoQuestions, state.selectedSubject, state.selectedClass, state.selectedChapters, questionTypes, subjects, classes]);
+      return questionTypes.filter(t => 
+         typeSet.has(t.id) || 
+         typeSet.has(t.name) || 
+         Array.from(typeSet).some(qt => matchesSectionType(qt, t.name) || matchesSectionType(qt, t.id))
+      );
+   }, [repoQuestions, state.selectedSubject, state.selectedClass, state.selectedChapters, state.languageMedium, questionTypes, subjects, classes]);
 
    const getSubtopicsForChapter = (chapterName: string) => {
       const chapterObj = allChapters.find(c => c.name === chapterName);
@@ -267,6 +296,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
    };
 
    const initStructure = () => {
+      const currentMedium = state.languageMedium || 'Bilingual';
       const structure: PaperStructure = {};
       // If a pairing scheme was selected, populate structure from the scheme
       if (selectedScheme && selectedScheme.structure && selectedScheme.structure.length > 0) {
@@ -285,7 +315,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                blankLines: 0,
                blankLineType: 'Line',
                questionsPerLine: false,
-               languageMedium: 'Bilingual',
+               languageMedium: currentMedium,
                sourceFilter: [],
                category: isObjective ? 'Objective' : 'Subjective',
                subQuestionNumbering: secDef.type === 'MCQ' ? 'Numeric' : 'Alpha',
@@ -313,6 +343,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                id: id,
                title: `Q.${idx + 1} ${type}`,
                instruction: getDefaultSectionInstruction(type, selectCount, totalCount),
+               instructionUrdu: getDefaultSectionInstructionUrdu(type, selectCount, totalCount),
                questionType: type,
                marksPerQuestion: type === 'MCQ' ? 1 : type === 'Short Answer' ? 2 : 5,
                totalCount: totalCount,
@@ -320,7 +351,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                blankLines: 0,
                blankLineType: 'Line',
                questionsPerLine: false,
-               languageMedium: 'Bilingual',
+               languageMedium: currentMedium,
                sourceFilter: [],
                category: isObjective ? 'Objective' : 'Subjective',
                subQuestionNumbering: type === 'MCQ' ? 'Numeric' : 'Alpha'
@@ -378,7 +409,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
          blankLines: 0,
          blankLineType: 'Line',
          questionsPerLine: false,
-         languageMedium: 'Bilingual',
+         languageMedium: state.languageMedium || 'Bilingual',
          sourceFilter: [],
          category: isObjective ? 'Objective' : 'Subjective',
          subQuestionNumbering: defaultType === 'MCQ' ? 'Numeric' : 'Alpha'
@@ -440,7 +471,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
             }
          }
          if (updates.selectCount !== undefined && !updated.hasChoice) {
-            updated.totalCount = updates.selectCount;
+            updated.totalCount = updated.selectCount;
          }
          return updated;
       }));
@@ -477,10 +508,6 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
          const secId = `sec_quick_${Date.now()}_${idx}`;
          const secMarksShare = Math.max(2, Math.round(totalPaperMarks * weights[type]));
 
-         // Marks per question according to user specification:
-         // mcqs = 1 mark
-         // short = 2 marks
-         // long = 4 marks (for sub-part a/b) or 8 marks (for single full question)
          let marksPerQ = quickCustomMarks[type] || 1;
          if (type === 'Multiple Choice') marksPerQ = 1;
          else if (type === 'Short Question') marksPerQ = 2;
@@ -488,10 +515,6 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
 
          const selectCount = Math.max(1, Math.round(secMarksShare / marksPerQ));
 
-         // Student choice logic:
-         // MCQs typically have no choice (attempt all)
-         // Short questions typically have choice (e.g. attempt 5 out of 8, ~30-40% extra)
-         // Long questions typically have choice (e.g. attempt 2 out of 3)
          let totalCount = selectCount;
          if (quickHasChoice) {
             if (type === 'Multiple Choice') {
@@ -530,7 +553,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
             blankLines: 0,
             blankLineType: 'Line',
             questionsPerLine: false,
-            languageMedium: 'Bilingual',
+            languageMedium: state.languageMedium || 'Bilingual',
             sourceFilter: [],
             category: isObjective ? 'Objective' : 'Subjective',
             subQuestionNumbering: 'Numeric',
@@ -570,7 +593,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
             blankLines: 0,
             blankLineType: 'Line',
             questionsPerLine: false,
-            languageMedium: 'Bilingual',
+            languageMedium: state.languageMedium || 'Bilingual',
             sourceFilter: [],
             category: isObjective ? 'Objective' : 'Subjective',
             subQuestionNumbering: 'Numeric',
@@ -644,7 +667,6 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                   return;
                }
             } catch (e: any) {
-               // If the error message is available from the API response
                alert(e.message || "Daily AI limit reached.");
                setIsGenerating(false);
                return;
@@ -692,7 +714,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                            blankLines: 0,
                            blankLineType: 'Line',
                            questionsPerLine: cfg.type === 'MCQ',
-                           languageMedium: 'Bilingual',
+                           languageMedium: state.languageMedium || 'Bilingual',
                            sourceFilter: [],
                            category: isObjective ? 'Objective' : 'Subjective',
                            subQuestionNumbering: cfg.type === 'MCQ' ? 'Numeric' : 'Roman'
@@ -717,32 +739,6 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
          }
          // Case 2: Repository Shuffle (Manual Mode with Auto-Fill)
          else {
-            const normalizeQType = (t: string) => {
-               const val = (t || '').toLowerCase().trim();
-               if (val.includes('mcq') || val.includes('multiple choice') || val.includes('multi choice')) return 'mcq';
-               if (val.includes('short')) return 'short';
-               if (val.includes('long') || val.includes('essay')) return 'long';
-               if (val.includes('blank')) return 'blank';
-               if (val.includes('true') || val.includes('false')) return 'true_false';
-               if (val.includes('translation')) return 'translation';
-               if (val.includes('words') || val.includes('sentence')) return 'words';
-               return val;
-            };
-
-            const matchesSectionType = (qType: string, secType: string) => {
-               if (!qType || !secType) return false;
-               if (qType === secType) return true;
-               return normalizeQType(qType) === normalizeQType(secType);
-            };
-
-            const matchesSectionMedium = (q: any, sectionMedium: 'English' | 'Urdu' | 'Bilingual') => {
-               const qm = (q?.medium || 'Bilingual') as 'English' | 'Urdu' | 'Bilingual';
-               if (sectionMedium === 'Bilingual') return qm === 'Bilingual' || qm === 'English' || qm === 'Urdu';
-               if (sectionMedium === 'English') return qm === 'English' || qm === 'Bilingual';
-               if (sectionMedium === 'Urdu') return qm === 'Urdu' || qm === 'Bilingual';
-               return true;
-            };
-
             const isChapterMatch = (questionChapter?: string, targetChapters: string[] = []): boolean => {
                if (!questionChapter) return false;
                if (targetChapters.length === 0) return true;
@@ -1515,7 +1511,39 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
             <div className="space-y-8">
                <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                  <h4 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] mb-6 flex items-center gap-2"><Layout size={18} /> Visual Formatting</h4>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                     <h4 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2"><Layout size={18} /> Visual Formatting & Language</h4>
+                     {/* PAPER LANGUAGE SELECTOR */}
+                     <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+                        <span className="text-[10px] font-black uppercase text-slate-500 px-1.5 flex items-center gap-1">
+                           <Globe size={13} className="text-indigo-600" /> Language:
+                        </span>
+                        {(['English', 'Urdu', 'Bilingual'] as const).map(lang => {
+                           const isSelected = (state.languageMedium || 'Bilingual') === lang;
+                           return (
+                              <button
+                                 key={lang}
+                                 type="button"
+                                 onClick={() => {
+                                    setState(prev => {
+                                       const updatedStruct: PaperStructure = {};
+                                       Object.entries(prev.paperStructure).forEach(([k, sec]) => {
+                                          updatedStruct[k] = { ...sec, languageMedium: lang };
+                                       });
+                                       return { ...prev, languageMedium: lang, paperStructure: updatedStruct };
+                                    });
+                                 }}
+                                 className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                                    isSelected ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'text-slate-600 hover:text-indigo-600 hover:bg-white'
+                                 }`}
+                              >
+                                 {lang === 'English' ? '🇬🇧 English' : lang === 'Urdu' ? '🇵🇰 اردو' : '🌐 Bilingual'}
+                              </button>
+                           );
+                        })}
+                     </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                      <div>
                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Watermark Type</label>
@@ -1656,7 +1684,11 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                                     >
                                        {questionTypes.length > 0 ? (
                                           questionTypes.map((t: any) => {
-                                             const count = repoQuestions.filter((q: any) => q.type?.toLowerCase().trim() === t.name.toLowerCase().trim()).length;
+                                             const count = repoQuestions.filter((q: any) => {
+                                                const typeMatches = matchesSectionType(q.type, t.name) || matchesSectionType(q.type, t.id) || q.type?.toLowerCase().trim() === t.name?.toLowerCase().trim();
+                                                if (!typeMatches) return false;
+                                                return matchesSectionMedium(q, state.languageMedium || 'Bilingual');
+                                             }).length;
                                              const label = state.configMode === 'MANUAL' ? `${t.name} (${count})` : t.name;
                                              return <option key={t.id} value={t.name}>{label}</option>;
                                           })
@@ -2600,7 +2632,9 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
          schoolId: user.schoolId,
          selectedChapters: state.selectedChapters,
          selectedTopics: state.selectedTopics,
-         isOnline: state.isOnline
+         isOnline: state.isOnline,
+         languageMedium: state.languageMedium || 'Bilingual',
+         languageMode: state.languageMedium || 'Bilingual'
       };
       return <PaperEditor paper={initialPaper} onUpdate={() => { }} onBack={() => { onEditorExit?.(); setState({ ...state, step: 'SETUP', selectedQuestions: [] }); }} user={user} />;
    }

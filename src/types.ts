@@ -507,6 +507,7 @@ export interface WizardState {
   paperLayout: PaperLayoutMode;
   watermark: WatermarkType;
   isOnline: boolean;
+  languageMedium?: 'English' | 'Urdu' | 'Bilingual';
 }
 
 export interface Syllabus {

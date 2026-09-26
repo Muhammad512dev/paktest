@@ -96,8 +96,10 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
 
    // Global Visibility/Extraction Language
    const [extractionLanguage, setExtractionLanguage] = useState<'English' | 'Urdu' | 'Bilingual'>(() => {
+      if ((paper as any).languageMedium) return (paper as any).languageMedium;
+      if ((paper as any).languageMode) return (paper as any).languageMode;
       const mediums = Object.values(paper.structure || {}).map(s => s.languageMedium).filter(Boolean) as Array<'English' | 'Urdu' | 'Bilingual'>;
-      if (mediums.length === 0) return 'English';
+      if (mediums.length === 0) return 'Bilingual';
       const first = mediums[0];
       const allSame = mediums.every(m => m === first);
       return allSame ? first : 'Bilingual';
@@ -217,10 +219,11 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
          const matchTopic = paper.selectedTopics.length === 0 || paper.selectedTopics.some(t => t.toLowerCase() === q.topic?.toLowerCase());
          const matchType = !targetType || normalizeType(q.type) === normalizedTargetType;
 
+         const qm = q.medium as string | undefined;
          let matchesLanguage = true;
-         if (extractionLanguage === 'English') matchesLanguage = !!q.text;
-         if (extractionLanguage === 'Urdu') matchesLanguage = !!q.textUrdu;
-         if (extractionLanguage === 'Bilingual') matchesLanguage = !!q.text && !!q.textUrdu;
+         if (extractionLanguage === 'English') matchesLanguage = (qm === 'English' || qm === 'Bilingual' || !qm) && !!q.text && qm !== 'Urdu';
+         if (extractionLanguage === 'Urdu') matchesLanguage = (qm === 'Urdu' || qm === 'Bilingual' || !qm) && (!!q.textUrdu || qm === 'Urdu');
+         if (extractionLanguage === 'Bilingual') matchesLanguage = true;
 
          return matchSub && matchCls && matchChap && matchTopic && matchType && matchesLanguage;
       });
@@ -249,10 +252,11 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
          const matchesType = activeTypes.length === 0 || activeTypes.some(t => normalizeType(t) === normalizedQType);
 
          // 3. Language Filter
+         const qm = q.medium as string | undefined;
          let matchesLanguage = true;
-         if (extractionLanguage === 'English') matchesLanguage = !!q.text;
-         if (extractionLanguage === 'Urdu') matchesLanguage = !!q.textUrdu;
-         if (extractionLanguage === 'Bilingual') matchesLanguage = !!q.text && !!q.textUrdu;
+         if (extractionLanguage === 'English') matchesLanguage = (qm === 'English' || qm === 'Bilingual' || !qm) && !!q.text && qm !== 'Urdu';
+         if (extractionLanguage === 'Urdu') matchesLanguage = (qm === 'Urdu' || qm === 'Bilingual' || !qm) && (!!q.textUrdu || qm === 'Urdu');
+         if (extractionLanguage === 'Bilingual') matchesLanguage = true;
 
          return matchesSource && matchesType && matchesLanguage;
       });
@@ -280,10 +284,11 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
          const matchChap = customScopeChapters.length === 0 || customScopeChapters.some(c => c.toLowerCase() === q.chapter?.toLowerCase());
          const matchTopic = customScopeTopics.length === 0 || customScopeTopics.some(t => t.toLowerCase() === q.topic?.toLowerCase());
          
+         const qm = q.medium as string | undefined;
          let matchesLanguage = true;
-         if (extractionLanguage === 'English') matchesLanguage = !!q.text;
-         if (extractionLanguage === 'Urdu') matchesLanguage = !!q.textUrdu;
-         if (extractionLanguage === 'Bilingual') matchesLanguage = !!q.text && !!q.textUrdu;
+         if (extractionLanguage === 'English') matchesLanguage = (qm === 'English' || qm === 'Bilingual' || !qm) && !!q.text && qm !== 'Urdu';
+         if (extractionLanguage === 'Urdu') matchesLanguage = (qm === 'Urdu' || qm === 'Bilingual' || !qm) && (!!q.textUrdu || qm === 'Urdu');
+         if (extractionLanguage === 'Bilingual') matchesLanguage = true;
 
          return matchSub && matchType && matchChap && matchTopic && matchesLanguage;
       });

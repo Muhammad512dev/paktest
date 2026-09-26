@@ -116,7 +116,9 @@ const GlobalQuestionBank: React.FC = () => {
   const [batchClassOverride, setBatchClassOverride] = useState<string>('');
   const [batchSubjectOverride, setBatchSubjectOverride] = useState<string>('');
   const [batchTypeOverride, setBatchTypeOverride] = useState<string>('');
+  const [isCustomBatchType, setIsCustomBatchType] = useState(false);
   const [batchAuthorOverride, setBatchAuthorOverride] = useState<string>('');
+  const [isCustomBatchAuthor, setIsCustomBatchAuthor] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sequenceFileInputRef = useRef<HTMLInputElement>(null);
   const diagramFileInputRef = useRef<HTMLInputElement>(null);
@@ -1679,47 +1681,81 @@ const GlobalQuestionBank: React.FC = () => {
                     {/* Batch Type Selection */}
                     <div className="flex items-center gap-2">
                        <label className="text-xs font-medium text-slate-500">Type:</label>
-                       <input
-                          list="batch-types"
-                          placeholder="Individual (Type or Select)"
-                          value={batchTypeOverride}
-                          onChange={(e) => {
-                             const val = e.target.value;
-                             setBatchTypeOverride(val);
-                             if (val) {
-                                setImportRows(prev => prev.map(r => ({ ...r, Type: val })));
-                             }
-                          }}
-                          className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 w-44"
-                       />
-                       <datalist id="batch-types">
-                          {metadata.types.map(t => (
-                             <option key={t} value={t} />
-                          ))}
-                       </datalist>
+                       {isCustomBatchType ? (
+                          <div className="flex items-center gap-1">
+                             <input
+                                type="text"
+                                placeholder="Custom Type"
+                                value={batchTypeOverride}
+                                onChange={(e) => {
+                                   const val = e.target.value;
+                                   setBatchTypeOverride(val);
+                                   if (val) setImportRows(prev => prev.map(r => ({ ...r, Type: val })));
+                                }}
+                                className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 w-32"
+                             />
+                             <button onClick={() => { setIsCustomBatchType(false); setBatchTypeOverride(''); }} className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-0.5 rounded" title="Cancel Custom"><X size={14}/></button>
+                          </div>
+                       ) : (
+                          <select
+                             value={batchTypeOverride}
+                             onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '__CUSTOM__') {
+                                   setIsCustomBatchType(true);
+                                   setBatchTypeOverride('');
+                                } else {
+                                   setBatchTypeOverride(val);
+                                   if (val) setImportRows(prev => prev.map(r => ({ ...r, Type: val })));
+                                }
+                             }}
+                             className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 w-36"
+                          >
+                             <option value="">Individual</option>
+                             {metadata.types.map(t => <option key={t} value={t}>{t}</option>)}
+                             <option value="__CUSTOM__" className="font-bold text-indigo-600">+ Add Custom...</option>
+                          </select>
+                       )}
                     </div>
 
                     {/* Batch Author Selection */}
                     <div className="flex items-center gap-2">
                        <label className="text-xs font-medium text-slate-500">Author:</label>
-                       <input
-                          list="batch-authors"
-                          placeholder="Individual (Type or Select)"
-                          value={batchAuthorOverride}
-                          onChange={(e) => {
-                             const val = e.target.value;
-                             setBatchAuthorOverride(val);
-                             if (val) {
-                                setImportRows(prev => prev.map(r => ({ ...r, Sources: val })));
-                             }
-                          }}
-                          className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 w-44"
-                       />
-                       <datalist id="batch-authors">
-                          {metadata.sources.map(s => (
-                             <option key={s} value={s} />
-                          ))}
-                       </datalist>
+                       {isCustomBatchAuthor ? (
+                          <div className="flex items-center gap-1">
+                             <input
+                                type="text"
+                                placeholder="Custom Author"
+                                value={batchAuthorOverride}
+                                onChange={(e) => {
+                                   const val = e.target.value;
+                                   setBatchAuthorOverride(val);
+                                   if (val) setImportRows(prev => prev.map(r => ({ ...r, Sources: val })));
+                                }}
+                                className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 w-32"
+                             />
+                             <button onClick={() => { setIsCustomBatchAuthor(false); setBatchAuthorOverride(''); }} className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-0.5 rounded" title="Cancel Custom"><X size={14}/></button>
+                          </div>
+                       ) : (
+                          <select
+                             value={batchAuthorOverride}
+                             onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '__CUSTOM__') {
+                                   setIsCustomBatchAuthor(true);
+                                   setBatchAuthorOverride('');
+                                } else {
+                                   setBatchAuthorOverride(val);
+                                   if (val) setImportRows(prev => prev.map(r => ({ ...r, Sources: val })));
+                                }
+                             }}
+                             className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 w-36"
+                          >
+                             <option value="">Individual</option>
+                             {metadata.sources.map(s => <option key={s} value={s}>{s}</option>)}
+                             <option value="__CUSTOM__" className="font-bold text-indigo-600">+ Add Custom...</option>
+                          </select>
+                       )}
                     </div>
                  </div>
 

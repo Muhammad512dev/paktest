@@ -1763,15 +1763,21 @@ registerCurriculumRoutes('sources', prisma.source);
 app.get('/api/curriculum/question-types', async (req, res) => {
     try {
         const hardcoded = [
-            { id: 'MCQ', name: 'Multiple Choice', category: 'Objective' },
-            { id: 'Match Columns', name: 'Match Columns', category: 'Objective' },
-            { id: 'Fill in the Blanks', name: 'Fill in the Blanks', category: 'Objective' },
-            { id: 'True/False', name: 'True/False', category: 'Objective' },
-            { id: 'Short Answer', name: 'Short Answer', category: 'Subjective' },
-            { id: 'Long Answer', name: 'Long Answer', category: 'Subjective' },
-            { id: 'Diagram Based', name: 'Diagram Based', category: 'Subjective' },
+            { id: 'MCQ', name: 'MCQ' },
+            { id: 'Short Question', name: 'Short Question' },
+            { id: 'Long Answer', name: 'Long Answer' },
+            { id: 'Fill in the Blank', name: 'Fill in the Blank' },
+            { id: 'True/False', name: 'True/False' },
+            { id: 'Match Columns', name: 'Match Columns' },
+            { id: 'Numerical', name: 'Numerical' },
+            { id: 'Derivation', name: 'Derivation' },
         ];
         
+        let customTypes = [];
+        try {
+            customTypes = await prisma.questionType.findMany({ select: { name: true, id: true } });
+        } catch (e) { /* fallback if schema out of sync locally */ }
+
         // Find any new types in the database
         const dbTypes = await prisma.question.findMany({
             distinct: ['type'],
@@ -1779,17 +1785,38 @@ app.get('/api/curriculum/question-types', async (req, res) => {
             where: { type: { notIn: hardcoded.map(h => h.id), not: '' } }
         });
 
-        const newTypes = dbTypes.map(t => ({
-            id: t.type,
-            name: t.type,
-            category: (t.type.toLowerCase().includes('mcq') || t.type.toLowerCase().includes('objective') || t.type.toLowerCase().includes('fill') || t.type.toLowerCase().includes('match') || t.type.toLowerCase().includes('true')) ? 'Objective' : 'Subjective'
-        }));
+        const newTypes = dbTypes.map(t => ({ id: t.type, name: t.type }));
+        const customMapped = customTypes.map(t => ({ id: t.id, name: t.name }));
+        
+        const merged = [...hardcoded, ...customMapped, ...newTypes];
+        const unique = merged.filter((v, i, a) => a.findIndex(t => (t.name.toLowerCase() === v.name.toLowerCase())) === i);
 
-        res.json([...hardcoded, ...newTypes]);
+        res.json(unique);
     } catch (e) {
-        console.error("Failed to fetch question types:", e);
         res.status(500).json({ error: "Failed to fetch question types" });
     }
+});
+
+app.post('/api/curriculum/question-types', authenticate, async (req, res) => {
+    try {
+        let name = req.body.name;
+        const item = await prisma.questionType.create({ data: { name } });
+        res.json(item);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/curriculum/question-types/:id', authenticate, async (req, res) => {
+    try {
+        const item = await prisma.questionType.update({ where: { id: req.params.id }, data: { name: req.body.name } });
+        res.json(item);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/curriculum/question-types/:id', authenticate, async (req, res) => {
+    try {
+        const item = await prisma.questionType.delete({ where: { id: req.params.id } });
+        res.json(item);
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/api/curriculum/sync', authenticate, async (req, res) => {
     const { board, grade, subject, chapter, topic } = req.body;
@@ -1873,7 +1900,7 @@ app.get('/api/questions', authenticate, async (req, res) => {
         }
         // Add question type filter if provided
         if (req.query.type) {
-            where.type = req.query.type;
+            where.type = { equals: req.query.type, mode: 'insensitive' };
         }
         if (req.query.difficulty) {
             where.difficulty = req.query.difficulty;

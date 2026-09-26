@@ -44,12 +44,13 @@ import {
   getChapters, addChapter, deleteChapter, updateChapter,
   getTopics, addTopic, deleteTopic, updateTopic,
   getSources, addSource, deleteSource, updateSource,
+  getQuestionTypes, addQuestionType, updateQuestionType, deleteQuestionType,
   ensureCurriculumPath, uploadFile
 } from '../../services/dataService';
 import { Syllabus, ClassLevel, Subject, QuestionSource } from '../../types';
 
 const CurriculumManager: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'SYLLABUS' | 'CLASS' | 'SUBJECT' | 'CHAPTER' | 'TOPIC' | 'SOURCE'>('SYLLABUS');
+  const [activeTab, setActiveTab] = useState<'SYLLABUS' | 'CLASS' | 'SUBJECT' | 'CHAPTER' | 'TOPIC' | 'SOURCE' | 'TYPE'>('SYLLABUS');
   
   // --- DATA STATES ---
   const [syllabuses, setSyllabuses] = useState<Syllabus[]>([]);
@@ -58,16 +59,18 @@ const CurriculumManager: React.FC = () => {
   const [chapters, setChapters] = useState<any[]>([]);
   const [topics, setTopics] = useState<any[]>([]);
   const [sources, setSources] = useState<any[]>([]);
+  const [questionTypes, setQuestionTypes] = useState<any[]>([]);
 
   /* Fixed: Make refreshData async and await Promise results for curriculum nodes */
   const refreshData = async () => {
-    const [syls, clss, subs, chs, tops, srcs] = await Promise.all([
-      getSyllabuses(),
-      getClasses(),
-      getSubjects(),
-      getChapters(),
-      getTopics(),
-      getSources()
+    const [syls, clss, subs, chs, tops, srcs, types] = await Promise.all([
+      getSyllabuses().catch(() => []),
+      getClasses().catch(() => []),
+      getSubjects().catch(() => []),
+      getChapters().catch(() => []),
+      getTopics().catch(() => []),
+      getSources().catch(() => []),
+      getQuestionTypes().catch(() => [])
     ]);
     
     setSyllabuses(syls);
@@ -76,6 +79,7 @@ const CurriculumManager: React.FC = () => {
     setChapters(chs);
     setTopics(tops);
     setSources(srcs);
+    setQuestionTypes(types);
   };
 
   useEffect(() => {
@@ -218,7 +222,7 @@ const CurriculumManager: React.FC = () => {
       if (editingItem.type === 'subjects') { data.syllabusId = selSyllabusId; data.classId = multiSelClassIds[0]; }
       if (editingItem.type === 'chapters') { data.syllabusId = selSyllabusId; data.classId = selClassId; data.subjectId = multiSelSubjectIds[0]; }
       if (editingItem.type === 'topics') data.chapterId = multiSelChapterIds[0];
-      const updateActions: Record<string, (id: string, value: any) => Promise<any>> = { syllabuses: updateSyllabus, classes: updateClass, subjects: updateSubject, chapters: updateChapter, topics: updateTopic, sources: updateSource };
+      const updateActions: Record<string, (id: string, value: any) => Promise<any>> = { syllabuses: updateSyllabus, classes: updateClass, subjects: updateSubject, chapters: updateChapter, topics: updateTopic, sources: updateSource, 'question-types': updateQuestionType };
       await updateActions[editingItem.type](editingItem.id, data);
       await refreshData();
       setIsAddModalOpen(false);
@@ -252,6 +256,8 @@ const CurriculumManager: React.FC = () => {
       }
     } else if (activeTab === 'SOURCE') {
       await addSource({ id: `src_${timestamp}`, name: newItemName });
+    } else if (activeTab === 'TYPE') {
+      await addQuestionType({ id: `type_${timestamp}`, name: newItemName });
     }
 
     await refreshData();
@@ -267,6 +273,7 @@ const CurriculumManager: React.FC = () => {
     { id: 'CHAPTER', label: 'Chapters', icon: Layers },
     { id: 'TOPIC', label: 'Topics', icon: FileText },
     { id: 'SOURCE', label: 'Sources', icon: Tag },
+    { id: 'TYPE', label: 'Question Types', icon: Sparkles },
   ];
 
   const handleOpenAddModal = () => {
@@ -305,11 +312,11 @@ const CurriculumManager: React.FC = () => {
       setSelClassId(chapter?.classId || subject?.classId || '');
       setSelSyllabusId(chapter?.syllabusId || subject?.syllabusId || '');
     }
-    setActiveTab(({ syllabuses: 'SYLLABUS', classes: 'CLASS', subjects: 'SUBJECT', chapters: 'CHAPTER', topics: 'TOPIC', sources: 'SOURCE' } as any)[type]);
+    setActiveTab(({ syllabuses: 'SYLLABUS', classes: 'CLASS', subjects: 'SUBJECT', chapters: 'CHAPTER', topics: 'TOPIC', sources: 'SOURCE', 'question-types': 'TYPE' } as any)[type]);
     setIsAddModalOpen(true);
   };
 
-  const handleDeleteItem = (type: 'syllabuses' | 'classes' | 'subjects' | 'chapters' | 'topics' | 'sources', id: string, name: string) => {
+  const handleDeleteItem = (type: 'syllabuses' | 'classes' | 'subjects' | 'chapters' | 'topics' | 'sources' | 'question-types', id: string, name: string) => {
     setDeleteTarget({ type, id, name });
     setAdminPassword('');
     setDeleteError(null);
@@ -334,6 +341,7 @@ const CurriculumManager: React.FC = () => {
       else if (type === 'chapters') await deleteChapter(id, adminPassword);
       else if (type === 'topics') await deleteTopic(id, adminPassword);
       else if (type === 'sources') await deleteSource(id, adminPassword);
+      else if (type === 'question-types') await deleteQuestionType(id, adminPassword);
 
       await refreshData();
       setDeleteTarget(null);
@@ -442,6 +450,19 @@ const CurriculumManager: React.FC = () => {
                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                        <button onClick={() => openEditModal('sources', src)} className="text-gray-400 hover:text-indigo-600" title="Edit source"><Edit2 size={14}/></button>
                        <button onClick={() => handleDeleteItem('sources', src.id, src.name)} className="text-gray-400 hover:text-red-500" title="Delete source"><Trash2 size={14}/></button>
+                     </div>
+                  </div>
+               ))}
+            </div>
+         )}
+         {activeTab === 'TYPE' && (
+            <div className="p-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+               {questionTypes.map(t => (
+                  <div key={t.id} className="p-4 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between group">
+                     <span className="font-bold text-gray-700 text-sm">{t.name}</span>
+                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                       <button onClick={() => openEditModal('question-types', t)} className="text-gray-400 hover:text-indigo-600" title="Edit Type"><Edit2 size={14}/></button>
+                       <button onClick={() => handleDeleteItem('question-types', t.id, t.name)} className="text-gray-400 hover:text-red-500" title="Delete Type"><Trash2 size={14}/></button>
                      </div>
                   </div>
                ))}

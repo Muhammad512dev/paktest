@@ -377,9 +377,13 @@ export const ensureCurriculumPath = async (path: any) => {
 };
 
 export const getQuestionTypes = async () => {
-  const res = await fetch(`${API_URL}/api/curriculum/question-types`);
+  const res = await fetch(`${API_URL}/api/curriculum/question-types`, { headers: getHeaders() });
   return handleResponse(res);
 };
+
+export const addQuestionType = (item: any) => addCurriculum('question-types', item);
+export const updateQuestionType = (id: string, item: any) => updateCurriculum('question-types', id, item);
+export const deleteQuestionType = (id: string, password?: string) => deleteCurriculum('question-types', id, password);
 
 export const getMetadata = async (): Promise<{ types: string[], sources: string[] }> => {
   const res = await fetch(`${API_URL}/api/metadata`, { headers: getHeaders() });

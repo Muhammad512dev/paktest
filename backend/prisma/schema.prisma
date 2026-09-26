@@ -137,6 +137,11 @@ model Source {
   name String @unique
 }
 
+model QuestionType {
+  id   String @id @default(uuid())
+  name String @unique
+}
+
 model Question {
   id                String   @id @default(uuid())
   text              String

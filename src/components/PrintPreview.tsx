@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
-  X, Printer, Type, Layout, Settings2,
+  X, Printer, Type, Layout, Settings2, SlidersHorizontal,
   RotateCcw, CheckCircle2, Languages,
   Shuffle, Edit3, Grid3X3, FileText, Info,
   Square, CheckSquare, Check, Columns, Globe, Trash2, Maximize, Ruler, ChevronDown, ChevronUp,
@@ -424,6 +424,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [otherEmptyLines, setOtherEmptyLines] = useState<number>(0);
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
   const [questionLinesOverrides, setQuestionLinesOverrides] = useState<Record<string, number>>({});
+  const [emptyLineSpacing, setEmptyLineSpacing] = useState<number>(24); // Height / spacing between student answer lines in px
+  const [showAllTools, setShowAllTools] = useState<boolean>(false); // Toggle to view all toolbar options
 
   const getQuestionLines = (qId: string) => {
     if (questionLinesOverrides[qId] !== undefined) {
@@ -1086,6 +1088,19 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             <button onClick={() => setIsManualEdit(!isManualEdit)} className={`p-2.5 rounded-lg transition-colors ${isManualEdit ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Edit Mode">
               <Edit3 size={20} />
             </button>
+            <button
+              onClick={() => setShowAllTools(v => !v)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border ${
+                showAllTools
+                  ? 'bg-indigo-600 border-indigo-400 text-white shadow-md'
+                  : 'bg-slate-900/80 hover:bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
+              }`}
+              title={showAllTools ? 'Switch to Compact Toolbar' : 'Show All Toolbar Options'}
+            >
+              <SlidersHorizontal size={16} className={showAllTools ? 'text-white' : 'text-indigo-400'} />
+              <span className="hidden md:inline">{showAllTools ? 'Less Tools' : 'All Options'}</span>
+              {showAllTools ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
             <button onClick={() => setIsToolbarOpen(v => !v)} className="p-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800" title={isToolbarOpen ? 'Close preview controls' : 'Open preview controls'} aria-label={isToolbarOpen ? 'Close preview controls' : 'Open preview controls'}>
               {isToolbarOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </button>
@@ -1095,263 +1110,293 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
           </div>
         </div>
 
-        {/* Controls: one compact flow that naturally settles into two rows on smaller screens */}
-        {isToolbarOpen && <div className="flex flex-wrap items-center gap-2">
-          {/* 1. Language & Layout */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
-            <select value={languageMode} onChange={e => setLanguageMode(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-24">
-              <option value="Bilingual">Bilingual</option>
-              <option value="English">English</option>
-              <option value="Urdu">Urdu</option>
-            </select>
-            <div className="w-px h-5 bg-slate-700"></div>
-            <select value={printViewMode} onChange={e => setPrintViewMode(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-28" title="View Filter">
-              <option value="both">Full Paper</option>
-              <option value="objective">Objective Only</option>
-              <option value="subjective">Essay Type Only</option>
-            </select>
-            <div className="w-px h-5 bg-slate-700"></div>
-            <select value={layoutTarget} onChange={e => setLayoutTarget(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-black text-indigo-300 outline-none w-24" title="Layout Mode Target">
-              <option value="All">All Paper</option>
-              <option value="Objective">Objective</option>
-              <option value="Subjective">Subjective</option>
-            </select>
-            <button
-              onClick={() => setLayoutMode(m => m === 'DoubleColumn' ? 'Standard' : 'DoubleColumn')}
-              className={`p-2 rounded ${layoutMode === 'DoubleColumn' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-              title={layoutMode === 'DoubleColumn' ? 'Double Column Layout' : 'Single Column Layout'}
-            >
-              <Columns size={18} />
-            </button>
-            <button onClick={() => setIsGridView(!isGridView)} className={`p-2 rounded ${isGridView ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Grid Table Mode">
-              <TableIcon size={18} />
-            </button>
-            <button
-              onClick={() => setShowQuestionMarks(v => {
-                const next = !v;
-                onShowQuestionMarksChange?.(next);
-                return next;
-              })}
-              className={`p-2 rounded ${showQuestionMarks ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}
-              title={showQuestionMarks ? 'Hide marks on each question' : 'Show marks on each question'}
-            >
-              <Hash size={18} />
-            </button>
-            <select value={pageSize} onChange={e => setPageSize(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-20">
-              <option value="A4">A4</option>
-              <option value="Legal">Legal</option>
-              <option value="Letter">Letter</option>
-            </select>
-          </div>
-
-          {/* 2. Font Size Controls with editable input */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
-            <select
-              value={textSizeMode}
-              onChange={e => setTextSizeMode(e.target.value as any)}
-              className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-24 sm:w-28"
-            >
-              <option value="English">Q (English)</option>
-              <option value="Urdu">Q (Urdu)</option>
-              <option value="OptionEn">Opt (EN)</option>
-              <option value="OptionUr">Opt (UR)</option>
-              <option value="OptionLabel">A/B/C</option>
-              <option value="Header">Header</option>
-            </select>
-            <div className="w-px h-5 bg-slate-700"></div>
-            <div className="flex items-center gap-1">
-              <button onClick={() => adjustFontSize(-1)} className="p-1.5 bg-slate-700 rounded hover:bg-slate-600 text-white"><Minus size={14} /></button>
-              <input
-                type="number"
-                value={activeFontSizeDisplay}
-                onChange={e => setFontSizeDirectly(parseInt(e.target.value))}
-                className="w-12 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                min={8}
-                max={64}
-              />
-              <span className="text-[10px] text-slate-500 font-bold">px</span>
-              <button onClick={() => adjustFontSize(1)} className="p-1.5 bg-slate-700 rounded hover:bg-slate-600 text-white"><Plus size={14} /></button>
-            </div>
-          </div>
-
-          {/* 3. Extras — kept directly after font-size controls on the first toolbar row */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0 border-l border-slate-700 pl-2">
-            <div className="flex items-center gap-1 bg-slate-900/80 border border-slate-700 rounded-lg px-2 py-1">
-              <UserSquare2 size={15} className="text-indigo-400 shrink-0" />
-              <select value={studentInfoStyle} onChange={e => setStudentInfoStyle(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-bold text-slate-200 outline-none">
-                <option value="Standard">Header: Dotted</option>
-                <option value="Grid">Header: Boxed</option>
-                <option value="Minimal">Header: Minimal</option>
-                <option value="Board">Header: Board</option>
-              </select>
-            </div>
-            <button onClick={() => setPrintBubbleSheet(!printBubbleSheet)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${printBubbleSheet ? 'bg-emerald-600/20 border-emerald-600/50 text-emerald-400' : 'bg-transparent border-slate-700 text-slate-400'}`}>
-              <Grid3X3 size={16} /> OMR
-            </button>
-            <button onClick={() => setPrintAnswerKey(!printAnswerKey)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${printAnswerKey ? 'bg-emerald-600/20 border-emerald-600/50 text-emerald-400' : 'bg-transparent border-slate-700 text-slate-400'}`}>
-              <CheckSquare size={16} /> Key
-            </button>
-            <button onClick={() => setSeparateSubjective(!separateSubjective)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${separateSubjective ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-400' : 'bg-transparent border-slate-700 text-slate-400'}`} title="Print Subjective Part on Separate Page">
-              <Layers size={16} /> Split
-            </button>
-            {/* Student Write-in Lines for Solving Directly on Paper */}
-            <button
-              onClick={() => {
-                const next = !studentAnswerLinesEnabled;
-                setStudentAnswerLinesEnabled(next);
-                if (next) {
-                  setShortEmptyLines(3);
-                  setLongEmptyLines(8);
-                  setWordsEmptyLines(2);
-                  setTranslationEmptyLines(4);
-                  setOtherEmptyLines(3);
-                  setMatchEmptyLines(0);
-                } else {
-                  setShortEmptyLines(0);
-                  setLongEmptyLines(0);
-                  setWordsEmptyLines(0);
-                  setTranslationEmptyLines(0);
-                  setOtherEmptyLines(0);
-                  setMatchEmptyLines(0);
-                }
-              }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${studentAnswerLinesEnabled ? 'bg-indigo-600 border-indigo-400 text-white shadow-md' : 'bg-transparent border-slate-700 text-slate-400 hover:text-white'}`}
-              title="Toggle Student Write-in Lines with Smart Defaults (Short: 3, Long: 8, Words: 2, Trans: 4)"
-            >
-              <Edit3 size={15} /> Student Lines {studentAnswerLinesEnabled ? 'ON' : 'OFF'}
-            </button>
-            {studentAnswerLinesEnabled && (
-              <div className="flex items-center gap-2 border-l border-slate-700 pl-2 ml-1" title="Configure write-in lines for question types present in this paper">
-                {paperHasShort && <><span className="text-[10px] text-slate-400 font-bold uppercase">Short:</span>
-                <input type="number" min={0} max={20} value={shortEmptyLines === 0 ? '' : shortEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setShortEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
-                {paperHasLong && <><span className="text-[10px] text-slate-400 font-bold uppercase">Long:</span>
-                <input type="number" min={0} max={40} value={longEmptyLines === 0 ? '' : longEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setLongEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
-                {paperHasVocab && <><span className="text-[10px] text-slate-400 font-bold uppercase">Words:</span>
-                <input type="number" min={0} max={15} value={wordsEmptyLines === 0 ? '' : wordsEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setWordsEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
-                {paperHasTranslation && <><span className="text-[10px] text-slate-400 font-bold uppercase">Trans:</span>
-                <input type="number" min={0} max={20} value={translationEmptyLines === 0 ? '' : translationEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setTranslationEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
-                {paperHasMatch && <><span className="text-[10px] text-slate-400 font-bold uppercase">Match:</span>
-                <input type="number" min={0} max={10} value={matchEmptyLines === 0 ? '' : matchEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setMatchEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
-                {paperHasOther && <><span className="text-[10px] text-slate-400 font-bold uppercase">Other:</span>
-                <input type="number" min={0} max={20} value={otherEmptyLines === 0 ? '' : otherEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setOtherEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+        {/* Controls: Compact Primary Row + Expandable Advanced Options */}
+        {isToolbarOpen && (
+          <div className="space-y-2">
+            {/* Primary Essential Controls Row */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* 1. Language & Layout */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
+                <select value={languageMode} onChange={e => setLanguageMode(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-24">
+                  <option value="Bilingual">Bilingual</option>
+                  <option value="English">English</option>
+                  <option value="Urdu">Urdu</option>
+                </select>
+                <div className="w-px h-5 bg-slate-700"></div>
+                <select value={printViewMode} onChange={e => setPrintViewMode(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-28" title="View Filter">
+                  <option value="both">Full Paper</option>
+                  <option value="objective">Objective Only</option>
+                  <option value="subjective">Essay Type Only</option>
+                </select>
+                <div className="w-px h-5 bg-slate-700"></div>
+                <select value={layoutTarget} onChange={e => setLayoutTarget(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-black text-indigo-300 outline-none w-24" title="Layout Mode Target">
+                  <option value="All">All Paper</option>
+                  <option value="Objective">Objective</option>
+                  <option value="Subjective">Subjective</option>
+                </select>
+                <button
+                  onClick={() => setLayoutMode(m => m === 'DoubleColumn' ? 'Standard' : 'DoubleColumn')}
+                  className={`p-2 rounded ${layoutMode === 'DoubleColumn' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  title={layoutMode === 'DoubleColumn' ? 'Double Column Layout' : 'Single Column Layout'}
+                >
+                  <Columns size={18} />
+                </button>
+                <button onClick={() => setIsGridView(!isGridView)} className={`p-2 rounded ${isGridView ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Grid Table Mode">
+                  <TableIcon size={18} />
+                </button>
+                <button
+                  onClick={() => setShowQuestionMarks(v => {
+                    const next = !v;
+                    onShowQuestionMarksChange?.(next);
+                    return next;
+                  })}
+                  className={`p-2 rounded ${showQuestionMarks ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}
+                  title={showQuestionMarks ? 'Hide marks on each question' : 'Show marks on each question'}
+                >
+                  <Hash size={18} />
+                </button>
+                <select value={pageSize} onChange={e => setPageSize(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-20">
+                  <option value="A4">A4</option>
+                  <option value="Legal">Legal</option>
+                  <option value="Letter">Letter</option>
+                </select>
               </div>
-            )}
-            {selectedQuestionId && (
-              <div className="flex items-center gap-2 border-l border-indigo-500/50 pl-2 ml-1 bg-indigo-950/80 px-2 py-1 rounded border border-indigo-500/40">
-                <span className="text-[10px] text-amber-300 font-black uppercase flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                  Q Lines:
-                </span>
-                <span className="text-[10px] text-slate-200 font-bold max-w-[100px] truncate" title={questions.find(q => q.id === selectedQuestionId)?.text || ''}>
-                  {questions.find(q => q.id === selectedQuestionId)?.type} ({questions.findIndex(q => q.id === selectedQuestionId) + 1})
-                </span>
+
+              {/* 2. Font Size Controls with direct input */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
+                <select
+                  value={textSizeMode}
+                  onChange={e => setTextSizeMode(e.target.value as any)}
+                  className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-24 sm:w-28"
+                >
+                  <option value="English">Q (English)</option>
+                  <option value="Urdu">Q (Urdu)</option>
+                  <option value="OptionEn">Opt (EN)</option>
+                  <option value="OptionUr">Opt (UR)</option>
+                  <option value="OptionLabel">A/B/C</option>
+                  <option value="Header">Header</option>
+                </select>
+                <div className="w-px h-5 bg-slate-700"></div>
                 <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => {
-                      const cur = getQuestionLines(selectedQuestionId);
-                      setQuestionLinesOverrides(prev => ({ ...prev, [selectedQuestionId]: Math.max(0, cur - 1) }));
-                    }}
-                    className="w-5 h-5 flex items-center justify-center bg-indigo-700 hover:bg-indigo-600 rounded text-white font-black text-xs"
-                  >-</button>
+                  <button onClick={() => adjustFontSize(-1)} className="p-1.5 bg-slate-700 rounded hover:bg-slate-600 text-white"><Minus size={14} /></button>
                   <input
                     type="number"
-                    min={0}
-                    max={30}
-                    value={getQuestionLines(selectedQuestionId) === 0 ? '' : getQuestionLines(selectedQuestionId)}
-                    placeholder="0"
-                    onChange={e => {
-                      const val = e.target.value === '' ? 0 : parseInt(e.target.value);
-                      setQuestionLinesOverrides(prev => ({ ...prev, [selectedQuestionId]: val }));
-                    }}
-                    className="w-10 text-center text-xs font-black text-amber-300 bg-slate-900 border border-indigo-400 rounded px-1 py-0.5 outline-none focus:border-amber-400"
+                    value={activeFontSizeDisplay}
+                    onChange={e => setFontSizeDirectly(parseInt(e.target.value))}
+                    className="w-12 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    min={8}
+                    max={64}
                   />
-                  <button
-                    onClick={() => {
-                      const cur = getQuestionLines(selectedQuestionId);
-                      setQuestionLinesOverrides(prev => ({ ...prev, [selectedQuestionId]: cur + 1 }));
-                    }}
-                    className="w-5 h-5 flex items-center justify-center bg-indigo-700 hover:bg-indigo-600 rounded text-white font-black text-xs"
-                  >+</button>
+                  <span className="text-[10px] text-slate-500 font-bold">px</span>
+                  <button onClick={() => adjustFontSize(1)} className="p-1.5 bg-slate-700 rounded hover:bg-slate-600 text-white"><Plus size={14} /></button>
                 </div>
-                <button
-                  onClick={() => setSelectedQuestionId(null)}
-                  className="text-[10px] text-slate-400 hover:text-white underline ml-0.5"
-                  title="Deselect question"
-                >
-                  ✕
-                </button>
+              </div>
+
+              {/* 3. Header Design Style */}
+              <div className="flex items-center gap-1 bg-slate-900/80 border border-slate-700 rounded-lg px-2 py-1.5">
+                <UserSquare2 size={16} className="text-indigo-400 shrink-0" />
+                <select value={studentInfoStyle} onChange={e => setStudentInfoStyle(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-bold text-slate-200 outline-none">
+                  <option value="Standard">Header: Dotted</option>
+                  <option value="Grid">Header: Boxed</option>
+                  <option value="Minimal">Header: Minimal</option>
+                  <option value="Board">Header: Board</option>
+                </select>
+              </div>
+
+              {/* 4. Student Write-in Lines Toggle with Line Space control */}
+              <button
+                onClick={() => {
+                  const next = !studentAnswerLinesEnabled;
+                  setStudentAnswerLinesEnabled(next);
+                  if (next) {
+                    setShortEmptyLines(3);
+                    setLongEmptyLines(8);
+                    setWordsEmptyLines(2);
+                    setTranslationEmptyLines(4);
+                    setOtherEmptyLines(3);
+                    setMatchEmptyLines(0);
+                  } else {
+                    setShortEmptyLines(0);
+                    setLongEmptyLines(0);
+                    setWordsEmptyLines(0);
+                    setTranslationEmptyLines(0);
+                    setOtherEmptyLines(0);
+                    setMatchEmptyLines(0);
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${studentAnswerLinesEnabled ? 'bg-indigo-600 border-indigo-400 text-white shadow-md' : 'bg-transparent border-slate-700 text-slate-400 hover:text-white'}`}
+                title="Toggle Student Write-in Lines with Smart Defaults (Short: 3, Long: 8, Words: 2, Trans: 4)"
+              >
+                <Edit3 size={15} /> Student Lines {studentAnswerLinesEnabled ? 'ON' : 'OFF'}
+              </button>
+
+              {studentAnswerLinesEnabled && (
+                <div className="flex flex-wrap items-center gap-2 border-l border-slate-700 pl-2 bg-slate-800/40 p-1 rounded-lg border" title="Configure write-in lines and spacing for question types">
+                  {paperHasShort && <><span className="text-[10px] text-slate-400 font-bold uppercase">Short:</span>
+                  <input type="number" min={0} max={20} value={shortEmptyLines === 0 ? '' : shortEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setShortEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+                  {paperHasLong && <><span className="text-[10px] text-slate-400 font-bold uppercase">Long:</span>
+                  <input type="number" min={0} max={40} value={longEmptyLines === 0 ? '' : longEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setLongEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+                  {paperHasVocab && <><span className="text-[10px] text-slate-400 font-bold uppercase">Words:</span>
+                  <input type="number" min={0} max={15} value={wordsEmptyLines === 0 ? '' : wordsEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setWordsEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+                  {paperHasTranslation && <><span className="text-[10px] text-slate-400 font-bold uppercase">Trans:</span>
+                  <input type="number" min={0} max={20} value={translationEmptyLines === 0 ? '' : translationEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setTranslationEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+                  {paperHasMatch && <><span className="text-[10px] text-slate-400 font-bold uppercase">Match:</span>
+                  <input type="number" min={0} max={10} value={matchEmptyLines === 0 ? '' : matchEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setMatchEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+                  {paperHasOther && <><span className="text-[10px] text-slate-400 font-bold uppercase">Other:</span>
+                  <input type="number" min={0} max={20} value={otherEmptyLines === 0 ? '' : otherEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setOtherEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+                  <RangeControl label="Line Space" value={emptyLineSpacing} setValue={setEmptyLineSpacing} min={12} max={64} unit="px" width="w-16" />
+                </div>
+              )}
+
+              {selectedQuestionId && (
+                <div className="flex items-center gap-2 border-l border-indigo-500/50 pl-2 ml-1 bg-indigo-950/80 px-2 py-1 rounded border border-indigo-500/40">
+                  <span className="text-[10px] text-amber-300 font-black uppercase flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                    Q Lines:
+                  </span>
+                  <span className="text-[10px] text-slate-200 font-bold max-w-[100px] truncate" title={questions.find(q => q.id === selectedQuestionId)?.text || ''}>
+                    {questions.find(q => q.id === selectedQuestionId)?.type} ({questions.findIndex(q => q.id === selectedQuestionId) + 1})
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        const cur = getQuestionLines(selectedQuestionId);
+                        setQuestionLinesOverrides(prev => ({ ...prev, [selectedQuestionId]: Math.max(0, cur - 1) }));
+                      }}
+                      className="w-5 h-5 flex items-center justify-center bg-indigo-700 hover:bg-indigo-600 rounded text-white font-black text-xs"
+                    >-</button>
+                    <input
+                      type="number"
+                      min={0}
+                      max={30}
+                      value={getQuestionLines(selectedQuestionId) === 0 ? '' : getQuestionLines(selectedQuestionId)}
+                      placeholder="0"
+                      onChange={e => {
+                        const val = e.target.value === '' ? 0 : parseInt(e.target.value);
+                        setQuestionLinesOverrides(prev => ({ ...prev, [selectedQuestionId]: val }));
+                      }}
+                      className="w-10 text-center text-xs font-black text-amber-300 bg-slate-900 border border-indigo-400 rounded px-1 py-0.5 outline-none focus:border-amber-400"
+                    />
+                    <button
+                      onClick={() => {
+                        const cur = getQuestionLines(selectedQuestionId);
+                        setQuestionLinesOverrides(prev => ({ ...prev, [selectedQuestionId]: cur + 1 }));
+                      }}
+                      className="w-5 h-5 flex items-center justify-center bg-indigo-700 hover:bg-indigo-600 rounded text-white font-black text-xs"
+                    >+</button>
+                  </div>
+                  <button
+                    onClick={() => setSelectedQuestionId(null)}
+                    className="text-[10px] text-slate-400 hover:text-white underline ml-0.5"
+                    title="Deselect question"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
+              <button onClick={() => setBoardExamFormat(p => !p)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${boardExamFormat ? 'bg-amber-600/30 border-amber-500/50 text-amber-300' : 'bg-transparent border-slate-700 text-slate-400 hover:text-amber-300'}`} title="Pakistani Board Exam Format (Bilingual side-by-side rows)">
+                <FileText size={16} /> Board Format
+              </button>
+
+              <button
+                onClick={() => setShowAllTools(v => !v)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${
+                  showAllTools
+                    ? 'bg-indigo-600 border-indigo-400 text-white shadow-md'
+                    : 'bg-slate-900/80 hover:bg-slate-800 border-slate-700 text-indigo-300 hover:text-white'
+                }`}
+                title="Toggle all fine-tuning toolbar options"
+              >
+                <SlidersHorizontal size={15} /> {showAllTools ? 'Less Tools' : 'All Options'}
+                {showAllTools ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+            </div>
+
+            {/* Extended / All Options Toolbar (Revealed when showAllTools is true) */}
+            {showAllTools && (
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800 animate-fade-in">
+                {/* 1. Print & Output Modes */}
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800/50 rounded-lg border border-slate-700">
+                  <button onClick={() => setPrintBubbleSheet(!printBubbleSheet)} className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-bold uppercase whitespace-nowrap transition-all ${printBubbleSheet ? 'bg-emerald-600/20 border-emerald-600/50 text-emerald-400' : 'bg-transparent border-slate-700 text-slate-400'}`}>
+                    <Grid3X3 size={14} /> OMR
+                  </button>
+                  <button onClick={() => setPrintAnswerKey(!printAnswerKey)} className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-bold uppercase whitespace-nowrap transition-all ${printAnswerKey ? 'bg-emerald-600/20 border-emerald-600/50 text-emerald-400' : 'bg-transparent border-slate-700 text-slate-400'}`}>
+                    <CheckSquare size={14} /> Key
+                  </button>
+                  <button onClick={() => setSeparateSubjective(!separateSubjective)} className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-bold uppercase whitespace-nowrap transition-all ${separateSubjective ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-400' : 'bg-transparent border-slate-700 text-slate-400'}`} title="Print Subjective Part on Separate Page">
+                    <Layers size={14} /> Split
+                  </button>
+                </div>
+
+                {/* 2. Typography, Font Selection & Borders */}
+                <div className="flex flex-wrap items-center gap-2 px-2.5 py-1.5 bg-slate-800/50 rounded-lg border border-slate-700">
+                  <label className="flex items-center gap-1 text-[10px] font-black text-slate-300 uppercase">Font
+                    <select value={englishFont} onChange={e => setEnglishFont(e.target.value)} className="print-preview-select bg-slate-900 text-white text-xs rounded px-1.5 py-1">
+                      <option value="'Inter', sans-serif">Inter</option>
+                      <option value="Arial, sans-serif">Arial</option>
+                      <option value="'Times New Roman', serif">Times New Roman</option>
+                      <option value="Georgia, serif">Georgia</option>
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-1 text-[10px] font-black text-slate-300 uppercase">Urdu
+                    <select value={urduFont} onChange={e => setUrduFont(e.target.value)} className="print-preview-select bg-slate-900 text-white text-xs rounded px-1.5 py-1">
+                      <option value="'Noto Nastaliq Urdu', serif">Nastaliq</option>
+                      <option value="Arial, sans-serif">Arial</option>
+                      <option value="'Jameel Noori Nastaleeq', serif">Jameel Noori</option>
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-1 text-[10px] font-black text-slate-300 uppercase">Heading
+                    <select value={headingBorderMode} onChange={e => setHeadingBorderMode(e.target.value as 'subjective' | 'all' | 'none')} className="print-preview-select bg-slate-900 text-white text-xs rounded px-1.5 py-1">
+                      <option value="subjective">Subjective only</option>
+                      <option value="all">All headings</option>
+                      <option value="none">No borders</option>
+                    </select>
+                  </label>
+                  <button onClick={() => setBoldAllText(v => !v)} className={`px-2 py-1 rounded border text-[10px] font-black uppercase whitespace-nowrap ${boldAllText ? 'bg-indigo-600 border-indigo-400 text-white' : 'border-slate-700 text-slate-400'}`} title="Bold all paper text">
+                    <Bold size={13} className="inline mr-1" />All Bold
+                  </button>
+                  <button onClick={() => setObjectiveBold(v => !v)} className={`px-2 py-1 rounded border text-[10px] font-black uppercase whitespace-nowrap ${objectiveBold ? 'bg-indigo-600 border-indigo-400 text-white' : 'border-slate-700 text-slate-400'}`} title="Toggle bold objective questions">
+                    Objective {objectiveBold ? 'Bold' : 'Regular'}
+                  </button>
+                  <RangeControl label="Line Ht" value={lineHeight} setValue={setLineHeight} min={1} max={2.5} step={0.1} width="w-14" />
+                  <RangeControl label="Line Space" value={emptyLineSpacing} setValue={setEmptyLineSpacing} min={12} max={64} unit="px" width="w-16" />
+                  <RangeControl label="Q Gap" value={questionGap} setValue={setQuestionGap} min={0} max={40} width="w-14" />
+                  <RangeControl label="Opt Gap" value={verticalSpacing} setValue={setVerticalSpacing} min={0} max={16} width="w-14" />
+                  <RangeControl label="Margin" value={pagePadding} setValue={setPagePadding} min={0} max={40} unit="mm" width="w-16" />
+                  <RangeControl label="MCQ Cols" value={mcqColumns} setValue={setMcqColumns} min={1} max={4} width="w-14" />
+                  <RangeControl label="Vocab Cols" value={vocabGridCols} setValue={setVocabGridCols} min={2} max={4} width="w-14" />
+                  <button onClick={() => setShowMatchHeadings(v => !v)} className={`px-2 py-1 rounded border text-[10px] font-black uppercase whitespace-nowrap ${showMatchHeadings ? 'bg-indigo-600 border-indigo-400 text-white' : 'border-slate-700 text-slate-400'}`} title="Toggle Column A / Column B headers">Pair Headings</button>
+                  <RangeControl label="Pair Font" value={matchColumnFontSize} setValue={setMatchColumnFontSize} min={8} max={24} unit="pt" width="w-16" />
+                  <RangeControl label="Match Box Ht" value={matchColumnMinHeight} setValue={setMatchColumnMinHeight} min={20} max={120} unit="px" width="w-16" />
+                  <RangeControl label="Match Gap" value={matchColumnGap} setValue={setMatchColumnGap} min={0} max={100} unit="px" width="w-16" />
+                  <RangeControl label="Match Width" value={matchTableWidth} setValue={setMatchTableWidth} min={40} max={100} unit="%" width="w-16" />
+                  <RangeControl label="Img Zoom" value={imageScale} setValue={setImageScale} min={0.5} max={3} step={0.1} width="w-16" />
+                </div>
+
+                {/* 3. Header Visibility & Watermark */}
+                <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
+                  <button onClick={() => setHeaderVisibility(v => ({ ...v, logo: !v.logo }))} className={`p-2 rounded border ${headerVisibility.logo ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-300' : 'bg-transparent border-slate-700 text-slate-500'}`} title="Logo">
+                    <ImageIcon size={18} />
+                  </button>
+                  <button onClick={() => setHeaderVisibility(v => ({ ...v, marksBox: !v.marksBox }))} className={`p-2 rounded border ${headerVisibility.marksBox ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-300' : 'bg-transparent border-slate-700 text-slate-500'}`} title="Marks Box">
+                    <Square size={18} />
+                  </button>
+                  <div className="w-px h-5 bg-slate-700"></div>
+                  <button onClick={cycleWatermark} className={`p-2 rounded border ${watermark !== 'None' ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-300' : 'bg-transparent border-slate-700 text-slate-500'}`} title={`Watermark: ${watermark}`}>
+                    <Globe size={18} />
+                  </button>
+                  {watermark !== 'None' && (
+                    <>
+                      <RangeControl label="Opacity" value={watermarkOpacity} setValue={setWatermarkOpacity} min={0.05} max={1.0} step={0.05} width="w-16" />
+                      <RangeControl label="Size" value={watermarkSize} setValue={setWatermarkSize} min={20} max={200} step={10} width="w-16" />
+                    </>
+                  )}
+                </div>
               </div>
             )}
-            <button onClick={() => setBoardExamFormat(p => !p)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${boardExamFormat ? 'bg-amber-600/30 border-amber-500/50 text-amber-300' : 'bg-transparent border-slate-700 text-slate-400 hover:text-amber-300'}`} title="Pakistani Board Exam Format (Bilingual side-by-side rows)">
-              <FileText size={16} /> Board Format
-            </button>
           </div>
-
-          {/* 4. Typography, spacing, and MCQ layout */}
-          <div className="flex flex-wrap items-center gap-2 px-2.5 py-1.5 bg-slate-800/50 rounded-lg border border-slate-700">
-            <label className="flex items-center gap-1 text-[10px] font-black text-slate-300 uppercase">Font
-              <select value={englishFont} onChange={e => setEnglishFont(e.target.value)} className="print-preview-select bg-slate-900 text-white text-xs rounded px-1.5 py-1">
-                <option value="'Inter', sans-serif">Inter</option>
-                <option value="Arial, sans-serif">Arial</option>
-                <option value="'Times New Roman', serif">Times New Roman</option>
-                <option value="Georgia, serif">Georgia</option>
-              </select>
-            </label>
-            <label className="flex items-center gap-1 text-[10px] font-black text-slate-300 uppercase">Urdu
-              <select value={urduFont} onChange={e => setUrduFont(e.target.value)} className="print-preview-select bg-slate-900 text-white text-xs rounded px-1.5 py-1">
-                <option value="'Noto Nastaliq Urdu', serif">Nastaliq</option>
-                <option value="Arial, sans-serif">Arial</option>
-                <option value="'Jameel Noori Nastaleeq', serif">Jameel Noori</option>
-              </select>
-            </label>
-            <label className="flex items-center gap-1 text-[10px] font-black text-slate-300 uppercase">Heading
-              <select value={headingBorderMode} onChange={e => setHeadingBorderMode(e.target.value as 'subjective' | 'all' | 'none')} className="print-preview-select bg-slate-900 text-white text-xs rounded px-1.5 py-1">
-                <option value="subjective">Subjective only</option>
-                <option value="all">All headings</option>
-                <option value="none">No borders</option>
-              </select>
-            </label>
-            <button onClick={() => setBoldAllText(v => !v)} className={`px-2 py-1 rounded border text-[10px] font-black uppercase whitespace-nowrap ${boldAllText ? 'bg-indigo-600 border-indigo-400 text-white' : 'border-slate-700 text-slate-400'}`} title="Bold all paper text">
-              <Bold size={13} className="inline mr-1" />All Bold
-            </button>
-            <button onClick={() => setObjectiveBold(v => !v)} className={`px-2 py-1 rounded border text-[10px] font-black uppercase whitespace-nowrap ${objectiveBold ? 'bg-indigo-600 border-indigo-400 text-white' : 'border-slate-700 text-slate-400'}`} title="Toggle bold objective questions">
-              Objective {objectiveBold ? 'Bold' : 'Regular'}
-            </button>
-            <RangeControl label="Line" value={lineHeight} setValue={setLineHeight} min={1} max={2.5} step={0.1} width="w-14" />
-            <RangeControl label="Q Gap" value={questionGap} setValue={setQuestionGap} min={0} max={40} width="w-14" />
-            <RangeControl label="Opt Gap" value={verticalSpacing} setValue={setVerticalSpacing} min={0} max={16} width="w-14" />
-            <RangeControl label="Margin" value={pagePadding} setValue={setPagePadding} min={0} max={40} unit="mm" width="w-16" />
-            <RangeControl label="MCQ Cols" value={mcqColumns} setValue={setMcqColumns} min={1} max={4} width="w-14" />
-            <RangeControl label="Vocab Cols" value={vocabGridCols} setValue={setVocabGridCols} min={2} max={4} width="w-14" />
-            <button onClick={() => setShowMatchHeadings(v => !v)} className={`px-2 py-1 rounded border text-[10px] font-black uppercase whitespace-nowrap ${showMatchHeadings ? 'bg-indigo-600 border-indigo-400 text-white' : 'border-slate-700 text-slate-400'}`} title="Toggle Column A / Column B headers">Pair Headings</button>
-            <RangeControl label="Pair Font" value={matchColumnFontSize} setValue={setMatchColumnFontSize} min={8} max={24} unit="pt" width="w-16" />
-            <RangeControl label="Match Box Ht" value={matchColumnMinHeight} setValue={setMatchColumnMinHeight} min={20} max={120} unit="px" width="w-16" />
-            <RangeControl label="Match Gap" value={matchColumnGap} setValue={setMatchColumnGap} min={0} max={100} unit="px" width="w-16" />
-            <RangeControl label="Match Width" value={matchTableWidth} setValue={setMatchTableWidth} min={40} max={100} unit="%" width="w-16" />
-            <RangeControl label="Img Zoom" value={imageScale} setValue={setImageScale} min={0.5} max={3} step={0.1} width="w-16" />
-          </div>
-
-          {/* 4. Visibility & Watermark */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
-            <button onClick={() => setHeaderVisibility(v => ({ ...v, logo: !v.logo }))} className={`p-2 rounded border ${headerVisibility.logo ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-300' : 'bg-transparent border-slate-700 text-slate-500'}`} title="Logo">
-              <ImageIcon size={18} />
-            </button>
-            <button onClick={() => setHeaderVisibility(v => ({ ...v, marksBox: !v.marksBox }))} className={`p-2 rounded border ${headerVisibility.marksBox ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-300' : 'bg-transparent border-slate-700 text-slate-500'}`} title="Marks Box">
-              <Square size={18} />
-            </button>
-            <div className="w-px h-5 bg-slate-700"></div>
-            <button onClick={cycleWatermark} className={`p-2 rounded border ${watermark !== 'None' ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-300' : 'bg-transparent border-slate-700 text-slate-500'}`} title={`Watermark: ${watermark}`}>
-              <Globe size={18} />
-            </button>
-            {watermark !== 'None' && (
-              <>
-                <RangeControl label="Opacity" value={watermarkOpacity} setValue={setWatermarkOpacity} min={0.05} max={1.0} step={0.05} width="w-16" />
-                <RangeControl label="Size" value={watermarkSize} setValue={setWatermarkSize} min={20} max={200} step={10} width="w-16" />
-              </>
-            )}
-          </div>
-
-        </div>}
+        )}
       </header>
 
       {/* PAPER CANVAS */}
@@ -2070,7 +2115,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     return (
                       <tr className="print:break-inside-avoid">
                         <td colSpan={languageMode === 'Bilingual' ? 4 : 2} className="px-2 pt-2 pb-4">
-                          <div className="flex flex-col gap-6">
+                          <div className="flex flex-col" style={{ gap: `${emptyLineSpacing}px` }}>
                             {Array.from({ length: linesCount }).map((_, lIdx) => (
                               <div key={lIdx} className="border-b border-gray-400 print:border-black w-full h-[1px]" />
                             ))}
@@ -2727,7 +2772,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     const linesCount = calculateLinesForQuestion(q, sec);
                     if (linesCount <= 0) return null;
                     return (
-                      <div className="flex flex-col gap-6 pt-3 pb-4 print:break-inside-avoid w-full px-2">
+                      <div className="flex flex-col pt-3 pb-4 print:break-inside-avoid w-full px-2" style={{ gap: `${emptyLineSpacing}px` }}>
                         {Array.from({ length: linesCount }).map((_, lIdx) => (
                           <div key={lIdx} className="border-b border-gray-400 print:border-black w-full h-[1px]" />
                         ))}

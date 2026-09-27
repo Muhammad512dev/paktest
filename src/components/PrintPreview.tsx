@@ -384,11 +384,28 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [bilingualInline, setBilingualInline] = useState(true);
   const [boardExamFormat, setBoardExamFormat] = useState(false); // Default to off as requested
   const [matchColumnFontSize, setMatchColumnFontSize] = useState<number>(12); // Default 12pt for Match Columns and item pairs
+  const [matchEmptyLines, setMatchEmptyLines] = useState<number>(0);
+  const [matchColumnMinHeight, setMatchColumnMinHeight] = useState<number>(44); // Default 44px min cell height
   const [showQuestionMarks, setShowQuestionMarks] = useState(paper.showQuestionMarks ?? true);
   const [printViewMode, setPrintViewMode] = useState<'both' | 'objective' | 'subjective'>('both');
   useEffect(() => {
     setShowQuestionMarks(paper.showQuestionMarks ?? true);
   }, [paper.showQuestionMarks]);
+
+  // Interaction State
+  const [isToolbarOpen, setIsToolbarOpen] = useState(true);
+  const [isManualEdit, setIsManualEdit] = useState(false);
+  const [questions, setQuestions] = useState<Question[]>(paper.questions);
+  const [removedSections, setRemovedSections] = useState<Set<string>>(new Set());
+  const [removedInfoFields, setRemovedInfoFields] = useState<Set<string>>(new Set());
+
+  // Computed: which question type categories are present in this paper
+  const paperHasLong = useMemo(() => questions.some(q => q.type?.toLowerCase().includes('long') || q.type?.toLowerCase().includes('essay') || q.type?.toLowerCase().includes('composition') || q.type?.toLowerCase().includes('letter') || q.type?.toLowerCase().includes('story')), [questions]);
+  const paperHasVocab = useMemo(() => questions.some(q => isVocabQuestionType(q.type)), [questions]);
+  const paperHasTranslation = useMemo(() => questions.some(q => q.type?.toLowerCase().includes('translat') || q.type?.toLowerCase().includes('paragraph') || q.type?.toLowerCase().includes('comprehension')), [questions]);
+  const paperHasShort = useMemo(() => questions.some(q => q.type?.toLowerCase().includes('short')), [questions]);
+  const paperHasMatch = useMemo(() => questions.some(q => q.type === 'Match Columns'), [questions]);
+  const paperHasOther = useMemo(() => questions.some(q => !isMCQType(q.type) && !q.type?.toLowerCase().includes('long') && !q.type?.toLowerCase().includes('essay') && !q.type?.toLowerCase().includes('composition') && !q.type?.toLowerCase().includes('letter') && !q.type?.toLowerCase().includes('story') && !isVocabQuestionType(q.type) && !q.type?.toLowerCase().includes('translat') && !q.type?.toLowerCase().includes('paragraph') && !q.type?.toLowerCase().includes('comprehension') && !q.type?.toLowerCase().includes('short') && q.type !== 'Match Columns'), [questions]);
 
   // Printing Options & Student Answer Sheet Write-in Lines
   const [printSyllabus, setPrintSyllabus] = useState(false);
@@ -401,13 +418,6 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [wordsEmptyLines, setWordsEmptyLines] = useState<number>(0);
   const [translationEmptyLines, setTranslationEmptyLines] = useState<number>(0);
   const [otherEmptyLines, setOtherEmptyLines] = useState<number>(0);
-
-  // Interaction State
-  const [isToolbarOpen, setIsToolbarOpen] = useState(true);
-  const [isManualEdit, setIsManualEdit] = useState(false);
-  const [questions, setQuestions] = useState<Question[]>(paper.questions);
-  const [removedSections, setRemovedSections] = useState<Set<string>>(new Set());
-  const [removedInfoFields, setRemovedInfoFields] = useState<Set<string>>(new Set());
 
   // Derived show answers logic
   const showAnswersInline = answerKeyDisplay === 'inline';
@@ -1125,12 +1135,14 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                   setWordsEmptyLines(2);
                   setTranslationEmptyLines(4);
                   setOtherEmptyLines(3);
+                  setMatchEmptyLines(0);
                 } else {
                   setShortEmptyLines(0);
                   setLongEmptyLines(0);
                   setWordsEmptyLines(0);
                   setTranslationEmptyLines(0);
                   setOtherEmptyLines(0);
+                  setMatchEmptyLines(0);
                 }
               }}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${studentAnswerLinesEnabled ? 'bg-indigo-600 border-indigo-400 text-white shadow-md' : 'bg-transparent border-slate-700 text-slate-400 hover:text-white'}`}
@@ -1139,14 +1151,18 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               <Edit3 size={15} /> Student Lines {studentAnswerLinesEnabled ? 'ON' : 'OFF'}
             </button>
             <div className="flex items-center gap-2 border-l border-slate-700 pl-2 ml-1" title="Configure write-in lines for students to solve questions directly on paper">
-              <span className="text-[10px] text-slate-400 font-bold uppercase">Short:</span>
-              <input type="number" min={0} max={20} value={shortEmptyLines === 0 ? '' : shortEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setShortEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" />
-              <span className="text-[10px] text-slate-400 font-bold uppercase">Long:</span>
-              <input type="number" min={0} max={40} value={longEmptyLines === 0 ? '' : longEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setLongEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" />
-              <span className="text-[10px] text-slate-400 font-bold uppercase">Words:</span>
-              <input type="number" min={0} max={15} value={wordsEmptyLines === 0 ? '' : wordsEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setWordsEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" />
-              <span className="text-[10px] text-slate-400 font-bold uppercase">Trans:</span>
-              <input type="number" min={0} max={20} value={translationEmptyLines === 0 ? '' : translationEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setTranslationEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" />
+              {paperHasShort && <><span className="text-[10px] text-slate-400 font-bold uppercase">Short:</span>
+              <input type="number" min={0} max={20} value={shortEmptyLines === 0 ? '' : shortEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setShortEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+              {paperHasLong && <><span className="text-[10px] text-slate-400 font-bold uppercase">Long:</span>
+              <input type="number" min={0} max={40} value={longEmptyLines === 0 ? '' : longEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setLongEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+              {paperHasVocab && <><span className="text-[10px] text-slate-400 font-bold uppercase">Words:</span>
+              <input type="number" min={0} max={15} value={wordsEmptyLines === 0 ? '' : wordsEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setWordsEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+              {paperHasTranslation && <><span className="text-[10px] text-slate-400 font-bold uppercase">Trans:</span>
+              <input type="number" min={0} max={20} value={translationEmptyLines === 0 ? '' : translationEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setTranslationEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+              {paperHasMatch && <><span className="text-[10px] text-slate-400 font-bold uppercase">Match:</span>
+              <input type="number" min={0} max={10} value={matchEmptyLines === 0 ? '' : matchEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setMatchEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+              {paperHasOther && <><span className="text-[10px] text-slate-400 font-bold uppercase">Other:</span>
+              <input type="number" min={0} max={20} value={otherEmptyLines === 0 ? '' : otherEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setOtherEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
             </div>
             <button onClick={() => setBoardExamFormat(p => !p)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${boardExamFormat ? 'bg-amber-600/30 border-amber-500/50 text-amber-300' : 'bg-transparent border-slate-700 text-slate-400 hover:text-amber-300'}`} title="Pakistani Board Exam Format (Bilingual side-by-side rows)">
               <FileText size={16} /> Board Format
@@ -1190,6 +1206,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             <RangeControl label="MCQ Cols" value={mcqColumns} setValue={setMcqColumns} min={1} max={4} width="w-14" />
             <RangeControl label="Vocab Cols" value={vocabGridCols} setValue={setVocabGridCols} min={2} max={4} width="w-14" />
             <RangeControl label="Pair Font" value={matchColumnFontSize} setValue={setMatchColumnFontSize} min={8} max={24} unit="pt" width="w-16" />
+            <RangeControl label="Match Box Ht" value={matchColumnMinHeight} setValue={setMatchColumnMinHeight} min={20} max={120} unit="px" width="w-16" />
             <RangeControl label="Img Zoom" value={imageScale} setValue={setImageScale} min={0.5} max={3} step={0.1} width="w-16" />
           </div>
 
@@ -1852,6 +1869,18 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       </td>
                     )}
                   </tr>
+                  {/* Match Columns blank lines for student answers */}
+                  {q.type === 'Match Columns' && matchEmptyLines > 0 && (
+                    <tr className="print:break-inside-avoid">
+                      <td colSpan={languageMode === 'Bilingual' ? 4 : 2} className="px-2 pt-2 pb-4">
+                        <div className="flex flex-col gap-6">
+                          {Array.from({ length: matchEmptyLines }).map((_, lIdx) => (
+                            <div key={lIdx} className="border-b border-gray-400 print:border-black w-full h-[1px]" />
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                   {!isMCQType(q.type) && q.type !== 'Match Columns' && (() => {
                     let linesCount = 0;
                     if (sec.blankLines && sec.blankLines > 0) {
@@ -2464,6 +2493,13 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                   })()}
 
                   {/* MATCH COLUMNS TABLE RENDERING WITH CONFIGURABLE PAIR FONT SIZE */}
+                  {q.type === 'Match Columns' && matchEmptyLines > 0 && (
+                    <div className="flex flex-col gap-6 pt-3 pb-4 print:break-inside-avoid w-full px-2">
+                      {Array.from({ length: matchEmptyLines }).map((_, lIdx) => (
+                        <div key={lIdx} className="border-b border-gray-400 print:border-black w-full h-[1px]" />
+                      ))}
+                    </div>
+                  )}
                   {q.type === 'Match Columns' && q.matchingPairs && (
                     <div className="mt-4 mx-1 md:mx-2 break-inside-avoid">
                       <div className="grid grid-cols-2 gap-8 md:gap-12">
@@ -2474,7 +2510,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                           </div>
                           <div className="divide-y-2 divide-black bg-white">
                             {q.matchingPairs.map((pair, i) => (
-                              <div key={`left-${i}`} className="p-2.5 flex gap-3 items-center min-h-[44px]">
+                              <div key={`left-${i}`} className="p-2.5 flex gap-3 items-center" style={{ minHeight: `${matchColumnMinHeight}px` }}>
                                 <span className="font-black shrink-0" style={{ fontSize: `${matchColumnFontSize}px`, width: '24px' }}>({i + 1})</span>
                                 <div className={`flex-1 flex ${bilingualInline ? 'flex-col gap-1' : 'flex-col'}`} style={{ fontSize: `${matchColumnFontSize}px` }}>
                                   {(languageMode === 'Bilingual' || languageMode === 'English') && pair.left && (q.medium !== 'Urdu' || languageMode === 'English') &&
@@ -2499,7 +2535,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                             {[...q.matchingPairs]
                               .sort((a, b) => (showAnswersInline ? 0 : (a.right || '').localeCompare(b.right || ''))) // If showing answers, don't shuffle
                               .map((pair, i) => (
-                                <div key={`right-${i}`} className={`p-2.5 flex gap-3 items-center min-h-[44px] ${showAnswersInline ? 'bg-green-50' : ''}`}>
+                                <div key={`right-${i}`} className={`p-2.5 flex gap-3 items-center ${showAnswersInline ? 'bg-green-50' : ''}`} style={{ minHeight: `${matchColumnMinHeight}px` }}>
                                   <span className="font-black shrink-0" style={{ fontSize: `${matchColumnFontSize}px`, width: '24px' }}>({String.fromCharCode(65 + i)})</span>
                                   <div className={`flex-1 flex ${bilingualInline ? 'flex-col gap-1' : 'flex-col'}`} style={{ fontSize: `${matchColumnFontSize}px` }}>
                                     {(languageMode === 'Bilingual' || languageMode === 'English') && pair.right && (q.medium !== 'Urdu' || languageMode === 'English') &&

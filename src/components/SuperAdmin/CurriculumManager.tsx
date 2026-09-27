@@ -379,13 +379,18 @@ const CurriculumManager: React.FC = () => {
       if (editingItem.type === 'chapters') { data.syllabusId = selSyllabusId; data.classId = selClassId; data.subjectId = multiSelSubjectIds[0]; }
       if (editingItem.type === 'topics') data.chapterId = multiSelChapterIds[0];
       const updateActions: Record<string, (id: string, value: any) => Promise<any>> = { syllabuses: updateSyllabus, classes: updateClass, subjects: updateSubject, chapters: updateChapter, topics: updateTopic, sources: updateSource, 'question-types': updateQuestionType };
-      await updateActions[editingItem.type](editingItem.id, data);
-      await refreshData();
-      setIsAddModalOpen(false);
-      setEditingItem(null);
-      setNewItemName('');
-      setNewItemDesc('');
-      setNewItemImage(null);
+      try {
+        await updateActions[editingItem.type](editingItem.id, data);
+        await refreshData();
+        setIsAddModalOpen(false);
+        setEditingItem(null);
+        setNewItemName('');
+        setNewItemDesc('');
+        setNewItemImage(null);
+      } catch (err: any) {
+        console.error('Failed to update item:', err);
+        alert(`Update failed: ${err?.message || 'Unknown error. The name may already exist at this level.'}`);
+      }
       return;
     }
     
@@ -396,10 +401,11 @@ const CurriculumManager: React.FC = () => {
         await addClass({ id: `cls_${timestamp}_${idx}`, name: newItemName, syllabusId: sId, logo: logoStr });
       }
     } else if (activeTab === 'SUBJECT') {
+      if (!selSyllabusId) { alert('Please select a Board first.'); return; }
+      if (multiSelClassIds.length === 0) { alert('Please select at least one Grade first.'); return; }
       for (const [idx, cId] of multiSelClassIds.entries()) {
         const parentClass = classes.find(c => c.id === cId);
-        /* Fixed: Removed 'originalId' as it is not a property of Subject type */
-        await addSubject({ id: `sub_${timestamp}_${idx}`, name: newItemName, icon: Book, classId: cId, syllabusId: parentClass?.syllabusId || selSyllabusId, logo: logoStr });
+        await addSubject({ id: `sub_${timestamp}_${idx}`, name: newItemName, classId: cId, syllabusId: parentClass?.syllabusId || selSyllabusId, logo: logoStr });
       }
     } else if (activeTab === 'CHAPTER') {
       for (const [idx, sId] of multiSelSubjectIds.entries()) {

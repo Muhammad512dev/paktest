@@ -38,4 +38,4 @@ Disallow: /billing
 Crawl-delay: 1
 
 # Sitemap URL (Replace your-domain.com with your actual public domain)
-Sitemap: https://pakparcha.com/sitemap.xml
+Sitemap: https://pakparchaai.com/sitemap.xml

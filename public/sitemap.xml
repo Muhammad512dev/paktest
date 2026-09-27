@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <!-- Homepage -->
   <url>
-    <loc>https://pakparcha.com/</loc>
+    <loc>https://pakparchaai.com/</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
@@ -10,55 +10,55 @@
 
   <!-- Core Public Pages -->
   <url>
-    <loc>https://pakparcha.com/pricing</loc>
+    <loc>https://pakparchaai.com/pricing</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://pakparcha.com/about</loc>
+    <loc>https://pakparchaai.com/about</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://pakparcha.com/blog</loc>
+    <loc>https://pakparchaai.com/blog</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://pakparcha.com/notes</loc>
+    <loc>https://pakparchaai.com/notes</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://pakparcha.com/lesson_plans</loc>
+    <loc>https://pakparchaai.com/lesson_plans</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://pakparcha.com/books</loc>
+    <loc>https://pakparchaai.com/books</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://pakparcha.com/past_papers</loc>
+    <loc>https://pakparchaai.com/past_papers</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://pakparcha.com/quiz</loc>
+    <loc>https://pakparchaai.com/quiz</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://pakparcha.com/contact</loc>
+    <loc>https://pakparchaai.com/contact</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -66,25 +66,25 @@
 
   <!-- Legal & Policy Pages (Mandatory for Ad Networks) -->
   <url>
-    <loc>https://pakparcha.com/privacy</loc>
+    <loc>https://pakparchaai.com/privacy</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://pakparcha.com/terms</loc>
+    <loc>https://pakparchaai.com/terms</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://pakparcha.com/disclaimer</loc>
+    <loc>https://pakparchaai.com/disclaimer</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://pakparcha.com/refund</loc>
+    <loc>https://pakparchaai.com/refund</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>

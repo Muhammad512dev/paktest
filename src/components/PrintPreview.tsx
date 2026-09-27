@@ -1,4 +1,4 @@
-﻿
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   X, Printer, Type, Layout, Settings2,
@@ -373,8 +373,10 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [canvasScale, setCanvasScale] = useState(1);
 
   // Student Info Style
-  const [studentInfoStyle, setStudentInfoStyle] = useState<'Standard' | 'Grid'>('Standard');
+  const [studentInfoStyle, setStudentInfoStyle] = useState<'Standard' | 'Grid' | 'Minimal' | 'Board'>('Standard');
   const [imageScale, setImageScale] = useState<number>(1.0);
+  const [layoutTarget, setLayoutTarget] = useState<'All' | 'Objective' | 'Subjective'>('All');
+  const [showMatchHeadings, setShowMatchHeadings] = useState<boolean>(true);
 
   // MCQ Grid Controls: Default 2 columns for Board format / Bilingual mode, otherwise 4
   const [mcqColumns, setMcqColumns] = useState<number>(languageMode === 'Bilingual' ? 2 : 4);
@@ -383,7 +385,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [questionGap, setQuestionGap] = useState<number>(0);
   const [bilingualInline, setBilingualInline] = useState(true);
   const [boardExamFormat, setBoardExamFormat] = useState(false); // Default to off as requested
-  const [matchColumnFontSize, setMatchColumnFontSize] = useState<number>(12); // Default 12pt for Match Columns and item pairs
+  const [matchColumnFontSize, setMatchColumnFontSize] = useState<number>(16); // Default 16pt for Match Columns and item pairs
   const [matchEmptyLines, setMatchEmptyLines] = useState<number>(0);
   const [matchColumnMinHeight, setMatchColumnMinHeight] = useState<number>(44); // Default 44px min cell height
   const [matchColumnGap, setMatchColumnGap] = useState<number>(32); // Gap between Column A and Column B in px
@@ -484,10 +486,10 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [headerVisibility, setHeaderVisibility] = useState({
     logo: true,
     schoolName: true,
-    examTitle: true,
+    examTitle: false,
     marksBox: true,
-    sessionTag: true,
-    assessmentTag: true,
+    sessionTag: false,
+    assessmentTag: false,
     studentInfo: true,
   });
 
@@ -1103,20 +1105,25 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               <option value="Urdu">Urdu</option>
             </select>
             <div className="w-px h-5 bg-slate-700"></div>
-            <select value={printViewMode} onChange={e => setPrintViewMode(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-28">
+            <select value={printViewMode} onChange={e => setPrintViewMode(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-black text-white outline-none w-28" title="View Filter">
               <option value="both">Full Paper</option>
               <option value="objective">Objective Only</option>
               <option value="subjective">Essay Type Only</option>
             </select>
             <div className="w-px h-5 bg-slate-700"></div>
+            <select value={layoutTarget} onChange={e => setLayoutTarget(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-black text-indigo-300 outline-none w-24" title="Layout Mode Target">
+              <option value="All">All Paper</option>
+              <option value="Objective">Objective</option>
+              <option value="Subjective">Subjective</option>
+            </select>
             <button
               onClick={() => setLayoutMode(m => m === 'DoubleColumn' ? 'Standard' : 'DoubleColumn')}
               className={`p-2 rounded ${layoutMode === 'DoubleColumn' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-              title={layoutMode === 'DoubleColumn' ? 'Double Print (2 Columns)' : 'Single Print (1 Column)'}
+              title={layoutMode === 'DoubleColumn' ? 'Double Column Layout' : 'Single Column Layout'}
             >
               <Columns size={18} />
             </button>
-            <button onClick={() => setIsGridView(!isGridView)} className={`p-2 rounded ${isGridView ? 'bg-indigo-600 text-white' : 'text-slate-400'}`} title="Grid Mode">
+            <button onClick={() => setIsGridView(!isGridView)} className={`p-2 rounded ${isGridView ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Grid Table Mode">
               <TableIcon size={18} />
             </button>
             <button
@@ -1169,9 +1176,15 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
 
           {/* 3. Extras — kept directly after font-size controls on the first toolbar row */}
           <div className="flex flex-wrap items-center gap-2 shrink-0 border-l border-slate-700 pl-2">
-            <button onClick={() => setStudentInfoStyle(prev => prev === 'Standard' ? 'Grid' : 'Standard')} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${studentInfoStyle === 'Grid' ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-400' : 'bg-transparent border-slate-700 text-slate-400'}`} title="Student Grid Header">
-              <UserSquare2 size={16} /> <span className="hidden sm:inline">Header</span> Grid
-            </button>
+            <div className="flex items-center gap-1 bg-slate-900/80 border border-slate-700 rounded-lg px-2 py-1">
+              <UserSquare2 size={15} className="text-indigo-400 shrink-0" />
+              <select value={studentInfoStyle} onChange={e => setStudentInfoStyle(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-bold text-slate-200 outline-none">
+                <option value="Standard">Header: Dotted</option>
+                <option value="Grid">Header: Boxed</option>
+                <option value="Minimal">Header: Minimal</option>
+                <option value="Board">Header: Board</option>
+              </select>
+            </div>
             <button onClick={() => setPrintBubbleSheet(!printBubbleSheet)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${printBubbleSheet ? 'bg-emerald-600/20 border-emerald-600/50 text-emerald-400' : 'bg-transparent border-slate-700 text-slate-400'}`}>
               <Grid3X3 size={16} /> OMR
             </button>
@@ -1310,6 +1323,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             <RangeControl label="Margin" value={pagePadding} setValue={setPagePadding} min={0} max={40} unit="mm" width="w-16" />
             <RangeControl label="MCQ Cols" value={mcqColumns} setValue={setMcqColumns} min={1} max={4} width="w-14" />
             <RangeControl label="Vocab Cols" value={vocabGridCols} setValue={setVocabGridCols} min={2} max={4} width="w-14" />
+            <button onClick={() => setShowMatchHeadings(v => !v)} className={`px-2 py-1 rounded border text-[10px] font-black uppercase whitespace-nowrap ${showMatchHeadings ? 'bg-indigo-600 border-indigo-400 text-white' : 'border-slate-700 text-slate-400'}`} title="Toggle Column A / Column B headers">Pair Headings</button>
             <RangeControl label="Pair Font" value={matchColumnFontSize} setValue={setMatchColumnFontSize} min={8} max={24} unit="pt" width="w-16" />
             <RangeControl label="Match Box Ht" value={matchColumnMinHeight} setValue={setMatchColumnMinHeight} min={20} max={120} unit="px" width="w-16" />
             <RangeControl label="Match Gap" value={matchColumnGap} setValue={setMatchColumnGap} min={0} max={100} unit="px" width="w-16" />
@@ -1483,6 +1497,80 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                           </div>
                         </div>
                       </div>
+                    ) : studentInfoStyle === 'Minimal' ? (
+                      /* MINIMALIST HEADER */
+                      <div className="border-t-2 border-b-2 border-black py-2.5 my-2 space-y-2 text-xs">
+                        <div className="flex justify-between items-center gap-4">
+                          <div className="flex items-center gap-1.5 flex-1">
+                            <span className="font-black uppercase text-[9px] text-slate-600">Student Name:</span>
+                            <span className="border-b border-black flex-1 min-h-[14px]"></span>
+                          </div>
+                          <div className="flex items-center gap-1.5 w-36">
+                            <span className="font-black uppercase text-[9px] text-slate-600">Roll No:</span>
+                            <span className="border-b border-black flex-1 min-h-[14px]"></span>
+                          </div>
+                          <div className="flex items-center gap-1.5 w-28">
+                            <span className="font-black uppercase text-[9px] text-slate-600">Class:</span>
+                            <span className="font-bold text-[11px]">{paper.classLevel}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 w-24">
+                            <span className="font-black uppercase text-[9px] text-slate-600">Sec:</span>
+                            <span className="border-b border-black flex-1 min-h-[14px]"></span>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center gap-4 pt-1 border-t border-dotted border-slate-300">
+                          <div className="flex items-center gap-1.5 flex-1">
+                            <span className="font-black uppercase text-[9px] text-slate-600">Subject:</span>
+                            <span className="font-bold text-[11px]">{paper.subject}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 w-36">
+                            <span className="font-black uppercase text-[9px] text-slate-600">Time:</span>
+                            <span className="font-bold text-[11px]">{paper.durationMinutes} Mins</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 w-28">
+                            <span className="font-black uppercase text-[9px] text-slate-600">Date:</span>
+                            <span className="font-bold text-[11px]">{paper.examDate || '___/___/20__'}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 w-24">
+                            <span className="font-black uppercase text-[9px] text-slate-600">Marks:</span>
+                            <span className="font-black text-[11px]">{calculatedTotalMarks}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : studentInfoStyle === 'Board' ? (
+                      /* CLASSIC BOARD EXAM HEADER */
+                      <div className="border-2 border-black rounded-lg p-3 my-2 bg-slate-50/40">
+                        <div className="flex justify-between items-center gap-6">
+                          <div className="flex-1 space-y-1.5">
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+                              <div className="flex gap-2 items-baseline">
+                                <span className="font-black uppercase text-[9px] text-slate-600">Name:</span>
+                                <span className="border-b border-black flex-1 min-h-[14px]"></span>
+                              </div>
+                              <div className="flex gap-2 items-baseline">
+                                <span className="font-black uppercase text-[9px] text-slate-600">Grade:</span>
+                                <span className="font-bold">{paper.classLevel}</span>
+                              </div>
+                              <div className="flex gap-2 items-baseline">
+                                <span className="font-black uppercase text-[9px] text-slate-600">Subject:</span>
+                                <span className="font-bold">{paper.subject}</span>
+                              </div>
+                              <div className="flex gap-2 items-baseline">
+                                <span className="font-black uppercase text-[9px] text-slate-600">Timing:</span>
+                                <span className="font-bold">{paper.durationMinutes} Mins | {paper.examDate || '___/___/20__'}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="border-2 border-black p-2 rounded text-center shrink-0 w-36 bg-white">
+                            <span className="block text-[8px] font-black uppercase tracking-widest text-slate-600 mb-1">Roll Number</span>
+                            <div className="grid grid-cols-6 border border-black divide-x divide-black h-7">
+                              {Array.from({ length: 6 }).map((_, rIdx) => (
+                                <div key={rIdx} className="h-full"></div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     ) : (
                       /* STANDARD LIST HEADER */
                       <div className="grid grid-cols-3 print-header-grid gap-y-3 gap-x-6 sm:gap-x-8 border-t border-slate-200 pt-4 relative">
@@ -1535,10 +1623,10 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               )}
 
               {/* COMBINED WRAPPER FOR GLOBAL COLUMNS */}
-              <div className={`${layoutMode === 'DoubleColumn' && !isGridView ? 'columns-2 gap-8' : ''}`}>
+              <div className={`${layoutMode === 'DoubleColumn' && layoutTarget === 'All' && !isGridView ? 'columns-2 gap-8' : ''}`}>
                 {/* PART I: OBJECTIVE */}
               {objectiveSections.length > 0 && (
-                <div className="mb-8">
+                <div className={`mb-8 ${layoutMode === 'DoubleColumn' && layoutTarget === 'Objective' && !isGridView ? 'columns-2 gap-8' : ''}`}>
                   {showPartHeadings && (
                     <div className={`text-center mb-3 pb-1 ${headingBorderClass('Objective')}`}>
                       {boardExamFormat ? (
@@ -1571,7 +1659,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               {/* PART II: SUBJECTIVE (With explicit page break logic) */}
               {subjectiveSections.length > 0 && (
                 <div
-                  className={`pt-4 ${separateSubjective ? 'break-before-page' : 'mt-4 border-t-2 border-dashed border-slate-300'}`}
+                  className={`pt-4 ${separateSubjective ? 'break-before-page' : 'mt-4 border-t-2 border-dashed border-slate-300'} ${layoutMode === 'DoubleColumn' && layoutTarget === 'Subjective' && !isGridView ? 'columns-2 gap-8' : ''}`}
                   style={separateSubjective ? { pageBreakBefore: 'always' } : {}}
                 >
                   {showPartHeadings && (
@@ -2580,9 +2668,11 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       <div className="grid grid-cols-2" style={{ columnGap: `${matchColumnGap}px`, width: `${matchTableWidth}%`, maxWidth: '100%' }}>
                         {/* Column A */}
                         <div className="border-2 border-black rounded-lg overflow-hidden">
-                          <div className="bg-slate-100 border-b-2 border-black p-2 text-center">
-                            <h4 className="font-black uppercase tracking-widest" style={{ fontSize: `${matchColumnFontSize}px` }}>Column A / کالم الف</h4>
-                          </div>
+                          {showMatchHeadings && (
+                            <div className="bg-slate-100 border-b-2 border-black p-2 text-center">
+                              <h4 className="font-black uppercase tracking-widest" style={{ fontSize: `${matchColumnFontSize}px` }}>Column A / کالم الف</h4>
+                            </div>
+                          )}
                           <div className="divide-y-2 divide-black bg-white">
                             {q.matchingPairs.map((pair, i) => (
                               <div key={`left-${i}`} className="p-2.5 flex gap-3 items-center" style={{ minHeight: `${matchColumnMinHeight}px` }}>
@@ -2603,9 +2693,11 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                         </div>
                         {/* Column B - Shuffled Display for Exam */}
                         <div className="border-2 border-black rounded-lg overflow-hidden">
-                          <div className="bg-slate-100 border-b-2 border-black p-2 text-center">
-                            <h4 className="font-black uppercase tracking-widest" style={{ fontSize: `${matchColumnFontSize}px` }}>Column B / کالم ب</h4>
-                          </div>
+                          {showMatchHeadings && (
+                            <div className="bg-slate-100 border-b-2 border-black p-2 text-center">
+                              <h4 className="font-black uppercase tracking-widest" style={{ fontSize: `${matchColumnFontSize}px` }}>Column B / کالم ب</h4>
+                            </div>
+                          )}
                           <div className="divide-y-2 divide-black bg-white">
                             {[...q.matchingPairs]
                               .sort((a, b) => (showAnswersInline ? 0 : (a.right || '').localeCompare(b.right || ''))) // If showing answers, don't shuffle

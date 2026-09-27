@@ -386,6 +386,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [matchColumnFontSize, setMatchColumnFontSize] = useState<number>(12); // Default 12pt for Match Columns and item pairs
   const [matchEmptyLines, setMatchEmptyLines] = useState<number>(0);
   const [matchColumnMinHeight, setMatchColumnMinHeight] = useState<number>(44); // Default 44px min cell height
+  const [matchColumnGap, setMatchColumnGap] = useState<number>(32); // Gap between Column A and Column B in px
+  const [matchTableWidth, setMatchTableWidth] = useState<number>(100); // Table width percentage (40% - 100%)
   const [showQuestionMarks, setShowQuestionMarks] = useState(paper.showQuestionMarks ?? true);
   const [printViewMode, setPrintViewMode] = useState<'both' | 'objective' | 'subjective'>('both');
   useEffect(() => {
@@ -446,6 +448,12 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const calculateLinesForQuestion = (q: Question, sec: PaperSectionConfig) => {
     if (questionLinesOverrides[q.id] !== undefined) {
       return questionLinesOverrides[q.id];
+    }
+    if (sec.blankLines && sec.blankLines > 0) {
+      return sec.blankLines;
+    }
+    if (!studentAnswerLinesEnabled) {
+      return 0;
     }
     if (q.type === 'Match Columns') {
       return matchEmptyLines;
@@ -1199,7 +1207,23 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             >
               <Edit3 size={15} /> Student Lines {studentAnswerLinesEnabled ? 'ON' : 'OFF'}
             </button>
-            {selectedQuestionId ? (
+            {studentAnswerLinesEnabled && (
+              <div className="flex items-center gap-2 border-l border-slate-700 pl-2 ml-1" title="Configure write-in lines for question types present in this paper">
+                {paperHasShort && <><span className="text-[10px] text-slate-400 font-bold uppercase">Short:</span>
+                <input type="number" min={0} max={20} value={shortEmptyLines === 0 ? '' : shortEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setShortEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+                {paperHasLong && <><span className="text-[10px] text-slate-400 font-bold uppercase">Long:</span>
+                <input type="number" min={0} max={40} value={longEmptyLines === 0 ? '' : longEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setLongEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+                {paperHasVocab && <><span className="text-[10px] text-slate-400 font-bold uppercase">Words:</span>
+                <input type="number" min={0} max={15} value={wordsEmptyLines === 0 ? '' : wordsEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setWordsEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+                {paperHasTranslation && <><span className="text-[10px] text-slate-400 font-bold uppercase">Trans:</span>
+                <input type="number" min={0} max={20} value={translationEmptyLines === 0 ? '' : translationEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setTranslationEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+                {paperHasMatch && <><span className="text-[10px] text-slate-400 font-bold uppercase">Match:</span>
+                <input type="number" min={0} max={10} value={matchEmptyLines === 0 ? '' : matchEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setMatchEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+                {paperHasOther && <><span className="text-[10px] text-slate-400 font-bold uppercase">Other:</span>
+                <input type="number" min={0} max={20} value={otherEmptyLines === 0 ? '' : otherEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setOtherEmptyLines(val); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
+              </div>
+            )}
+            {selectedQuestionId && (
               <div className="flex items-center gap-2 border-l border-indigo-500/50 pl-2 ml-1 bg-indigo-950/80 px-2 py-1 rounded border border-indigo-500/40">
                 <span className="text-[10px] text-amber-300 font-black uppercase flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
@@ -1213,7 +1237,6 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     onClick={() => {
                       const cur = getQuestionLines(selectedQuestionId);
                       setQuestionLinesOverrides(prev => ({ ...prev, [selectedQuestionId]: Math.max(0, cur - 1) }));
-                      setStudentAnswerLinesEnabled(true);
                     }}
                     className="w-5 h-5 flex items-center justify-center bg-indigo-700 hover:bg-indigo-600 rounded text-white font-black text-xs"
                   >-</button>
@@ -1226,7 +1249,6 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     onChange={e => {
                       const val = e.target.value === '' ? 0 : parseInt(e.target.value);
                       setQuestionLinesOverrides(prev => ({ ...prev, [selectedQuestionId]: val }));
-                      if (val > 0) setStudentAnswerLinesEnabled(true);
                     }}
                     className="w-10 text-center text-xs font-black text-amber-300 bg-slate-900 border border-indigo-400 rounded px-1 py-0.5 outline-none focus:border-amber-400"
                   />
@@ -1234,7 +1256,6 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     onClick={() => {
                       const cur = getQuestionLines(selectedQuestionId);
                       setQuestionLinesOverrides(prev => ({ ...prev, [selectedQuestionId]: cur + 1 }));
-                      setStudentAnswerLinesEnabled(true);
                     }}
                     className="w-5 h-5 flex items-center justify-center bg-indigo-700 hover:bg-indigo-600 rounded text-white font-black text-xs"
                   >+</button>
@@ -1247,21 +1268,6 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                   ✕
                 </button>
               </div>
-            ) : (
-              <div className="flex items-center gap-2 border-l border-slate-700 pl-2 ml-1" title="Configure write-in lines for students to solve questions directly on paper (Click any question to set lines individually)">
-              {paperHasShort && <><span className="text-[10px] text-slate-400 font-bold uppercase">Short:</span>
-              <input type="number" min={0} max={20} value={shortEmptyLines === 0 ? '' : shortEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setShortEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
-              {paperHasLong && <><span className="text-[10px] text-slate-400 font-bold uppercase">Long:</span>
-              <input type="number" min={0} max={40} value={longEmptyLines === 0 ? '' : longEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setLongEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
-              {paperHasVocab && <><span className="text-[10px] text-slate-400 font-bold uppercase">Words:</span>
-              <input type="number" min={0} max={15} value={wordsEmptyLines === 0 ? '' : wordsEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setWordsEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
-              {paperHasTranslation && <><span className="text-[10px] text-slate-400 font-bold uppercase">Trans:</span>
-              <input type="number" min={0} max={20} value={translationEmptyLines === 0 ? '' : translationEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setTranslationEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
-              {paperHasMatch && <><span className="text-[10px] text-slate-400 font-bold uppercase">Match:</span>
-              <input type="number" min={0} max={10} value={matchEmptyLines === 0 ? '' : matchEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setMatchEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
-              {paperHasOther && <><span className="text-[10px] text-slate-400 font-bold uppercase">Other:</span>
-              <input type="number" min={0} max={20} value={otherEmptyLines === 0 ? '' : otherEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setOtherEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
-            </div>
             )}
             <button onClick={() => setBoardExamFormat(p => !p)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${boardExamFormat ? 'bg-amber-600/30 border-amber-500/50 text-amber-300' : 'bg-transparent border-slate-700 text-slate-400 hover:text-amber-300'}`} title="Pakistani Board Exam Format (Bilingual side-by-side rows)">
               <FileText size={16} /> Board Format
@@ -1306,6 +1312,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             <RangeControl label="Vocab Cols" value={vocabGridCols} setValue={setVocabGridCols} min={2} max={4} width="w-14" />
             <RangeControl label="Pair Font" value={matchColumnFontSize} setValue={setMatchColumnFontSize} min={8} max={24} unit="pt" width="w-16" />
             <RangeControl label="Match Box Ht" value={matchColumnMinHeight} setValue={setMatchColumnMinHeight} min={20} max={120} unit="px" width="w-16" />
+            <RangeControl label="Match Gap" value={matchColumnGap} setValue={setMatchColumnGap} min={0} max={100} unit="px" width="w-16" />
+            <RangeControl label="Match Width" value={matchTableWidth} setValue={setMatchTableWidth} min={40} max={100} unit="%" width="w-16" />
             <RangeControl label="Img Zoom" value={imageScale} setValue={setImageScale} min={0.5} max={3} step={0.1} width="w-16" />
           </div>
 
@@ -2282,7 +2290,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                                  t === 'singular / plural' || t === 'singular and plural' || t === 'singular plural' || t === 'words / opposites' || t === 'words opposites' || t === 'masculine / feminine' ||
                                  t === 'کالم الف کو کالم ب سے ملائیں' || t === 'کالم ملائیں' || t === 'کالم ملائیے' || t === 'الفاظ و معانی / جوڑے' || t === 'الفاظ معنی' || t === 'الفاظ کے جوڑے' || t === 'واحد جمع' || t === 'واحد / جمع' || t === 'مذکر مؤنث' || t === 'الفاظ متضاد' || t === 'الفاظ مترادف';
                         };
-                        const skipStatementRow = isPairOrVocabType && isGenericStatement(displayTextEn) && isGenericStatement(displayTextUr);
+                        const skipStatementRow = q.type === 'Match Columns' || (isPairOrVocabType && isGenericStatement(displayTextEn) && isGenericStatement(displayTextUr));
 
                         if (skipStatementRow) return null;
 
@@ -2568,8 +2576,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
 
                   {/* MATCH COLUMNS TABLE RENDERING WITH CONFIGURABLE PAIR FONT SIZE */}
                   {q.type === 'Match Columns' && q.matchingPairs && (
-                    <div className="mt-4 mx-1 md:mx-2 break-inside-avoid">
-                      <div className="grid grid-cols-2 gap-8 md:gap-12">
+                    <div className="mt-4 mx-1 md:mx-2 break-inside-avoid flex justify-center w-full">
+                      <div className="grid grid-cols-2" style={{ columnGap: `${matchColumnGap}px`, width: `${matchTableWidth}%`, maxWidth: '100%' }}>
                         {/* Column A */}
                         <div className="border-2 border-black rounded-lg overflow-hidden">
                           <div className="bg-slate-100 border-b-2 border-black p-2 text-center">

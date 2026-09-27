@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   getQuestionsPage, addQuestion, addQuestionsBulk, deleteQuestion, updateQuestion, getMetadata,
@@ -640,11 +640,24 @@ const GlobalQuestionBank: React.FC = () => {
             continue;
         }
 
+        let finalQuestionText = text;
+        let finalQuestionTextUrdu = textUrdu;
+        if (type === 'Match Columns' || matchingPairs.length > 0) {
+          if (!finalQuestionText && !finalQuestionTextUrdu) {
+            finalQuestionText = 'Match the Columns';
+            finalQuestionTextUrdu = 'کالم الف کو کالم ب سے ملائیں';
+          } else if (!finalQuestionText && finalQuestionTextUrdu) {
+            finalQuestionText = 'Match the Columns';
+          } else if (!finalQuestionTextUrdu && finalQuestionText) {
+            finalQuestionTextUrdu = 'کالم الف کو کالم ب سے ملائیں';
+          }
+        }
+
         const sourcesValue = (batchAuthorOverride && batchAuthorOverride !== '__AUTO__' ? batchAuthorOverride : undefined) || row.Sources;
         const q: Question = {
             id: `bulk_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 5)}`,
-            text: text,
-            textUrdu: textUrdu,
+            text: finalQuestionText,
+            textUrdu: finalQuestionTextUrdu,
             type: type,
             marks: parseInt(row.Marks) || (type === 'MCQ' ? 1 : type === 'Short Answer' ? 2 : type === 'Match Columns' ? 4 : 5),
             difficulty: (row.Difficulty || Difficulty.MEDIUM) as Difficulty,

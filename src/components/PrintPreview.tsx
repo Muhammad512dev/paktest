@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   X, Printer, Type, Layout, Settings2,
@@ -418,6 +418,55 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [wordsEmptyLines, setWordsEmptyLines] = useState<number>(0);
   const [translationEmptyLines, setTranslationEmptyLines] = useState<number>(0);
   const [otherEmptyLines, setOtherEmptyLines] = useState<number>(0);
+  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
+  const [questionLinesOverrides, setQuestionLinesOverrides] = useState<Record<string, number>>({});
+
+  const getQuestionLines = (qId: string) => {
+    if (questionLinesOverrides[qId] !== undefined) {
+      return questionLinesOverrides[qId];
+    }
+    const targetQ = questions.find(q => q.id === qId);
+    if (!targetQ) return 0;
+    if (targetQ.type === 'Match Columns') return matchEmptyLines;
+    if (targetQ.type?.toLowerCase().includes('long') || targetQ.type?.toLowerCase().includes('essay') || targetQ.type?.toLowerCase().includes('composition') || targetQ.type?.toLowerCase().includes('letter') || targetQ.type?.toLowerCase().includes('story')) {
+      return longEmptyLines;
+    }
+    if (isVocabQuestionType(targetQ.type)) {
+      return wordsEmptyLines;
+    }
+    if (targetQ.type?.toLowerCase().includes('translat') || targetQ.type?.toLowerCase().includes('paragraph') || targetQ.type?.toLowerCase().includes('comprehension')) {
+      return translationEmptyLines;
+    }
+    if (targetQ.type?.toLowerCase().includes('short')) {
+      return shortEmptyLines;
+    }
+    return otherEmptyLines;
+  };
+
+  const calculateLinesForQuestion = (q: Question, sec: PaperSectionConfig) => {
+    if (questionLinesOverrides[q.id] !== undefined) {
+      return questionLinesOverrides[q.id];
+    }
+    if (q.type === 'Match Columns') {
+      return matchEmptyLines;
+    }
+    if (sec.blankLines && sec.blankLines > 0) {
+      return sec.blankLines;
+    }
+    if (q.type?.toLowerCase().includes('long') || q.type?.toLowerCase().includes('essay') || q.type?.toLowerCase().includes('composition') || q.type?.toLowerCase().includes('letter') || q.type?.toLowerCase().includes('story')) {
+      return longEmptyLines;
+    }
+    if (isVocabQuestionType(q.type) || isVocabQuestionType(sec.questionType)) {
+      return wordsEmptyLines;
+    }
+    if (q.type?.toLowerCase().includes('translat') || q.type?.toLowerCase().includes('paragraph') || q.type?.toLowerCase().includes('comprehension')) {
+      return translationEmptyLines;
+    }
+    if (q.type?.toLowerCase().includes('short')) {
+      return shortEmptyLines;
+    }
+    return otherEmptyLines;
+  };
 
   // Derived show answers logic
   const showAnswersInline = answerKeyDisplay === 'inline';
@@ -1150,7 +1199,56 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
             >
               <Edit3 size={15} /> Student Lines {studentAnswerLinesEnabled ? 'ON' : 'OFF'}
             </button>
-            <div className="flex items-center gap-2 border-l border-slate-700 pl-2 ml-1" title="Configure write-in lines for students to solve questions directly on paper">
+            {selectedQuestionId ? (
+              <div className="flex items-center gap-2 border-l border-indigo-500/50 pl-2 ml-1 bg-indigo-950/80 px-2 py-1 rounded border border-indigo-500/40">
+                <span className="text-[10px] text-amber-300 font-black uppercase flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  Q Lines:
+                </span>
+                <span className="text-[10px] text-slate-200 font-bold max-w-[100px] truncate" title={questions.find(q => q.id === selectedQuestionId)?.text || ''}>
+                  {questions.find(q => q.id === selectedQuestionId)?.type} ({questions.findIndex(q => q.id === selectedQuestionId) + 1})
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      const cur = getQuestionLines(selectedQuestionId);
+                      setQuestionLinesOverrides(prev => ({ ...prev, [selectedQuestionId]: Math.max(0, cur - 1) }));
+                      setStudentAnswerLinesEnabled(true);
+                    }}
+                    className="w-5 h-5 flex items-center justify-center bg-indigo-700 hover:bg-indigo-600 rounded text-white font-black text-xs"
+                  >-</button>
+                  <input
+                    type="number"
+                    min={0}
+                    max={30}
+                    value={getQuestionLines(selectedQuestionId) === 0 ? '' : getQuestionLines(selectedQuestionId)}
+                    placeholder="0"
+                    onChange={e => {
+                      const val = e.target.value === '' ? 0 : parseInt(e.target.value);
+                      setQuestionLinesOverrides(prev => ({ ...prev, [selectedQuestionId]: val }));
+                      if (val > 0) setStudentAnswerLinesEnabled(true);
+                    }}
+                    className="w-10 text-center text-xs font-black text-amber-300 bg-slate-900 border border-indigo-400 rounded px-1 py-0.5 outline-none focus:border-amber-400"
+                  />
+                  <button
+                    onClick={() => {
+                      const cur = getQuestionLines(selectedQuestionId);
+                      setQuestionLinesOverrides(prev => ({ ...prev, [selectedQuestionId]: cur + 1 }));
+                      setStudentAnswerLinesEnabled(true);
+                    }}
+                    className="w-5 h-5 flex items-center justify-center bg-indigo-700 hover:bg-indigo-600 rounded text-white font-black text-xs"
+                  >+</button>
+                </div>
+                <button
+                  onClick={() => setSelectedQuestionId(null)}
+                  className="text-[10px] text-slate-400 hover:text-white underline ml-0.5"
+                  title="Deselect question"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 border-l border-slate-700 pl-2 ml-1" title="Configure write-in lines for students to solve questions directly on paper (Click any question to set lines individually)">
               {paperHasShort && <><span className="text-[10px] text-slate-400 font-bold uppercase">Short:</span>
               <input type="number" min={0} max={20} value={shortEmptyLines === 0 ? '' : shortEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setShortEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
               {paperHasLong && <><span className="text-[10px] text-slate-400 font-bold uppercase">Long:</span>
@@ -1164,6 +1262,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               {paperHasOther && <><span className="text-[10px] text-slate-400 font-bold uppercase">Other:</span>
               <input type="number" min={0} max={20} value={otherEmptyLines === 0 ? '' : otherEmptyLines} placeholder="0" onChange={e => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setOtherEmptyLines(val); if (val > 0) setStudentAnswerLinesEnabled(true); }} className="w-10 text-center text-xs font-bold text-indigo-300 bg-slate-900/60 border border-slate-600 rounded px-1 py-1 outline-none focus:border-indigo-500" /></>}
             </div>
+            )}
             <button onClick={() => setBoardExamFormat(p => !p)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase whitespace-nowrap transition-all ${boardExamFormat ? 'bg-amber-600/30 border-amber-500/50 text-amber-300' : 'bg-transparent border-slate-700 text-slate-400 hover:text-amber-300'}`} title="Pakistani Board Exam Format (Bilingual side-by-side rows)">
               <FileText size={16} /> Board Format
             </button>
@@ -1773,7 +1872,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     </tr>
                   )}
 
-                  <tr className="break-inside-avoid relative group/q align-top">
+                  <tr onClick={() => setSelectedQuestionId(prev => prev === q.id ? null : q.id)} className={`break-inside-avoid relative group/q align-top transition-colors ${selectedQuestionId === q.id ? 'bg-indigo-50/70 ring-2 ring-indigo-500/80 rounded' : 'hover:bg-slate-50/70'} cursor-pointer print:bg-transparent print:ring-0`} title="Click to select this question to set individual student answer lines in the toolbar">
                     {/* Marks left column (per question / part) */}
                     {showQuestionMarks && q.marks > 0 && (
                       <td className="text-center font-black border-r border-black pr-1 pl-0.5 align-top" style={{ width: '28px', fontSize: `${englishFontSize - 1}px`, paddingTop: '3px' }}>
@@ -1869,33 +1968,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                       </td>
                     )}
                   </tr>
-                  {/* Match Columns blank lines for student answers */}
-                  {q.type === 'Match Columns' && matchEmptyLines > 0 && (
-                    <tr className="print:break-inside-avoid">
-                      <td colSpan={languageMode === 'Bilingual' ? 4 : 2} className="px-2 pt-2 pb-4">
-                        <div className="flex flex-col gap-6">
-                          {Array.from({ length: matchEmptyLines }).map((_, lIdx) => (
-                            <div key={lIdx} className="border-b border-gray-400 print:border-black w-full h-[1px]" />
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                  {!isMCQType(q.type) && q.type !== 'Match Columns' && (() => {
-                    let linesCount = 0;
-                    if (sec.blankLines && sec.blankLines > 0) {
-                      linesCount = sec.blankLines;
-                    } else if (q.type?.toLowerCase().includes('long') || q.type?.toLowerCase().includes('essay') || q.type?.toLowerCase().includes('composition') || q.type?.toLowerCase().includes('letter') || q.type?.toLowerCase().includes('story')) {
-                      linesCount = longEmptyLines;
-                    } else if (isVocabQuestionType(q.type) || isVocabQuestionType(sec.questionType)) {
-                      linesCount = wordsEmptyLines;
-                    } else if (q.type?.toLowerCase().includes('translat') || q.type?.toLowerCase().includes('paragraph') || q.type?.toLowerCase().includes('comprehension')) {
-                      linesCount = translationEmptyLines;
-                    } else if (q.type?.toLowerCase().includes('short')) {
-                      linesCount = shortEmptyLines;
-                    } else {
-                      linesCount = otherEmptyLines;
-                    }
+                  {!isMCQType(q.type) && (() => {
+                    const linesCount = calculateLinesForQuestion(q, sec);
                     if (linesCount <= 0) return null;
                     return (
                       <tr className="print:break-inside-avoid">
@@ -2161,7 +2235,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                   const qColsOverride = (q as any).colsOverride || (q as any).mcqColsOverride;
 
                   return (
-                    <div key={q.id} className={`relative break-inside-avoid group/q ${qColsOverride === 1 && sectionCols > 1 ? 'col-span-full' : ''}`} style={{ marginBottom: `${questionGap}px` }}>
+                    <div key={q.id} onClick={() => setSelectedQuestionId(prev => prev === q.id ? null : q.id)} className={`relative break-inside-avoid group/q p-1 rounded-lg transition-all ${selectedQuestionId === q.id ? 'ring-2 ring-indigo-500 bg-indigo-50/20 shadow-sm' : 'hover:bg-slate-50/40'} cursor-pointer print:ring-0 print:bg-transparent print:p-0 ${qColsOverride === 1 && sectionCols > 1 ? 'col-span-full' : ''}`} style={{ marginBottom: `${questionGap}px` }}>
                       {isManualEdit && (
                         <div className="absolute -left-12 top-0 flex flex-col gap-1 print:hidden opacity-0 group-hover/q:opacity-100 z-30">
                           <button onClick={() => togglePageBreak(q.id)} className={`p-1.5 rounded transition-colors shadow-sm ${q.pageBreakAfter ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`} title="Toggle Page Break"><Scissors size={14} /></button>
@@ -2493,13 +2567,6 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                   })()}
 
                   {/* MATCH COLUMNS TABLE RENDERING WITH CONFIGURABLE PAIR FONT SIZE */}
-                  {q.type === 'Match Columns' && matchEmptyLines > 0 && (
-                    <div className="flex flex-col gap-6 pt-3 pb-4 print:break-inside-avoid w-full px-2">
-                      {Array.from({ length: matchEmptyLines }).map((_, lIdx) => (
-                        <div key={lIdx} className="border-b border-gray-400 print:border-black w-full h-[1px]" />
-                      ))}
-                    </div>
-                  )}
                   {q.type === 'Match Columns' && q.matchingPairs && (
                     <div className="mt-4 mx-1 md:mx-2 break-inside-avoid">
                       <div className="grid grid-cols-2 gap-8 md:gap-12">
@@ -2556,21 +2623,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     </div>
                   )}
 
-                  {!isMCQType(q.type) && q.type !== 'Match Columns' && (() => {
-                    let linesCount = 0;
-                    if (sec.blankLines && sec.blankLines > 0) {
-                      linesCount = sec.blankLines;
-                    } else if (q.type?.toLowerCase().includes('long') || q.type?.toLowerCase().includes('essay') || q.type?.toLowerCase().includes('composition') || q.type?.toLowerCase().includes('letter') || q.type?.toLowerCase().includes('story')) {
-                      linesCount = longEmptyLines;
-                    } else if (isVocabQuestionType(q.type) || isVocabQuestionType(sec.questionType)) {
-                      linesCount = wordsEmptyLines;
-                    } else if (q.type?.toLowerCase().includes('translat') || q.type?.toLowerCase().includes('paragraph') || q.type?.toLowerCase().includes('comprehension')) {
-                      linesCount = translationEmptyLines;
-                    } else if (q.type?.toLowerCase().includes('short')) {
-                      linesCount = shortEmptyLines;
-                    } else {
-                      linesCount = otherEmptyLines;
-                    }
+                  {!isMCQType(q.type) && (() => {
+                    const linesCount = calculateLinesForQuestion(q, sec);
                     if (linesCount <= 0) return null;
                     return (
                       <div className="flex flex-col gap-6 pt-3 pb-4 print:break-inside-avoid w-full px-2">

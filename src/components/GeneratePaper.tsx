@@ -270,8 +270,8 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
       );
    }, [repoQuestions, state.selectedSubject, state.selectedClass, state.selectedChapters, state.languageMedium, questionTypes, subjects, classes]);
 
-   const getSubtopicsForChapter = (chapterName: string) => {
-      const chapterObj = allChapters.find(c => c.name === chapterName);
+   const getSubtopicsForChapter = (chapterIdOrName: string) => {
+      const chapterObj = relevantChapters.find(c => c.id === chapterIdOrName || c.name === chapterIdOrName);
       if (chapterObj) return allTopics.filter(t => t.chapterId === chapterObj.id).map(t => t.name);
       return [];
    };
@@ -279,13 +279,14 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
    const handleSelectAllChapters = () => {
       const allNames = relevantChapters.map(c => c.name);
       const allTops: string[] = [];
-      allNames.forEach(c => allTops.push(...getSubtopicsForChapter(c)));
+      relevantChapters.forEach(c => allTops.push(...getSubtopicsForChapter(c.id)));
       setState(prev => ({ ...prev, selectedChapters: allNames, selectedTopics: allTops }));
    };
 
    const handleChapterToggle = (chapter: string) => {
       const isSelected = state.selectedChapters.includes(chapter);
-      const chapterSubtopics = getSubtopicsForChapter(chapter);
+      const chapterObj = relevantChapters.find(c => c.name === chapter);
+      const chapterSubtopics = chapterObj ? getSubtopicsForChapter(chapterObj.id) : getSubtopicsForChapter(chapter);
       setState(prev => {
          let newChapters = isSelected ? prev.selectedChapters.filter(c => c !== chapter) : [...prev.selectedChapters, chapter];
          let newTopics = isSelected
@@ -1482,7 +1483,7 @@ const GeneratePaper: React.FC<GeneratePaperProps> = ({ onBack, user, onEditorEnt
                      <div className="flex-1 min-w-0">
                         <span onClick={() => handleChapterToggle(c.name)} className="font-black block text-xl text-gray-900 cursor-pointer leading-tight mb-3">{c.name}</span>
                         <div className="flex flex-wrap gap-2">
-                           {getSubtopicsForChapter(c.name).map((sub, i) => (
+                           {getSubtopicsForChapter(c.id).map((sub, i) => (
                               <span key={i} onClick={() => {
                                  const isSelected = state.selectedTopics.includes(sub);
                                  setState(prev => {

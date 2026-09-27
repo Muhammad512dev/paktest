@@ -6,7 +6,7 @@ import {
    Calendar, Clock, ClipboardList, Info as InfoIcon, CheckSquare, Square, ChevronDown, Globe, Languages, GraduationCap, ChevronRight, ChevronUp, BookOpen, Settings2, HelpCircle, Eye, EyeOff, Key, FileCheck
 } from 'lucide-react';
 import { ExamPaper, Question, PaperSectionConfig, Difficulty, User, QuestionSource, SavedPaper, QuestionType, Syllabus, ClassLevel, Subject, getDefaultSectionInstruction } from '../types';
-import { getQuestions, getChapters, getTopics, savePaper, getQuestionTypes } from '../services/dataService';
+import { getQuestions, getChapters, getTopics, savePaper, getQuestionTypes, getClasses, getSubjects } from '../services/dataService';
 import PrintPreview from './PrintPreview';
 import MathRenderer from './MathRenderer';
 
@@ -68,6 +68,8 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
    const [allChapters, setAllChapters] = useState<any[]>([]);
    const [allTopics, setAllTopics] = useState<any[]>([]);
    const [availableQuestionTypes, setAvailableQuestionTypes] = useState<any[]>([]);
+   const [subjects, setSubjects] = useState<Subject[]>([]);
+   const [classes, setClasses] = useState<ClassLevel[]>([]);
 
    const normalizeType = (t: string) => {
       const val = (t || '').toLowerCase().trim();
@@ -80,16 +82,20 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
    /* Load data asynchronously on mount */
    useEffect(() => {
       const loadRepoData = async () => {
-         const [qs, chs, tops, types] = await Promise.all([
+         const [qs, chs, tops, types, subs, cls] = await Promise.all([
             getQuestions({ pageSize: 1000, maxPages: 25, subject: paper.subject, classLevel: paper.classLevel }),
             getChapters(),
             getTopics(),
-            getQuestionTypes()
+            getQuestionTypes(),
+            getSubjects(),
+            getClasses()
          ]);
          setRepoQuestions(qs);
          setAllChapters(chs);
          setAllTopics(tops);
          setAvailableQuestionTypes(types);
+         setSubjects(subs);
+         setClasses(cls);
       };
       loadRepoData();
    }, []);
@@ -914,7 +920,9 @@ const PaperEditor: React.FC<PaperEditorProps> = ({ paper, onBack, user }) => {
                                  paper.selectedChapters.map(chap => {
                                     const isChapActive = activeChapters.includes(chap);
                                     const isExpanded = expandedChapters.includes(chap);
-                                    const chapterId = allChapters.find(c => c.name === chap)?.id;
+                                    const paperSubject = subjects.find(s => s.name === paper.subject && (!paper.classLevel || s.classId === classes.find(c => c.name === paper.classLevel)?.id));
+                                    const targetChap = (paperSubject ? allChapters.find(c => c.name === chap && c.subjectId === paperSubject.id) : null) || allChapters.find(c => c.name === chap);
+                                    const chapterId = targetChap?.id;
                                     const topicsInChapter = allTopics.filter(t => t.chapterId === chapterId);
 
                                     return (

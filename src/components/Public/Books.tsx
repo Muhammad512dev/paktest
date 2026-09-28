@@ -494,13 +494,13 @@ const Books: React.FC = () => {
           </div>
         ) : (
           <div className="text-center py-4">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0B192C] border border-amber-500/30 text-amber-300 text-xs font-bold uppercase tracking-widest mb-4 shadow-sm">
-              <Sparkles size={14} className="text-amber-400" /> Official Textbook Repository
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-200/80 text-indigo-700 text-xs font-bold uppercase tracking-widest mb-4 shadow-sm">
+              <Sparkles size={14} className="text-indigo-600" /> Official Textbook Repository
             </div>
-            <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white block font-serif">
-              <span className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 bg-clip-text text-transparent">Official Textbooks</span> & Key Books
+            <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900 block font-serif">
+              <span className="text-indigo-600">Official Textbooks</span> & Key Books
             </h1>
-            <p className="text-xs sm:text-base text-slate-600 dark:text-slate-300 mt-2 max-w-xl mx-auto font-medium">
+            <p className="text-xs sm:text-base text-slate-600 mt-2 max-w-xl mx-auto font-medium">
               Official board textbooks, syllabus guidebooks, and curriculum key reference books from PCTB, Federal, and Provincial boards.
             </p>
           </div>

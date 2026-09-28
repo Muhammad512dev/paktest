@@ -455,22 +455,25 @@ const LessonPlans: React.FC = () => {
           </div>
         ) : (
           <div className="text-center py-4">
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 inline-block relative">
-              <span className="text-emerald-600 border-b-4 border-emerald-600 pb-1">Teacher</span> Lesson Plans
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-700 text-xs font-bold uppercase tracking-widest mb-4 shadow-sm">
+              <BookOpen size={14} className="text-emerald-600" /> Pedagogical Resources & Teaching Guides
+            </div>
+            <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900 block font-serif">
+              <span className="text-emerald-600">Teacher</span> Lesson Plans
             </h1>
-            <p className="text-slate-500 text-sm mt-2 max-w-2xl mx-auto">
-              Ready-to-use structured lesson plans, SLO-based teaching guides, learning objectives, and classroom activity sheets.
+            <p className="text-slate-600 text-sm sm:text-base mt-2 max-w-2xl mx-auto font-medium">
+              Ready-to-use structured lesson plans, SLO-based teaching guides, learning objectives, and classroom activity sheets for Pakistani educators.
             </p>
             {(selectedBoard || selectedClass || selectedSubject) && (
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm font-black uppercase text-slate-700 tracking-wider">
-                {selectedBoard && <span className="bg-slate-100 px-2.5 py-1 rounded-lg">🏛️ {selectedBoard}</span>}
-                {selectedBoard && selectedClass && <span>›</span>}
-                {selectedClass && <span className="bg-slate-100 px-2.5 py-1 rounded-lg">🎓 {selectedClass}</span>}
-                {selectedClass && selectedSubject && <span>›</span>}
-                {selectedSubject && <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg">📖 {selectedSubject}</span>}
-                {selectedUnit !== 'ALL' && <span>›</span>}
-                {selectedUnit !== 'ALL' && <span className="bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg">📑 Unit {selectedUnit}</span>}
-                <button onClick={resetStepWizard} className="ml-3 text-xs text-rose-500 hover:underline normal-case font-bold">(Reset All)</button>
+              <div className="mt-5 inline-flex flex-wrap items-center justify-center gap-2 bg-slate-900 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl border border-slate-800 shadow-md text-xs sm:text-sm font-bold uppercase tracking-wider">
+                {selectedBoard && <span className="text-emerald-300">🏛️ {selectedBoard}</span>}
+                {selectedBoard && selectedClass && <span className="text-slate-500">›</span>}
+                {selectedClass && <span className="text-sky-300">🎓 {selectedClass}</span>}
+                {selectedClass && selectedSubject && <span className="text-slate-500">›</span>}
+                {selectedSubject && <span className="text-emerald-300">📖 {selectedSubject}</span>}
+                {selectedUnit !== 'ALL' && <span className="text-slate-500">›</span>}
+                {selectedUnit !== 'ALL' && <span className="text-emerald-300">📑 Unit {selectedUnit}</span>}
+                <button onClick={resetStepWizard} className="ml-3 text-xs text-rose-400 hover:text-rose-300 underline normal-case font-semibold">(Reset All)</button>
               </div>
             )}
           </div>

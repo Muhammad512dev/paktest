@@ -7,10 +7,10 @@ const Contact: React.FC = () => {
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', message: '' });
   const [status, setStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'>('IDLE');
   const [config, setConfig] = useState({ 
-    platformEmail: 'support@PakParcha.com', 
-    platformAddress: '123 Tech Park, SF, CA', 
+    platformEmail: 'support@pakparchaai.com', 
+    platformAddress: 'Punjab, Pakistan (Serving Lahore, Multan, Rawalpindi, Faisalabad & All Boards)', 
     platformName: 'PakParcha AI',
-    platformContact: '+1 (555) 123-4567'
+    platformContact: '+92 300 0000000'
   });
 
   useEffect(() => {
@@ -18,10 +18,10 @@ const Contact: React.FC = () => {
         try {
             const data = await getSystemConfig();
             setConfig({
-                platformEmail: data.platformEmail || 'support@PakParcha.com',
-                platformAddress: data.platformAddress || '123 Tech Park, SF, CA',
+                platformEmail: data.platformEmail || 'support@pakparchaai.com',
+                platformAddress: data.platformAddress || 'Punjab, Pakistan (Serving Lahore, Multan, Rawalpindi, Faisalabad & All Boards)',
                 platformName: data.platformName || 'PakParcha AI',
-                platformContact: data.platformContact || '+1 (555) 123-4567'
+                platformContact: data.platformContact || '+92 300 0000000'
             });
         } catch (e) {}
     };

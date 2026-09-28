@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Menu, X, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react';
 import CookieConsent from './CookieConsent';
+import { getSystemConfig } from '../../services/dataService';
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -12,7 +13,16 @@ interface PublicLayoutProps {
 }
 
 const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNavigate, systemName, logoUrl }) => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [whatsappContact, setWhatsappContact] = useState<string>('923000000000');
+
+  useEffect(() => {
+    getSystemConfig().then((cfg) => {
+      if (cfg?.platformContact) {
+        setWhatsappContact(cfg.platformContact.replace(/[^0-9]/g, ''));
+      }
+    }).catch(() => {});
+  }, []);
 
   const navItems = [
     { id: 'HOME', label: 'Home' },
@@ -150,11 +160,11 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
       </main>
 
       {/* Compact Footer */}
-      <footer className="bg-slate-900 text-slate-300 py-6 md:py-8">
+      <footer className="bg-slate-900 text-slate-300 py-10 md:py-12 border-t border-slate-800">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="col-span-1 md:col-span-1">
-              <div className="flex items-center gap-2 mb-6">
+              <div className="flex items-center gap-2 mb-4">
                 {logoUrl ? (
                   <img 
                     src={logoUrl} 
@@ -171,9 +181,9 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
                 )}
               </div>
               <p className="text-xs leading-relaxed text-slate-400">
-                Pakistan’s premier exam paper generation, grading, and curriculum platform for schools, colleges, and academies. 100% aligned with PCTB, FBISE, and provincial board patterns.
+                Pakistan’s premier exam paper generation, grading, and curriculum platform for schools, colleges, and academies. 100% aligned with PCTB (9 Punjab Boards), FBISE, Sindh, and KPK Board patterns.
               </p>
-              <div className="flex gap-4 mt-6">
+              <div className="flex gap-4 mt-5">
                 <a href="#" className="text-slate-400 hover:text-white" aria-label="Facebook Profile"><Facebook size={18} /></a>
                 <a href="#" className="text-slate-400 hover:text-white" aria-label="Twitter Profile"><Twitter size={18} /></a>
                 <a href="#" className="text-slate-400 hover:text-white" aria-label="LinkedIn Profile"><Linkedin size={18} /></a>
@@ -182,39 +192,40 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
             </div>
             
             <div>
-              <h4 className="text-sm font-bold text-white uppercase tracking-widest mb-6">Platform & Resources</h4>
-              <ul className="space-y-3 text-sm">
-                <li><button onClick={() => onNavigate('HOME')} className="hover:text-indigo-400">Home</button></li>
-                <li><button onClick={() => onNavigate('PRICING')} className="hover:text-indigo-400">Academy Pricing</button></li>
-                <li><button onClick={() => onNavigate('PAST_PAPERS')} className="hover:text-indigo-400">Past Papers</button></li>
-                <li><button onClick={() => onNavigate('NOTES')} className="hover:text-indigo-400">Study Notes</button></li>
-                <li><button onClick={() => onNavigate('LESSON_PLANS')} className="hover:text-indigo-400">Lesson Plans</button></li>
-                <li><button onClick={() => onNavigate('BLOG')} className="hover:text-indigo-400">Blog & Board Guides</button></li>
+              <h4 className="text-xs font-black text-white uppercase tracking-widest mb-5 text-indigo-400">Platform & Resources</h4>
+              <ul className="space-y-2.5 text-xs font-medium">
+                <li><button onClick={() => onNavigate('HOME')} className="hover:text-white transition-colors">Home Page</button></li>
+                <li><button onClick={() => onNavigate('PRICING')} className="hover:text-white transition-colors">Academy Pricing & Plans</button></li>
+                <li><button onClick={() => onNavigate('PAST_PAPERS')} className="hover:text-white transition-colors">Past Papers Archive</button></li>
+                <li><button onClick={() => onNavigate('NOTES')} className="hover:text-white transition-colors">Curriculum Study Notes</button></li>
+                <li><button onClick={() => onNavigate('LESSON_PLANS')} className="hover:text-white transition-colors">Teacher Lesson Plans</button></li>
+                <li><button onClick={() => onNavigate('BLOG')} className="hover:text-white transition-colors">Educational Guides & Blog</button></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-sm font-bold text-white uppercase tracking-widest mb-6">Support & Legal</h4>
-              <ul className="space-y-3 text-sm">
-                <li><button onClick={() => onNavigate('CONTACT')} className="hover:text-indigo-400">Contact Support</button></li>
-                <li><button onClick={() => onNavigate('ABOUT')} className="hover:text-indigo-400">About Us</button></li>
-                <li><button onClick={() => onNavigate('PRIVACY')} className="hover:text-indigo-400">Privacy Policy</button></li>
-                <li><button onClick={() => onNavigate('TERMS')} className="hover:text-indigo-400">Terms of Service</button></li>
-                <li><button onClick={() => onNavigate('DISCLAIMER')} className="hover:text-indigo-400">Disclaimer & DMCA</button></li>
-                <li><button onClick={() => onNavigate('REFUND')} className="hover:text-indigo-400">Refund Policy</button></li>
+              <h4 className="text-xs font-black text-white uppercase tracking-widest mb-5 text-emerald-400">Support & Legal</h4>
+              <ul className="space-y-2.5 text-xs font-medium">
+                <li><button onClick={() => onNavigate('CONTACT')} className="hover:text-white transition-colors">Contact Support Team</button></li>
+                <li><button onClick={() => onNavigate('ABOUT')} className="hover:text-white transition-colors">About Our Platform</button></li>
+                <li><button onClick={() => onNavigate('PRIVACY')} className="hover:text-white transition-colors">Privacy Policy</button></li>
+                <li><button onClick={() => onNavigate('TERMS')} className="hover:text-white transition-colors">Terms of Service</button></li>
+                <li><button onClick={() => onNavigate('DISCLAIMER')} className="hover:text-white transition-colors">Disclaimer & DMCA</button></li>
+                <li><button onClick={() => onNavigate('REFUND')} className="hover:text-white transition-colors">Refund & Cancellation Policy</button></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-sm font-bold text-white uppercase tracking-widest mb-6">Stay Updated</h4>
-              <p className="text-xs text-slate-400 mb-4">Subscribe for latest pairing schemes, guess papers, and feature updates.</p>
-              <div className="flex gap-2">
-                <input type="email" placeholder="Email address" className="bg-slate-800 border-none rounded-lg px-4 py-2 text-sm text-white w-full focus:ring-2 focus:ring-indigo-500" />
-                <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 cursor-pointer">Go</button>
+              <h4 className="text-xs font-black text-white uppercase tracking-widest mb-5 text-amber-400">Curriculum Coverage</h4>
+              <p className="text-xs text-slate-400 mb-3 leading-relaxed">
+                Covering Matric (9th, 10th) & Intermediate (11th, 12th / FSc Pre-Medical, Pre-Engineering, ICS, I.Com) across all Pakistani educational boards.
+              </p>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-[11px] font-bold text-emerald-400">
+                <span>🇵🇰</span> 100% Urdu Nastaleeq & English Support
               </div>
             </div>
           </div>
-          <div className="border-t border-slate-800 mt-6 pt-4 text-center text-xs text-slate-500 font-medium">
+          <div className="border-t border-slate-800 mt-8 pt-4 text-center text-xs text-slate-500 font-medium">
             &copy; {new Date().getFullYear()} {systemName} (Pakistan). All rights reserved. &bull; Punjab & Federal Board Aligned
           </div>
         </div>
@@ -222,11 +233,11 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
 
       {/* Floating WhatsApp Quick Support Button */}
       <a
-        href="https://wa.me/923000000000?text=Hi%20PakParcha%20Team%2C%20I%20want%20to%20learn%20more%20about%20the%20Exam%20Generator"
+        href={`https://wa.me/${whatsappContact}?text=${encodeURIComponent('Assalam-o-Alaikum! I want to learn more about the PakParcha Exam Generator & School Plans.')}`}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Chat with Support on WhatsApp"
-        className="fixed bottom-6 right-6 z-40 bg-[#25D366] text-white p-3.5 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all flex items-center gap-2 group"
+        className="fixed bottom-6 right-6 z-40 bg-[#25D366] hover:bg-[#20bd5a] text-white p-3.5 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all flex items-center gap-2 group cursor-pointer"
       >
         <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
           <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
@@ -241,3 +252,4 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
 };
 
 export default PublicLayout;
+

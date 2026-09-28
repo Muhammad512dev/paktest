@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Target, Eye, Award, Linkedin, Instagram, Phone, Users, ShieldCheck, Languages, BarChart3, CheckCircle2, Play, Sparkles } from 'lucide-react';
+import { Target, Eye, Award, Linkedin, Instagram, Phone, Users, ShieldCheck, Languages, BarChart3, CheckCircle2, Play, Sparkles, BookOpen, Layers, Printer, FileText } from 'lucide-react';
 
 interface AboutProps {
   appName: string;
@@ -12,22 +11,18 @@ const getYouTubeEmbedUrl = (url?: string): string | null => {
   const cleanUrl = url.trim();
   if (!cleanUrl) return null;
 
-  // If already an embed URL
   if (cleanUrl.includes('youtube.com/embed/')) return cleanUrl;
 
-  // Handle standard youtube.com/watch?v=ID
   const watchMatch = cleanUrl.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
   if (watchMatch && watchMatch[1]) {
     return `https://www.youtube.com/embed/${watchMatch[1]}?autoplay=1&rel=0`;
   }
 
-  // Handle youtu.be/ID
   const shortMatch = cleanUrl.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
   if (shortMatch && shortMatch[1]) {
     return `https://www.youtube.com/embed/${shortMatch[1]}?autoplay=1&rel=0`;
   }
 
-  // Handle youtube.com/shorts/ID
   const shortsMatch = cleanUrl.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
   if (shortsMatch && shortsMatch[1]) {
     return `https://www.youtube.com/embed/${shortsMatch[1]}?autoplay=1&rel=0`;
@@ -41,15 +36,18 @@ const About: React.FC<AboutProps> = ({ appName, videoUrl }) => {
   const embedUrl = getYouTubeEmbedUrl(videoUrl);
 
   return (
-    <div className="py-20 max-w-7xl mx-auto px-6 lg:px-8">
+    <div className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Page Header */}
       <div className="text-center mb-16">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-4">
-          <Sparkles size={14} /> Discover Our Platform
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-4">
+          <Sparkles size={14} /> Built for Pakistani Educators
         </div>
-        <h1 className="text-4xl sm:text-5xl font-black text-slate-900 mb-6 tracking-tight">About {appName}</h1>
-        <p className="text-slate-500 max-w-2xl mx-auto text-lg leading-relaxed">
-          We are on a mission to modernize education through intelligent technology, developed with passion and precision.
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-slate-900 mb-6 tracking-tight">
+          About {appName}
+        </h1>
+        <p className="text-slate-600 max-w-3xl mx-auto text-base sm:text-lg leading-relaxed font-normal">
+          We built {appName} to solve the single most time-consuming challenge faced by Pakistani teachers and tuition academies: 
+          composing, formatting, and balancing board-standard examination papers every week.
         </p>
       </div>
 
@@ -57,13 +55,13 @@ const About: React.FC<AboutProps> = ({ appName, videoUrl }) => {
       <section className="mb-24">
         <div className="bg-gradient-to-b from-slate-900 to-slate-950 rounded-[2.5rem] p-6 sm:p-10 md:p-12 shadow-2xl border border-slate-800 text-white relative overflow-hidden">
           <div className="absolute top-0 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
-          <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none" />
+          <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
 
           <div className="max-w-3xl mx-auto text-center mb-8 relative z-10">
-            <span className="text-xs font-black uppercase tracking-[0.25em] text-indigo-400">Interactive Walkthrough</span>
-            <h2 className="mt-2 text-3xl sm:text-4xl font-black tracking-tight text-white">See {appName} In Action</h2>
-            <p className="mt-3 text-slate-400 text-sm sm:text-base leading-relaxed">
-              Watch a full comprehensive demonstration showing how fast teachers generate bilingual exam papers, organize question banks, and conduct online assessments.
+            <span className="text-xs font-black uppercase tracking-[0.25em] text-cyan-400">Platform Demonstration</span>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-black tracking-tight text-white">See {appName} In Action</h2>
+            <p className="mt-3 text-slate-400 text-xs sm:text-sm md:text-base leading-relaxed">
+              Watch how teachers generate bilingual exam papers with Urdu Nastaleeq typography, official pairing schemes, answer keys, and institutional watermarks in under 60 seconds.
             </p>
           </div>
 
@@ -83,19 +81,19 @@ const About: React.FC<AboutProps> = ({ appName, videoUrl }) => {
                   className="relative w-full h-full cursor-pointer flex items-center justify-center bg-slate-900 group"
                 >
                   <img 
-                    src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80" 
+                    src="/blog-exam-guide.jpg" 
                     alt="Platform Video Preview" 
-                    className="w-full h-full object-cover opacity-40 group-hover:opacity-50 transition-opacity duration-500 scale-100 group-hover:scale-105 transition-transform"
+                    className="w-full h-full object-cover opacity-50 group-hover:opacity-60 transition-opacity duration-500 scale-100 group-hover:scale-105 transition-transform"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
                   
                   <div className="relative flex flex-col items-center gap-4 text-center p-6">
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-indigo-600/90 text-white flex items-center justify-center shadow-xl shadow-indigo-600/50 group-hover:bg-indigo-500 group-hover:scale-110 transition-all duration-300 ring-8 ring-indigo-500/20">
-                      <Play size={36} className="ml-1 fill-white" />
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-indigo-600/90 text-white flex items-center justify-center shadow-xl shadow-indigo-600/50 group-hover:bg-indigo-500 group-hover:scale-110 transition-all duration-300 ring-8 ring-indigo-500/20">
+                      <Play size={32} className="ml-1 fill-white" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-white">Click to Play Video</h3>
-                      <p className="text-xs text-slate-300 mt-1">Full Detailed Platform Walkthrough & Features</p>
+                      <h3 className="text-lg sm:text-xl font-bold text-white">Click to Watch Platform Tour</h3>
+                      <p className="text-xs text-slate-300 mt-1">Complete Paper Generator & Question Bank Demo</p>
                     </div>
                   </div>
                 </div>
@@ -103,21 +101,18 @@ const About: React.FC<AboutProps> = ({ appName, videoUrl }) => {
             ) : (
               <div className="relative w-full h-full flex flex-col items-center justify-center bg-slate-900/90 p-8 text-center">
                 <img 
-                  src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80" 
-                  alt="Platform Walkthrough Coming Soon" 
-                  className="absolute inset-0 w-full h-full object-cover opacity-20"
+                  src="/blog-exam-guide.jpg" 
+                  alt="Platform Walkthrough" 
+                  className="absolute inset-0 w-full h-full object-cover opacity-25"
                 />
                 <div className="relative z-10 max-w-md">
                   <div className="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 mx-auto flex items-center justify-center mb-4 shadow-inner">
                     <Play size={28} className="ml-1" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Video Walkthrough Coming Soon</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed mb-4">
-                    We are currently recording an in-depth video guide on how to utilize AI-powered paper generation, question bank management, and grading.
+                  <h3 className="text-xl font-bold text-white mb-2">Video Demonstration Guide</h3>
+                  <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                    Explore our step-by-step guides and test paper creation workflow directly on the live platform.
                   </p>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-slate-300 text-xs font-semibold">
-                    <Sparkles size={12} className="text-amber-400" /> Upload link anytime in Super Admin Settings
-                  </span>
                 </div>
               </div>
             )}
@@ -125,143 +120,120 @@ const About: React.FC<AboutProps> = ({ appName, videoUrl }) => {
         </div>
       </section>
 
-      {/* Platform Story */}
+      {/* The Story & Real Problem We Solve */}
       <section className="mb-24 grid lg:grid-cols-2 gap-10 items-center">
-        <div className="rounded-[2rem] bg-slate-900 p-9 md:p-12 text-white relative overflow-hidden">
+        <div className="rounded-[2.5rem] bg-slate-900 p-8 sm:p-12 text-white relative overflow-hidden shadow-xl border border-slate-800">
           <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-indigo-500/20 blur-3xl" />
-          <div className="relative">
-            <span className="text-xs font-black uppercase tracking-[0.2em] text-indigo-300">Built for modern institutions</span>
-            <h2 className="mt-4 text-3xl font-black tracking-tight">Assessment should support learning—not add more administration.</h2>
-            <p className="mt-5 leading-relaxed text-slate-300">{appName} brings paper creation, secure role-based access, student assessment, result management, and performance insights into one connected workspace.</p>
+          <div className="relative z-10">
+            <span className="text-xs font-black uppercase tracking-[0.2em] text-cyan-400">Our Motivation</span>
+            <h2 className="mt-4 text-2xl sm:text-3xl font-black tracking-tight leading-tight">
+              Ending the 4-Hour Struggle of Manual InPage & Word Paper Typing.
+            </h2>
+            <p className="mt-4 leading-relaxed text-slate-300 text-sm sm:text-base">
+              In Pakistan, preparing bilingual examination papers traditionally meant wrestling with Urdu InPage, missing Nastaleeq fonts, corrupted tables, and manual math equation formatting.
+            </p>
+            <p className="mt-3 leading-relaxed text-slate-300 text-sm sm:text-base">
+              {appName} was engineered specifically to automate this entire workflow, giving teachers access to over 100,000+ verified textbook questions matching Punjab Boards (PCTB) and Federal Board (FBISE) standards.
+            </p>
           </div>
         </div>
-        <div className="space-y-5">
-          <h2 className="text-3xl font-black text-slate-900">How {appName} helps</h2>
-          <p className="text-slate-500 leading-relaxed">Schools can move from scattered documents and manual processes to a clear, repeatable exam workflow. Teachers spend less time formatting papers, while leaders gain a better view of academic activity.</p>
-          <ul className="space-y-3">
+
+        <div className="space-y-6">
+          <div>
+            <span className="text-xs font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
+              What We Deliver
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2">
+              Everything Your Academy Needs for Exam Excellence
+            </h2>
+          </div>
+          <ul className="space-y-3.5">
             {[
-              'Create exam papers from an organized question bank.',
-              'Prepare English, Urdu, and bilingual assessments.',
-              'Give staff and students the right level of access.',
-              'Print professional papers and review results in one place.'
-            ].map((item) => <li key={item} className="flex gap-3 text-sm font-medium text-slate-700"><CheckCircle2 size={19} className="shrink-0 text-emerald-500" />{item}</li>)}
+              '100% Bilingual Urdu & English with flawless Nastaleeq fonts.',
+              'Official 2025–2026 Board Pairing Schemes auto-balanced in 1 click.',
+              'PCTB, FBISE, and Single National Curriculum (SNC) chapter coverage.',
+              'Instant Teacher Answer Keys & OMR Bubble Sheets generated automatically.',
+              'Institutional Branding: School logo, custom header, and anti-copy watermark on every PDF.'
+            ].map((item, idx) => (
+              <li key={idx} className="flex gap-3 text-sm font-semibold text-slate-700">
+                <CheckCircle2 size={20} className="shrink-0 text-emerald-500 mt-0.5" />
+                <span>{item}</span>
+              </li>
+            ))}
           </ul>
         </div>
       </section>
 
-      {/* Values Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
-        <div className="p-8 bg-indigo-50 rounded-[2rem] border border-indigo-100">
-          <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-indigo-600 mb-6 shadow-sm">
+      {/* Core Values */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-24">
+        <div className="p-8 bg-indigo-50/70 rounded-3xl border border-indigo-100 shadow-sm">
+          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-indigo-600 mb-5 shadow-sm">
             <Target size={24} />
           </div>
-          <h3 className="text-xl font-bold text-slate-900 mb-3">Our Mission</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            To empower educators with tools that eliminate administrative burden, allowing them to focus on what matters most: teaching and student growth.
+          <h3 className="text-lg font-bold text-slate-900 mb-2">Our Mission</h3>
+          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            To give every Pakistani educator and school director the tools to conduct high-quality, board-standard testing without administrative overhead.
           </p>
         </div>
         
-        <div className="p-8 bg-purple-50 rounded-[2rem] border border-purple-100">
-          <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-purple-600 mb-6 shadow-sm">
-            <Eye size={24} />
+        <div className="p-8 bg-purple-50/70 rounded-3xl border border-purple-100 shadow-sm">
+          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-purple-600 mb-5 shadow-sm">
+            <BookOpen size={24} />
           </div>
-          <h3 className="text-xl font-bold text-slate-900 mb-3">Our Vision</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            A world where quality assessment is accessible, fair, and data-driven, bridging the gap between traditional methods and future needs.
+          <h3 className="text-lg font-bold text-slate-900 mb-2">Curriculum Accuracy</h3>
+          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            Every question, MCQ, and numerical problem is continuously audited against official textbooks and recent board past papers.
           </p>
         </div>
 
-        <div className="p-8 bg-emerald-50 rounded-[2rem] border border-emerald-100">
-          <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-emerald-600 mb-6 shadow-sm">
+        <div className="p-8 bg-emerald-50/70 rounded-3xl border border-emerald-100 shadow-sm">
+          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-emerald-600 mb-5 shadow-sm">
             <Award size={24} />
           </div>
-          <h3 className="text-xl font-bold text-slate-900 mb-3">Our Values</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            Integrity, Innovation, and Inclusivity drive every feature we build and every decision we make in this platform.
+          <h3 className="text-lg font-bold text-slate-900 mb-2">Teacher-Centric Support</h3>
+          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            Local Pakistani customer support via WhatsApp and dedicated staff training for schools across all 9 Punjab boards.
           </p>
         </div>
       </div>
 
-      {/* What We Build */}
-      <section className="mb-24">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-3xl font-black text-slate-900">Designed around real academic work</h2>
-          <p className="mt-4 text-slate-500">Every part of {appName} is intended to make assessments clearer, faster, and easier to manage.</p>
-        </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {[
-            { icon: Users, title: 'Role-based Workspaces', text: 'Separate experiences for admins, teachers, and students.' },
-            { icon: Languages, title: 'Bilingual Support', text: 'Flexible English, Urdu, and bilingual paper creation.' },
-            { icon: BarChart3, title: 'Useful Insights', text: 'Results and activity information that help academic teams act.' },
-            { icon: ShieldCheck, title: 'Responsible Access', text: 'Structured permissions and activity tracking for institutions.' }
-          ].map((item) => (
-            <article key={item.title} className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-              <item.icon size={24} className="text-indigo-600 mb-4" />
-              <h3 className="font-bold text-slate-900">{item.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-500">{item.text}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* Developer Profile Section */}
-      <div className="bg-slate-900 text-white rounded-[3rem] p-12 text-center relative overflow-hidden shadow-2xl">
-        {/* Background Decoration */}
+      {/* Founder / Team Profile Section */}
+      <div className="bg-slate-900 text-white rounded-[3rem] p-8 sm:p-12 text-center relative overflow-hidden shadow-2xl border border-slate-800">
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/20 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/20 rounded-full blur-[100px] pointer-events-none translate-y-1/2 -translate-x-1/2"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-cyan-500/20 rounded-full blur-[100px] pointer-events-none translate-y-1/2 -translate-x-1/2"></div>
 
-        <div className="relative z-10 flex flex-col items-center">
-            <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-indigo-400 mb-10">Meet the Developer</h2>
-            
-            {/* Profile Image Container */}
-            <div className="w-48 h-48 rounded-full border-4 border-white/10 mb-8 overflow-hidden bg-slate-800 shadow-2xl relative group">
-                {/* Placeholder Image - Replace src with your actual photo URL */}
-                <img 
-                    src="https://ui-avatars.com/api/?name=Muhammad+Raza&background=random&size=256&bold=true&color=fff" 
-                    alt="Muhammad Raza" 
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                />
-            </div>
+        <div className="relative z-10 flex flex-col items-center max-w-2xl mx-auto">
+          <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-400 mb-6">Built in Pakistan, for Pakistani Education</h2>
+          
+          <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full border-4 border-white/20 mb-6 overflow-hidden bg-slate-800 shadow-2xl">
+            <img 
+              src="https://ui-avatars.com/api/?name=Muhammad+Raza&background=4f46e5&size=256&bold=true&color=fff" 
+              alt="Muhammad Raza" 
+              className="w-full h-full object-cover" 
+            />
+          </div>
 
-            <h4 className="text-4xl font-black mb-2 tracking-tight">Muhammad Raza</h4>
-            <p className="text-lg text-slate-400 font-medium mb-8">Founder & Lead Engineer</p>
+          <h4 className="text-2xl sm:text-3xl font-black mb-1 tracking-tight">Muhammad Raza</h4>
+          <p className="text-sm text-cyan-400 font-bold mb-6">Founder & Lead Software Engineer</p>
 
-            <p className="max-w-2xl text-slate-300 leading-relaxed mb-10 text-lg">
-                Sole developer and architect of {appName}. Dedicated to building robust educational technologies that simplify complex academic workflows. 
-                Passionate about full-stack development and AI integration.
-            </p>
+          <p className="text-slate-300 leading-relaxed mb-8 text-sm sm:text-base font-normal">
+            "We built {appName} with the belief that technology should empower educators, not complicate their lives. Our platform is dedicated to helping schools and tuition academies across Pakistan raise the standard of academic assessment while saving valuable teaching hours."
+          </p>
 
-            <div className="flex items-center justify-center gap-6">
-                <a 
-                    href="https://linkedin.com" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="p-4 bg-white/5 rounded-full text-white hover:bg-[#0077b5] hover:scale-110 transition-all duration-300 backdrop-blur-sm border border-white/10"
-                    title="Connect on LinkedIn"
-                >
-                    <Linkedin size={24} />
-                </a>
-                <a 
-                    href="https://instagram.com" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="p-4 bg-white/5 rounded-full text-white hover:bg-gradient-to-tr hover:from-[#fd5949] hover:to-[#d6249f] hover:scale-110 transition-all duration-300 backdrop-blur-sm border border-white/10"
-                    title="Follow on Instagram"
-                >
-                    <Instagram size={24} />
-                </a>
-                <a 
-                    href="https://wa.me/923001234567" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="p-4 bg-white/5 rounded-full text-white hover:bg-[#25D366] hover:scale-110 transition-all duration-300 backdrop-blur-sm border border-white/10"
-                    title="Contact via WhatsApp"
-                >
-                    <Phone size={24} />
-                </a>
-            </div>
+          <div className="flex items-center justify-center gap-4">
+            <a 
+              href="https://wa.me/923000000000" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="px-6 py-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold rounded-2xl text-xs flex items-center gap-2 shadow-lg transition-all active:scale-95"
+            >
+              <Phone size={16} />
+              <span>Contact via WhatsApp</span>
+            </a>
+          </div>
         </div>
       </div>
+
     </div>
   );
 };

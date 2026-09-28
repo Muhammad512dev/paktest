@@ -201,23 +201,23 @@ const PastPapers: React.FC = () => {
   }, [filteredPastPapers]);
 
   return (
-    <div className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Page Title Banner with Academic Prestige Accents */}
+    <div className="py-10 sm:py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Page Title Banner */}
       <div className="text-center mb-10">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0B192C] border border-amber-500/30 text-amber-300 text-xs font-bold uppercase tracking-widest mb-4 shadow-sm">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-200/80 text-indigo-700 text-xs font-bold uppercase tracking-widest mb-4 shadow-sm">
           <span>🏛️</span> Official Board Examination Archive
         </div>
-        <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
-          <span className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 bg-clip-text text-transparent">Official Past</span> Papers Archive
+        <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900">
+          <span className="text-indigo-600">Official Past</span> Papers Archive
         </h1>
-        <p className="mt-3 text-slate-600 dark:text-slate-300 max-w-2xl mx-auto text-sm sm:text-base font-medium">
+        <p className="mt-3 text-slate-600 max-w-2xl mx-auto text-sm sm:text-base font-medium">
           Download authenticated matriculation and intermediate past examination papers from PCTB, Federal Board (FBISE), KPK, and Sindh boards.
         </p>
         
         {/* Dynamic Breadcrumbs */}
         {(selectedBoard || selectedLevel || selectedSubject) && (
-          <div className="mt-6 inline-flex flex-wrap items-center justify-center gap-2 bg-[#071326] text-white px-5 py-2.5 rounded-2xl border border-amber-500/30 shadow-md text-xs sm:text-sm font-bold uppercase tracking-wider">
-            {selectedBoard && <span className="text-amber-300">🏛️ {selectedBoard}</span>}
+          <div className="mt-6 inline-flex flex-wrap items-center justify-center gap-2 bg-slate-900 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl border border-slate-800 shadow-md text-xs sm:text-sm font-bold uppercase tracking-wider">
+            {selectedBoard && <span className="text-indigo-300">🏛️ {selectedBoard}</span>}
             {selectedBoard && selectedLevel && <span className="text-slate-500">›</span>}
             {selectedLevel && <span className="text-sky-300">🎓 {selectedLevel}</span>}
             {selectedLevel && selectedSubject && <span className="text-slate-500">›</span>}
@@ -231,14 +231,14 @@ const PastPapers: React.FC = () => {
       {currentStep === 1 && (
         <div className="max-w-5xl mx-auto space-y-6">
           <div className="text-center mb-6">
-            <span className="text-xs font-black text-amber-400 uppercase tracking-widest bg-[#0B192C] px-3.5 py-1 rounded-full border border-amber-500/30 shadow-sm">Step 1 of 3</span>
-            <h2 className="text-2xl font-black text-slate-900 dark:text-white mt-2">Select Educational Board / Syllabus</h2>
+            <span className="text-xs font-black text-indigo-700 uppercase tracking-widest bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200/80 shadow-sm">Step 1 of 3</span>
+            <h2 className="text-2xl font-black text-slate-900 mt-2">Select Educational Board / Syllabus</h2>
             <p className="text-slate-500 text-xs sm:text-sm mt-1">Select your provincial board to filter papers</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
             <button
               onClick={() => updateRouteUrl('', '', '', 2)}
-              className="p-6 rounded-2xl bg-gradient-to-br from-[#0B192C] to-[#071326] text-white font-black text-lg border-2 border-amber-500/40 shadow-xl hover:border-amber-400 hover:scale-105 transition-all text-center group"
+              className="p-6 rounded-2xl bg-slate-900 text-white font-black text-lg border-2 border-slate-800 shadow-xl hover:border-indigo-500 hover:scale-105 transition-all text-center group"
             >
               <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">🌟</div>
               ALL BOARDS
@@ -260,13 +260,13 @@ const PastPapers: React.FC = () => {
       {currentStep === 2 && (
         <div className="max-w-5xl mx-auto space-y-6">
           <div className="text-center mb-6">
-            <span className="text-xs font-black text-amber-400 uppercase tracking-widest bg-[#0B192C] px-3.5 py-1 rounded-full border border-amber-500/30 shadow-sm">Step 2 of 3</span>
-            <h2 className="text-2xl font-black text-slate-900 dark:text-white mt-2">Select Class / Level</h2>
-            <button onClick={() => updateRouteUrl(selectedBoard, '', '', 1)} className="text-xs text-amber-600 dark:text-amber-400 font-bold hover:underline mt-1 inline-flex items-center gap-1">
+            <span className="text-xs font-black text-indigo-700 uppercase tracking-widest bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200/80 shadow-sm">Step 2 of 3</span>
+            <h2 className="text-2xl font-black text-slate-900 mt-2">Select Class / Level</h2>
+            <button onClick={() => updateRouteUrl(selectedBoard, '', '', 1)} className="text-xs text-indigo-600 font-bold hover:underline mt-1 inline-flex items-center gap-1">
               ← Change Board ({selectedBoard || 'All'})
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
             {allLevels.map((lvl, idx) => (
               <button
                 key={lvl}
@@ -284,9 +284,9 @@ const PastPapers: React.FC = () => {
       {currentStep === 3 && (
         <div className="max-w-5xl mx-auto space-y-6">
           <div className="text-center mb-6">
-            <span className="text-xs font-black text-amber-400 uppercase tracking-widest bg-[#0B192C] px-3.5 py-1 rounded-full border border-amber-500/30 shadow-sm">Step 3 of 3</span>
-            <h2 className="text-2xl font-black text-slate-900 dark:text-white mt-2">Select Subject</h2>
-            <button onClick={() => updateRouteUrl(selectedBoard, selectedLevel, '', 2)} className="text-xs text-amber-600 dark:text-amber-400 font-bold hover:underline mt-1 inline-flex items-center gap-1">
+            <span className="text-xs font-black text-indigo-700 uppercase tracking-widest bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200/80 shadow-sm">Step 3 of 3</span>
+            <h2 className="text-2xl font-black text-slate-900 mt-2">Select Subject</h2>
+            <button onClick={() => updateRouteUrl(selectedBoard, selectedLevel, '', 2)} className="text-xs text-indigo-600 font-bold hover:underline mt-1 inline-flex items-center gap-1">
               ← Change Class ({selectedLevel})
             </button>
           </div>
@@ -307,13 +307,13 @@ const PastPapers: React.FC = () => {
       {/* STEP 4: Year Grouping PDF Cards View */}
       {(currentStep === 4 || (selectedBoard && selectedLevel && selectedSubject)) && (
         <div className="space-y-6 mt-4">
-          <div className="bg-[#0B192C] p-5 rounded-2xl border border-amber-500/20 shadow-xl flex flex-col md:flex-row gap-4 justify-between items-center text-white">
+          <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-800 shadow-xl flex flex-col md:flex-row gap-4 justify-between items-center text-white">
             <div className="relative flex-1 w-full md:max-w-md">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
                 type="text" 
                 placeholder="Search paper by board, title or year..." 
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#071326] border border-amber-500/20 text-white placeholder-slate-400 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
@@ -321,7 +321,7 @@ const PastPapers: React.FC = () => {
             
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
               {/* Limit selector dropdown */}
-              <div className="flex items-center gap-1.5 bg-[#071326] border border-amber-500/20 px-3 py-2 rounded-xl text-xs font-bold text-slate-300">
+              <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-700 px-3 py-2 rounded-xl text-xs font-bold text-slate-300">
                 <span className="text-slate-400 font-semibold">Show:</span>
                 <select
                   value={itemsPerPage === 9999 ? 'all' : itemsPerPage.toString()}
@@ -330,16 +330,16 @@ const PastPapers: React.FC = () => {
                     setItemsPerPage(val === 'all' ? 9999 : parseInt(val, 10));
                     setCurrentPage(1);
                   }}
-                  className="bg-transparent font-black text-amber-400 focus:outline-none cursor-pointer"
+                  className="bg-transparent font-black text-indigo-400 focus:outline-none cursor-pointer"
                 >
-                  <option value="20" className="bg-[#071326] text-white">20</option>
-                  <option value="40" className="bg-[#071326] text-white">40</option>
-                  <option value="100" className="bg-[#071326] text-white">100</option>
-                  <option value="all" className="bg-[#071326] text-white">All</option>
+                  <option value="20" className="bg-slate-900 text-white">20</option>
+                  <option value="40" className="bg-slate-900 text-white">40</option>
+                  <option value="100" className="bg-slate-900 text-white">100</option>
+                  <option value="all" className="bg-slate-900 text-white">All</option>
                 </select>
               </div>
 
-              <button onClick={resetStepWizard} className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-[#071326] rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md">
+              <button onClick={resetStepWizard} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md">
                 Change Selection
               </button>
             </div>
@@ -347,12 +347,12 @@ const PastPapers: React.FC = () => {
 
           {/* Results Summary Bar */}
           {filteredPastPapers.length > 0 && (
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-2 px-1 text-xs text-slate-500 dark:text-slate-400 font-semibold">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-2 px-1 text-xs text-slate-500 font-semibold">
               <div>
-                Showing <span className="font-bold text-slate-900 dark:text-white">{filteredPastPapers.length}</span> authentic board papers
+                Showing <span className="font-bold text-slate-900">{filteredPastPapers.length}</span> authentic board papers
               </div>
 
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#0B192C] p-0.5 rounded-lg border border-slate-200 dark:border-amber-500/20">
+              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
                 {['20', '40', '100', 'all'].map((opt) => (
                   <button
                     key={opt}
@@ -362,8 +362,8 @@ const PastPapers: React.FC = () => {
                     }}
                     className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase transition-all ${
                       (opt === 'all' && itemsPerPage === 9999) || itemsPerPage === parseInt(opt, 10)
-                        ? 'bg-amber-500 text-slate-900 font-black shadow-sm' 
-                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                        ? 'bg-indigo-600 text-white font-black shadow-sm' 
+                        : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
                     {opt === 'all' ? 'All' : opt}
@@ -376,12 +376,12 @@ const PastPapers: React.FC = () => {
           {/* Grouped by Year Headers */}
           {papersByYear.map(group => (
             <div key={group.year} className="space-y-4">
-              {/* Year Header Banner with Academic Gold Crest Accent */}
-              <div className="w-full bg-gradient-to-r from-[#071326] via-[#0B192C] to-[#071326] text-white py-3 px-6 rounded-2xl font-black text-center text-lg tracking-widest shadow-lg border border-amber-500/30 flex items-center justify-center gap-3">
-                <span className="text-amber-400 text-sm">✦</span>
-                <span className="text-amber-300 font-serif text-xl">{group.year}</span>
+              {/* Year Header Banner */}
+              <div className="w-full bg-slate-900 text-white py-3 px-6 rounded-2xl font-black text-center text-lg tracking-widest shadow-lg border border-slate-800 flex items-center justify-center gap-3">
+                <span className="text-indigo-400 text-sm">✦</span>
+                <span className="text-indigo-300 font-serif text-xl">{group.year}</span>
                 <span className="text-xs uppercase tracking-widest text-slate-300 font-sans font-bold">Annual & Supplementary Examinations</span>
-                <span className="text-amber-400 text-sm">✦</span>
+                <span className="text-indigo-400 text-sm">✦</span>
               </div>
 
               {/* Grid of PDF Cards */}
@@ -392,14 +392,14 @@ const PastPapers: React.FC = () => {
                     href={p.fileUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="p-5 bg-white dark:bg-[#0B192C] rounded-2xl border border-slate-200 dark:border-amber-500/20 hover:border-amber-400 dark:hover:border-amber-400 shadow-sm hover:shadow-xl transition-all flex flex-col items-center justify-center text-center group cursor-pointer"
+                    className="p-5 bg-white rounded-2xl border border-slate-200 hover:border-indigo-400 shadow-sm hover:shadow-xl transition-all flex flex-col items-center justify-center text-center group cursor-pointer"
                   >
-                    <div className="w-12 h-12 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-rose-100 transition-all border border-rose-200 dark:border-rose-900/50">
+                    <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-rose-100 transition-all border border-rose-200">
                       <Download size={22} />
                     </div>
-                    <h4 className="font-bold text-slate-900 dark:text-white text-sm group-hover:text-amber-500 transition-colors line-clamp-2">{p.title || `${p.board || 'Board'} Paper`}</h4>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold uppercase mt-1 tracking-wider">{p.subject} • {p.year}</p>
-                    <span className="mt-3 text-[11px] font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-500/30 px-3 py-1 rounded-full group-hover:bg-amber-500 group-hover:text-slate-900 transition-colors">
+                    <h4 className="font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors line-clamp-2">{p.title || `${p.board || 'Board'} Paper`}</h4>
+                    <p className="text-[11px] text-slate-500 font-semibold uppercase mt-1 tracking-wider">{p.subject} • {p.year}</p>
+                    <span className="mt-3 text-[11px] font-black text-indigo-700 bg-indigo-50 border border-indigo-200/70 px-3 py-1 rounded-full group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                       View / Download PDF →
                     </span>
                   </a>
@@ -409,10 +409,10 @@ const PastPapers: React.FC = () => {
           ))}
 
           {filteredPastPapers.length === 0 && (
-            <div className="py-16 text-center text-slate-400 bg-white dark:bg-[#0B192C] rounded-3xl border border-slate-200 dark:border-amber-500/20 shadow-md">
-              <Filter size={48} className="mx-auto mb-3 opacity-20 text-amber-500" />
-              <p className="font-bold text-slate-700 dark:text-slate-200">No past papers found for this specific selection.</p>
-              <button onClick={resetStepWizard} className="mt-4 text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline">
+            <div className="py-16 text-center text-slate-400 bg-white rounded-3xl border border-slate-200 shadow-md">
+              <Filter size={48} className="mx-auto mb-3 opacity-20 text-indigo-500" />
+              <p className="font-bold text-slate-700">No past papers found for this specific selection.</p>
+              <button onClick={resetStepWizard} className="mt-4 text-xs font-bold text-indigo-600 hover:underline">
                 Reset filters and explore other subjects
               </button>
             </div>

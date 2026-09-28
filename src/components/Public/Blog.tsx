@@ -268,15 +268,15 @@ const Blog: React.FC = () => {
   }
 
   return (
-    <div className="bg-slate-50 dark:bg-[#071326] min-h-screen">
-      <div className="bg-[#071326] py-20 px-6 lg:px-8 relative overflow-hidden border-b border-amber-500/20">
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-amber-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div className="bg-slate-50 min-h-screen">
+      <div className="bg-slate-900 py-16 sm:py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden border-b border-slate-800">
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none"></div>
         <div className="max-w-7xl mx-auto relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0B192C] border border-amber-500/30 text-amber-300 text-xs font-bold uppercase tracking-widest mb-4 shadow-sm">
-            <SparklesIcon size={14} className="text-amber-400" /> Academic Insights & Pedagogical Guides
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-400/30 text-indigo-300 text-xs font-bold uppercase tracking-widest mb-4 shadow-sm">
+            <SparklesIcon size={14} className="text-indigo-400" /> Academic Insights & Pedagogical Guides
           </div>
-          <h1 className="text-4xl md:text-6xl font-black text-white mb-4 tracking-tight font-serif">
-            Educational <span className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 bg-clip-text text-transparent">Insights & Research</span>
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white mb-4 tracking-tight font-serif">
+            Educational <span className="text-indigo-400">Insights & Research</span>
           </h1>
           <p className="text-slate-300 max-w-2xl mx-auto text-sm sm:text-base font-normal mb-8">
             Expert pedagogical guides, board paper pairing breakdown, assessment strategies, and exam preparation tips for Pakistani educators.
@@ -286,7 +286,7 @@ const Blog: React.FC = () => {
             <input 
               type="text" 
               placeholder="Search guides, pairing schemes, paper patterns..." 
-              className="w-full pl-12 pr-4 py-4 rounded-2xl bg-[#0B192C] border border-amber-500/30 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 backdrop-blur-sm transition-all text-sm"
+              className="w-full pl-12 pr-4 py-3.5 sm:py-4 rounded-2xl bg-slate-800 border border-slate-700 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 backdrop-blur-sm transition-all text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -294,16 +294,16 @@ const Blog: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         
         {/* Pagination Controls Top */}
         <div className="flex justify-end mb-8">
            <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Articles per page:</span>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Articles per page:</span>
               <select 
                  value={itemsPerPage}
                  onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                 className="px-3 py-2 border border-slate-200 dark:border-amber-500/20 rounded-lg bg-white dark:bg-[#0B192C] text-xs font-bold text-slate-700 dark:text-amber-400 outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                 className="px-3 py-2 border border-slate-200 rounded-lg bg-white text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
                  <option value={20}>20</option>
                  <option value={40}>40</option>
@@ -314,29 +314,29 @@ const Blog: React.FC = () => {
 
         {featuredPost && (
           <div className="mb-16">
-            <h2 className="text-xs font-bold text-amber-500 uppercase tracking-widest mb-6 flex items-center gap-2 font-mono">
-              <SparklesIcon className="text-amber-500" size={16} /> Featured Master Guide
+            <h2 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-6 flex items-center gap-2 font-mono">
+              <SparklesIcon className="text-indigo-600" size={16} /> Featured Master Guide
             </h2>
             <div 
-              className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center group cursor-pointer bg-white dark:bg-[#0B192C] p-6 sm:p-8 rounded-[2.5rem] border border-slate-200 dark:border-amber-500/20 shadow-xl hover:border-amber-500/40 transition-all"
+              className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center group cursor-pointer bg-white p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-slate-200 shadow-xl hover:border-indigo-400 transition-all"
               onClick={() => openPost(featuredPost)}
             >
               {featuredPost.image && (
-                <div className="relative overflow-hidden rounded-[2rem] shadow-xl border border-slate-100 dark:border-amber-500/20">
-                  <div className="absolute inset-0 bg-[#071326]/20 group-hover:bg-transparent transition-all z-10"></div>
-                  <img src={featuredPost.image} className="w-full h-[360px] object-cover transform group-hover:scale-105 transition-transform duration-700" alt={featuredPost.title} />
+                <div className="relative overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] shadow-xl border border-slate-100">
+                  <div className="absolute inset-0 bg-slate-900/10 group-hover:bg-transparent transition-all z-10"></div>
+                  <img src={featuredPost.image} className="w-full h-[280px] sm:h-[360px] object-cover transform group-hover:scale-105 transition-transform duration-700" alt={featuredPost.title} />
                 </div>
               )}
               <div className="space-y-6">
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 text-xs font-black uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-black uppercase tracking-wider">
                   <Tag size={12} /> {featuredPost.category}
                 </span>
-                <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white leading-tight font-serif group-hover:text-amber-500 transition-colors">
+                <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 leading-tight font-serif group-hover:text-indigo-600 transition-colors">
                   {featuredPost.title}
                 </h3>
-                <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed font-normal">{featuredPost.excerpt}</p>
-                <div className="flex items-center gap-6 text-xs sm:text-sm text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-amber-500/20 pt-6 font-medium">
-                  <span className="font-bold text-slate-900 dark:text-white">{featuredPost.author}</span>
+                <p className="text-base sm:text-lg text-slate-600 leading-relaxed font-normal">{featuredPost.excerpt}</p>
+                <div className="flex items-center gap-6 text-xs sm:text-sm text-slate-500 border-t border-slate-100 pt-6 font-medium">
+                  <span className="font-bold text-slate-900">{featuredPost.author}</span>
                   <span>{new Date(featuredPost.date).toLocaleDateString()}</span>
                   <span>{featuredPost.readTime}</span>
                 </div>

@@ -38,13 +38,13 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-800 selection:bg-amber-100 selection:text-slate-900">
-      {/* Top Academic Prestige Ribbon */}
-      <div className="bg-[#071326] text-amber-300 text-[11px] font-semibold py-1.5 px-4 border-b border-amber-500/20">
+    <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-800 selection:bg-indigo-100 selection:text-indigo-900">
+      {/* Top Academic Ribbon */}
+      <div className="bg-slate-900 text-slate-300 text-[11px] font-semibold py-1.5 px-4 border-b border-slate-800">
         <div className="max-w-[1600px] mx-auto flex flex-wrap justify-between items-center gap-2">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/30 text-[10px] font-black uppercase tracking-wider">
-              <Award size={11} className="text-amber-400" /> Academic Portal
+            <span className="inline-flex items-center gap-1 bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/30 text-[10px] font-black uppercase tracking-wider">
+              <Award size={11} className="text-indigo-400" /> Academic Exam System
             </span>
             <span className="text-slate-300">100% Curriculum Compliant with Punjab (PCTB), Federal (FBISE), Sindh & KPK Boards</span>
           </div>
@@ -57,11 +57,11 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
         </div>
       </div>
 
-      {/* Main Navbar with Royal Navy and Gold Touch */}
-      <nav className="sticky top-0 z-50 bg-[#0B192C]/95 backdrop-blur-md border-b border-slate-800/80 shadow-lg shadow-slate-950/20 w-full">
+      {/* Main Navbar */}
+      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm w-full">
         <div className="max-w-[1600px] mx-auto px-3 sm:px-6">
-          <div className="flex justify-between items-center h-16 sm:h-20 gap-2 sm:gap-4">
-            {/* Logo: Brand Identity */}
+          <div className="flex justify-between items-center h-16 sm:h-20 gap-2 sm:gap-3">
+            {/* Logo */}
             <div className="flex items-center cursor-pointer shrink-0 py-1 sm:py-2" onClick={() => onNavigate('HOME')}>
               {logoUrl ? (
                 <img 
@@ -75,33 +75,33 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
                       target.src = '/favicon.svg';
                     }
                   }}
-                  className="h-10 sm:h-12 md:h-14 w-auto max-w-[170px] sm:max-w-[260px] md:max-w-[320px] object-contain drop-shadow-md transition-transform hover:scale-[1.02]" 
+                  className="h-10 sm:h-12 md:h-14 w-auto max-w-[170px] sm:max-w-[260px] md:max-w-[320px] object-contain drop-shadow-sm transition-transform hover:scale-[1.02]" 
                 />
               ) : (
                 <div className="flex items-center gap-2.5 sm:gap-3">
-                  <div className="w-9 h-9 sm:w-11 sm:h-11 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center text-slate-950 shadow-md shadow-amber-500/20 font-black">
-                    <GraduationCap size={22} className="text-slate-950" />
+                  <div className="w-9 h-9 sm:w-11 sm:h-11 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-200 font-black">
+                    <GraduationCap size={22} className="text-white" />
                   </div>
                   <div>
-                    <span className="font-black text-base sm:text-xl tracking-tight text-white block leading-tight">{systemName}</span>
-                    <span className="text-[10px] text-amber-400 uppercase tracking-widest font-black block">Exam System</span>
+                    <span className="font-black text-base sm:text-xl tracking-tight text-slate-900 block leading-tight">{systemName}</span>
+                    <span className="text-[10px] text-indigo-600 uppercase tracking-widest font-black block">Exam System</span>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Desktop Nav Items */}
-            <div className="hidden xl:flex flex-1 justify-center items-center gap-1 2xl:gap-1.5 px-2">
+            {/* Desktop Nav Items - Compact Gap Between Tab Names */}
+            <div className="hidden xl:flex flex-1 justify-center items-center gap-0.5 2xl:gap-1 px-1">
               {navItems.map((item) => {
                 const isActive = currentView === item.id;
                 return (
                   <button
                     key={item.id}
                     onClick={() => onNavigate(item.id)}
-                    className={`text-[11px] 2xl:text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap py-2 px-3 rounded-xl ${
+                    className={`text-[11px] 2xl:text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap py-2 px-2.5 rounded-xl ${
                       isActive 
-                        ? 'text-amber-300 bg-amber-500/15 border border-amber-500/30 shadow-inner' 
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                        ? 'text-indigo-600 bg-indigo-50 border border-indigo-200/70 shadow-sm' 
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
                     }`}
                   >
                     {item.label}
@@ -110,23 +110,23 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
               })}
             </div>
 
-            {/* Auth Action Buttons with Academic Elite Styling */}
-            <div className="hidden xl:flex items-center gap-2.5 shrink-0">
+            {/* Auth Action Buttons */}
+            <div className="hidden xl:flex items-center gap-2 shrink-0">
               <button 
                 onClick={() => onNavigate('LOGIN')}
-                className="whitespace-nowrap rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-2 text-xs font-bold transition-all shadow-sm active:scale-95"
+                className="whitespace-nowrap rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-3 py-2 text-xs font-bold transition-all shadow-sm active:scale-95"
               >
                 Staff Portal
               </button>
               <button 
                 onClick={() => onNavigate('STUDENT_LOGIN')}
-                className="whitespace-nowrap rounded-xl bg-slate-800/90 hover:bg-slate-700 text-amber-400 border border-amber-500/30 px-3.5 py-2 text-xs font-bold transition-all shadow-sm active:scale-95"
+                className="whitespace-nowrap rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 text-xs font-bold transition-all shadow-sm active:scale-95"
               >
                 Student Portal
               </button>
               <button 
                 onClick={() => onNavigate('SIGNUP')}
-                className="whitespace-nowrap rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black px-4 py-2 text-xs uppercase tracking-wider transition-all shadow-lg shadow-amber-500/20 active:scale-95"
+                className="whitespace-nowrap rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-black px-4 py-2 text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-200 active:scale-95"
               >
                 Start Free Trial
               </button>
@@ -136,7 +136,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
             <div className="xl:hidden">
               <button 
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
-                className="text-slate-300 p-2 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700" 
+                className="text-slate-700 p-2 rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200" 
                 aria-label="Toggle Mobile Menu"
               >
                 {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
@@ -147,39 +147,39 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
 
         {/* Mobile / Tablet Menu */}
         {isMobileMenuOpen && (
-          <div className="xl:hidden bg-[#0B192C] border-t border-slate-800 absolute w-full left-0 shadow-2xl">
-            <div className="px-4 pt-3 pb-6 space-y-1.5">
+          <div className="xl:hidden bg-white border-t border-slate-200 absolute w-full left-0 shadow-2xl">
+            <div className="px-4 pt-3 pb-6 space-y-1">
               {navItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => { onNavigate(item.id); setIsMobileMenuOpen(false); }}
-                  className={`block w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider ${
+                  className={`block w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider ${
                     currentView === item.id 
-                      ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30' 
-                      : 'text-slate-300 hover:bg-slate-800'
+                      ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' 
+                      : 'text-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   {item.label}
                 </button>
               ))}
-              <div className="h-px bg-slate-800 my-3"></div>
+              <div className="h-px bg-slate-200 my-3"></div>
               <div className="grid grid-cols-2 gap-2">
                 <button 
                   onClick={() => { onNavigate('LOGIN'); setIsMobileMenuOpen(false); }}
-                  className="rounded-xl bg-slate-800 px-3 py-2.5 text-center text-xs font-bold text-white border border-slate-700"
+                  className="rounded-xl bg-slate-100 px-3 py-2.5 text-center text-xs font-bold text-slate-800 border border-slate-200"
                 >
                   Staff Portal
                 </button>
                 <button 
                   onClick={() => { onNavigate('STUDENT_LOGIN'); setIsMobileMenuOpen(false); }}
-                  className="rounded-xl bg-slate-800 px-3 py-2.5 text-center text-xs font-bold text-amber-400 border border-amber-500/30"
+                  className="rounded-xl bg-indigo-50 px-3 py-2.5 text-center text-xs font-bold text-indigo-700 border border-indigo-200"
                 >
                   Student Portal
                 </button>
               </div>
               <button 
                 onClick={() => { onNavigate('SIGNUP'); setIsMobileMenuOpen(false); }}
-                className="w-full mt-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black px-4 py-3 text-center text-xs uppercase tracking-wider"
+                className="w-full mt-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-black px-4 py-3 text-center text-xs uppercase tracking-wider shadow-lg shadow-indigo-200"
               >
                 Create School Trial Account
               </button>
@@ -193,8 +193,8 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
         {children}
       </main>
 
-      {/* Academic Prestigious Footer */}
-      <footer className="bg-[#071326] text-slate-300 py-12 md:py-16 border-t border-slate-800/80">
+      {/* Footer in Clean Slate & Indigo */}
+      <footer className="bg-slate-900 text-slate-300 py-12 md:py-16 border-t border-slate-800">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 lg:gap-12">
             

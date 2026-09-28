@@ -71,43 +71,43 @@ const Pricing: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate 
   return (
     <div className="bg-slate-50 min-h-screen">
       {/* Hero Header */}
-      <div className="bg-[#071326] py-20 px-6 relative overflow-hidden text-white border-b border-amber-500/20">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="bg-slate-900 py-16 sm:py-20 px-4 sm:px-6 relative overflow-hidden text-white border-b border-slate-800">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[140px] pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-cyan-600/10 rounded-full blur-[120px] pointer-events-none"></div>
         
         <div className="max-w-5xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-black uppercase tracking-wider mb-5">
-            <Award size={14} className="text-amber-400" /> Transparent Institutional Pricing
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-400/30 text-indigo-300 text-xs font-black uppercase tracking-wider mb-4">
+            <Award size={14} className="text-indigo-400" /> Transparent Institutional Pricing
           </div>
           
           <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4">
             Affordable Plans for Schools & Academies
           </h1>
-          <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto mb-9 leading-relaxed font-medium">
+          <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto mb-8 leading-relaxed font-medium">
             Generate unlimited chapter-wise, half-book, and full-length exam papers with custom school logo watermarks, Nastaleeq Urdu, and automated answer keys.
           </p>
           
           {/* Billing Switch */}
-          <div className="inline-flex bg-[#0B192C] p-1.5 rounded-2xl border border-amber-500/30 shadow-inner">
+          <div className="inline-flex bg-slate-800 p-1.5 rounded-2xl border border-slate-700 shadow-inner">
             <button 
                 onClick={() => setIsAnnual(false)}
-                className={`px-6 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all ${!isAnnual ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20' : 'text-slate-400 hover:text-white'}`}
+                className={`px-5 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all ${!isAnnual ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
             >
                 Monthly Billing
             </button>
             <button 
                 onClick={() => setIsAnnual(true)}
-                className={`px-6 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 ${isAnnual ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20' : 'text-slate-400 hover:text-white'}`}
+                className={`px-5 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 ${isAnnual ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
             >
-                Annual <span className="text-[10px] bg-emerald-600 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Save 20%</span>
+                Annual <span className="text-[10px] bg-emerald-500 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Save 20%</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Pricing Cards Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 -mt-10 relative z-20">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 -mt-8 relative z-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
             
             {/* Plans List */}
             <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -116,15 +116,15 @@ const Pricing: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate 
                     return (
                     <div 
                         key={plan.id}
-                        className={`bg-white rounded-3xl p-8 border flex flex-col relative transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5 ${
+                        className={`bg-white rounded-3xl p-6 sm:p-8 border flex flex-col relative transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${
                             isPopular 
-                            ? 'border-amber-500/80 shadow-xl ring-2 ring-amber-500/30' 
+                            ? 'border-indigo-500 shadow-xl ring-2 ring-indigo-500/20' 
                             : 'border-slate-200 shadow-md'
                         }`}
                     >
                         {isPopular && (
-                            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 px-4 py-1 rounded-full text-[11px] font-black uppercase tracking-widest shadow-md flex items-center gap-1.5 border border-amber-300">
-                                <Crown size={13} className="text-slate-950" /> Most Popular for Academies
+                            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-4 py-1 rounded-full text-[11px] font-black uppercase tracking-widest shadow-md flex items-center gap-1.5 border border-indigo-400/40">
+                                <Crown size={13} className="text-white" /> Most Popular for Academies
                             </div>
                         )}
 
@@ -141,16 +141,16 @@ const Pricing: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate 
                             </p>
                         </div>
 
-                        <div className="space-y-3.5 mb-8 flex-1">
-                            <div className="flex items-center gap-3 text-xs sm:text-sm font-bold text-slate-800 bg-amber-50/50 p-2.5 rounded-xl border border-amber-100">
-                                <div className="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 font-black">
+                        <div className="space-y-3 mb-8 flex-1">
+                            <div className="flex items-center gap-3 text-xs sm:text-sm font-bold text-slate-800 bg-indigo-50/70 p-2.5 rounded-xl border border-indigo-100">
+                                <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 font-black">
                                     <Zap size={15} />
                                 </div>
                                 <span>{plan.limits.papers >= 9999 ? 'Unlimited Test Paper' : `${plan.limits.papers} Test Papers`} / month</span>
                             </div>
                             
                             <div className="flex items-center gap-3 text-xs sm:text-sm font-bold text-slate-800 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                                <div className="w-7 h-7 rounded-lg bg-slate-900 text-amber-400 flex items-center justify-center shrink-0 font-black">
+                                <div className="w-7 h-7 rounded-lg bg-slate-900 text-indigo-400 flex items-center justify-center shrink-0 font-black">
                                     <Building2 size={15} />
                                 </div>
                                 <span>{plan.limits.staff >= 999 ? 'Unlimited Teacher Accounts' : `${plan.limits.staff} Staff / Teacher Accounts`}</span>
@@ -169,7 +169,7 @@ const Pricing: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate 
                         {plan.price === 0 ? (
                             <button 
                                 onClick={() => onNavigate('SIGNUP')}
-                                className="w-full py-4 rounded-2xl font-black uppercase tracking-wider text-xs transition-all bg-[#0B192C] text-amber-300 hover:bg-slate-950 border border-amber-500/30 shadow-lg hover:shadow-xl"
+                                className="w-full py-3.5 rounded-2xl font-black uppercase tracking-wider text-xs transition-all bg-slate-900 text-white hover:bg-slate-800 border border-slate-800 shadow-md hover:shadow-lg"
                             >
                                 Start Free Trial Now
                             </button>
@@ -179,7 +179,7 @@ const Pricing: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate 
                                     href={`https://wa.me/${(systemConfig?.platformContact || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hi PakParcha Team! I want to activate the ${plan.name} Plan (${plan.currencySymbol}${plan.price}/month).\n\nPlease send me the bank / JazzCash / EasyPaisa payment details.`)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="w-full py-4 rounded-2xl font-black uppercase tracking-wider text-xs transition-all bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+                                    className="w-full py-3.5 rounded-2xl font-black uppercase tracking-wider text-xs transition-all bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
                                 >
                                     <MessageCircle size={17} /> Order on WhatsApp
                                 </a>

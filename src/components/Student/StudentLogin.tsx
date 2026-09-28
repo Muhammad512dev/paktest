@@ -30,10 +30,10 @@ const StudentLogin: React.FC<StudentLoginProps> = ({ onLogin, onSwitchToAdmin, o
   };
 
   return (
-    <div className="min-h-screen bg-[#071326] flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
       {/* Background glow */}
-      <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none"></div>
-      <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[140px] pointer-events-none"></div>
+      <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-cyan-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
       <div className="max-w-md w-full relative z-10">
         {/* Logo & Branding */}
@@ -41,20 +41,20 @@ const StudentLogin: React.FC<StudentLoginProps> = ({ onLogin, onSwitchToAdmin, o
           <button
             type="button"
             onClick={onBack}
-            className="mb-6 inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-[#0B192C] px-4 py-2 text-xs font-bold text-slate-300 shadow-sm transition-colors hover:border-amber-500/40 hover:text-amber-300"
+            className="mb-6 inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-bold text-slate-300 shadow-sm transition-colors hover:border-indigo-500 hover:text-indigo-300"
           >
             <ArrowLeft size={15} /> Back to Platform
           </button>
           
-          <div className="inline-flex items-center justify-center p-4 bg-gradient-to-br from-amber-400 to-amber-600 rounded-3xl shadow-xl shadow-amber-500/20 mb-4 transform -rotate-3 border border-amber-300">
-            <GraduationCap className="text-slate-950" size={36} />
+          <div className="inline-flex items-center justify-center p-4 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-3xl shadow-xl shadow-indigo-500/20 mb-4 transform -rotate-3 border border-indigo-400/40">
+            <GraduationCap className="text-white" size={36} />
           </div>
           <h1 className="text-3xl font-black text-white tracking-tight">Student Exam Portal</h1>
           <p className="text-slate-400 mt-1.5 text-xs sm:text-sm font-medium">Access your school tests, quizzes & performance analytics</p>
         </div>
 
-        <div className="bg-[#0B192C]/95 rounded-3xl shadow-2xl border border-amber-500/30 overflow-hidden backdrop-blur-xl">
-          <div className="p-8">
+        <div className="bg-slate-800/95 rounded-3xl shadow-2xl border border-slate-700 overflow-hidden backdrop-blur-xl">
+          <div className="p-6 sm:p-8">
             {error && (
               <div className="mb-6 p-4 bg-rose-950/50 border border-rose-800 text-rose-300 rounded-2xl flex items-center gap-3 text-xs font-medium">
                 <AlertCircle size={18} className="shrink-0 text-rose-400" />
@@ -72,7 +72,7 @@ const StudentLogin: React.FC<StudentLoginProps> = ({ onLogin, onSwitchToAdmin, o
                     type="email" 
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3.5 bg-slate-900/90 border border-slate-700 rounded-xl outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20 transition-all text-xs sm:text-sm font-medium text-white placeholder:text-slate-600"
+                    className="w-full pl-11 pr-4 py-3.5 bg-slate-900 border border-slate-700 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 transition-all text-xs sm:text-sm font-medium text-white placeholder:text-slate-600"
                     placeholder="student@school.edu.pk"
                   />
                 </div>
@@ -87,7 +87,7 @@ const StudentLogin: React.FC<StudentLoginProps> = ({ onLogin, onSwitchToAdmin, o
                     type="password" 
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3.5 bg-slate-900/90 border border-slate-700 rounded-xl outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20 transition-all text-xs sm:text-sm font-medium text-white placeholder:text-slate-600"
+                    className="w-full pl-11 pr-4 py-3.5 bg-slate-900 border border-slate-700 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 transition-all text-xs sm:text-sm font-medium text-white placeholder:text-slate-600"
                     placeholder="••••••••"
                   />
                 </div>
@@ -97,7 +97,7 @@ const StudentLogin: React.FC<StudentLoginProps> = ({ onLogin, onSwitchToAdmin, o
                 <button 
                   type="submit" 
                   disabled={loading}
-                  className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 group shadow-lg shadow-amber-500/20 cursor-pointer"
+                  className="w-full py-3.5 sm:py-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 group shadow-lg shadow-indigo-500/20 cursor-pointer"
                 >
                   {loading ? 'Authenticating...' : 'Sign In to Student Portal'}
                   {!loading && <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />}
@@ -106,10 +106,10 @@ const StudentLogin: React.FC<StudentLoginProps> = ({ onLogin, onSwitchToAdmin, o
             </form>
           </div>
 
-          <div className="px-8 py-5 bg-[#071326] border-t border-slate-800 flex flex-col items-center gap-3">
+          <div className="px-6 sm:px-8 py-5 bg-slate-900 border-t border-slate-800 flex flex-col items-center gap-3">
             <button 
               onClick={onSwitchToAdmin}
-              className="text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-2"
+              className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-2"
             >
               <ShieldCheck size={16} />
               Switch to Teacher / Admin Portal

@@ -518,22 +518,25 @@ const Notes: React.FC = () => {
           </div>
         ) : (
           <div className="text-center py-4">
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 inline-block relative">
-              <span className="text-amber-500 border-b-4 border-amber-500 pb-1">Study</span> Notes & Chapter Solutions
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0B192C] border border-amber-500/30 text-amber-300 text-xs font-bold uppercase tracking-widest mb-4 shadow-sm">
+              <Sparkles size={14} className="text-amber-400" /> SNC 2025–2026 Aligned Study Material
+            </div>
+            <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white block font-serif">
+              <span className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 bg-clip-text text-transparent">Study Notes</span> & Chapter Solutions
             </h1>
-            <p className="text-slate-500 text-sm mt-2 max-w-2xl mx-auto">
+            <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base mt-2 max-w-2xl mx-auto font-medium">
               Comprehensive chapter-wise solved questions, MCQs with answer keys, numericals, and full book complete notes for matric & intermediate exams.
             </p>
             {(selectedBoard || selectedClass || selectedSubject) && (
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm font-black uppercase text-slate-700 tracking-wider">
-                {selectedBoard && <span className="bg-slate-100 px-2.5 py-1 rounded-lg">🏛️ {selectedBoard}</span>}
-                {selectedBoard && selectedClass && <span>›</span>}
-                {selectedClass && <span className="bg-slate-100 px-2.5 py-1 rounded-lg">🎓 {selectedClass}</span>}
-                {selectedClass && selectedSubject && <span>›</span>}
-                {selectedSubject && <span className="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg">📖 {selectedSubject}</span>}
-                {selectedUnit !== 'ALL' && <span>›</span>}
-                {selectedUnit !== 'ALL' && <span className="bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg">📑 Unit {selectedUnit}</span>}
-                <button onClick={resetStepWizard} className="ml-3 text-xs text-rose-500 hover:underline normal-case font-bold">(Reset All)</button>
+              <div className="mt-5 inline-flex flex-wrap items-center justify-center gap-2 bg-[#071326] text-white px-5 py-2.5 rounded-2xl border border-amber-500/30 shadow-md text-xs sm:text-sm font-bold uppercase tracking-wider">
+                {selectedBoard && <span className="text-amber-300">🏛️ {selectedBoard}</span>}
+                {selectedBoard && selectedClass && <span className="text-slate-500">›</span>}
+                {selectedClass && <span className="text-sky-300">🎓 {selectedClass}</span>}
+                {selectedClass && selectedSubject && <span className="text-slate-500">›</span>}
+                {selectedSubject && <span className="text-emerald-300">📖 {selectedSubject}</span>}
+                {selectedUnit !== 'ALL' && <span className="text-slate-500">›</span>}
+                {selectedUnit !== 'ALL' && <span className="text-amber-400">📑 Unit {selectedUnit}</span>}
+                <button onClick={resetStepWizard} className="ml-3 text-xs text-rose-400 hover:text-rose-300 underline normal-case font-semibold">(Reset All)</button>
               </div>
             )}
           </div>

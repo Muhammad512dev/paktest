@@ -158,84 +158,87 @@ const Quiz: React.FC = () => {
   const progress = Math.round((answeredCount / questions.length) * 100);
 
   return (
-    <div className="py-20 max-w-4xl mx-auto px-6">
+    <div className="py-16 max-w-4xl mx-auto px-6">
       <div className="text-center mb-10">
-        <h1 className="text-4xl font-black text-slate-900 mb-2">
-          {view === 'SETUP' ? 'Configure Assessment' : view === 'QUIZ' ? `Quiz Mode` : 'Result Card'}
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0B192C] border border-amber-500/30 text-amber-300 text-xs font-bold uppercase tracking-widest mb-4 shadow-sm">
+          <span>🎯</span> Interactive Board-Standard MCQ Bench
+        </div>
+        <h1 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white mb-2 tracking-tight font-serif">
+          {view === 'SETUP' ? 'Interactive Board Quiz' : view === 'QUIZ' ? `Live Exam Simulation` : 'Performance Result Card'}
         </h1>
-        <p className="text-slate-500">
-          {view === 'SETUP' ? 'Customize your practice session parameters.' : view === 'QUIZ' ? 'Focused Practice Session' : 'Performance Summary'}
+        <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base font-medium">
+          {view === 'SETUP' ? 'Select your board, class, and chapters to practice authentic MCQs with instant scoring.' : view === 'QUIZ' ? 'Focused board examination testing environment.' : 'Detailed breakdown of your accuracy and correct answers.'}
         </p>
       </div>
 
       {/* SETUP VIEW */}
       {view === 'SETUP' && (
-        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl p-8 md:p-12 relative overflow-hidden transition-all animate-in fade-in zoom-in duration-300">
+        <div className="bg-white dark:bg-[#0B192C] rounded-[2.5rem] border border-slate-200 dark:border-amber-500/20 shadow-2xl p-8 md:p-12 relative overflow-hidden transition-all">
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                  <BookOpen size={12} /> Board / Syllabus
+                <label className="text-xs font-black text-slate-500 dark:text-amber-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <BookOpen size={14} /> Board / Syllabus
                 </label>
                 <select 
                   value={config.syllabusId}
                   onChange={(e) => setConfig({...config, syllabusId: e.target.value, classId: '', subjectId: '', chapterId: ''})}
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 transition-all cursor-pointer hover:bg-white"
+                  className="w-full p-4 bg-slate-50 dark:bg-[#071326] border border-slate-200 dark:border-amber-500/20 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500 font-bold text-slate-900 dark:text-white transition-all cursor-pointer"
                 >
-                  <option value="">Select Board...</option>
-                  {curriculum.syllabuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  <option value="" className="bg-[#071326] text-white">Select Board / Syllabus...</option>
+                  {curriculum.syllabuses.map(s => <option key={s.id} value={s.id} className="bg-[#071326] text-white">{s.name}</option>)}
                 </select>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                  <GraduationCap size={12} /> Grade / Class
+                <label className="text-xs font-black text-slate-500 dark:text-amber-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <GraduationCap size={14} /> Grade / Class
                 </label>
                 <select 
                   value={config.classId}
                   onChange={(e) => setConfig({...config, classId: e.target.value, subjectId: '', chapterId: ''})}
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 transition-all cursor-pointer hover:bg-white"
+                  className="w-full p-4 bg-slate-50 dark:bg-[#071326] border border-slate-200 dark:border-amber-500/20 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500 font-bold text-slate-900 dark:text-white transition-all cursor-pointer disabled:opacity-50"
                   disabled={!config.syllabusId}
                 >
-                  <option value="">Select Grade...</option>
-                  {filteredClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  <option value="" className="bg-[#071326] text-white">Select Grade / Class...</option>
+                  {filteredClasses.map(c => <option key={c.id} value={c.id} className="bg-[#071326] text-white">{c.name}</option>)}
                 </select>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                  <BookOpen size={12} /> Subject
+                <label className="text-xs font-black text-slate-500 dark:text-amber-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <BookOpen size={14} /> Subject
                 </label>
                 <select 
                   value={config.subjectId}
                   onChange={(e) => setConfig({...config, subjectId: e.target.value, chapterId: ''})}
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 transition-all cursor-pointer hover:bg-white"
+                  className="w-full p-4 bg-slate-50 dark:bg-[#071326] border border-slate-200 dark:border-amber-500/20 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500 font-bold text-slate-900 dark:text-white transition-all cursor-pointer disabled:opacity-50"
                   disabled={!config.classId}
                 >
-                  <option value="">Select Subject...</option>
-                  {filteredSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  <option value="" className="bg-[#071326] text-white">Select Subject...</option>
+                  {filteredSubjects.map(s => <option key={s.id} value={s.id} className="bg-[#071326] text-white">{s.name}</option>)}
                 </select>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                  <Layers size={12} /> Sequence / Chapter
+                <label className="text-xs font-black text-slate-500 dark:text-amber-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <Layers size={14} /> Sequence / Chapter
                 </label>
                 <select 
                   value={config.chapterId}
                   onChange={(e) => setConfig({...config, chapterId: e.target.value})}
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 transition-all cursor-pointer hover:bg-white"
+                  className="w-full p-4 bg-slate-50 dark:bg-[#071326] border border-slate-200 dark:border-amber-500/20 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500 font-bold text-slate-900 dark:text-white transition-all cursor-pointer disabled:opacity-50"
                   disabled={!config.subjectId}
                 >
-                  <option value="">General / All Chapters</option>
-                  {filteredChapters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  <option value="" className="bg-[#071326] text-white">General / All Chapters</option>
+                  {filteredChapters.map(c => <option key={c.id} value={c.id} className="bg-[#071326] text-white">{c.name}</option>)}
                 </select>
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                  <Award size={12} /> Quiz Difficulty Level
+                <label className="text-xs font-black text-slate-500 dark:text-amber-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <Award size={14} /> Difficulty Level
                 </label>
                 <div className="grid grid-cols-4 gap-3">
                   {['All', 'Easy', 'Medium', 'Hard'].map((lvl) => (
@@ -245,8 +248,8 @@ const Quiz: React.FC = () => {
                       onClick={() => setConfig({...config, level: lvl as any})}
                       className={`p-3 rounded-xl border font-bold text-xs uppercase tracking-wide transition-all ${
                         config.level === lvl
-                          ? 'bg-amber-500 text-white border-amber-500 shadow-md'
-                          : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                          ? 'bg-amber-500 text-slate-950 font-black border-amber-500 shadow-md'
+                          : 'bg-slate-50 dark:bg-[#071326] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-amber-500/20 hover:border-amber-500/50'
                       }`}
                     >
                       {lvl === 'All' ? '⚡ All Levels' : lvl}
@@ -256,8 +259,8 @@ const Quiz: React.FC = () => {
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                  <Languages size={12} /> Language Medium
+                <label className="text-xs font-black text-slate-500 dark:text-amber-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <Languages size={14} /> Language Medium
                 </label>
                 <div className="grid grid-cols-3 gap-3">
                     {['English', 'Urdu', 'Bilingual'].map((medium) => (
@@ -267,8 +270,8 @@ const Quiz: React.FC = () => {
                             onClick={() => setConfig({...config, medium: medium as any})}
                             className={`p-3 rounded-xl border font-bold text-xs uppercase tracking-wide transition-all ${
                                 config.medium === medium 
-                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' 
-                                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black border-amber-500 shadow-md' 
+                                : 'bg-slate-50 dark:bg-[#071326] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-amber-500/20 hover:border-amber-500/50'
                             }`}
                         >
                             {medium}
@@ -278,10 +281,10 @@ const Quiz: React.FC = () => {
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                  <Filter size={12} /> Source Material
+                <label className="text-xs font-black text-slate-500 dark:text-amber-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <Filter size={14} /> Question Scope / Sources
                 </label>
-                <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-200 rounded-2xl min-h-[80px]">
+                <div className="flex flex-wrap gap-2 p-4 bg-slate-50 dark:bg-[#071326] border border-slate-200 dark:border-amber-500/20 rounded-2xl min-h-[80px]">
                     {ALL_SOURCES.map(src => {
                         const isSelected = config.sources.includes(src);
                         return (
@@ -290,8 +293,8 @@ const Quiz: React.FC = () => {
                                 onClick={() => toggleSource(src)}
                                 className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all flex items-center gap-1 ${
                                     isSelected 
-                                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm' 
-                                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+                                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-sm' 
+                                    : 'bg-white dark:bg-[#0B192C] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-amber-500/10 hover:border-amber-500/30'
                                 }`}
                             >
                                 {src}
@@ -303,8 +306,8 @@ const Quiz: React.FC = () => {
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                  <Hash size={12} /> Question Count
+                <label className="text-xs font-black text-slate-500 dark:text-amber-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <Hash size={14} /> Number of Questions
                 </label>
                 <input 
                   type="number" 
@@ -317,19 +320,19 @@ const Quiz: React.FC = () => {
                     if (val < 0) val = 1;
                     setConfig({...config, count: val});
                   }}
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 transition-all"
+                  className="w-full p-4 bg-slate-50 dark:bg-[#071326] border border-slate-200 dark:border-amber-500/20 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500 font-bold text-slate-900 dark:text-white transition-all text-sm"
                 />
               </div>
             </div>
 
-            <div className="pt-6 border-t border-slate-100">
+            <div className="pt-6 border-t border-slate-200 dark:border-amber-500/20">
               <button 
                 onClick={handleGenerateQuiz}
                 disabled={isLoading}
-                className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-indigo-100 hover:bg-indigo-700 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full py-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-amber-500/20 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isLoading ? <RefreshCw className="animate-spin" /> : <Play size={20} fill="currentColor" />} 
-                {isLoading ? 'Fetching Questions...' : 'Start Assessment'}
+                {isLoading ? 'Retrieving Question Bank...' : 'Start Assessment'}
               </button>
             </div>
           </div>
@@ -338,52 +341,51 @@ const Quiz: React.FC = () => {
 
       {/* QUIZ VIEW - LIST WISE */}
       {view === 'QUIZ' && questions.length > 0 && (
-        <div className="space-y-6 animate-in slide-in-from-bottom-8 duration-500">
-          
+        <div className="space-y-6">
           {/* Progress Header */}
-          <div className="sticky top-20 z-30 bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-slate-200 shadow-lg mb-8 flex justify-between items-center">
+          <div className="sticky top-20 z-30 bg-white/95 dark:bg-[#0B192C]/95 backdrop-blur-md p-4 rounded-2xl border border-slate-200 dark:border-amber-500/30 shadow-xl mb-8 flex justify-between items-center">
              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-amber-50 dark:bg-amber-950/40 text-amber-500 rounded-xl flex items-center justify-center border border-amber-500/30">
                    <CheckSquare size={24} />
                 </div>
                 <div>
-                   <h4 className="font-bold text-slate-900 text-sm">Attempting...</h4>
-                   <p className="text-xs text-slate-500">{answeredCount} of {questions.length} Answered</p>
+                   <h4 className="font-bold text-slate-900 dark:text-white text-sm">Attempting Exam Questions</h4>
+                   <p className="text-xs text-slate-500 dark:text-slate-400">{answeredCount} of {questions.length} Questions Answered</p>
                 </div>
              </div>
-             <div className="w-32 bg-slate-100 rounded-full h-3 overflow-hidden">
-                <div className="bg-indigo-600 h-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
+             <div className="w-32 bg-slate-100 dark:bg-[#071326] rounded-full h-3 overflow-hidden border border-slate-200 dark:border-amber-500/20">
+                <div className="bg-gradient-to-r from-amber-500 to-amber-600 h-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
              </div>
           </div>
 
           {/* Question List */}
           <div className="space-y-6">
             {questions.map((q, qIndex) => (
-              <div key={q.id} className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow">
+              <div key={q.id} className="bg-white dark:bg-[#0B192C] rounded-3xl border border-slate-200 dark:border-amber-500/20 p-6 md:p-8 shadow-sm hover:shadow-lg transition-all">
                 <div className="flex justify-between items-start mb-6">
                    <div className="flex gap-4">
-                      <span className="w-8 h-8 bg-slate-100 text-slate-500 rounded-lg flex items-center justify-center font-bold text-sm shrink-0">
+                      <span className="w-8 h-8 bg-amber-50 dark:bg-[#071326] text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-lg flex items-center justify-center font-bold text-sm shrink-0">
                         {qIndex + 1}
                       </span>
                       <div>
                         {/* Display based on medium preference */}
                         {(config.medium === 'English' || config.medium === 'Bilingual') && q.text && (
-                            <h3 className="font-bold text-lg text-slate-900 leading-snug">
+                            <h3 className="font-bold text-lg text-slate-900 dark:text-white leading-snug">
                                <MathRenderer text={q.text} />
                             </h3>
                         )}
                         {(config.medium === 'Urdu' || config.medium === 'Bilingual') && q.textUrdu && (
-                            <div className="text-right font-urdu text-xl mt-2 text-slate-700 leading-loose" dir="rtl">
+                            <div className="text-right font-urdu text-xl mt-2 text-slate-800 dark:text-slate-200 leading-loose" dir="rtl">
                                <MathRenderer text={q.textUrdu} dir="rtl" />
                             </div>
                         )}
                         {q.imageUrl && (
                             <div className="mt-4 flex justify-center">
-                               <img src={q.imageUrl} alt="Question diagram" className="max-w-full max-h-[400px] object-contain rounded-xl border border-slate-200" />
+                               <img src={q.imageUrl} alt="Question diagram" className="max-w-full max-h-[400px] object-contain rounded-xl border border-slate-200 dark:border-amber-500/20" />
                             </div>
                         )}
                         <div className="flex gap-2 mt-3">
-                           <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2 py-1 rounded border border-indigo-100 uppercase tracking-wider">{q.source}</span>
+                           <span className="text-[10px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 px-2.5 py-1 rounded-md border border-amber-200 dark:border-amber-500/30 uppercase tracking-wider">{q.source}</span>
                         </div>
                       </div>
                    </div>
@@ -398,12 +400,12 @@ const Quiz: React.FC = () => {
                         onClick={() => handleOptionSelect(q.id, idx)}
                         className={`text-left p-4 rounded-xl border-2 transition-all flex justify-between items-center group ${
                           isSelected 
-                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-md ring-1 ring-indigo-600' 
-                            : 'border-slate-100 bg-white text-slate-600 hover:border-indigo-200 hover:bg-slate-50'
+                            ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-slate-900 dark:text-white shadow-md ring-1 ring-amber-500' 
+                            : 'border-slate-100 dark:border-amber-500/10 bg-white dark:bg-[#071326] text-slate-700 dark:text-slate-300 hover:border-amber-500/40'
                         }`}
                       >
                         <span className="flex items-center gap-3 w-full">
-                          <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold shrink-0 ${isSelected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 text-slate-400 group-hover:border-indigo-400'}`}>
+                          <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold shrink-0 ${isSelected ? 'border-amber-500 bg-amber-500 text-slate-950 font-black' : 'border-slate-300 dark:border-slate-600 text-slate-400 group-hover:border-amber-400'}`}>
                             {String.fromCharCode(65+idx)}
                           </span>
                           <div className="flex flex-col w-full">
@@ -415,7 +417,7 @@ const Quiz: React.FC = () => {
                              )}
                           </div>
                         </span>
-                        {isSelected && <CheckCircle2 size={18} className="text-indigo-600 shrink-0" />}
+                        {isSelected && <CheckCircle2 size={18} className="text-amber-500 shrink-0" />}
                       </button>
                     );
                   })}
@@ -427,13 +429,13 @@ const Quiz: React.FC = () => {
           {/* Submit Action */}
           <div className="pt-8 flex flex-col items-center gap-4">
              {answeredCount < questions.length && (
-                <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-4 py-2 rounded-lg border border-amber-100 text-sm font-bold animate-pulse">
-                   <AlertCircle size={16} /> You have {questions.length - answeredCount} unanswered questions.
+                <div className="flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-950/50 px-4 py-2 rounded-lg border border-amber-200 dark:border-amber-500/30 text-sm font-bold">
+                   <AlertCircle size={16} /> You have {questions.length - answeredCount} unanswered questions remaining.
                 </div>
              )}
              <button 
                 onClick={handleSubmitQuiz}
-                className="px-12 py-4 bg-slate-900 text-white font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-indigo-600 shadow-xl shadow-slate-200 transition-all flex items-center gap-3 text-sm transform hover:scale-105 active:scale-95"
+                className="px-12 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-amber-500/20 transition-all flex items-center gap-3 text-sm transform hover:scale-105 active:scale-95"
              >
                 Submit Assessment <ArrowRight size={18} />
              </button>
@@ -443,31 +445,31 @@ const Quiz: React.FC = () => {
 
       {/* RESULT VIEW */}
       {view === 'RESULT' && (
-        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl p-8 md:p-12 animate-in zoom-in duration-300">
+        <div className="bg-white dark:bg-[#0B192C] rounded-[2.5rem] border border-slate-200 dark:border-amber-500/20 shadow-2xl p-8 md:p-12">
           <div className="text-center mb-10">
-            <div className="w-32 h-32 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center text-white mx-auto shadow-2xl shadow-emerald-200 mb-6 ring-8 ring-emerald-50">
-                <Award size={64} />
+            <div className="w-28 h-28 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center text-slate-950 mx-auto shadow-2xl shadow-amber-500/30 mb-6 ring-8 ring-amber-500/20">
+                <Award size={56} />
             </div>
             
             <div className="space-y-2 mb-8">
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Assessment Complete!</h2>
-                <p className="text-slate-500 text-lg">Detailed analysis of your performance.</p>
+                <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight font-serif">Assessment Complete!</h2>
+                <p className="text-slate-500 dark:text-slate-300 text-base">Detailed breakdown of your examination performance.</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
-                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200">
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Score</p>
-                <p className="text-4xl font-black text-indigo-600">{score} <span className="text-lg text-slate-400">/ {questions.length}</span></p>
+                <div className="p-6 bg-slate-50 dark:bg-[#071326] rounded-2xl border border-slate-200 dark:border-amber-500/20">
+                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Score</p>
+                  <p className="text-4xl font-black text-amber-500 font-mono">{score} <span className="text-lg text-slate-400">/ {questions.length}</span></p>
                 </div>
-                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200">
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Accuracy</p>
-                <p className="text-4xl font-black text-emerald-600">{questions.length > 0 ? Math.round((score / questions.length) * 100) : 0}%</p>
+                <div className="p-6 bg-slate-50 dark:bg-[#071326] rounded-2xl border border-slate-200 dark:border-amber-500/20">
+                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Accuracy</p>
+                  <p className="text-4xl font-black text-emerald-500 font-mono">{questions.length > 0 ? Math.round((score / questions.length) * 100) : 0}%</p>
                 </div>
             </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-10">
-             <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2"><CheckSquare className="text-indigo-600"/> Detailed Analysis</h3>
+          <div className="border-t border-slate-200 dark:border-amber-500/20 pt-10">
+             <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2"><CheckSquare className="text-amber-500"/> Detailed Question Review</h3>
              <div className="space-y-6">
                 {questions.map((q, qIndex) => {
                     const userAnsIdx = userAnswers[q.id];
@@ -489,29 +491,27 @@ const Quiz: React.FC = () => {
                     const isSkipped = userAnsIdx === undefined;
 
                     return (
-                        <div key={q.id} className={`p-6 rounded-2xl border-2 transition-all ${isCorrect ? 'border-emerald-100 bg-emerald-50/30' : 'border-rose-100 bg-rose-50/30'}`}>
+                        <div key={q.id} className={`p-6 rounded-2xl border-2 transition-all ${isCorrect ? 'border-emerald-500/30 bg-emerald-50/20 dark:bg-emerald-950/20' : 'border-rose-500/30 bg-rose-50/20 dark:bg-rose-950/20'}`}>
                             <div className="flex gap-4 mb-4">
-                                <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${isCorrect ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300' : 'bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300'}`}>
                                     {qIndex + 1}
                                 </span>
                                 <div className="flex-1">
-                                    <h4 className="font-bold text-slate-900 text-lg leading-snug">
+                                    <h4 className="font-bold text-slate-900 dark:text-white text-lg leading-snug">
                                        <MathRenderer text={q.text} />
                                     </h4>
                                     
                                     <div className="mt-4 space-y-2">
                                         {q.options && q.options.map((opt: string, idx: number) => {
-                                            let optionClass = "border-slate-200 bg-white text-slate-500 opacity-70";
+                                            let optionClass = "border-slate-200 dark:border-slate-700 bg-white dark:bg-[#071326] text-slate-500 opacity-70";
                                             let icon = null;
 
                                             if (idx === correctIdx) {
-                                                // Correct Answer (Always Highlight Green)
-                                                optionClass = "border-emerald-500 bg-emerald-50 text-emerald-800 font-bold ring-1 ring-emerald-500 opacity-100";
-                                                icon = <CheckCircle2 size={18} className="text-emerald-600" />;
+                                                optionClass = "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-bold ring-1 ring-emerald-500 opacity-100";
+                                                icon = <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400" />;
                                             } else if (idx === userAnsIdx) {
-                                                // User's Wrong Answer (Highlight Red)
-                                                optionClass = "border-rose-500 bg-rose-50 text-rose-800 font-bold ring-1 ring-rose-500 opacity-100";
-                                                icon = <XCircle size={18} className="text-rose-600" />;
+                                                optionClass = "border-rose-500 bg-rose-50 dark:bg-rose-950/50 text-rose-800 dark:text-rose-300 font-bold ring-1 ring-rose-500 opacity-100";
+                                                icon = <XCircle size={18} className="text-rose-600 dark:text-rose-400" />;
                                             }
 
                                             return (
@@ -527,7 +527,7 @@ const Quiz: React.FC = () => {
                                     </div>
 
                                     {isSkipped && (
-                                        <div className="mt-3 flex items-center gap-2 text-amber-600 bg-amber-50 px-3 py-2 rounded-lg border border-amber-100 text-xs font-bold w-fit">
+                                        <div className="mt-3 flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-950/50 px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-500/30 text-xs font-bold w-fit">
                                             <AlertCircle size={14}/> Not Attempted
                                         </div>
                                     )}
@@ -539,12 +539,12 @@ const Quiz: React.FC = () => {
              </div>
           </div>
 
-          <div className="flex justify-center gap-4 mt-12 pt-8 border-t border-slate-100">
-            <button onClick={() => setView('SETUP')} className="px-8 py-3 bg-white border-2 border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center gap-2">
-              <Settings size={18} /> New Config
+          <div className="flex justify-center gap-4 mt-12 pt-8 border-t border-slate-200 dark:border-amber-500/20">
+            <button onClick={() => setView('SETUP')} className="px-8 py-3 bg-white dark:bg-[#071326] border-2 border-slate-200 dark:border-amber-500/20 text-slate-700 dark:text-slate-300 font-bold rounded-xl hover:border-amber-500 transition-all flex items-center gap-2 text-sm">
+              <Settings size={18} /> New Configuration
             </button>
-            <button onClick={reset} className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200">
-              <RefreshCw size={18} /> Restart Quiz
+            <button onClick={reset} className="px-8 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black rounded-xl hover:from-amber-400 hover:to-amber-500 transition-all flex items-center gap-2 shadow-lg shadow-amber-500/20 text-sm">
+              <RefreshCw size={18} /> Restart Assessment
             </button>
           </div>
         </div>

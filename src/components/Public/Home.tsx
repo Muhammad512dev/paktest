@@ -483,71 +483,74 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
     <div className="space-y-24 pb-20 bg-slate-50/50">
       
       {/* 1. HERO SECTION WITH INTERACTIVE LIVE MOCK PAPER GENERATOR */}
-      <section className="relative pt-24 pb-32 overflow-hidden bg-[#0A0F1D] text-white">
+      <section className="relative pt-20 pb-28 overflow-hidden bg-[#071326] text-white border-b border-amber-500/20">
         
-        {/* Ambient Glows */}
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-indigo-600/20 rounded-full blur-[140px] pointer-events-none"></div>
-        <div className="absolute top-40 right-10 w-[450px] h-[450px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+        {/* Ambient Royal Navy & Warm Gold Glows */}
+        <div className="absolute top-0 right-1/4 w-[600px] h-[400px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none"></div>
+        <div className="absolute bottom-10 left-10 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[140px] pointer-events-none"></div>
         
+        {/* Subtle Academic Grid lines */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(212,175,55,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(212,175,55,0.4) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           
           {/* Logo Branding */}
           {platformConfig.logo && (
-            <div className="flex justify-center mb-6">
+            <div className="flex justify-center mb-5">
               <div className="relative group p-2">
                 <img
                   src={platformConfig.logo}
                   alt={platformConfig.name || "PakParcha AI"}
-                  className="h-20 sm:h-28 md:h-32 w-auto object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.8)] filter brightness-110"
+                  className="h-16 sm:h-24 md:h-28 w-auto object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.8)] filter brightness-110 transition-transform hover:scale-105"
                 />
               </div>
             </div>
           )}
 
-          {/* Top Trust Badge */}
-          <div className="flex justify-center mb-5">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-400/30 text-indigo-300 text-xs sm:text-sm font-bold tracking-wide backdrop-blur-md shadow-inner">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>Updated for 2025–2026 PCTB, FBISE & SLO Board Exam Patterns</span>
+          {/* Top Academic Prestige Badge */}
+          <div className="flex justify-center mb-4">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs sm:text-sm font-bold tracking-wide backdrop-blur-md shadow-inner">
+              <Award size={14} className="text-amber-400" />
+              <span>Pakistan’s Official Curriculum Assessment & Exam Generation Platform</span>
             </div>
           </div>
 
-          {/* Main Title & Subtitle */}
-          <div className="text-center max-w-4xl mx-auto mb-12">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.15] mb-5 text-white">
-              Create Board-Pattern Papers in{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-300 to-indigo-500">
+          {/* Main Title & Subtitle with Academic Elite Typography */}
+          <div className="text-center max-w-4xl mx-auto mb-10">
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.15] mb-5 text-white">
+              Author Board-Standard Exam Papers in{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-500 font-serif italic">
                 60 Seconds
               </span>
-              , Not 4 Hours.
+              .
             </h1>
 
-            <p className="text-sm sm:text-base md:text-lg text-slate-300 leading-relaxed max-w-3xl mx-auto font-normal">
-              Pakistan’s premier exam paper creator for <strong className="text-white font-semibold">Schools, Colleges, and Academies</strong>. 
-              Generate bilingual (Urdu & English) papers with authentic Nastaleeq fonts, pairing schemes, answer keys, and your custom institute watermark.
+            <p className="text-sm sm:text-base md:text-lg text-slate-300 leading-relaxed max-w-3xl mx-auto font-medium">
+              Trusted by leading <strong className="text-amber-300 font-bold">Schools, Colleges, and Academies</strong> across Pakistan. 
+              Instant chapter-wise, half-book, and grand tests with flawless Urdu Nastaleeq typography, official pairing schemes, and customized school crest watermarks.
             </p>
           </div>
 
           {/* ⚡ INTERACTIVE LIVE MOCKUP PAPER GENERATOR CONTROLS */}
-          <div className="max-w-4xl mx-auto mb-8 bg-slate-900/90 border border-slate-700/80 rounded-3xl p-4 sm:p-6 shadow-2xl backdrop-blur-xl">
+          <div className="max-w-4xl mx-auto mb-8 bg-[#0B192C]/95 border border-amber-500/30 rounded-3xl p-4 sm:p-6 shadow-2xl backdrop-blur-xl ring-1 ring-amber-500/20">
             <div className="flex items-center justify-between gap-2 border-b border-slate-700/80 pb-3 mb-4">
-              <div className="flex items-center gap-2 text-xs sm:text-sm font-black text-cyan-400 uppercase tracking-wider">
-                <Zap size={16} className="animate-bounce" />
-                <span>Try Live Mock Test Generator (Interactive Demo)</span>
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-black text-amber-400 uppercase tracking-wider">
+                <Zap size={16} className="text-amber-400" />
+                <span>Live Interactive Test Generator Demo</span>
               </div>
-              <span className="text-[11px] font-bold text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700">
-                Instant Preview
+              <span className="text-[11px] font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 px-3 py-0.5 rounded-full">
+                Interactive Test Bench
               </span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               {/* Board Selector */}
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">1. Board / Syllabus</label>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-amber-300/80 mb-1">1. Board / Syllabus</label>
                 <select
                   value={mockBoard}
                   onChange={e => { setMockBoard(e.target.value); handleRegenerateMock(); }}
-                  className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
+                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-amber-500 outline-none cursor-pointer"
                 >
                   <option value="Punjab Board (PCTB)">Punjab Board (PCTB)</option>
                   <option value="Federal Board (FBISE)">Federal Board (FBISE)</option>
@@ -558,11 +561,11 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
 
               {/* Class Selector */}
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">2. Class / Grade</label>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-amber-300/80 mb-1">2. Class / Grade</label>
                 <select
                   value={mockClass}
                   onChange={e => { setMockClass(e.target.value); handleRegenerateMock(); }}
-                  className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
+                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-amber-500 outline-none cursor-pointer"
                 >
                   <option value="9th Class">9th Class (Matric Part-I)</option>
                   <option value="10th Class">10th Class (Matric Part-II)</option>
@@ -573,11 +576,11 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
 
               {/* Subject Selector */}
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">3. Select Subject</label>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-amber-300/80 mb-1">3. Select Subject</label>
                 <select
                   value={mockSubject}
                   onChange={e => { setMockSubject(e.target.value); handleRegenerateMock(); }}
-                  className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
+                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-amber-500 outline-none cursor-pointer"
                 >
                   <option value="Biology">Biology / حیاتیات</option>
                   <option value="Physics">Physics / طبیعیات</option>
@@ -590,11 +593,11 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
 
               {/* Test Scope */}
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">4. Test Scope</label>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-amber-300/80 mb-1">4. Test Scope</label>
                 <select
                   value={mockTestType}
                   onChange={e => { setMockTestType(e.target.value); handleRegenerateMock(); }}
-                  className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
+                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-amber-500 outline-none cursor-pointer"
                 >
                   <option value="Chapter 1 (Unit Test)">Chapter 1 (Unit Test)</option>
                   <option value="Chapter 1-3 (Quarter Book)">Chapter 1-3 (Quarter)</option>
@@ -604,11 +607,11 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
             </div>
 
             {/* Quick Generator Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-700/80">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800">
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleRegenerateMock}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95"
+                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95 uppercase tracking-wider"
                 >
                   <RefreshCw size={14} className={isGenerating ? 'animate-spin' : ''} />
                   <span>Generate Test Paper</span>
@@ -625,7 +628,7 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
               <div className="flex items-center gap-2">
                 <button
                   onClick={handlePrintMock}
-                  className="px-4 py-2 bg-white text-slate-900 hover:bg-slate-100 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95"
+                  className="px-4 py-2 bg-white text-slate-950 hover:bg-slate-100 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95 uppercase tracking-wider"
                   title="Print this sample paper in PDF"
                 >
                   <Printer size={14} />
@@ -633,9 +636,9 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
                 </button>
                 <button
                   onClick={() => onNavigate('SIGNUP')}
-                  className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95 uppercase tracking-wider"
                 >
-                  <span>Create Custom Exam (Sign Up)</span>
+                  <span>Create Account</span>
                   <ArrowRight size={13} />
                 </button>
               </div>
@@ -797,22 +800,22 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
       </section>
 
       {/* 2. SUPPORTED BOARDS & CURRICULUM BANNER */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 relative z-20">
-        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-14 relative z-20">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-amber-500/20 ring-1 ring-amber-500/10">
           <div className="text-center mb-6">
-            <span className="text-xs font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
-              Full Board & Syllabus Coverage
+            <span className="text-[11px] font-black uppercase tracking-widest text-amber-700 bg-amber-50 border border-amber-200 px-3.5 py-1 rounded-full">
+              🏛️ Official Curriculum Compliance
             </span>
-            <h3 className="text-lg sm:text-xl font-black text-slate-900 mt-2">
-              Ready for All 9 Punjab Educational Boards, FBISE & Single National Curriculum (SNC)
+            <h3 className="text-lg sm:text-2xl font-black text-[#0B192C] mt-2 tracking-tight">
+              Aligned with all 9 Punjab Boards, Federal Board (FBISE), Sindh & KPK Syllabuses
             </h3>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {BOARDS.map((b, idx) => (
-              <div key={idx} className="p-3 bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/70 rounded-2xl text-center transition-all">
-                <div className="text-xs font-bold text-slate-800">{b.name}</div>
-                <div className="text-[10px] font-semibold text-indigo-600 mt-0.5">{b.badge}</div>
+              <div key={idx} className="p-3.5 bg-slate-50 hover:bg-amber-50/60 border border-slate-200/80 hover:border-amber-300 rounded-2xl text-center transition-all hover:shadow-md group">
+                <div className="text-xs font-bold text-slate-900 group-hover:text-amber-900">{b.name}</div>
+                <div className="text-[10px] font-bold text-amber-700 mt-0.5">{b.badge}</div>
               </div>
             ))}
           </div>
@@ -820,16 +823,16 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
       </section>
 
       {/* 3. CORE TEACHER & ACADEMY BENEFITS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <span className="text-xs font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
-            Built for Pakistani Educators
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <div className="text-center max-w-3xl mx-auto mb-14">
+          <span className="text-[11px] font-black uppercase tracking-widest text-amber-700 bg-amber-50 border border-amber-200 px-3.5 py-1 rounded-full">
+            Institutional Excellence
           </span>
-          <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mt-3">
-            Everything You Need to Run Seamless School & Academy Tests
+          <h2 className="text-2xl sm:text-4xl font-black text-[#0B192C] mt-3 tracking-tight">
+            Engineered for Modern Pakistani Academies & Colleges
           </h2>
-          <p className="text-slate-600 text-sm sm:text-base mt-3 leading-relaxed">
-            Stop wasting valuable teacher hours on manual typing, Urdu keyboard issues, and page formatting errors.
+          <p className="text-slate-600 text-xs sm:text-base mt-2.5 leading-relaxed font-medium">
+            Eliminate manual typing bottlenecks, Urdu Nastaleeq typesetting issues, and question formula errors.
           </p>
         </div>
 
@@ -837,61 +840,61 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
           {[
             {
               icon: Languages,
-              color: 'text-indigo-600 bg-indigo-50',
+              color: 'text-amber-700 bg-amber-50 border border-amber-200',
               title: "100% Bilingual Urdu & English",
               desc: "Native Nastaleeq Urdu typography with English side-by-side. Supports science formulas, math equations, and diagrams seamlessly."
             },
             {
               icon: Layers,
-              color: 'text-cyan-600 bg-cyan-50',
+              color: 'text-blue-700 bg-blue-50 border border-blue-200',
               title: "Official Pairing Schemes (2025–26)",
               desc: "Select chapters and let the system automatically distribute MCQs, short questions, and long questions strictly by board pairing schemes."
             },
             {
               icon: Printer,
-              color: 'text-emerald-600 bg-emerald-50',
+              color: 'text-emerald-700 bg-emerald-50 border border-emerald-200',
               title: "Your School Logo & Watermark",
               desc: "Every printed paper carries your academy's official header, contact info, logo, and anti-copy watermark ready in PDF format."
             },
             {
               icon: FileCheck2,
-              color: 'text-amber-600 bg-amber-50',
+              color: 'text-amber-700 bg-amber-50 border border-amber-200',
               title: "Instant Teacher Answer Keys",
               desc: "Generate complete solution keys alongside the student paper with one click, saving hours of manual checking time."
             },
             {
               icon: Database,
-              color: 'text-violet-600 bg-violet-50',
+              color: 'text-indigo-700 bg-indigo-50 border border-indigo-200',
               title: "Massive 100,000+ Question Bank",
               desc: "Filtered chapter-by-chapter according to PCTB textbooks, previous 5-year past papers, exercise questions, and conceptual SLOs."
             },
             {
               icon: Clock,
-              color: 'text-rose-600 bg-rose-50',
+              color: 'text-rose-700 bg-rose-50 border border-rose-200',
               title: "Monthly & Test-Series Modes",
               desc: "Generate Quarter Book, Half Book, Full Book, or custom chapter tests in seconds for continuous test session management."
             }
           ].map((feature, i) => (
-            <div key={i} className="p-7 rounded-3xl bg-white border border-slate-200/80 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${feature.color} mb-5`}>
+            <div key={i} className="p-7 rounded-3xl bg-white border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-amber-300 transition-all">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${feature.color} mb-5 shadow-inner`}>
                 <feature.icon size={24} />
               </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">{feature.title}</h3>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{feature.desc}</p>
+              <h3 className="text-lg font-black text-slate-900 mb-2">{feature.title}</h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">{feature.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* 4. REAL TESTIMONIALS FROM PAKISTANI ACADEMIES */}
-      <section className="bg-slate-900 text-white py-20 relative overflow-hidden">
+      <section className="bg-[#071326] text-white py-20 relative overflow-hidden border-y border-amber-500/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-2xl mx-auto mb-14">
-            <span className="text-xs font-black uppercase tracking-widest text-cyan-400 bg-cyan-950/60 px-3 py-1 rounded-full border border-cyan-800">
-              Trusted by 500+ Institutions
+            <span className="text-[11px] font-black uppercase tracking-widest text-amber-300 bg-amber-500/10 border border-amber-500/30 px-3.5 py-1 rounded-full">
+              ⭐ Trusted by 500+ Institutions
             </span>
-            <h2 className="text-3xl sm:text-4xl font-black mt-3">What Teachers & Principals Say</h2>
-            <p className="text-slate-400 text-sm mt-2">See how top academies across Pakistan speed up their examination prep.</p>
+            <h2 className="text-2xl sm:text-4xl font-black mt-3 text-white">What Principals & Teachers Say</h2>
+            <p className="text-slate-400 text-xs sm:text-sm mt-2">See how prestigious academies across Pakistan accelerate examination workflow.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -918,21 +921,21 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
                 stars: 5
               }
             ].map((t, idx) => (
-              <div key={idx} className="p-7 rounded-3xl bg-slate-800/80 border border-slate-700 shadow-xl flex flex-col justify-between">
+              <div key={idx} className="p-7 rounded-3xl bg-[#0B192C] border border-amber-500/20 shadow-xl flex flex-col justify-between hover:border-amber-400/40 transition-all">
                 <div>
                   <div className="flex gap-1 text-amber-400 mb-4">
                     {[...Array(t.stars)].map((_, s) => (
-                      <Star key={s} size={16} fill="#fbbf24" stroke="none" />
+                      <Star key={s} size={15} fill="#fbbf24" stroke="none" />
                     ))}
                   </div>
-                  <p className="text-sm text-slate-200 leading-relaxed italic mb-6">
+                  <p className="text-xs sm:text-sm text-slate-200 leading-relaxed italic mb-6 font-medium">
                     "{t.quote}"
                   </p>
                 </div>
-                <div className="pt-4 border-t border-slate-700/60">
-                  <div className="font-bold text-white text-sm">{t.name}</div>
-                  <div className="text-xs text-cyan-400">{t.role}</div>
-                  <div className="text-xs text-slate-400 mt-0.5">{t.academy}</div>
+                <div className="pt-4 border-t border-slate-800">
+                  <div className="font-black text-amber-300 text-sm">{t.name}</div>
+                  <div className="text-xs text-slate-300 font-bold">{t.role}</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">{t.academy}</div>
                 </div>
               </div>
             ))}
@@ -944,23 +947,23 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
           <div>
-            <span className="text-xs font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
-              Free Study Resources
+            <span className="text-[11px] font-black uppercase tracking-widest text-amber-700 bg-amber-50 border border-amber-200 px-3.5 py-1 rounded-full">
+              Free Academic Resources
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2">
-              Explore Board Past Papers, Notes & Guides
+            <h2 className="text-2xl sm:text-3xl font-black text-[#0B192C] mt-2">
+              Board Past Papers, Revision Notes & Syllabus Guides
             </h2>
           </div>
           <div className="flex gap-3">
             <button
               onClick={() => onNavigate('PAST_PAPERS')}
-              className="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              className="px-4 py-2 bg-[#0B192C] text-amber-300 hover:bg-slate-900 rounded-xl text-xs font-bold transition-all cursor-pointer border border-amber-500/30"
             >
               All Past Papers &rarr;
             </button>
             <button
               onClick={() => onNavigate('NOTES')}
-              className="px-4 py-2 bg-slate-100 text-slate-800 hover:bg-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              className="px-4 py-2 bg-slate-100 text-slate-800 hover:bg-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer border border-slate-200"
             >
               All Notes &rarr;
             </button>
@@ -972,7 +975,7 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
           <div className="p-7 rounded-3xl bg-white border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center font-bold">
                   <BookOpen size={20} />
                 </div>
                 <div>
@@ -980,7 +983,7 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
                   <p className="text-xs text-slate-500">Free chapter summaries & solved questions</p>
                 </div>
               </div>
-              <button onClick={() => onNavigate('NOTES')} className="text-xs font-bold text-indigo-600 hover:underline">
+              <button onClick={() => onNavigate('NOTES')} className="text-xs font-bold text-amber-700 hover:underline">
                 View All
               </button>
             </div>
@@ -994,14 +997,14 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
                     className="w-full py-3.5 text-left group flex items-center justify-between"
                   >
                     <div>
-                      <p className="font-bold text-sm text-slate-800 group-hover:text-indigo-600 transition-colors">
+                      <p className="font-bold text-sm text-slate-800 group-hover:text-amber-700 transition-colors">
                         {n.title || n.name || 'Study Guide & Solved Questions'}
                       </p>
                       <p className="text-xs text-slate-500 mt-0.5">
                         {[n.subject, n.grade, n.noteType].filter(Boolean).join(' • ') || 'PCTB Syllabus'}
                       </p>
                     </div>
-                    <ArrowRight size={16} className="text-slate-400 group-hover:text-indigo-600 transition-colors" />
+                    <ArrowRight size={16} className="text-slate-400 group-hover:text-amber-600 transition-colors" />
                   </button>
                 ))
               ) : (
@@ -1016,7 +1019,7 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
           <div className="p-7 rounded-3xl bg-white border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center">
                   <FileText size={20} />
                 </div>
                 <div>
@@ -1024,7 +1027,7 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
                   <p className="text-xs text-slate-500">Board schemes & exam preparation articles</p>
                 </div>
               </div>
-              <button onClick={() => onNavigate('BLOG')} className="text-xs font-bold text-cyan-600 hover:underline">
+              <button onClick={() => onNavigate('BLOG')} className="text-xs font-bold text-blue-700 hover:underline">
                 View All
               </button>
             </div>
@@ -1038,14 +1041,14 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
                     className="w-full py-3.5 text-left group flex items-center justify-between"
                   >
                     <div>
-                      <p className="font-bold text-sm text-slate-800 group-hover:text-indigo-600 transition-colors line-clamp-1">
+                      <p className="font-bold text-sm text-slate-800 group-hover:text-blue-700 transition-colors line-clamp-1">
                         {b.title || 'Board Exam Pattern & Preparation Tips'}
                       </p>
                       <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">
                         {b.excerpt || b.category || 'Read the full guide for preparation.'}
                       </p>
                     </div>
-                    <ArrowRight size={16} className="text-slate-400 group-hover:text-indigo-600 transition-colors" />
+                    <ArrowRight size={16} className="text-slate-400 group-hover:text-blue-600 transition-colors" />
                   </button>
                 ))
               ) : (
@@ -1059,29 +1062,29 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
       </section>
 
       {/* 6. STATS / IMPACT */}
-      <section className="bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-950 py-16 text-white">
+      <section className="bg-[#071326] py-16 text-white border-y border-amber-500/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             <div className="p-4">
-              <div className="text-3xl sm:text-4xl font-black text-cyan-400 mb-1">
+              <div className="text-3xl sm:text-4xl font-black text-amber-300 mb-1">
                 {loadingStats ? <Loader2 className="animate-spin inline" size={24} /> : formatNumber(stats.papers || 5400)}
               </div>
               <div className="text-xs font-bold uppercase tracking-wider text-slate-300">Exam Papers Generated</div>
             </div>
             <div className="p-4">
-              <div className="text-3xl sm:text-4xl font-black text-indigo-400 mb-1">
+              <div className="text-3xl sm:text-4xl font-black text-amber-300 mb-1">
                 {loadingStats ? <Loader2 className="animate-spin inline" size={24} /> : formatNumber(stats.schools || 450)}
               </div>
               <div className="text-xs font-bold uppercase tracking-wider text-slate-300">Schools & Academies</div>
             </div>
             <div className="p-4">
-              <div className="text-3xl sm:text-4xl font-black text-emerald-400 mb-1">
+              <div className="text-3xl sm:text-4xl font-black text-amber-300 mb-1">
                 {loadingStats ? <Loader2 className="animate-spin inline" size={24} /> : formatNumber(stats.questions || 120000)}
               </div>
               <div className="text-xs font-bold uppercase tracking-wider text-slate-300">Bilingual Questions</div>
             </div>
             <div className="p-4">
-              <div className="text-3xl sm:text-4xl font-black text-amber-400 mb-1">
+              <div className="text-3xl sm:text-4xl font-black text-emerald-400 mb-1">
                 100%
               </div>
               <div className="text-xs font-bold uppercase tracking-wider text-slate-300">Board Pairing Aligned</div>
@@ -1093,24 +1096,21 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
       {/* 7. LOCAL PAKISTANI PAYMENT & TRUST BADGES */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <div className="p-8 rounded-3xl bg-white border border-slate-200 shadow-sm">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 mb-4">
-            Easy & Secure Local Payment Options in Pakistan
+          <h3 className="text-xs font-black uppercase tracking-widest text-slate-600 mb-4">
+            Secure Local Pakistani Payment Channels
           </h3>
-          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-12 opacity-80">
-            <div className="flex items-center gap-2 font-black text-slate-800 text-sm">
-              <span className="w-3 h-3 rounded-full bg-emerald-500"></span> EasyPaisa
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10">
+            <div className="flex items-center gap-2 font-black text-slate-800 text-xs sm:text-sm bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-100">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> EasyPaisa
             </div>
-            <div className="flex items-center gap-2 font-black text-slate-800 text-sm">
-              <span className="w-3 h-3 rounded-full bg-rose-500"></span> JazzCash
+            <div className="flex items-center gap-2 font-black text-slate-800 text-xs sm:text-sm bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-100">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> JazzCash
             </div>
-            <div className="flex items-center gap-2 font-black text-slate-800 text-sm">
-              <span className="w-3 h-3 rounded-full bg-indigo-500"></span> 1Link / Bank Transfer
+            <div className="flex items-center gap-2 font-black text-slate-800 text-xs sm:text-sm bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-100">
+              <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> 1Link Online Transfer
             </div>
-            <div className="flex items-center gap-2 font-black text-slate-800 text-sm">
-              <span className="w-3 h-3 rounded-full bg-amber-500"></span> Raast Instant Pay
-            </div>
-            <div className="flex items-center gap-2 font-black text-slate-800 text-sm">
-              <span className="w-3 h-3 rounded-full bg-blue-500"></span> Visa & Mastercard
+            <div className="flex items-center gap-2 font-black text-slate-800 text-xs sm:text-sm bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-100">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Raast Instant Pay
             </div>
           </div>
         </div>
@@ -1118,32 +1118,33 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
 
       {/* 8. FINAL CALL TO ACTION */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="rounded-[2.5rem] bg-gradient-to-br from-indigo-900 via-indigo-800 to-cyan-900 text-white p-10 sm:p-14 text-center shadow-2xl relative overflow-hidden">
+        <div className="rounded-[2.5rem] bg-[#071326] border border-amber-500/30 text-white p-10 sm:p-14 text-center shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-[100px] pointer-events-none"></div>
           <div className="relative z-10">
-            <h2 className="text-3xl sm:text-4xl font-black mb-4 tracking-tight">
-              Ready to Save 4 Hours Every Exam Day?
+            <h2 className="text-2xl sm:text-4xl font-black mb-3 tracking-tight">
+              Ready to Upgrade Your School’s Examination System?
             </h2>
-            <p className="text-slate-200 text-sm sm:text-base max-w-xl mx-auto mb-8 leading-relaxed">
-              Join hundreds of schools and academies across Pakistan creating board-standard examination papers with PakParcha AI.
+            <p className="text-slate-300 text-xs sm:text-base max-w-xl mx-auto mb-8 leading-relaxed font-medium">
+              Join hundreds of schools and academies across Pakistan authoring board-standard examination papers in minutes.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5">
               <button
                 onClick={() => onNavigate('SIGNUP')}
-                className="w-full sm:w-auto px-10 py-4 bg-white text-indigo-900 hover:bg-indigo-50 rounded-2xl font-black text-sm uppercase tracking-wider transition-all shadow-xl active:scale-95 cursor-pointer"
+                className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-xl active:scale-95 cursor-pointer"
               >
-                Create Free Account
+                Create Free Trial Account
               </button>
               <button
                 onClick={() => onNavigate('PRICING')}
-                className="w-full sm:w-auto px-8 py-4 bg-white/10 hover:bg-white/15 text-white border border-white/20 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+                className="w-full sm:w-auto px-8 py-4 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
               >
-                View Academy Plans
+                View Institutional Plans
               </button>
             </div>
 
-            <p className="mt-6 text-xs text-indigo-200 flex items-center justify-center gap-2 font-medium">
-              <CheckCircle2 size={15} className="text-emerald-400" /> Free 14-day trial &bull; No credit card required &bull; Cancel anytime
+            <p className="mt-5 text-xs text-slate-400 flex items-center justify-center gap-2 font-medium">
+              <CheckCircle2 size={14} className="text-emerald-400" /> Instant activation &bull; 100% PTB & FBISE Syllabus aligned
             </p>
           </div>
         </div>

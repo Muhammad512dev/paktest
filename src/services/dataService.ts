@@ -45,6 +45,36 @@ const unwrapPaginated = <T = any>(payload: any): { data: T[]; pagination: any } 
   return { data: unwrapList<T>(payload), pagination: { page: 1, pageSize: unwrapList<T>(payload).length, total: unwrapList<T>(payload).length, pages: 1 } };
 };
 
+// --- IN-MEMORY FAST SWR CLIENT CACHE ---
+const memoryCache = new Map<string, { data: any; expiry: number }>();
+
+export const getCached = async <T = any>(
+  key: string,
+  fetcher: () => Promise<T>,
+  ttlMs: number = 5 * 60 * 1000 // default 5 minutes
+): Promise<T> => {
+  const now = Date.now();
+  const entry = memoryCache.get(key);
+  if (entry && entry.expiry > now) {
+    return entry.data as T;
+  }
+  const result = await fetcher();
+  memoryCache.set(key, { data: result, expiry: now + ttlMs });
+  return result;
+};
+
+export const invalidateCache = (prefixOrKey?: string) => {
+  if (!prefixOrKey) {
+    memoryCache.clear();
+    return;
+  }
+  for (const key of memoryCache.keys()) {
+    if (key.startsWith(prefixOrKey)) {
+      memoryCache.delete(key);
+    }
+  }
+};
+
 // --- AUTH ---
 export const authenticateUser = async (email: string, password: string): Promise<User> => {
   const res = await fetch(`${API_URL}/api/auth/login`, {
@@ -76,13 +106,15 @@ export const initializeDB = async () => {
 
 export const getSystemConfig = async () => {
   const defaultLogo = '/logo.webp';
-  try {
-    const res = await fetch(`${API_URL}/api/public/settings`);
-    const data = await handleResponse(res);
-    return { ...data, platformLogo: data?.platformLogo || defaultLogo };
-  } catch (e) {
-    return { currencySymbol: '$', platformName: 'PakParcha AI', platformLogo: defaultLogo };
-  }
+  return getCached('system_config', async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/public/settings`);
+      const data = await handleResponse(res);
+      return { ...data, platformLogo: data?.platformLogo || defaultLogo };
+    } catch (e) {
+      return { currencySymbol: '$', platformName: 'PakParcha AI', platformLogo: defaultLogo };
+    }
+  }, 10 * 60 * 1000);
 };
 
 export const updateSystemConfig = async (config: any) => {
@@ -91,6 +123,7 @@ export const updateSystemConfig = async (config: any) => {
     headers: getHeaders(),
     body: JSON.stringify(config)
   });
+  invalidateCache('system_config');
   return handleResponse(res);
 };
 
@@ -134,26 +167,32 @@ export const uploadFile = async (file: File): Promise<string> => {
 
 // --- PUBLIC ---
 export const getPublicStats = async () => {
-  const res = await fetch(`${API_URL}/api/public/stats`);
-  return handleResponse(res);
+  return getCached('public_stats', async () => {
+    const res = await fetch(`${API_URL}/api/public/stats`);
+    return handleResponse(res);
+  }, 5 * 60 * 1000);
 };
 
 export const getPublicCurriculum = async () => {
-  const res = await fetch(`${API_URL}/api/public/curriculum`);
-  return handleResponse(res);
+  return getCached('public_curriculum', async () => {
+    const res = await fetch(`${API_URL}/api/public/curriculum`);
+    return handleResponse(res);
+  }, 10 * 60 * 1000);
 };
 
 export const getPublicPlans = async () => {
-  try {
-    const res = await fetch(`${API_URL}/api/public/plans`);
-    const data = await handleResponse(res);
-    // If API returns empty, use fallback constant
-    if (Array.isArray(data) && data.length > 0) return data;
-    return PRICING_PLANS;
-  } catch (e) {
-    console.warn("API Error fetching plans, using fallback.", e);
-    return PRICING_PLANS;
-  }
+  return getCached('public_plans', async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/public/plans`);
+      const data = await handleResponse(res);
+      // If API returns empty, use fallback constant
+      if (Array.isArray(data) && data.length > 0) return data;
+      return PRICING_PLANS;
+    } catch (e) {
+      console.warn("API Error fetching plans, using fallback.", e);
+      return PRICING_PLANS;
+    }
+  }, 10 * 60 * 1000);
 };
 
 export const generatePublicQuiz = async (config: any) => {
@@ -559,8 +598,10 @@ export const deletePaperSubmissions = async (paperId: string) => {
 
 // --- CONTENT CMS ---
 export const getBlogs = async () => {
-  const res = await fetch(`${API_URL}/api/blogs`);
-  return handleResponse(res);
+  return getCached('blogs', async () => {
+    const res = await fetch(`${API_URL}/api/blogs`);
+    return handleResponse(res);
+  }, 5 * 60 * 1000);
 };
 export const addBlog = async (data: any) => {
   const res = await fetch(`${API_URL}/api/blogs`, {
@@ -568,6 +609,7 @@ export const addBlog = async (data: any) => {
     headers: getHeaders(),
     body: JSON.stringify(data)
   });
+  invalidateCache('blogs');
   return handleResponse(res);
 };
 export const updateBlog = async (id: string, data: any) => {
@@ -576,6 +618,7 @@ export const updateBlog = async (id: string, data: any) => {
     headers: getHeaders(),
     body: JSON.stringify(data)
   });
+  invalidateCache('blogs');
   return handleResponse(res);
 };
 export const deleteBlog = async (id: string) => {
@@ -583,6 +626,7 @@ export const deleteBlog = async (id: string) => {
     method: 'DELETE',
     headers: getHeaders()
   });
+  invalidateCache('blogs');
   return handleResponse(res);
 };
 
@@ -595,8 +639,10 @@ export const getNotes = async (params?: { search?: string; subject?: string; gra
   if (params?.noteType) sp.set('noteType', params.noteType);
   const qs = sp.toString();
 
-  const res = await fetch(`${API_URL}/api/notes${qs ? `?${qs}` : ''}`);
-  return handleResponse(res);
+  return getCached(`notes_${qs}`, async () => {
+    const res = await fetch(`${API_URL}/api/notes${qs ? `?${qs}` : ''}`);
+    return handleResponse(res);
+  }, 5 * 60 * 1000);
 };
 export const addNote = async (data: any) => {
   const res = await fetch(`${API_URL}/api/notes`, {
@@ -604,6 +650,7 @@ export const addNote = async (data: any) => {
     headers: getHeaders(),
     body: JSON.stringify(data)
   });
+  invalidateCache('notes_');
   return handleResponse(res);
 };
 export const updateNote = async (id: string, data: any) => {
@@ -612,6 +659,7 @@ export const updateNote = async (id: string, data: any) => {
     headers: getHeaders(),
     body: JSON.stringify(data)
   });
+  invalidateCache('notes_');
   return handleResponse(res);
 };
 export const deleteNote = async (id: string) => {
@@ -619,6 +667,7 @@ export const deleteNote = async (id: string) => {
     method: 'DELETE',
     headers: getHeaders()
   });
+  invalidateCache('notes_');
   return handleResponse(res);
 };
 
@@ -628,12 +677,16 @@ export const getPastPapers = async (params?: { search?: string; board?: string; 
     if (value !== undefined && value !== '') sp.set(key, String(value));
   });
   const qs = sp.toString();
-  const res = await fetch(`${API_URL}/api/past-papers${qs ? `?${qs}` : ''}`);
-  return unwrapPaginated<any>(await handleResponse(res));
+  return getCached(`past_papers_${qs}`, async () => {
+    const res = await fetch(`${API_URL}/api/past-papers${qs ? `?${qs}` : ''}`);
+    return unwrapPaginated<any>(await handleResponse(res));
+  }, 5 * 60 * 1000);
 };
 export const getPastPaperFilters = async (): Promise<{ boards: string[]; levels: string[]; subjects: string[]; years: string[] }> => {
-  const res = await fetch(`${API_URL}/api/past-papers?filters=true`);
-  return handleResponse(res);
+  return getCached('past_paper_filters', async () => {
+    const res = await fetch(`${API_URL}/api/past-papers?filters=true`);
+    return handleResponse(res);
+  }, 10 * 60 * 1000);
 };
 export const addPastPaper = async (data: any) => {
   const res = await fetch(`${API_URL}/api/past-papers`, {
@@ -641,6 +694,7 @@ export const addPastPaper = async (data: any) => {
     headers: getHeaders(),
     body: JSON.stringify(data)
   });
+  invalidateCache('past_paper');
   return handleResponse(res);
 };
 export const updatePastPaper = async (id: string, data: any) => {
@@ -649,6 +703,7 @@ export const updatePastPaper = async (id: string, data: any) => {
     headers: getHeaders(),
     body: JSON.stringify(data)
   });
+  invalidateCache('past_paper');
   return handleResponse(res);
 };
 export const deletePastPaper = async (id: string) => {
@@ -656,6 +711,7 @@ export const deletePastPaper = async (id: string) => {
     method: 'DELETE',
     headers: getHeaders()
   });
+  invalidateCache('past_paper');
   return handleResponse(res);
 };
 

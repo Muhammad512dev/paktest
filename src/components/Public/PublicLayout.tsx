@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Menu, X, Facebook, Twitter, Linkedin, Instagram, GraduationCap, ShieldCheck, Sparkles, Award } from 'lucide-react';
 import CookieConsent from './CookieConsent';
-import { getSystemConfig } from '../../services/dataService';
+import { getSystemConfig, getNotes, getPublicCurriculum, getPastPapers, getPastPaperFilters, getBlogs, getPublicPlans } from '../../services/dataService';
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -23,6 +23,36 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
       }
     }).catch(() => {});
   }, []);
+
+  const handlePrefetch = (id: string) => {
+    try {
+      switch (id) {
+        case 'NOTES':
+          getPublicCurriculum().catch(() => {});
+          getNotes().catch(() => {});
+          break;
+        case 'BOOKS':
+          getPublicCurriculum().catch(() => {});
+          getNotes({ noteType: 'Textbook' }).catch(() => {});
+          break;
+        case 'LESSON_PLANS':
+          getPublicCurriculum().catch(() => {});
+          getNotes({ noteType: 'Lesson Plan' }).catch(() => {});
+          break;
+        case 'PAST_PAPERS':
+          getPublicCurriculum().catch(() => {});
+          getPastPapers().catch(() => {});
+          getPastPaperFilters().catch(() => {});
+          break;
+        case 'BLOG':
+          getBlogs().catch(() => {});
+          break;
+        case 'PRICING':
+          getPublicPlans().catch(() => {});
+          break;
+      }
+    } catch (_) {}
+  };
 
   const navItems = [
     { id: 'HOME', label: 'Home' },
@@ -98,6 +128,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
                   <button
                     key={item.id}
                     onClick={() => onNavigate(item.id)}
+                    onMouseEnter={() => handlePrefetch(item.id)}
                     className={`text-[11px] xl:text-[11.5px] 2xl:text-xs font-bold transition-all whitespace-nowrap py-1.5 px-1.5 xl:px-2.5 rounded-lg ${
                       isActive 
                         ? 'text-indigo-600 bg-indigo-50 border border-indigo-200/70 shadow-xs' 

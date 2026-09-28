@@ -373,7 +373,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
   const [canvasScale, setCanvasScale] = useState(1);
 
   // Student Info Style
-  const [studentInfoStyle, setStudentInfoStyle] = useState<'Standard' | 'Grid' | 'Minimal' | 'Board'>('Standard');
+  const [studentInfoStyle, setStudentInfoStyle] = useState<'Standard' | 'Grid' | 'Minimal' | 'Board' | 'ModernAcademy'>('Standard');
   const [imageScale, setImageScale] = useState<number>(1.0);
   const [layoutTarget, setLayoutTarget] = useState<'All' | 'Objective' | 'Subjective'>('All');
   const [showMatchHeadings, setShowMatchHeadings] = useState<boolean>(true);
@@ -1196,6 +1196,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
               <div className="flex items-center gap-1 bg-slate-900/80 border border-slate-700 rounded-lg px-2 py-1.5">
                 <UserSquare2 size={16} className="text-indigo-400 shrink-0" />
                 <select value={studentInfoStyle} onChange={e => setStudentInfoStyle(e.target.value as any)} className="print-preview-select bg-transparent text-xs font-bold text-slate-200 outline-none">
+                  <option value="ModernAcademy">Header: Modern Academy</option>
                   <option value="Standard">Header: Dotted</option>
                   <option value="Grid">Header: Boxed</option>
                   <option value="Minimal">Header: Minimal</option>
@@ -1540,6 +1541,20 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                             <span className="block text-[8px] font-black uppercase text-slate-500 mb-1">Invigilator Sign</span>
                             <div className="h-4"></div>
                           </div>
+                        </div>
+                      </div>
+                    ) : studentInfoStyle === 'ModernAcademy' ? (
+                      /* MODERN ACADEMY HERO STYLE HEADER */
+                      <div className="border-b-2 border-slate-900 pb-3 my-2 text-center">
+                        <div className="flex justify-between items-start text-[10px] sm:text-[11px] text-slate-600 font-bold mb-1">
+                          <span>Roll No: ____________</span>
+                          <span className="text-indigo-900 font-black uppercase tracking-wider">{paper.testType || 'PAKPARCHA TEST SERIES'}</span>
+                          <span>Date: {paper.examDate || '___/___/2025'}</span>
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mt-2 text-[10px] sm:text-xs font-bold text-slate-800">
+                          <span className="bg-slate-100 border border-slate-300 px-2.5 py-0.5 rounded">Class: {paper.classLevel} &bull; {paper.subject}</span>
+                          <span className="bg-slate-100 border border-slate-300 px-2.5 py-0.5 rounded">Time: {paper.durationMinutes} Mins</span>
+                          <span className="bg-slate-100 border border-slate-300 px-2.5 py-0.5 rounded">Total Marks: {calculatedTotalMarks}</span>
                         </div>
                       </div>
                     ) : studentInfoStyle === 'Minimal' ? (

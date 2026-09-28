@@ -869,12 +869,31 @@ app.post('/api/auth/register-school', async (req: any, res: any) => {
         const initialStatus = isFree ? 'Trial' : 'Suspended';
         const validTillDays = isFree ? 14 : 365;
 
-        // For Trial: auto-assign ALL syllabuses/boards so school has full access
+        // For Trial: auto-assign ONLY PTB (Punjab Board / Punjab Textbook Board) syllabus
         let assignedSyllabuses: string[] = [];
         if (isFree) {
             try {
-                const allSyllabuses = await prisma.syllabus.findMany({ select: { id: true } });
-                assignedSyllabuses = allSyllabuses.map((s: any) => s.id);
+                const ptbSyllabus = await prisma.syllabus.findFirst({
+                    where: {
+                        OR: [
+                            { name: { contains: 'PTB', mode: 'insensitive' } },
+                            { name: { contains: 'Punjab', mode: 'insensitive' } },
+                            { name: { contains: 'PCTB', mode: 'insensitive' } },
+                            { name: { contains: 'Punjab Board', mode: 'insensitive' } }
+                        ]
+                    },
+                    select: { id: true }
+                });
+
+                if (ptbSyllabus) {
+                    assignedSyllabuses = [ptbSyllabus.id];
+                } else {
+                    // Fallback to first available syllabus if specific PTB entry is not found
+                    const firstSyllabus = await prisma.syllabus.findFirst({ select: { id: true } });
+                    if (firstSyllabus) {
+                        assignedSyllabuses = [firstSyllabus.id];
+                    }
+                }
             } catch (e) {
                 // Non-critical: proceed with empty list if syllabuses table not ready
             }

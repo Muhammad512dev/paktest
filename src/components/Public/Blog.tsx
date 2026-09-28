@@ -7,6 +7,70 @@ import 'katex/dist/contrib/mhchem';
 
 const createSlug = (title: string) => title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 
+const formatMarkdownToHtml = (content: string): string => {
+  if (!content) return '';
+  const trimmed = content.trim();
+  // If content is already valid HTML markup containing tags, return as is
+  const isHtml = /^<[a-z][\s\S]*>/i.test(trimmed) && trimmed.includes('</');
+  if (isHtml) return content;
+
+  let html = content;
+
+  // 1. Headers (H1 - H4)
+  html = html.replace(/^#### (.*$)/gim, '<h4 class="text-lg font-bold text-slate-900 mt-6 mb-2">$1</h4>');
+  html = html.replace(/^### (.*$)/gim, '<h3 class="text-xl font-bold text-slate-900 mt-8 mb-3">$1</h3>');
+  html = html.replace(/^## (.*$)/gim, '<h2 class="text-2xl sm:text-3xl font-black text-slate-900 mt-10 mb-4 pb-2 border-b border-slate-100">$1</h2>');
+  html = html.replace(/^# (.*$)/gim, '<h1 class="text-3xl sm:text-4xl font-black text-slate-900 mt-10 mb-6">$1</h1>');
+
+  // 2. Horizontal Rules
+  html = html.replace(/^(?:---|\*\*\*|___)\s*$/gim, '<hr class="my-8 border-slate-200" />');
+
+  // 3. Blockquotes
+  html = html.replace(/^> (.*$)/gim, '<blockquote class="border-l-4 border-indigo-500 bg-indigo-50/60 rounded-r-xl px-5 py-3.5 my-5 text-slate-700 italic">$1</blockquote>');
+
+  // 4. Bold & Italic
+  html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-slate-900">$1</strong>');
+  html = html.replace(/__(.*?)__/g, '<strong class="font-bold text-slate-900">$1</strong>');
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  html = html.replace(/_(.*?)_/g, '<em>$1</em>');
+
+  // 5. Links
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-indigo-600 font-bold hover:underline">$1</a>');
+
+  // 6. Ordered & Unordered Lists / Paragraphs
+  const blocks = html.split(/\n\n+/);
+  const formattedBlocks = blocks.map(block => {
+    const lines = block.split('\n');
+    const isNumberedList = lines.length > 0 && lines.every(l => /^\s*\d+\.\s+/.test(l.trim()) || l.trim() === '');
+    const isBulletList = lines.length > 0 && lines.every(l => /^\s*[-*•]\s+/.test(l.trim()) || l.trim() === '');
+
+    if (isNumberedList) {
+      const items = lines
+        .filter(l => l.trim().length > 0)
+        .map(l => `<li class="leading-relaxed">${l.replace(/^\s*\d+\.\s+/, '')}</li>`)
+        .join('');
+      return `<ol class="list-decimal pl-6 space-y-2 my-4 text-slate-700 font-medium">${items}</ol>`;
+    }
+
+    if (isBulletList) {
+      const items = lines
+        .filter(l => l.trim().length > 0)
+        .map(l => `<li class="leading-relaxed">${l.replace(/^\s*[-*•]\s+/, '')}</li>`)
+        .join('');
+      return `<ul class="list-disc pl-6 space-y-2 my-4 text-slate-700 font-medium">${items}</ul>`;
+    }
+
+    if (/^<(h[1-6]|blockquote|hr|div|p|ul|ol)/i.test(block.trim())) {
+      return block;
+    }
+
+    return `<p class="my-4 leading-relaxed text-slate-700">${block.replace(/\n/g, '<br/>')}</p>`;
+  });
+
+  return formattedBlocks.join('\n');
+};
+
 const Blog: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
@@ -170,8 +234,8 @@ const Blog: React.FC = () => {
 
               <div
                 ref={postContentRef}
-                className="prose prose-lg prose-slate max-w-none text-slate-600 leading-relaxed font-medium"
-                dangerouslySetInnerHTML={{ __html: selectedPost.content || '' }}
+                className="prose prose-lg prose-slate max-w-none text-slate-700 leading-relaxed font-medium"
+                dangerouslySetInnerHTML={{ __html: formatMarkdownToHtml(selectedPost.content || '') }}
               />
            </div>
 

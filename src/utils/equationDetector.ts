@@ -279,15 +279,18 @@ export function autoDetectAndFormatEquations(
     .replace(/\bweakacid\b/gi, 'Weak acid')
     .replace(/\bstrongbase\b/gi, 'Strong base');
 
-  // 2. Protect existing LaTeX Math blocks ($...$, $$...$$, \(...\), \[...\]) before auto-detecting formulas
+  // 2. Protect existing LaTeX Math blocks, inline SVGs, and <img> tags before auto-detecting formulas
   const mathPlaceholders: string[] = [];
-  const mathRegex = /(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\])/gs;
+  const mathRegex = /(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\]|<svg[\s\S]*?<\/svg>|<img[^>]*>)/gis;
   text = text.replace(mathRegex, (match) => {
-    const cleanMath = match
-      .replace(/\\ce\{\s*\\ce\{/g, '\\ce{')
-      .replace(/\\ce\{\s*\$/g, '\\ce{')
-      .replace(/\$\s*\}/g, '}')
-      .replace(/2ce\{/g, '2');
+    let cleanMath = match;
+    if (match.startsWith('$') || match.startsWith('\\(') || match.startsWith('\\[')) {
+      cleanMath = match
+        .replace(/\\ce\{\s*\\ce\{/g, '\\ce{')
+        .replace(/\\ce\{\s*\$/g, '\\ce{')
+        .replace(/\$\s*\}/g, '}')
+        .replace(/2ce\{/g, '2');
+    }
     const idx = mathPlaceholders.length;
     mathPlaceholders.push(cleanMath);
     return `___MATH_BLOCK_${idx}___`;

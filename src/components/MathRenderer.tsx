@@ -270,7 +270,8 @@ const MathRenderer: React.FC<MathRendererProps> = ({
         }
         
         // Auto-fix relative /uploads/ URLs to point to the backend
-        const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+        const rawApiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+        const API_URL = rawApiUrl || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000' : '');
         if (API_URL) {
             img = img.replace(/src=["']\/uploads\//g, `src="${API_URL}/uploads/`);
         }

@@ -10,6 +10,8 @@ export interface ParsedMhtmlQuestion {
         'Diagram Based' | 'Definitions' | 'Spelling Check' | 'Missing Word' | 'Comprehension' |
         'Composition / Essay' | 'Translation' | 'Letter Writing' | 'Story / Paragraph Writing' |
         'Direct / Indirect Speech' | 'Active / Passive Voice';
+  detectedType?: string;
+  originalType?: string;
   Difficulty: 'Easy' | 'Medium' | 'Hard';
   Marks: number;
   QuestionText_EN: string;
@@ -32,6 +34,26 @@ function cleanHtmlContent(str: string, isUrdu: boolean = false): string {
   
   // Use intelligent equation detector to convert html, sub/sup, MathML, unicode and reactions
   return autoDetectAndFormatEquations(str, { isUrdu });
+}
+
+function decodeBase64Svg(cleanB64: string): string | null {
+  try {
+    const globalBuffer = (globalThis as any).Buffer;
+    if (globalBuffer) {
+      const raw = globalBuffer.from(cleanB64, 'base64').toString('utf-8');
+      if (raw.includes('<svg') && raw.includes('</svg>')) {
+        return raw.replace(/<\?xml[\s\S]*?\?>/i, '').replace(/<!DOCTYPE[\s\S]*?>/i, '').trim();
+      }
+    }
+    const binary = atob(cleanB64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const raw = new TextDecoder('utf-8').decode(bytes);
+    if (raw.includes('<svg') && raw.includes('</svg>')) {
+      return raw.replace(/<\?xml[\s\S]*?\?>/i, '').replace(/<!DOCTYPE[\s\S]*?>/i, '').trim();
+    }
+  } catch (e) {}
+  return null;
 }
 
 export function parseMhtmlToQuestions(
@@ -64,17 +86,19 @@ export function parseMhtmlToQuestions(
           const body = splits.slice(1).join('\n\n').trim();
           if (encodingMatch && /base64/i.test(encodingMatch[1])) {
             const cleanB64 = body.replace(/\s+/g, '');
-            resourceMap[loc] = `data:${mimeType};base64,${cleanB64}`;
-          } else if (/svg|utf-8|text\//i.test(mimeType) || /utf-8/i.test(part)) {
-            if (mimeType.includes('svg')) {
-              // Convert unencoded SVGs to base64 so backend extracts them correctly
-              try {
-                // btoa requires ascii, unescape/encodeURIComponent handles unicode
-                const b64 = btoa(unescape(encodeURIComponent(body)));
-                resourceMap[loc] = `data:image/svg+xml;base64,${b64}`;
-              } catch (e) {
-                resourceMap[loc] = body; // fallback
+            if (mimeType.includes('svg') || cleanB64.startsWith('PHN2Zw') || cleanB64.startsWith('PD94bW')) {
+              const rawSvg = decodeBase64Svg(cleanB64);
+              if (rawSvg) {
+                resourceMap[loc] = rawSvg;
+              } else {
+                resourceMap[loc] = `data:${mimeType};base64,${cleanB64}`;
               }
+            } else {
+              resourceMap[loc] = `data:${mimeType};base64,${cleanB64}`;
+            }
+          } else if (/svg|utf-8|text\//i.test(mimeType) || /utf-8/i.test(part) || body.includes('<svg')) {
+            if (body.includes('<svg') && body.includes('</svg>')) {
+              resourceMap[loc] = body.replace(/<\?xml[\s\S]*?\?>/i, '').replace(/<!DOCTYPE[\s\S]*?>/i, '').trim();
             } else {
               resourceMap[loc] = body;
             }
@@ -88,12 +112,34 @@ export function parseMhtmlToQuestions(
     }
   }
 
-  // Replace external image URLs with embedded data URIs so they display 100% offline
-  for (const [url, dataUri] of Object.entries(resourceMap)) {
-    if (url.startsWith('http') || url.startsWith('cid:')) {
-      mainHtmlContent = mainHtmlContent.replaceAll(url, dataUri);
+  // Replace external image URLs with embedded data URIs or inline SVGs so they display 100% offline
+  for (const [url, dataOrSvg] of Object.entries(resourceMap)) {
+    const isSvg = dataOrSvg.includes('<svg') && dataOrSvg.includes('</svg>');
+    const escapedUrl = url.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
+    
+    if (isSvg) {
+      // Replace whole <img> tags referencing this URL
+      const imgWithSrcRegex = new RegExp(`<img[^>]*src=["']${escapedUrl}["'][^>]*>`, 'gi');
+      mainHtmlContent = mainHtmlContent.replace(imgWithSrcRegex, dataOrSvg);
+
+      // Also match by filename in case src is relative/different path (e.g. /uploads/Class_9/.../eq_123.svg vs eq_123.svg)
+      const filename = url.split('/').pop()?.trim();
+      if (filename && filename.length > 3) {
+        const escapedFilename = filename.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
+        const imgByFileRegex = new RegExp(`<img[^>]*src=["'][^"']*${escapedFilename}["'][^>]*>`, 'gi');
+        mainHtmlContent = mainHtmlContent.replace(imgByFileRegex, dataOrSvg);
+      }
+    } else {
+      mainHtmlContent = mainHtmlContent.replaceAll(url, dataOrSvg);
     }
   }
+
+  // Convert any remaining base64 SVG img tags to clean inline <svg>
+  mainHtmlContent = mainHtmlContent.replace(/<img[^>]*src=["']data:image\/svg\+xml;base64,([a-zA-Z0-9+/=]+)["'][^>]*>/gi, (_match, b64) => {
+    const cleanB64 = b64.replace(/\s+/g, '');
+    const decoded = decodeBase64Svg(cleanB64);
+    return decoded || _match;
+  });
 
   // 1. Try extracting Grade and Subject from modal-title, header, or page titles
   if (!detectedGrade || !detectedSubject) {
@@ -337,6 +383,8 @@ export function parseMhtmlToQuestions(
         Chapter: currentChapter,
         Topic: currentTopic,
         Type: type as any,
+        detectedType: type as any,
+        originalType: type as any,
         Difficulty: 'Medium',
         Marks: type === 'MCQ' || type === 'True/False' || type === 'Fill in the Blanks' || type === 'Spelling Check' || type === 'Missing Word' ? 1
              : type === 'Short Answer' || type === 'Definitions' || type === 'Match Columns' || type === 'Words / Meanings' || type === 'Pair of Words' ? 2

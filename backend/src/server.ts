@@ -118,9 +118,12 @@ app.get('/api/health', (_req: any, res: any) => {
     res.status(200).json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
 });
 
-// Serve Uploads Static Folder
-// Fixed: Cast to any to avoid overload mismatches
-app.use('/uploads', express.static(uploadDir) as any);
+// Serve Uploads Static Folder with CORS headers
+app.use('/uploads', ((req: any, res: any, next: any) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+}) as any, express.static(uploadDir) as any);
 
 // Auth Middleware
 // Fixed: Use any for req and res to avoid property existence errors in the auth middleware
@@ -446,15 +449,60 @@ function extractAndSaveEmbeddedMedia(content: string, classLevel: string, subjec
 
     let result = content;
 
-    // 1. Base64 data URIs: data:image/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=]+)
-    const dataUriRegex = /data:image\/([a-zA-Z0-9+.-]+);base64,([a-zA-Z0-9+/=]+)/g;
-    if (dataUriRegex.test(result)) {
-        ensureDir();
-        dataUriRegex.lastIndex = 0;
-        result = result.replace(dataUriRegex, (_match, format, b64Data) => {
+    // 1. Convert Base64 SVGs inside <img> tags directly into clean inline <svg> markup
+    const svgImgRegex = /<img\b[^>]*src=["']data:image\/svg\+xml;base64,([a-zA-Z0-9+/=]+)["'][^>]*>/gi;
+    if (svgImgRegex.test(result)) {
+        svgImgRegex.lastIndex = 0;
+        result = result.replace(svgImgRegex, (_match, b64Data) => {
             try {
-                const ext = format.includes('svg') ? '.svg' : format.includes('png') ? '.png' : format.includes('webp') ? '.webp' : '.jpg';
-                const uniqueName = `eq_${Date.now()}_${Math.round(Math.random() * 1e6)}${ext}`;
+                const decoded = Buffer.from(b64Data.replace(/\s+/g, ''), 'base64').toString('utf-8');
+                if (decoded.includes('<svg') && decoded.includes('</svg>')) {
+                    return decoded.replace(/<\?xml[\s\S]*?\?>/i, '').replace(/<!DOCTYPE[\s\S]*?>/i, '').trim();
+                }
+            } catch (err) {}
+            return _match;
+        });
+    }
+
+    // 2. Convert unencoded / URL-encoded SVG Data URIs inside <img> tags into clean inline <svg>
+    const svgUtf8ImgRegex = /<img\b[^>]*src=["']data:image\/svg\+xml(?:;utf8)?,([\s\S]*?)["'][^>]*>/gi;
+    if (svgUtf8ImgRegex.test(result)) {
+        svgUtf8ImgRegex.lastIndex = 0;
+        result = result.replace(svgUtf8ImgRegex, (_match, raw) => {
+            try {
+                const decoded = decodeURIComponent(raw);
+                if (decoded.includes('<svg') && decoded.includes('</svg>')) {
+                    return decoded.replace(/<\?xml[\s\S]*?\?>/i, '').replace(/<!DOCTYPE[\s\S]*?>/i, '').trim();
+                }
+            } catch (err) {}
+            return _match;
+        });
+    }
+
+    // 3. Convert standalone Base64 SVG data URIs into clean inline <svg>
+    const standaloneSvgB64Regex = /data:image\/svg\+xml;base64,([a-zA-Z0-9+/=]+)/gi;
+    if (standaloneSvgB64Regex.test(result)) {
+        standaloneSvgB64Regex.lastIndex = 0;
+        result = result.replace(standaloneSvgB64Regex, (_match, b64Data) => {
+            try {
+                const decoded = Buffer.from(b64Data.replace(/\s+/g, ''), 'base64').toString('utf-8');
+                if (decoded.includes('<svg') && decoded.includes('</svg>')) {
+                    return decoded.replace(/<\?xml[\s\S]*?\?>/i, '').replace(/<!DOCTYPE[\s\S]*?>/i, '').trim();
+                }
+            } catch (err) {}
+            return _match;
+        });
+    }
+
+    // 4. Save Base64 bitmap data URIs (PNG, JPEG, WEBP, GIF) to local uploads directory
+    const bitmapDataUriRegex = /data:image\/(png|jpeg|jpg|webp|gif);base64,([a-zA-Z0-9+/=]+)/gi;
+    if (bitmapDataUriRegex.test(result)) {
+        ensureDir();
+        bitmapDataUriRegex.lastIndex = 0;
+        result = result.replace(bitmapDataUriRegex, (_match, format, b64Data) => {
+            try {
+                const ext = format.toLowerCase().includes('png') ? '.png' : format.toLowerCase().includes('webp') ? '.webp' : format.toLowerCase().includes('gif') ? '.gif' : '.jpg';
+                const uniqueName = `img_${Date.now()}_${Math.round(Math.random() * 1e6)}${ext}`;
                 const filePath = path.join(targetDir, uniqueName);
                 const buffer = Buffer.from(b64Data, 'base64');
                 fs.writeFileSync(filePath, buffer);
@@ -462,40 +510,6 @@ function extractAndSaveEmbeddedMedia(content: string, classLevel: string, subjec
             } catch (err) {
                 console.error('Error saving embedded media to class folder:', err);
                 return _match;
-            }
-        });
-    }
-
-    // 2. Unencoded SVG Data URIs: data:image/svg+xml;utf8,<svg... or data:image/svg+xml,<svg...
-    const svgDataUriRegex = /data:image\/svg\+xml(?:;utf8)?,([\s\S]*?)(?=["'\s]|$)/gi;
-    if (svgDataUriRegex.test(result)) {
-        ensureDir();
-        svgDataUriRegex.lastIndex = 0;
-        result = result.replace(svgDataUriRegex, (_match, svgRaw) => {
-            try {
-                const uniqueName = `svg_${Date.now()}_${Math.round(Math.random() * 1e6)}.svg`;
-                const filePath = path.join(targetDir, uniqueName);
-                fs.writeFileSync(filePath, decodeURIComponent(svgRaw), 'utf-8');
-                return `/uploads/${classFolder}/${subjFolder}/${uniqueName}`;
-            } catch (err) {
-                return _match;
-            }
-        });
-    }
-
-    // 3. Raw SVG XML markup (<svg ...</svg>) passed as image/column cell
-    const rawSvgRegex = /<svg\b[^>]*>[\s\S]*?<\/svg>/gi;
-    if (rawSvgRegex.test(result) && !result.includes('/uploads/')) {
-        ensureDir();
-        rawSvgRegex.lastIndex = 0;
-        result = result.replace(rawSvgRegex, (svgBlock) => {
-            try {
-                const uniqueName = `svg_${Date.now()}_${Math.round(Math.random() * 1e6)}.svg`;
-                const filePath = path.join(targetDir, uniqueName);
-                fs.writeFileSync(filePath, svgBlock, 'utf-8');
-                return `/uploads/${classFolder}/${subjFolder}/${uniqueName}`;
-            } catch (err) {
-                return svgBlock;
             }
         });
     }

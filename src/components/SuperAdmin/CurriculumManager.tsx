@@ -801,6 +801,71 @@ const CurriculumManager: React.FC = () => {
                     </div>
                  )}
 
+                  {/* QUESTION TYPE FORMAT SELECTION (When adding Question Type) */}
+                  {activeTab === 'TYPE' && (
+                     <div className="space-y-4 pt-4 border-t border-gray-100">
+                        <div>
+                           <label className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest ml-1 block mb-1.5">
+                              Classification Category
+                           </label>
+                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                              {(['Objective', 'Subjective', 'Language', 'Custom'] as const).map(cat => (
+                                 <button
+                                    key={cat}
+                                    type="button"
+                                    onClick={() => setNewTypeCategory(cat)}
+                                    className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all border ${
+                                       newTypeCategory === cat 
+                                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100' 
+                                          : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                                    }`}
+                                 >
+                                    {cat}
+                                 </button>
+                              ))}
+                           </div>
+                        </div>
+
+                        <div>
+                           <label className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest ml-1 block mb-2">
+                              Question Format / Structure Requirement
+                           </label>
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {[
+                                 { id: 'CHOICE', label: 'Multiple Choice (MCQ)', desc: 'Requires 4 options (A, B, C, D) & correct choice selection', icon: CheckSquare },
+                                 { id: 'TEXT', label: 'Short Question / Statement', desc: 'Requires statement text & concise model answer', icon: FileText },
+                                 { id: 'LONG', label: 'Long Question / Essay', desc: 'Requires comprehensive question & detailed answer', icon: BookOpen },
+                                 { id: 'MATCH', label: 'Match Columns / Pairs', desc: 'Requires Column A & Column B matching pairs', icon: List },
+                                 { id: 'BLANK', label: 'Fill in the Blanks', desc: 'Requires statement with blanks/missing terms', icon: Edit2 },
+                              ].map(fmt => {
+                                 const IconComponent = fmt.icon;
+                                 const isSelected = newTypeFormat === fmt.id;
+                                 return (
+                                    <button
+                                       key={fmt.id}
+                                       type="button"
+                                       onClick={() => setNewTypeFormat(fmt.id as any)}
+                                       className={`p-3.5 rounded-2xl border text-left transition-all flex items-start gap-3 ${
+                                          isSelected 
+                                             ? 'border-indigo-600 bg-indigo-50/80 shadow-md ring-2 ring-indigo-500/20' 
+                                             : 'border-gray-200 bg-white hover:border-indigo-200 hover:bg-gray-50/50'
+                                       }`}
+                                    >
+                                       <div className={`p-2 rounded-xl mt-0.5 shrink-0 ${isSelected ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                          <IconComponent size={16} />
+                                       </div>
+                                       <div className="flex-1 min-w-0">
+                                          <p className={`text-xs font-bold leading-tight ${isSelected ? 'text-indigo-900' : 'text-gray-800'}`}>{fmt.label}</p>
+                                          <p className="text-[10px] text-gray-500 mt-0.5 leading-normal">{fmt.desc}</p>
+                                       </div>
+                                       {isSelected && <Check className="text-indigo-600 shrink-0 mt-1" size={16} />}
+                                    </button>
+                                 );
+                              })}
+                           </div>
+                        </div>
+                     </div>
+                  )}
                  {/* MAIN NAME INPUT */}
                  <div className="space-y-3 pt-6 border-t border-gray-100">
                     <label className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest ml-1">{activeTab} Title</label>

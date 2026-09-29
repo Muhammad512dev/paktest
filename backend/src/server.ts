@@ -395,23 +395,32 @@ const getPaginationParams = (req: any) => {
 
 const normalizeQuestionType = (type: any) => {
     const t = String(type ?? '').toLowerCase().trim();
+    if (!t) return 'Short Answer';
     if (t === 'mcq' || t.includes('multiple choice') || t.includes('multi choice') || t.includes('objective')) return 'MCQ';
     if (t.includes('match') || t.includes('column')) return 'Match Columns';
     if (t.includes('true') || t.includes('false')) return 'True/False';
     if (t.includes('blank') || t.includes('fill')) return 'Fill in the Blanks';
+    if (t.includes('verb')) return 'Forms of Verbs';
+    if (t.includes('opposite') || t.includes('antonym')) return 'Words & Opposites';
+    if (t.includes('singular') || t.includes('plural') || t.includes('plulrar')) return 'Singular / Plural';
+    if (t.includes('meaning') || t.includes('vocab')) return 'Words / Meanings';
+    if (t.includes('sentence')) return 'Words / Sentences';
+    if (t.includes('gender') || t.includes('masculine') || t.includes('feminine')) return 'Masculine / Feminine';
+    if (t.includes('pair of word') || t.includes('pairs of word') || t.includes('homophone')) return 'Pair of Words';
+    if (t.includes('numerical') || t.includes('problem')) return 'Numerical Problem';
     if (t.includes('defin')) return 'Definitions';
     if (t.includes('spelling') || t.includes('dictation')) return 'Spelling Check';
     if (t.includes('missing') || t === 'missing word') return 'Missing Word';
     if (t.includes('comprehension') || t.includes('passage')) return 'Comprehension';
     if (t.includes('composition') || t.includes('essay')) return 'Composition / Essay';
     if (t.includes('translat')) return 'Translation';
-    if (t.includes('letter') || t.includes('application writ')) return 'Letter Writing';
-    if (t.includes('story') || t.includes('paragraph writ')) return 'Story / Paragraph Writing';
+    if (t.includes('letter') || t.includes('application')) return 'Letter Writing';
+    if (t.includes('story') || t.includes('paragraph')) return 'Story / Paragraph Writing';
     if (t.includes('direct') || t.includes('indirect')) return 'Direct / Indirect Speech';
     if (t.includes('active') || t.includes('passive')) return 'Active / Passive Voice';
     if (t.includes('diagram')) return 'Diagram Based';
-    if (t.includes('short')) return 'Short Answer';
-    if (t.includes('long')) return 'Long Answer';
+    if (t.includes('short') || t === 'sq') return 'Short Answer';
+    if (t.includes('long') || t === 'lq') return 'Long Answer';
     return String(type ?? '').trim() || 'Short Answer';
 };
 
@@ -2604,6 +2613,8 @@ const KNOWN_TYPE_ALIASES: Record<string, string> = {
     'mcq': 'MCQ'
 };
 
+
+
 // GET – merge built-ins with user-added custom types from DB
 app.get('/api/curriculum/question-types', authenticate, async (req: any, res: any) => {
     try {
@@ -2627,17 +2638,17 @@ app.get('/api/curriculum/question-types', authenticate, async (req: any, res: an
 // POST – add a new custom question type
 app.post('/api/curriculum/question-types', authenticate, async (req: any, res: any) => {
     if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
-    const { name } = req.body;
+    const { name, category, format } = req.body;
     if (!name || String(name).trim() === '') return res.status(400).json({ error: 'Name is required' });
     const trimmed = String(name).trim();
-    if (BUILT_IN_TYPE_IDS.has(trimmed)) return res.status(409).json({ error: 'This is a built-in type and cannot be duplicated' });
+    if (BUILT_IN_TYPE_IDS.has(trimmed.toLowerCase())) return res.status(409).json({ error: 'This is a built-in type and cannot be duplicated' });
     try {
         const created = await prisma.questionType.upsert({
             where: { name: trimmed },
             update: {},
             create: { id: trimmed, name: trimmed }
         });
-        res.json({ ...created, category: 'Custom', isBuiltIn: false });
+        res.json({ ...created, category: category || 'Custom', format: format || 'TEXT', isBuiltIn: false });
     } catch (e: any) {
         res.status(500).json({ error: 'Failed to create question type', details: e?.message });
     }
@@ -2799,14 +2810,32 @@ app.get('/api/questions', authenticate, questionLimiter as any, async (req: any,
             const expanded = Array.from(new Set(inputArr.flatMap((c: string) => expandCls(c))));
             where.classLevel = expanded.length === 1 ? expanded[0] : { in: expanded };
         }
-        if (req.query.type) {
-            where.type = Array.isArray(req.query.type) ? { in: req.query.type } : req.query.type;
+        if (req.query.type && req.query.type !== 'All') {
+            const rawType = req.query.type;
+            const typeList = Array.isArray(rawType) ? rawType.map(String) : [String(rawType)];
+            const expandedTypes = new Set<string>();
+            for (const t of typeList) {
+                if (!t || t === 'All') continue;
+                expandedTypes.add(t);
+                const norm = normalizeQuestionType(t);
+                if (norm) expandedTypes.add(norm);
+            }
+            if (expandedTypes.size === 1) {
+                const single = Array.from(expandedTypes)[0];
+                AND.push({
+                    type: { equals: single, mode: 'insensitive' }
+                });
+            } else if (expandedTypes.size > 1) {
+                AND.push({
+                    OR: Array.from(expandedTypes).map(t => ({ type: { equals: t, mode: 'insensitive' } }))
+                });
+            }
         }
-        if (req.query.difficulty) {
+        if (req.query.difficulty && req.query.difficulty !== 'All') {
             where.difficulty = Array.isArray(req.query.difficulty) ? { in: req.query.difficulty } : req.query.difficulty;
         }
         // ── Source filter: support both string source and sources array ──
-        if (req.query.source) {
+        if (req.query.source && req.query.source !== 'All') {
             const srcVal = req.query.source;
             const srcArr = (Array.isArray(srcVal) ? srcVal : [srcVal]).filter((s: string) => s && s !== 'All');
             if (srcArr.length > 0) {

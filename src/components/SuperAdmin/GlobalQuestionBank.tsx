@@ -202,7 +202,7 @@ const GlobalQuestionBank: React.FC = () => {
   const [formStep, setFormStep] = useState<'TYPE' | 'CONTENT'>('TYPE');
   const [isCustomType, setIsCustomType] = useState(false);
   // Custom Type specific state
-  const [customFormat, setCustomFormat] = useState<'TEXT' | 'CHOICE'>('TEXT');
+  const [customFormat, setCustomFormat] = useState<'CHOICE' | 'TEXT' | 'LONG' | 'MATCH' | 'BLANK'>('TEXT');
 
   const [newQuestion, setNewQuestion] = useState<Partial<Question>>({
      text: '', textUrdu: '', type: 'MCQ', difficulty: Difficulty.MEDIUM, marks: 1,
@@ -3017,7 +3017,7 @@ const GlobalQuestionBank: React.FC = () => {
                           newQuestion.type === 'Missing Letters' || 
                           newQuestion.type === 'Synonyms' || 
                           newQuestion.type === 'Antonyms' || 
-                          (newQuestion.matchingPairs && newQuestion.matchingPairs.length > 0 && customFormat !== 'CHOICE')) && (
+                          customFormat === 'MATCH' || (newQuestion.matchingPairs && newQuestion.matchingPairs.length > 0 && customFormat !== 'CHOICE' && customFormat !== 'TEXT' && customFormat !== 'LONG' && customFormat !== 'BLANK')) && (
                            <div className="space-y-6 pt-6 border-t border-slate-100">
                               <div className="flex justify-between items-center">
                                  <h5 className="font-bold text-slate-800 text-sm uppercase tracking-widest">

@@ -261,6 +261,8 @@ const CurriculumManager: React.FC = () => {
   const [newItemName, setNewItemName] = useState('');
   const [newItemDesc, setNewItemDesc] = useState('');
   const [newItemImage, setNewItemImage] = useState<File | null>(null);
+  const [newTypeFormat, setNewTypeFormat] = useState<'CHOICE' | 'TEXT' | 'LONG' | 'MATCH' | 'BLANK'>('CHOICE');
+  const [newTypeCategory, setNewTypeCategory] = useState<'Objective' | 'Subjective' | 'Language' | 'Custom'>('Objective');
 
   // Secure Delete Confirmation Modal State
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -419,7 +421,7 @@ const CurriculumManager: React.FC = () => {
     } else if (activeTab === 'SOURCE') {
       await addSource({ id: `src_${timestamp}`, name: newItemName });
     } else if (activeTab === 'TYPE') {
-      await addQuestionType({ id: `type_${timestamp}`, name: newItemName });
+      await addQuestionType({ id: `type_${timestamp}`, name: newItemName, format: newTypeFormat, category: newTypeCategory });
     }
 
     await refreshData();
@@ -444,6 +446,8 @@ const CurriculumManager: React.FC = () => {
     setRemoveExistingImage(false);
     setNewItemName('');
     setNewItemImage(null);
+    setNewTypeFormat('CHOICE');
+    setNewTypeCategory('Objective');
     setSelSyllabusId('');
     setSelClassId('');
     setSelSubjectId('');

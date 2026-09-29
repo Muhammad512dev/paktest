@@ -1955,6 +1955,16 @@ const KNOWN_TYPE_ALIASES_JS = {
     'mcq': 'MCQ'
 };
 
+const normalizeQuestionType = (t) => {
+    if (!t) return '';
+    const norm = String(t).toLowerCase().trim();
+    if (KNOWN_TYPE_ALIASES[norm]) return KNOWN_TYPE_ALIASES[norm];
+    for (const bt of BUILT_IN_QUESTION_TYPES_JS) {
+        if (bt.id.toLowerCase() === norm || bt.name.toLowerCase() === norm) return bt.id;
+    }
+    return String(t).trim();
+};
+
 app.get('/api/curriculum/question-types', async (req, res) => {
     try {
         let customTypes = [];
@@ -1981,9 +1991,15 @@ app.get('/api/curriculum/question-types', async (req, res) => {
 
 app.post('/api/curriculum/question-types', authenticate, async (req, res) => {
     try {
-        let name = req.body.name;
-        const item = await prisma.questionType.create({ data: { name } });
-        res.json(item);
+        let { name, category, format } = req.body;
+        if (!name || String(name).trim() === '') return res.status(400).json({ error: 'Name is required' });
+        const trimmed = String(name).trim();
+        const item = await prisma.questionType.upsert({
+            where: { name: trimmed },
+            update: {},
+            create: { id: trimmed, name: trimmed }
+        });
+        res.json({ ...item, category: category || 'Custom', format: format || 'TEXT', isBuiltIn: false });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -2103,9 +2119,26 @@ app.get('/api/questions', authenticate, async (req, res) => {
             where.classLevel = Array.isArray(req.query.classLevel) ? { in: req.query.classLevel } : req.query.classLevel;
         }
         // Add question type filter if provided
-        if (req.query.type) {
-            const types = Array.isArray(req.query.type) ? req.query.type : [req.query.type];
-            where.type = { in: types, mode: 'insensitive' };
+        if (req.query.type && req.query.type !== 'All') {
+            const rawType = req.query.type;
+            const typeList = Array.isArray(rawType) ? rawType.map(String) : [String(rawType)];
+            const expandedTypes = new Set();
+            for (const t of typeList) {
+                if (!t || t === 'All') continue;
+                expandedTypes.add(t);
+                const norm = normalizeQuestionType(t);
+                if (norm) expandedTypes.add(norm);
+            }
+            if (expandedTypes.size === 1) {
+                const single = Array.from(expandedTypes)[0];
+                AND.push({
+                    type: { equals: single, mode: 'insensitive' }
+                });
+            } else if (expandedTypes.size > 1) {
+                AND.push({
+                    OR: Array.from(expandedTypes).map(t => ({ type: { equals: t, mode: 'insensitive' } }))
+                });
+            }
         }
         if (req.query.difficulty) {
             where.difficulty = Array.isArray(req.query.difficulty) ? { in: req.query.difficulty } : req.query.difficulty;

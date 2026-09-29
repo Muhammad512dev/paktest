@@ -1,4 +1,4 @@
-﻿
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   getQuestionsPage, addQuestion, addQuestionsBulk, deleteQuestion, updateQuestion, getMetadata,
@@ -608,8 +608,25 @@ const GlobalQuestionBank: React.FC = () => {
             continue;
         }
 
-        const options = [row.OptionA_EN, row.OptionB_EN, row.OptionC_EN, row.OptionD_EN].map(o => String(o || '')).filter(Boolean);
-        const optionsUrdu = [row.OptionA_UR, row.OptionB_UR, row.OptionC_UR, row.OptionD_UR].map(o => String(o || '')).filter(Boolean);
+        const rawOptA = row.OptionA_EN || row.OptionA || row.Option1 || row.Option_A || row.Option_1 || row['Option A'] || row['Option 1'] || row['Option (A)'] || row['A'] || '';
+        const rawOptB = row.OptionB_EN || row.OptionB || row.Option2 || row.Option_B || row.Option_2 || row['Option B'] || row['Option 2'] || row['Option (B)'] || row['B'] || '';
+        const rawOptC = row.OptionC_EN || row.OptionC || row.Option3 || row.Option_C || row.Option_3 || row['Option C'] || row['Option 3'] || row['Option (C)'] || row['C'] || '';
+        const rawOptD = row.OptionD_EN || row.OptionD || row.Option4 || row.Option_D || row.Option_4 || row['Option D'] || row['Option 4'] || row['Option (D)'] || row['D'] || '';
+
+        const rawOptAUr = row.OptionA_UR || row.OptionA_Urdu || row.Option1_UR || row.Option_A_UR || row['Option A Urdu'] || row['آپشن الف'] || '';
+        const rawOptBUr = row.OptionB_UR || row.OptionB_Urdu || row.Option2_UR || row.Option_B_UR || row['Option B Urdu'] || row['آپشن ب'] || '';
+        const rawOptCUr = row.OptionC_UR || row.OptionC_Urdu || row.Option3_UR || row.Option_C_UR || row['Option C Urdu'] || row['آپشن ج'] || '';
+        const rawOptDUr = row.OptionD_UR || row.OptionD_Urdu || row.Option4_UR || row.Option_D_UR || row['Option D Urdu'] || row['آپشن د'] || '';
+
+        let options = [rawOptA, rawOptB, rawOptC, rawOptD].map(o => String(o || '').trim()).filter(Boolean);
+        let optionsUrdu = [rawOptAUr, rawOptBUr, rawOptCUr, rawOptDUr].map(o => String(o || '').trim()).filter(Boolean);
+
+        // Auto-fallback for single-language options (Math equations, English spellings, Chemistry constants, etc.)
+        if (options.length > 0 && optionsUrdu.length === 0) {
+            optionsUrdu = [...options];
+        } else if (optionsUrdu.length > 0 && options.length === 0) {
+            options = [...optionsUrdu];
+        }
 
         // Parse matching pairs for Match Columns (supports text, LaTeX equations, and SVGs/pictures)
         const matchingPairs: any[] = [];
@@ -1432,6 +1449,29 @@ const GlobalQuestionBank: React.FC = () => {
         Sources: "Physics Numerical Problems|Board Exam"
       },
 
+      // --- ENGLISH SPELLING 4-OPTION MCQ (CHOOSE CORRECT SPELLING) ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "English",
+        Chapter: "Spelling & Vocabulary",
+        Topic: "Choose Correct Spelling",
+        QuestionText_EN: "Choose the word with correct spellings:",
+        QuestionText_UR: "درست ہجے (Correct Spelling) والا لفظ منتخب کریں:",
+        Type: "MCQ",
+        Marks: 1,
+        Difficulty: "Easy",
+        OptionA_EN: "inteligent", OptionA_UR: "inteligent",
+        OptionB_EN: "intelligent", OptionB_UR: "intelligent",
+        OptionC_EN: "intaligent", OptionC_UR: "intaligent",
+        OptionD_EN: "intilligent", OptionD_UR: "intilligent",
+        CorrectAnswer_Letter: "B",
+        ModelAnswer_EN: "Correct spelling is: (B) intelligent",
+        ModelAnswer_UR: "درست ہجے: (B) intelligent",
+        ImageURL: "",
+        Sources: "Board English Objective Paper Part A|Model Paper"
+      },
+
       // --- SPELLING CHECK / MISSING LETTERS EXAMPLE ---
       {
         Board: defaultBoard,
@@ -1661,7 +1701,14 @@ const GlobalQuestionBank: React.FC = () => {
                  XLSX.utils.book_append_sheet(wb, wsBio, "Biology_Examples");
              }
 
-             // 6. Formatting Instructions Guide Sheet
+             // 6. English & Spelling MCQs Sheet
+             const engRows = sampleRows.filter(r => r.Subject === "English");
+             if (engRows.length) {
+                 const wsEng = XLSX.utils.json_to_sheet(engRows);
+                 XLSX.utils.book_append_sheet(wb, wsEng, "English_Spelling_MCQ");
+             }
+
+             // 7. Formatting Instructions Guide Sheet
              const guideRows = [
                  { "Field Name": "Board", "Required": "Yes", "Description": "Exam Board / Syllabus (e.g. Punjab Board (PCTB), Federal Board (FBISE), Sindh Board, KPK Board, Cambridge)" },
                  { "Field Name": "Grade", "Required": "Yes", "Description": "Class level (e.g. Class 9, Class 10, Class 11, Class 12, Grade 8)" },

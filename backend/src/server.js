@@ -391,6 +391,13 @@ const sanitizeQuestionInput = (raw, schoolId) => {
         .map((s) => extractAndSaveEmbeddedMedia(s.trim(), q.classLevel, q.subject))
         .filter(Boolean);
 
+    // Auto-fallback options for Math/English/Physics/Chemistry where one language options apply to both
+    if (q.options.length > 0 && q.optionsUrdu.length === 0) {
+        q.optionsUrdu = [...q.options];
+    } else if (q.optionsUrdu.length > 0 && q.options.length === 0) {
+        q.options = [...q.optionsUrdu];
+    }
+
     if (Array.isArray(q.matchingPairs)) {
         q.matchingPairs = q.matchingPairs.map((pair) => ({
             left: typeof pair.left === 'string' ? extractAndSaveEmbeddedMedia(pair.left, q.classLevel, q.subject) : (pair.left || ''),
@@ -450,28 +457,21 @@ const validateQuestion = (question) => {
         'Definitions', 'Spelling Check', 'Missing Word', 'Fill in the Blanks'
     ].some(t => String(question.type || '').toLowerCase().includes(t.toLowerCase()));
 
-    if (question.medium === 'Urdu' || question.medium === 'Bilingual') {
-        const hasUrduOptions = Array.isArray(question.optionsUrdu) && question.optionsUrdu.length > 0;
-        if (!question.textUrdu || question.textUrdu.trim() === '') {
-            if (!(question.type === 'MCQ' && hasUrduOptions) && !isMatch && !hasPairs && !isPairOrWordType) {
-                errors.push('Urdu text (textUrdu) cannot be empty');
-            }
-        }
-        if (question.type === 'MCQ' && !hasUrduOptions) {
-            errors.push('Urdu options (optionsUrdu) required for MCQ');
+    const hasEnText = typeof question.text === 'string' && question.text.trim() !== '';
+    const hasUrText = typeof question.textUrdu === 'string' && question.textUrdu.trim() !== '';
+
+    if (!hasEnText && !hasUrText && !isMatch && !hasPairs && !isPairOrWordType) {
+        errors.push('Question text (text or textUrdu) cannot be empty');
+    }
+
+    if (question.type === 'MCQ') {
+        const hasEnOpts = Array.isArray(question.options) && question.options.length > 0;
+        const hasUrOpts = Array.isArray(question.optionsUrdu) && question.optionsUrdu.length > 0;
+        if (!hasEnOpts && !hasUrOpts) {
+            errors.push('Options (options or optionsUrdu) required for MCQ');
         }
     }
-    if (question.medium === 'English' || question.medium === 'Bilingual') {
-        const hasEngOptions = Array.isArray(question.options) && question.options.length > 0;
-        if (!question.text || question.text.trim() === '') {
-            if (!(question.type === 'MCQ' && hasEngOptions) && !isMatch && !hasPairs && !isPairOrWordType) {
-                errors.push('English text cannot be empty');
-            }
-        }
-        if (question.type === 'MCQ' && !hasEngOptions) {
-            errors.push('English options required for MCQ');
-        }
-    }
+
     return { valid: errors.length === 0, errors };
 };
 // --- HELPER: Audit Logger ---

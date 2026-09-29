@@ -106,17 +106,18 @@ const validateQuestion = (question: any): { valid: boolean; errors: string[] } =
   if (!question.classLevel || String(question.classLevel).trim() === '') errors.push('Class level (classLevel) is required');
   if (!question.topic || String(question.topic).trim() === '') errors.push('Topic (topic) is required');
 
-  if (question.medium === 'Urdu' || question.medium === 'Bilingual') {
-    if (!question.textUrdu || question.textUrdu.trim() === '') errors.push('Urdu text (textUrdu) cannot be empty');
-    if (question.type === 'MCQ' && (!Array.isArray(question.optionsUrdu) || question.optionsUrdu.length === 0)) {
-      errors.push('Urdu options (optionsUrdu) required for MCQ');
-    }
+  const hasEnText = typeof question.text === 'string' && question.text.trim() !== '';
+  const hasUrText = typeof question.textUrdu === 'string' && question.textUrdu.trim() !== '';
+
+  if (!hasEnText && !hasUrText) {
+    errors.push('Question text (text or textUrdu) cannot be empty');
   }
 
-  if (question.medium === 'English' || question.medium === 'Bilingual') {
-    if (!question.text || question.text.trim() === '') errors.push('English text cannot be empty');
-    if (question.type === 'MCQ' && (!Array.isArray(question.options) || question.options.length === 0)) {
-      errors.push('English options required for MCQ');
+  if (question.type === 'MCQ') {
+    const hasEnOpts = Array.isArray(question.options) && question.options.length > 0;
+    const hasUrOpts = Array.isArray(question.optionsUrdu) && question.optionsUrdu.length > 0;
+    if (!hasEnOpts && !hasUrOpts) {
+      errors.push('Options (options or optionsUrdu) required for MCQ');
     }
   }
 

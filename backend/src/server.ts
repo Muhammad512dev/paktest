@@ -549,10 +549,11 @@ const sanitizeQuestionInput = (raw: any, schoolId: string | null) => {
         }
     }
 
-    // Respect original language input without automatic cross-language mirroring or unwanted copying
+    // Fallbacks for missing text / textUrdu to ensure consistency
     if (!q.text && q.textUrdu) {
-        // Fallback for Prisma DB non-null 'text' field constraint when only Urdu is supplied
         q.text = q.textUrdu;
+    } else if (!q.textUrdu && q.text) {
+        q.textUrdu = q.text;
     }
 
     q.options = ensureStringArray(q.options)
@@ -561,6 +562,13 @@ const sanitizeQuestionInput = (raw: any, schoolId: string | null) => {
     q.optionsUrdu = ensureStringArray(q.optionsUrdu)
         .map((s: string) => extractAndSaveEmbeddedMedia(s.trim(), q.classLevel, q.subject))
         .filter(Boolean);
+
+    // Auto-fallback options for Math/English/Physics/Chemistry where one language options apply to both
+    if (q.options.length > 0 && q.optionsUrdu.length === 0) {
+        q.optionsUrdu = [...q.options];
+    } else if (q.optionsUrdu.length > 0 && q.options.length === 0) {
+        q.options = [...q.optionsUrdu];
+    }
 
     if (Array.isArray(q.matchingPairs)) {
         q.matchingPairs = q.matchingPairs.map((pair: any) => ({
@@ -612,21 +620,18 @@ const validateQuestion = (question: any): { valid: boolean; errors: string[] } =
         'Definitions', 'Spelling Check', 'Missing Word', 'Fill in the Blanks'
     ].some(t => String(question.type || '').toLowerCase().includes(t.toLowerCase()));
 
-    if (question.medium === 'Urdu' || question.medium === 'Bilingual') {
-        if (!question.textUrdu && !isMatch && !hasPairs && !isPairOrWordType) {
-            errors.push('Urdu text (textUrdu) cannot be empty');
-        }
-        if (question.type === 'MCQ' && (!Array.isArray(question.optionsUrdu) || question.optionsUrdu.length === 0)) {
-            errors.push('Urdu options (optionsUrdu) required for MCQ');
-        }
+    const hasEnText = typeof question.text === 'string' && question.text.trim() !== '';
+    const hasUrText = typeof question.textUrdu === 'string' && question.textUrdu.trim() !== '';
+
+    if (!hasEnText && !hasUrText && !isMatch && !hasPairs && !isPairOrWordType) {
+        errors.push('Question text (text or textUrdu) cannot be empty');
     }
 
-    if (question.medium === 'English' || question.medium === 'Bilingual') {
-        if (!question.text && !isMatch && !hasPairs && !isPairOrWordType) {
-            errors.push('English text cannot be empty');
-        }
-        if (question.type === 'MCQ' && (!Array.isArray(question.options) || question.options.length === 0)) {
-            errors.push('English options required for MCQ');
+    if (question.type === 'MCQ') {
+        const hasEnOpts = Array.isArray(question.options) && question.options.length > 0;
+        const hasUrOpts = Array.isArray(question.optionsUrdu) && question.optionsUrdu.length > 0;
+        if (!hasEnOpts && !hasUrOpts) {
+            errors.push('Options (options or optionsUrdu) required for MCQ');
         }
     }
 

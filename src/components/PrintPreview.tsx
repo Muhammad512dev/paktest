@@ -2090,35 +2090,39 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     {/* Sub-number / part label + English text (Only if Bilingual or English mode) */}
                     {languageMode !== 'Urdu' && (
                       <td className="pl-1 pr-1 align-top" style={{ paddingTop: '3px' }}>
-                        {showEnglish && subNumEn && <span className="font-black mr-1" style={{ fontSize: `${englishFontSize}px` }}>{subNumEn}</span>}
-                        {showEn && !isGenericStatement(cleanedTextEn) && (
-                          <span className="question-content">
-                            {isManualEdit
-                              ? <span contentEditable suppressContentEditableWarning className="outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-0.5">{cleanedTextEn}</span>
-                              : <MathRenderer text={cleanedTextEn} inline className="leading-snug font-bold" />}
-                          </span>
-                        )}
-                        {/* Image (below English text) */}
-                        {q.imageUrl && (
-                          <div className="my-1 flex justify-center">
-                            <ResizableImage src={q.imageUrl} alt="Diagram" initialDims={{ w: (q as any).imageWidth, h: (q as any).imageHeight, x: (q as any).imageX || 0, y: (q as any).imageY || 0 }} isEditing={isManualEdit} onUpdate={d => updateQuestionImageDims(q.id, d)} />
+                        <div className={isGenericStatement(cleanedTextEn) ? "flex items-start gap-2" : ""}>
+                          {showEnglish && subNumEn && <span className="font-black mr-1 shrink-0" style={{ fontSize: `${englishFontSize}px` }}>{subNumEn}</span>}
+                          <div className="flex-1 min-w-0">
+                            {showEn && !isGenericStatement(cleanedTextEn) && (
+                              <span className="question-content">
+                                {isManualEdit
+                                  ? <span contentEditable suppressContentEditableWarning className="outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-0.5">{cleanedTextEn}</span>
+                                  : <MathRenderer text={cleanedTextEn} inline className="leading-snug font-bold" />}
+                              </span>
+                            )}
+                            {/* Image (below English text) */}
+                            {q.imageUrl && (
+                              <div className="my-1 flex justify-center">
+                                <ResizableImage src={q.imageUrl} alt="Diagram" initialDims={{ w: (q as any).imageWidth, h: (q as any).imageHeight, x: (q as any).imageX || 0, y: (q as any).imageY || 0 }} isEditing={isManualEdit} onUpdate={d => updateQuestionImageDims(q.id, d)} />
+                              </div>
+                            )}
+                            {/* MCQ options below English question */}
+                            {isMCQType(q.type) && (languageMode === 'Bilingual' || languageMode === 'English') && (
+                              <div className={`grid ${!isGenericStatement(cleanedTextEn) ? 'mt-1' : ''}`} style={{ gridTemplateColumns: `repeat(${effectiveMcqCols}, minmax(0, 1fr))`, columnGap: `${verticalSpacing * 2}px`, rowGap: `${verticalSpacing}px` }}>
+                                {getMcqOptions(q).map((_, i) => {
+                                  const opt = q.options?.[i] || '';
+                                  const isCorrect = showAnswersInline && opt === q.correctAnswer;
+                                  return (
+                                    <div key={i} className="flex gap-1 items-start min-w-0">
+                                      <span style={{ fontSize: `${optionLabelSize}px` }} className={`font-black shrink-0 ${isCorrect ? 'text-green-700' : 'text-slate-500'}`}>({String.fromCharCode(65 + i)})</span>
+                                      <MathRenderer text={opt} className={`font-medium whitespace-normal break-words ${isCorrect ? 'font-bold text-green-700' : ''}`} inline />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
-                        )}
-                        {/* MCQ options below English question */}
-                        {isMCQType(q.type) && (languageMode === 'Bilingual' || languageMode === 'English') && (
-                          <div className="grid mt-1" style={{ gridTemplateColumns: `repeat(${effectiveMcqCols}, minmax(0, 1fr))`, columnGap: `${verticalSpacing * 2}px`, rowGap: `${verticalSpacing}px` }}>
-                            {getMcqOptions(q).map((_, i) => {
-                              const opt = q.options?.[i] || '';
-                              const isCorrect = showAnswersInline && opt === q.correctAnswer;
-                              return (
-                                <div key={i} className="flex gap-1 items-start min-w-0">
-                                  <span style={{ fontSize: `${optionLabelSize}px` }} className={`font-black shrink-0 ${isCorrect ? 'text-green-700' : 'text-slate-500'}`}>({String.fromCharCode(65 + i)})</span>
-                                  <MathRenderer text={opt} className={`font-medium whitespace-normal break-words ${isCorrect ? 'font-bold text-green-700' : ''}`} inline />
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
+                        </div>
                       </td>
                     )}
 
@@ -2447,12 +2451,8 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                           isVocabQuestionType(sec.questionType)
                         ) && Boolean(q.matchingPairs && q.matchingPairs.length > 0);
 
-                        const isSpellingWithOpts = (q.type === 'Spelling Check' || String(q.type || '').toLowerCase().includes('spell')) && 
-                          ((Array.isArray(q.options) && q.options.length > 0) || (Array.isArray(q.optionsUrdu) && q.optionsUrdu.length > 0));
-
                         const skipStatementRow = q.type === 'Match Columns' || 
-                          (isPairOrVocabType && isGenericStatement(displayTextEn) && isGenericStatement(displayTextUr)) ||
-                          (isSpellingWithOpts && isGenericStatement(displayTextEn) && isGenericStatement(displayTextUr));
+                          (isPairOrVocabType && isGenericStatement(displayTextEn) && isGenericStatement(displayTextUr));
 
                         if (skipStatementRow) return null;
 
@@ -2466,10 +2466,12 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                               {numEn}
                             </span>
                             <div className="flex-1 space-y-1 question-content">
-                              {isManualEdit ? (
-                                <p contentEditable suppressContentEditableWarning={true} className="leading-relaxed outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-1 font-bold">{displayTextEn}</p>
-                              ) : (
-                                <MathRenderer text={displayTextEn} className="leading-relaxed font-bold" />
+                              {!isGenericStatement(displayTextEn) && (
+                                isManualEdit ? (
+                                  <p contentEditable suppressContentEditableWarning={true} className="leading-relaxed outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-1 font-bold">{displayTextEn}</p>
+                                ) : (
+                                  <MathRenderer text={displayTextEn} className="leading-relaxed font-bold" />
+                                )
                               )}
                               {showQuestionMarks && (
                                 <span contentEditable={isManualEdit} suppressContentEditableWarning={true} className="text-[10px] font-black text-slate-500 pt-0.5 inline-block">[{q.marks}]</span>
@@ -2483,12 +2485,14 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                               {numUr}
                             </span>
                             <div className="flex-1 min-w-0 space-y-1 question-content">
-                              {isManualEdit ? (
-                                <p contentEditable suppressContentEditableWarning={true} style={{ fontSize: `${urduFontSize}px` }} className="bg-amber-50 rounded border-dashed border border-amber-300 p-1 outline-none font-bold text-black leading-[1.8]">{displayTextUr}</p>
-                              ) : (
-                                <div style={{ fontSize: `${urduFontSize}px` }} className="font-bold text-black leading-[1.8]">
-                                  <MathRenderer text={displayTextUr} />
-                                </div>
+                              {!isGenericStatement(displayTextUr) && (
+                                isManualEdit ? (
+                                  <p contentEditable suppressContentEditableWarning={true} style={{ fontSize: `${urduFontSize}px` }} className="bg-amber-50 rounded border-dashed border border-amber-300 p-1 outline-none font-bold text-black leading-[1.8]">{displayTextUr}</p>
+                                ) : (
+                                  <div style={{ fontSize: `${urduFontSize}px` }} className="font-bold text-black leading-[1.8]">
+                                    <MathRenderer text={displayTextUr} />
+                                  </div>
+                                )
                               )}
                             </div>
                           </div>
@@ -2503,12 +2507,14 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                           </span>
                           <div className="flex-1 space-y-1 question-content">
                             <div className="flex justify-between items-start">
-                              {isManualEdit ? (
-                                <p contentEditable suppressContentEditableWarning={true} style={{ fontSize: `${urduFontSize}px` }} className="bg-amber-50 rounded border-dashed border border-amber-300 p-1 outline-none font-bold text-black leading-[1.8] flex-1">{displayTextUr}</p>
-                              ) : (
-                                <div style={{ fontSize: `${urduFontSize}px` }} className="font-bold text-black leading-[1.8] flex-1">
-                                  <MathRenderer text={displayTextUr} />
-                                </div>
+                              {!isGenericStatement(displayTextUr) && (
+                                isManualEdit ? (
+                                  <p contentEditable suppressContentEditableWarning={true} style={{ fontSize: `${urduFontSize}px` }} className="bg-amber-50 rounded border-dashed border border-amber-300 p-1 outline-none font-bold text-black leading-[1.8] flex-1">{displayTextUr}</p>
+                                ) : (
+                                  <div style={{ fontSize: `${urduFontSize}px` }} className="font-bold text-black leading-[1.8] flex-1">
+                                    <MathRenderer text={displayTextUr} />
+                                  </div>
+                                )
                               )}
                               {showQuestionMarks && (
                                 <span contentEditable={isManualEdit} suppressContentEditableWarning={true} className="text-[10px] font-black text-slate-500 pt-0.5 shrink-0 ml-3">[{q.marks}]</span>
@@ -2526,10 +2532,12 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                           </span>
                           <div className="flex-1 space-y-1 question-content">
                             <div className="flex justify-between items-start">
-                              {isManualEdit ? (
-                                <p contentEditable suppressContentEditableWarning={true} className="leading-relaxed outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-1 font-bold flex-1">{displayTextEn}</p>
-                              ) : (
-                                <MathRenderer text={displayTextEn} className="leading-relaxed font-bold flex-1" />
+                              {!isGenericStatement(displayTextEn) && (
+                                isManualEdit ? (
+                                  <p contentEditable suppressContentEditableWarning={true} className="leading-relaxed outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-1 font-bold flex-1">{displayTextEn}</p>
+                                ) : (
+                                  <MathRenderer text={displayTextEn} className="leading-relaxed font-bold flex-1" />
+                                )
                               )}
                               {showQuestionMarks && (
                                 <span contentEditable={isManualEdit} suppressContentEditableWarning={true} className="text-[10px] font-black text-slate-500 pt-0.5 shrink-0 ml-3">[{q.marks}]</span>

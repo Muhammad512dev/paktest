@@ -166,9 +166,33 @@ const GlobalQuestionBank: React.FC = () => {
   const [batchClassOverride, setBatchClassOverride] = useState<string>('');
   const [batchSubjectOverride, setBatchSubjectOverride] = useState<string>('');
   const [batchTypeOverride, setBatchTypeOverride] = useState<string>('');
+  const [forceBatchType, setForceBatchType] = useState<boolean>(false);
   const [isCustomBatchType, setIsCustomBatchType] = useState(false);
   const [batchAuthorOverride, setBatchAuthorOverride] = useState<string>('');
   const [isCustomBatchAuthor, setIsCustomBatchAuthor] = useState(false);
+
+  const handleToggleForceBatchType = (force: boolean, currentType: string) => {
+    setForceBatchType(force);
+    if (force) {
+      const targetType = (currentType && currentType !== '__CUSTOM__') ? currentType : 'Short Answer';
+      if (!currentType || currentType === '__CUSTOM__') {
+        setBatchTypeOverride(targetType);
+      }
+      setImportRows(prev => prev.map(r => ({ ...r, Type: targetType })));
+    } else {
+      setImportRows(prev => prev.map(r => ({ 
+        ...r, 
+        Type: r.detectedType || r.originalType || r.Type || 'Short Answer' 
+      })));
+    }
+  };
+
+  const handleBatchTypeChange = (newType: string) => {
+    setBatchTypeOverride(newType);
+    if (forceBatchType && newType && newType !== '__CUSTOM__') {
+      setImportRows(prev => prev.map(r => ({ ...r, Type: newType })));
+    }
+  };
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sequenceFileInputRef = useRef<HTMLInputElement>(null);
   const diagramFileInputRef = useRef<HTMLInputElement>(null);
@@ -459,6 +483,8 @@ const GlobalQuestionBank: React.FC = () => {
           return;
         }
 
+        setForceBatchType(false);
+        setBatchTypeOverride('');
         setImportRows(parsedQuestions);
         setIsImportModalOpen(false);
         setIsSequenceImportModalOpen(false);
@@ -494,10 +520,16 @@ const GlobalQuestionBank: React.FC = () => {
         
         // Use sheet_to_json to parse. defval: '' ensures empty cells come as empty strings
         const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-        const processedRows = autoDetectEquations 
+        const processedRows = (autoDetectEquations 
           ? jsonData.map((row: any) => autoDetectAndFormatRow(row))
-          : jsonData;
+          : jsonData).map((row: any) => ({
+            ...row,
+            detectedType: row.Type || row.detectedType || 'Short Answer',
+            originalType: row.Type || row.originalType || 'Short Answer'
+          }));
 
+        setForceBatchType(false);
+        setBatchTypeOverride('');
         setImportRows(processedRows);
         setIsImportModalOpen(false);
         setIsSequenceImportModalOpen(false);
@@ -601,7 +633,10 @@ const GlobalQuestionBank: React.FC = () => {
 
         const text = (row.QuestionText_EN || row.Question || '').trim();
         const textUrdu = (row.QuestionText_UR || row.QuestionUrdu || '').trim();
-        const type = normalizeQuestionType((batchTypeOverride && batchTypeOverride !== '__AUTO__' ? batchTypeOverride : undefined) || row.Type || 'MCQ');
+        const rawType = (forceBatchType && batchTypeOverride && batchTypeOverride !== '__AUTO__')
+          ? batchTypeOverride
+          : (row.Type || row.detectedType || row.originalType || 'Short Answer');
+        const type = normalizeQuestionType(rawType);
         
         // Prevent duplicate questions in same batch
         if (finalQuestions.some(fq => fq.text === text && fq.textUrdu === textUrdu && fq.text !== '')) {
@@ -2309,9 +2344,18 @@ const GlobalQuestionBank: React.FC = () => {
                        </select>
                     </div>
 
-                    {/* Batch Type Selection */}
-                    <div className="flex items-center gap-2">
-                       <label className="text-xs font-medium text-slate-500">Type:</label>
+                    {/* Batch Type Selection with Checkbox */}
+                    <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-2.5 py-1 shadow-sm">
+                       <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-700 select-none">
+                          <input
+                             type="checkbox"
+                             checked={forceBatchType}
+                             onChange={(e) => handleToggleForceBatchType(e.target.checked, batchTypeOverride)}
+                             className="w-3.5 h-3.5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                          />
+                          <span>Force Type:</span>
+                       </label>
+
                        {isCustomBatchType ? (
                           <div className="flex items-center gap-1">
                              <input
@@ -2321,11 +2365,11 @@ const GlobalQuestionBank: React.FC = () => {
                                 onChange={(e) => {
                                    const val = e.target.value;
                                    setBatchTypeOverride(val);
-                                   if (val) setImportRows(prev => prev.map(r => ({ ...r, Type: val })));
+                                   if (forceBatchType && val) setImportRows(prev => prev.map(r => ({ ...r, Type: val })));
                                 }}
-                                className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 w-32"
+                                className="bg-slate-50 border border-slate-200 rounded px-2 py-0.5 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 w-28"
                              />
-                             <button onClick={() => { setIsCustomBatchType(false); setBatchTypeOverride(''); }} className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-0.5 rounded" title="Cancel Custom"><X size={14}/></button>
+                             <button onClick={() => { setIsCustomBatchType(false); setBatchTypeOverride(''); if (!forceBatchType) handleToggleForceBatchType(false, ''); }} className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-0.5 rounded" title="Cancel Custom"><X size={14}/></button>
                           </div>
                        ) : (
                           <select
@@ -2336,17 +2380,20 @@ const GlobalQuestionBank: React.FC = () => {
                                    setIsCustomBatchType(true);
                                    setBatchTypeOverride('');
                                 } else {
-                                   setBatchTypeOverride(val);
-                                   if (val) setImportRows(prev => prev.map(r => ({ ...r, Type: val })));
+                                   handleBatchTypeChange(val);
                                 }
                              }}
-                             className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 w-36"
+                             className="bg-slate-50 border border-slate-200 rounded px-2 py-0.5 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 w-36 cursor-pointer"
                           >
-                             <option value="">Individual</option>
+                             <option value="">{forceBatchType ? '-- Choose Type --' : 'Auto-Detect (Algorithm)'}</option>
                              {metadata.types.map(t => <option key={t} value={t}>{t}</option>)}
                              <option value="__CUSTOM__" className="font-bold text-indigo-600">+ Add Custom...</option>
                           </select>
                        )}
+
+                       <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded ${forceBatchType ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                          {forceBatchType ? 'All Forced' : 'Auto-Detect'}
+                       </span>
                     </div>
 
                     {/* Batch Author Selection */}
@@ -2431,7 +2478,25 @@ const GlobalQuestionBank: React.FC = () => {
                                 </td>
                                 <td className="px-5 py-3 border-r border-gray-100 max-w-md">
                                    <p className="text-sm font-semibold text-gray-900 truncate">{row.QuestionText_EN || row.Question || row.QuestionText_UR || row.QuestionUrdu}</p>
-                                   <p className="text-xs text-gray-500 mt-0.5 uppercase font-bold tracking-tighter">{row.Type || 'MCQ'}</p>
+                                   <div className="flex items-center gap-2 mt-1">
+                                      <select
+                                         value={row.Type || row.detectedType || 'Short Answer'}
+                                         onChange={(e) => {
+                                            const val = e.target.value;
+                                            setImportRows(prev => {
+                                               const next = [...prev];
+                                               next[i] = { ...next[i], Type: val };
+                                               return next;
+                                            });
+                                         }}
+                                         className="text-[11px] font-bold bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                                      >
+                                         {metadata.types.map(t => <option key={t} value={t}>{t}</option>)}
+                                      </select>
+                                      {!forceBatchType && row.detectedType && (
+                                         <span className="text-[10px] text-slate-400 font-medium tracking-tight">Auto: {row.detectedType}</span>
+                                      )}
+                                   </div>
                                 </td>
                                 
                                 {/* Editable Board Field */}

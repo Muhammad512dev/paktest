@@ -415,6 +415,9 @@ const GlobalQuestionBank: React.FC = () => {
           if (newQuestion.type === 'Match Columns' || hasPairs) {
               text = 'Match the Columns';
               textUrdu = 'کالم الف کو کالم ب سے ملائیں';
+          } else if (newQuestion.type === 'Spelling Check' || String(newQuestion.type || '').toLowerCase().includes('spell')) {
+              text = 'Choose the word with correct spelling:';
+              textUrdu = 'درست ہجے (Correct Spelling) والا لفظ منتخب کریں:';
           } else if (newQuestion.type?.includes('Word') || newQuestion.type?.includes('Meaning') || newQuestion.type?.includes('Pair')) {
               text = newQuestion.type;
               textUrdu = 'الفاظ و معانی / جوڑے';
@@ -702,6 +705,15 @@ const GlobalQuestionBank: React.FC = () => {
             finalQuestionText = 'Match the Columns';
           } else if (!finalQuestionTextUrdu && finalQuestionText) {
             finalQuestionTextUrdu = 'کالم الف کو کالم ب سے ملائیں';
+          }
+        } else if (type === 'Spelling Check' || String(type).toLowerCase().includes('spell') || (options.length > 0 && !finalQuestionText && !finalQuestionTextUrdu)) {
+          if (!finalQuestionText && !finalQuestionTextUrdu) {
+            finalQuestionText = 'Choose the word with correct spelling:';
+            finalQuestionTextUrdu = 'درست ہجے (Correct Spelling) والا لفظ منتخب کریں:';
+          } else if (!finalQuestionText && finalQuestionTextUrdu) {
+            finalQuestionText = finalQuestionTextUrdu;
+          } else if (!finalQuestionTextUrdu && finalQuestionText) {
+            finalQuestionTextUrdu = finalQuestionText;
           }
         }
 
@@ -2782,30 +2794,37 @@ const GlobalQuestionBank: React.FC = () => {
                                 <Layers size={14}/> Academic Classification
                               </h4>
                               {isCustomType && (
-                                  <div className="flex items-center gap-4 flex-1 mx-4">
-                                      <div className="flex-1">
+                                  <div className="flex items-center gap-3 flex-1 mx-4 flex-wrap">
+                                      <div className="flex-1 min-w-[140px]">
                                         <span className="text-[10px] font-bold text-indigo-600 uppercase mb-1 block">Category Name:</span>
                                         <input 
                                             type="text" 
-                                            placeholder="e.g. Map Identification" 
+                                            placeholder="e.g. Spelling Check / Dictation" 
                                             className="border-b-2 border-indigo-200 bg-transparent px-2 py-1 text-sm font-bold text-slate-800 outline-none focus:border-indigo-600 w-full"
                                             value={newQuestion.type}
-                                            onChange={e => setNewQuestion({...newQuestion, type: e.target.value})}
+                                            onChange={e => {
+                                               const val = e.target.value;
+                                               setNewQuestion({...newQuestion, type: val});
+                                               if (val.toLowerCase().includes('spell') || val === 'MCQ') setCustomFormat('CHOICE');
+                                            }}
                                         />
                                       </div>
-                                      <div className="flex items-center bg-white rounded-lg border border-slate-200 p-1">
-                                          <button 
-                                            onClick={() => setCustomFormat('TEXT')}
-                                            className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${customFormat === 'TEXT' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`}
-                                          >
-                                            Open Ended
-                                          </button>
-                                          <button 
-                                            onClick={() => setCustomFormat('CHOICE')}
-                                            className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${customFormat === 'CHOICE' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`}
-                                          >
-                                            Multiple Choice
-                                          </button>
+                                      <div>
+                                         <span className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Question Format:</span>
+                                         <div className="flex items-center bg-white rounded-lg border border-slate-200 p-1 shadow-2xs">
+                                             <button 
+                                               onClick={() => setCustomFormat('CHOICE')}
+                                               className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${customFormat === 'CHOICE' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'}`}
+                                             >
+                                               Multiple Choice / Spelling (A,B,C,D)
+                                             </button>
+                                             <button 
+                                               onClick={() => setCustomFormat('TEXT')}
+                                               className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${customFormat === 'TEXT' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'}`}
+                                             >
+                                               Short / Long (Text)
+                                             </button>
+                                         </div>
                                       </div>
                                   </div>
                               )}
@@ -2987,7 +3006,7 @@ const GlobalQuestionBank: React.FC = () => {
                         </div>
 
                         {/* 4. DYNAMIC TYPE SPECIFIC SECTIONS */}
-                        {(newQuestion.type === 'MCQ' || customFormat === 'CHOICE') && renderOptionsBuilder()}
+                        {(newQuestion.type === 'MCQ' || newQuestion.type === 'Spelling Check' || customFormat === 'CHOICE') && renderOptionsBuilder()}
 
                         {(newQuestion.type === 'Match Columns' || 
                           newQuestion.type === 'Pair of Words' || 
@@ -2996,10 +3015,9 @@ const GlobalQuestionBank: React.FC = () => {
                           newQuestion.type === 'Words / Sentences' || 
                           newQuestion.type === 'Missing Spelling' || 
                           newQuestion.type === 'Missing Letters' || 
-                          newQuestion.type === 'Spelling Check' || 
                           newQuestion.type === 'Synonyms' || 
                           newQuestion.type === 'Antonyms' || 
-                          (newQuestion.matchingPairs && newQuestion.matchingPairs.length > 0)) && (
+                          (newQuestion.matchingPairs && newQuestion.matchingPairs.length > 0 && customFormat !== 'CHOICE')) && (
                            <div className="space-y-6 pt-6 border-t border-slate-100">
                               <div className="flex justify-between items-center">
                                  <h5 className="font-bold text-slate-800 text-sm uppercase tracking-widest">

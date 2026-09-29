@@ -380,8 +380,16 @@ const sanitizeQuestionInput = (raw, schoolId) => {
     }
 
     // Respect original language input without automatic cross-language mirroring
-    if (!q.text && q.textUrdu) {
+    if (!q.text && !q.textUrdu) {
+        if ((Array.isArray(q.options) && q.options.length > 0) || (Array.isArray(q.optionsUrdu) && q.optionsUrdu.length > 0)) {
+            const isSpell = String(q.type || '').toLowerCase().includes('spell');
+            q.text = isSpell ? 'Choose the word with correct spelling:' : (q.type || 'Choose the correct option:');
+            q.textUrdu = isSpell ? 'درست ہجے (Correct Spelling) والا لفظ منتخب کریں:' : (q.type || 'درست جواب کا انتخاب کریں:');
+        }
+    } else if (!q.text && q.textUrdu) {
         q.text = q.textUrdu;
+    } else if (!q.textUrdu && q.text) {
+        q.textUrdu = q.text;
     }
 
     q.options = ensureStringArray(q.options)
@@ -459,16 +467,18 @@ const validateQuestion = (question) => {
 
     const hasEnText = typeof question.text === 'string' && question.text.trim() !== '';
     const hasUrText = typeof question.textUrdu === 'string' && question.textUrdu.trim() !== '';
+    const hasOpts = (Array.isArray(question.options) && question.options.length > 0) || 
+                    (Array.isArray(question.optionsUrdu) && question.optionsUrdu.length > 0);
 
-    if (!hasEnText && !hasUrText && !isMatch && !hasPairs && !isPairOrWordType) {
+    if (!hasEnText && !hasUrText && !isMatch && !hasPairs && !isPairOrWordType && !hasOpts) {
         errors.push('Question text (text or textUrdu) cannot be empty');
     }
 
-    if (question.type === 'MCQ') {
+    if (question.type === 'MCQ' || String(question.type || '').toLowerCase().includes('spelling')) {
         const hasEnOpts = Array.isArray(question.options) && question.options.length > 0;
         const hasUrOpts = Array.isArray(question.optionsUrdu) && question.optionsUrdu.length > 0;
         if (!hasEnOpts && !hasUrOpts) {
-            errors.push('Options (options or optionsUrdu) required for MCQ');
+            errors.push('Options (options or optionsUrdu) required for MCQ/Spelling');
         }
     }
 

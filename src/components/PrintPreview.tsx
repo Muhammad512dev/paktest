@@ -227,7 +227,23 @@ const ResizableImage = ({
 const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded = false, showPartHeadings = true, answerKeyDisplay = 'none', onShowQuestionMarksChange }) => {
   const isMCQType = (type: string | undefined) => {
     const t = (type || '').toLowerCase().trim();
-    return t === 'mcq' || t.includes('mcq') || t.includes('multiple choice') || t.includes('multi choice');
+    return t === 'mcq' || t.includes('mcq') || t.includes('multiple choice') || t.includes('multi choice') || t.includes('spelling');
+  };
+
+  const isGenericStatement = (text: string | undefined) => {
+    if (!text) return true;
+    const t = text.trim().toLowerCase();
+    return t === '' || 
+           t === 'match the columns' || t === 'match columns' || t === 'match the column' || t === 'match column a with column b' || t === 'match column' || 
+           t === 'choose the word with correct spelling:' || t === 'choose the word with correct spelling' ||
+           t === 'choose the word with correct spellings:' || t === 'choose the word with correct spellings' ||
+           t === 'choose correct spelling:' || t === 'choose correct spelling' || 
+           t === 'choose the correct spelling:' || t === 'choose the correct spelling' ||
+           t === 'write the correct spellings of the following words:' || t === 'write the correct spellings of the following words' ||
+           t === 'words / meanings' || t === 'words meanings' || t === 'pair of words' || t === 'words / sentences' || t === 'spelling check' ||
+           t === 'singular / plural' || t === 'singular and plural' || t === 'singular plural' || t === 'words / opposites' || t === 'words opposites' || t === 'masculine / feminine' ||
+           t === 'درست ہجے والا لفظ منتخب کریں:' || t === 'درست ہجے والا لفظ منتخب کریں' || t === 'درست ہجے (correct spelling) والا لفظ منتخب کریں:' ||
+           t === 'کالم الف کو کالم ب سے ملائیں' || t === 'کالم ملائیں' || t === 'کالم ملائیے' || t === 'الفاظ و معانی / جوڑے' || t === 'الفاظ معنی' || t === 'الفاظ کے جوڑے' || t === 'واحد جمع' || t === 'واحد / جمع' || t === 'مذکر مؤنث' || t === 'الفاظ متضاد' || t === 'الفاظ مترادف';
   };
 
   const isVocabQuestionType = (t?: string): boolean => {
@@ -2046,11 +2062,13 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     {/* Urdu text column */}
                     {showUr && (
                       <td dir="rtl" className="text-right pl-1 pr-1 font-urdu align-top font-bold" style={{ fontSize: `${urduFontSize}px`, fontFamily: urduFont, paddingTop: '3px', minWidth: '120px' }}>
-                        <span className="question-content">
-                          {isManualEdit
-                            ? <span contentEditable suppressContentEditableWarning className="outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-0.5">{cleanedTextUr}</span>
-                            : <MathRenderer text={cleanedTextUr!} inline />}
-                        </span>
+                        {!isGenericStatement(cleanedTextUr) && (
+                          <span className="question-content">
+                            {isManualEdit
+                              ? <span contentEditable suppressContentEditableWarning className="outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-0.5">{cleanedTextUr}</span>
+                              : <MathRenderer text={cleanedTextUr!} inline />}
+                          </span>
+                        )}
                         {/* MCQ Urdu options */}
                         {isMCQType(q.type) && (languageMode === 'Bilingual' || languageMode === 'Urdu') && (
                           <div dir="rtl" className="grid mt-1" style={{ gridTemplateColumns: `repeat(${effectiveMcqCols}, minmax(0, 1fr))`, columnGap: `${verticalSpacing * 2}px`, rowGap: `${verticalSpacing}px` }}>
@@ -2073,7 +2091,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     {languageMode !== 'Urdu' && (
                       <td className="pl-1 pr-1 align-top" style={{ paddingTop: '3px' }}>
                         {showEnglish && subNumEn && <span className="font-black mr-1" style={{ fontSize: `${englishFontSize}px` }}>{subNumEn}</span>}
-                        {showEn && (
+                        {showEn && !isGenericStatement(cleanedTextEn) && (
                           <span className="question-content">
                             {isManualEdit
                               ? <span contentEditable suppressContentEditableWarning className="outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-0.5">{cleanedTextEn}</span>
@@ -2429,16 +2447,12 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                           isVocabQuestionType(sec.questionType)
                         ) && Boolean(q.matchingPairs && q.matchingPairs.length > 0);
 
-                        const isGenericStatement = (text: string | undefined) => {
-                          if (!text) return true;
-                          const t = text.trim().toLowerCase();
-                          return t === '' || 
-                                 t === 'match the columns' || t === 'match columns' || t === 'match the column' || t === 'match column a with column b' || t === 'match column' || 
-                                 t === 'words / meanings' || t === 'words meanings' || t === 'pair of words' || t === 'words / sentences' || t === 'spelling check' ||
-                                 t === 'singular / plural' || t === 'singular and plural' || t === 'singular plural' || t === 'words / opposites' || t === 'words opposites' || t === 'masculine / feminine' ||
-                                 t === 'کالم الف کو کالم ب سے ملائیں' || t === 'کالم ملائیں' || t === 'کالم ملائیے' || t === 'الفاظ و معانی / جوڑے' || t === 'الفاظ معنی' || t === 'الفاظ کے جوڑے' || t === 'واحد جمع' || t === 'واحد / جمع' || t === 'مذکر مؤنث' || t === 'الفاظ متضاد' || t === 'الفاظ مترادف';
-                        };
-                        const skipStatementRow = q.type === 'Match Columns' || (isPairOrVocabType && isGenericStatement(displayTextEn) && isGenericStatement(displayTextUr));
+                        const isSpellingWithOpts = (q.type === 'Spelling Check' || String(q.type || '').toLowerCase().includes('spell')) && 
+                          ((Array.isArray(q.options) && q.options.length > 0) || (Array.isArray(q.optionsUrdu) && q.optionsUrdu.length > 0));
+
+                        const skipStatementRow = q.type === 'Match Columns' || 
+                          (isPairOrVocabType && isGenericStatement(displayTextEn) && isGenericStatement(displayTextUr)) ||
+                          (isSpellingWithOpts && isGenericStatement(displayTextEn) && isGenericStatement(displayTextUr));
 
                         if (skipStatementRow) return null;
 

@@ -46,6 +46,103 @@ interface PrintPreviewProps {
 }
 
 // Compact Helper Component for Slider
+
+const parseComprehensionText = (text: string) => {
+  if (!text) return { intro: '', passage: '', questionLines: [] };
+  
+  const qSplitRegex = /\n+(?:Questions|Questions:|Questions to Answer|QUESTIONS|QUESTIONS:)\s*:\s*\n+|\n+(?:Questions|Questions to Answer|QUESTIONS)\s*:\s*\n+|\n+Questions\s*:\s*/i;
+  const urduQSplitRegex = /\n+(?:سوالات|سوالات:|درج ذیل سوالات کے جوابات دیں)\s*:\s*\n+|\n+سوالات\s*:\s*/;
+
+  let passagePart = text;
+  let questionsPart = '';
+
+  if (qSplitRegex.test(text)) {
+    const parts = text.split(qSplitRegex);
+    passagePart = parts[0];
+    questionsPart = parts.slice(1).join('\n');
+  } else if (urduQSplitRegex.test(text)) {
+    const parts = text.split(urduQSplitRegex);
+    passagePart = parts[0];
+    questionsPart = parts.slice(1).join('\n');
+  }
+
+  let intro = '';
+  let passage = passagePart.trim();
+  const introMatch = passage.match(/^(Read the passage[^\n:]*[:.]?|Carefully read the passage[^\n:]*[:.]?|عبارت کو غور سے پڑھیں[^\n:]*[:.]?)\s*\n+/i);
+  if (introMatch) {
+    intro = introMatch[1];
+    passage = passage.slice(introMatch[0].length).trim();
+  }
+
+  if ((passage.startsWith('"') && passage.endsWith('"')) || (passage.startsWith("'") && passage.endsWith("'"))) {
+    passage = passage.slice(1, -1).trim();
+  }
+
+  const questionLines = questionsPart
+    ? questionsPart.split('\n').map(l => l.trim()).filter(Boolean)
+    : [];
+
+  return { intro, passage, questionLines };
+};
+
+const ComprehensionQuestionView: React.FC<{
+  text?: string;
+  isUrdu?: boolean;
+  fontSize: number;
+  fontFamily?: string;
+  isManualEdit?: boolean;
+}> = ({ text, isUrdu, fontSize, fontFamily, isManualEdit }) => {
+  if (!text) return null;
+  const { intro, passage, questionLines } = parseComprehensionText(text);
+
+  if (!passage || questionLines.length === 0) {
+    return isManualEdit ? (
+      <span contentEditable suppressContentEditableWarning className="outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-0.5">
+        {text}
+      </span>
+    ) : (
+      <MathRenderer text={text} inline />
+    );
+  }
+
+  return (
+    <div className={`comprehension-block space-y-2 my-1 ${isUrdu ? 'text-right font-urdu' : 'text-left'}`} dir={isUrdu ? 'rtl' : 'ltr'}>
+      {intro && (
+        <p className="font-bold text-slate-800 leading-snug" style={{ fontSize: `${fontSize}px` }}>
+          {intro}
+        </p>
+      )}
+      {passage && (
+        <div 
+          className="p-3 bg-slate-50/80 rounded-lg border border-slate-300/80 leading-relaxed print:bg-slate-50 print:border-slate-400"
+          style={{ 
+            fontSize: `${fontSize}px`, 
+            fontFamily, 
+            lineHeight: isUrdu ? '2.1' : '1.7',
+            fontStyle: isUrdu ? 'normal' : 'italic' 
+          }}
+        >
+          <MathRenderer text={passage} />
+        </div>
+      )}
+      {questionLines.length > 0 && (
+        <div className="pt-1 space-y-1">
+          <p className="font-black text-xs uppercase tracking-wider text-slate-700" style={{ fontSize: `${fontSize - 1}px` }}>
+            {isUrdu ? 'سوالات:' : 'Questions:'}
+          </p>
+          <div className="space-y-1 pl-2 pr-2">
+            {questionLines.map((qLine, qIdx) => (
+              <div key={qIdx} className="flex gap-2 items-start" style={{ fontSize: `${fontSize}px`, lineHeight: isUrdu ? '2' : '1.6' }}>
+                <MathRenderer text={qLine} inline className="font-bold" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const RangeControl = ({ label, value, setValue, min, max, step = 1, unit = '', width = 'w-24' }: { label: string, value: number, setValue: (v: number) => void, min: number, max: number, step?: number, unit?: string, width?: string }) => (
   <div className={`flex flex-col justify-center space-y-1 ${width}`}>
     <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">

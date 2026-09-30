@@ -1,22 +1,16 @@
 {
-  "$schema": "https://agenticresourcediscovery.org/spec/v1/schema.json",
   "specVersion": "1.0",
-  "name": "PakParcha AI",
-  "description": "Pakistan's official curriculum assessment and bilingual exam generation platform for schools, colleges, and academies.",
   "host": {
-    "name": "PakParcha AI Education Network",
-    "url": "https://www.pakparchaai.com"
+    "displayName": "PakParcha AI Education Network",
+    "documentationUrl": "https://www.pakparchaai.com/llms.txt",
+    "logoUrl": "https://www.pakparchaai.com/logo.png"
   },
-  "documentation": "https://www.pakparchaai.com/llms.txt",
   "entries": [
     {
-      "identifier": "urn:air:pakparchaai.com:service:exam-generator",
+      "identifier": "urn:air:pakparchaai.com:agent:exam-generator",
       "displayName": "PakParcha AI Exam Generator",
-      "name": "PakParcha AI Exam Generator",
-      "type": "text/html",
-      "description": "Bilingual examination paper authoring, curriculum alignment, and assessment test generator for Pakistani educational boards (PCTB, FBISE, Sindh, KPK).",
+      "type": "application/agent-card+json",
       "url": "https://www.pakparchaai.com",
-      "documentationUrl": "https://www.pakparchaai.com/llms.txt",
       "representativeQueries": [
         "generate matric physics exam paper pakparcha",
         "bilingual urdu english exam generator pakistan",
@@ -24,38 +18,25 @@
       ]
     },
     {
-      "identifier": "urn:air:pakparchaai.com:doc:llms-txt",
+      "identifier": "urn:air:pakparchaai.com:skills:curriculum-assessment",
       "displayName": "PakParcha AI LLM Context & Capabilities",
-      "name": "PakParcha AI LLM Context & Capabilities",
-      "type": "text/plain",
-      "description": "Comprehensive LLM and AI agent discovery guide detailing platform capabilities, syllabus alignments, and official links.",
+      "type": "text/markdown; profile=\"urn:air:agent-skills\"",
       "url": "https://www.pakparchaai.com/llms.txt",
-      "documentationUrl": "https://www.pakparchaai.com/llms.txt",
       "representativeQueries": [
-        "pakparcha ai capabilities",
-        "pakparcha syllabus guide llms.txt"
+        "pakparcha ai capabilities and features",
+        "pakparcha syllabus guide llms txt",
+        "pakistan board curriculum assessment agent tools"
       ]
     },
     {
-      "identifier": "urn:air:pakparchaai.com:service:pricing",
-      "displayName": "PakParcha Subscription & Pricing",
-      "name": "PakParcha Subscription & Pricing",
-      "type": "text/html",
-      "description": "Institutional and individual pricing plans for Pakistani schools, colleges, and academies.",
-      "url": "https://www.pakparchaai.com/#pricing",
+      "identifier": "urn:air:pakparchaai.com:mcp:assessment-tools",
+      "displayName": "PakParcha Assessment & Question Bank Tools",
+      "type": "application/mcp-server-card+json",
+      "url": "https://www.pakparchaai.com",
       "representativeQueries": [
-        "pakparcha subscription plans pricing pakistan"
-      ]
-    },
-    {
-      "identifier": "urn:air:pakparchaai.com:resource:notes-books",
-      "displayName": "Educational Notes & Official Textbooks",
-      "name": "Educational Notes & Official Textbooks",
-      "type": "text/html",
-      "description": "Official PCTB and FBISE textbooks, chapter-wise notes, and past paper solutions for Class 9 to 12.",
-      "url": "https://www.pakparchaai.com/#notes",
-      "representativeQueries": [
-        "class 9 10 notes pctb fbise books download"
+        "pakparcha exam paper authoring tool",
+        "bilingual assessment mcq generator tool",
+        "pakistan curriculum question bank search"
       ]
     }
   ]

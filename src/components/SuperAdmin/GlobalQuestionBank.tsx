@@ -634,11 +634,63 @@ const GlobalQuestionBank: React.FC = () => {
             pathCache[pathKey] = path;
         }
 
-        const text = (row.QuestionText_EN || row.Question || '').trim();
-        const textUrdu = (row.QuestionText_UR || row.QuestionUrdu || '').trim();
+        // Parse dedicated Comprehension / Passage columns if present
+        const passageEn = String(row.Paragraph_EN || row.Passage_EN || row.Paragraph || row.Passage || row['Comprehension Paragraph'] || row['Comprehension Passage'] || row['Paragraph EN'] || row['Passage EN'] || '').trim();
+        const passageUr = String(row.Paragraph_UR || row.Passage_UR || row.ParagraphUrdu || row.PassageUrdu || row['عبارت'] || row['Paragraph UR'] || row['Passage UR'] || '').trim();
+
+        const subQuestionsEn: string[] = [];
+        const subQuestionsUr: string[] = [];
+        for (let qIdx = 1; qIdx <= 10; qIdx++) {
+          const qEn = String(row[`Question${qIdx}_EN`] || row[`Question${qIdx}`] || row[`SubQuestion${qIdx}_EN`] || row[`SubQuestion${qIdx}`] || row[`Q${qIdx}_EN`] || row[`Q${qIdx}`] || row[`Question ${qIdx}`] || '').trim();
+          const qUr = String(row[`Question${qIdx}_UR`] || row[`Question${qIdx}_Urdu`] || row[`SubQuestion${qIdx}_UR`] || row[`SubQuestion${qIdx}_Urdu`] || row[`Q${qIdx}_UR`] || row[`Q${qIdx}_Urdu`] || row[`سوال ${qIdx}`] || '').trim();
+          if (qEn) subQuestionsEn.push(`${qIdx}. ${qEn}`);
+          if (qUr) subQuestionsUr.push(`${qIdx}. ${qUr}`);
+        }
+
+        let text = (row.QuestionText_EN || row.Question || '').trim();
+        let textUrdu = (row.QuestionText_UR || row.QuestionUrdu || '').trim();
+
+        if (passageEn || subQuestionsEn.length > 0) {
+          if (passageEn && subQuestionsEn.length > 0) {
+            text = `Read the passage carefully and answer the questions that follow:\n\n"${passageEn}"\n\nQuestions:\n${subQuestionsEn.join('\n')}`;
+          } else if (passageEn && text) {
+            text = `Read the passage carefully and answer the questions that follow:\n\n"${passageEn}"\n\n${text}`;
+          } else if (passageEn) {
+            text = passageEn;
+          } else if (subQuestionsEn.length > 0 && !text) {
+            text = `Questions:\n${subQuestionsEn.join('\n')}`;
+          }
+        }
+
+        if (passageUr || subQuestionsUr.length > 0) {
+          if (passageUr && subQuestionsUr.length > 0) {
+            textUrdu = `عبارت کو غور سے پڑھیں اور نیچے دیے گئے سوالات کے جوابات دیں:\n\n"${passageUr}"\n\nسوالات:\n${subQuestionsUr.join('\n')}`;
+          } else if (passageUr && textUrdu) {
+            textUrdu = `عبارت کو غور سے پڑھیں اور نیچے دیے گئے سوالات کے جوابات دیں:\n\n"${passageUr}"\n\n${textUrdu}`;
+          } else if (passageUr) {
+            textUrdu = passageUr;
+          } else if (subQuestionsUr.length > 0 && !textUrdu) {
+            textUrdu = `سوالات:\n${subQuestionsUr.join('\n')}`;
+          }
+        }
+
+        const subAnswersEn: string[] = [];
+        const subAnswersUr: string[] = [];
+        for (let aIdx = 1; aIdx <= 10; aIdx++) {
+          const aEn = String(row[`ModelAnswer${aIdx}_EN`] || row[`ModelAnswer${aIdx}`] || row[`Answer${aIdx}_EN`] || row[`Answer${aIdx}`] || row[`Ans${aIdx}_EN`] || row[`Ans${aIdx}`] || row[`Answer ${aIdx}`] || '').trim();
+          const aUr = String(row[`ModelAnswer${aIdx}_UR`] || row[`ModelAnswer${aIdx}_Urdu`] || row[`Answer${aIdx}_UR`] || row[`Answer${aIdx}_Urdu`] || row[`Ans${aIdx}_UR`] || row[`Ans${aIdx}_Urdu`] || row[`جواب ${aIdx}`] || '').trim();
+          if (aEn) subAnswersEn.push(`${aIdx}. ${aEn}`);
+          if (aUr) subAnswersUr.push(`${aIdx}. ${aUr}`);
+        }
+
+        let modelAnswerEn = (row.ModelAnswer_EN || row.ModelAnswer || row.Answer || row.CorrectAnswer || '').trim();
+        let modelAnswerUr = (row.ModelAnswer_UR || row.ModelAnswerUrdu || row.AnswerUrdu || '').trim();
+        if (subAnswersEn.length > 0 && !modelAnswerEn) modelAnswerEn = subAnswersEn.join('\n');
+        if (subAnswersUr.length > 0 && !modelAnswerUr) modelAnswerUr = subAnswersUr.join('\n');
+
         const rawType = (forceBatchType && batchTypeOverride && batchTypeOverride !== '__AUTO__')
           ? batchTypeOverride
-          : (row.Type || row.detectedType || row.originalType || 'Short Answer');
+          : (row.Type || (passageEn ? 'Comprehension' : row.detectedType || row.originalType || 'Short Answer'));
         const type = normalizeQuestionType(rawType);
         
         // Prevent duplicate questions in same batch
@@ -730,7 +782,7 @@ const GlobalQuestionBank: React.FC = () => {
             topic: topic,
             chapter: path.chapter.name,
             imageUrl: row.ImageURL || '',
-            correctAnswer: String(row.CorrectAnswer_Letter || row.CorrectAnswer || ''),
+            correctAnswer: String(row.CorrectAnswer_Letter || row.CorrectAnswer || modelAnswerEn || ''),
             sources: sourcesValue ? String(sourcesValue).split('|').map((s: string) => s.trim()).filter(Boolean) : [QuestionSource.MODEL_PAPER],
             source: sourcesValue ? String(sourcesValue).split('|')[0]?.trim() : QuestionSource.MODEL_PAPER,
             options: options.length > 0 ? options : (type === 'MCQ' ? options : []),
@@ -1580,14 +1632,32 @@ const GlobalQuestionBank: React.FC = () => {
         Subject: contextualSubject || "English",
         Chapter: "Reading Comprehension",
         Topic: "Passage Analysis",
-        QuestionText_EN: "Read the passage carefully and answer the questions that follow:\n\n'Early rising is a good habit. It gives us an early start in our day’s work. In the morning, the mind is fresh and there are few distractions, so the work done at this time is generally well done. Early risers also find time to take some exercise in the fresh morning air.'\n\nQuestions:\n1. What are the benefits of early rising?\n2. Why is work done in the morning generally well done?\n3. Suggest a suitable title for the passage.",
-        QuestionText_UR: "عبارت کو غور سے پڑھیں اور نیچے دیے گئے سوالات کے جوابات دیں:\n\n'صبح سویرے اٹھنا ایک اچھی عادت ہے۔ اس سے دن کے کاموں کا جلد آغاز ہوتا ہے۔ صبح کے وقت ذہن تروتازہ ہوتا ہے اور توجہ بٹانے والی چیزیں کم ہوتی ہیں۔'\n\nسوالات:\n1. صبح سویرے اٹھنے کے کیا فوائد ہیں؟\n2. صبح کا کیا گیا کام اچھا کیوں ہوتا ہے؟\n3. عبارت کے لیے مناسب عنوان تجویز کریں۔",
+        Paragraph_EN: "Early rising is a good habit. It gives us an early start in our day’s work. In the morning, the mind is fresh and there are few distractions, so the work done at this time is generally well done. Early risers also find time to take some exercise in the fresh morning air.",
+        Paragraph_UR: "صبح سویرے اٹھنا ایک اچھی عادت ہے۔ اس سے دن کے کاموں کا جلد آغاز ہوتا ہے۔ صبح کے وقت ذہن تروتازہ ہوتا ہے اور توجہ بٹانے والی چیزیں کم ہوتی ہیں۔",
+        Question1_EN: "What are the benefits of early rising?",
+        Question1_UR: "صبح سویرے اٹھنے کے کیا فوائد ہیں؟",
+        Question2_EN: "Why is work done in the morning generally well done?",
+        Question2_UR: "صبح کا کیا گیا کام اچھا کیوں ہوتا ہے؟",
+        Question3_EN: "Suggest a suitable title for the passage.",
+        Question3_UR: "عبارت کے لیے مناسب عنوان تجویز کریں۔",
+        Question4_EN: "",
+        Question4_UR: "",
+        Question5_EN: "",
+        Question5_UR: "",
+        Answer1_EN: "Early rising gives an early start to daily work and allows time for morning exercise.",
+        Answer1_UR: "صبح سویرے اٹھنے سے کام جلد شروع ہوتا ہے اور ورزش کا وقت ملتا ہے۔",
+        Answer2_EN: "In the morning, the mind is fresh and free from distractions.",
+        Answer2_UR: "صبح کے وقت ذہن تروتازہ ہوتا ہے۔",
+        Answer3_EN: "Suitable title: 'Benefits of Early Rising'",
+        Answer3_UR: "مناسب عنوان: صبح سویرے اٹھنے کے فوائد",
         Type: "Comprehension",
         Marks: 6,
         Difficulty: "Medium",
         OptionA_EN: "", OptionA_UR: "", OptionB_EN: "", OptionB_UR: "", OptionC_EN: "", OptionC_UR: "", OptionD_EN: "", OptionD_UR: "", CorrectAnswer_Letter: "",
-        ModelAnswer_EN: "1. Early rising gives an early start to daily work and allows time for morning exercise.\n2. In the morning, the mind is fresh and free from distractions.\n3. Suitable title: 'Benefits of Early Rising'.",
-        ModelAnswer_UR: "1. صبح سویرے اٹھنے سے کام جلد شروع ہوتا ہے اور ورزش کا وقت ملتا ہے۔\n2. صبح کے وقت ذہن تروتازہ ہوتا ہے۔\n3. مناسب عنوان: صبح سویرے اٹھنے کے فوائد۔",
+        QuestionText_EN: "",
+        QuestionText_UR: "",
+        ModelAnswer_EN: "",
+        ModelAnswer_UR: "",
         ImageURL: "",
         Sources: "English Composition Comprehension Section"
       },

@@ -48,41 +48,62 @@ interface PrintPreviewProps {
 // Compact Helper Component for Slider
 
 const parseComprehensionText = (text: string) => {
-  if (!text) return { intro: '', passage: '', questionLines: [] };
+  if (!text) return { isComprehension: false, intro: '', passage: '', questionLines: [] as string[] };
   
-  const qSplitRegex = /\n+(?:Questions|Questions:|Questions to Answer|QUESTIONS|QUESTIONS:)\s*:\s*\n+|\n+(?:Questions|Questions to Answer|QUESTIONS)\s*:\s*\n+|\n+Questions\s*:\s*/i;
-  const urduQSplitRegex = /\n+(?:سوالات|سوالات:|درج ذیل سوالات کے جوابات دیں)\s*:\s*\n+|\n+سوالات\s*:\s*/;
-
+  const qSplitRegex = /(?:\n+|\s+)(?:Questions|Questions to Answer|QUESTIONS|Questions:|\bQuestions\b\s*:|سوالات|سوالات:)\s*(?::|\n|\s+)(?=\d+[\.:\)]|\(i\)|\(\d+\)|[\u0660-\u0669]+[\.:\)])/i;
+  
   let passagePart = text;
   let questionsPart = '';
-
+  
   if (qSplitRegex.test(text)) {
-    const parts = text.split(qSplitRegex);
-    passagePart = parts[0];
-    questionsPart = parts.slice(1).join('\n');
-  } else if (urduQSplitRegex.test(text)) {
-    const parts = text.split(urduQSplitRegex);
-    passagePart = parts[0];
-    questionsPart = parts.slice(1).join('\n');
+    const splitIndex = text.search(qSplitRegex);
+    passagePart = text.substring(0, splitIndex).trim();
+    const afterSplit = text.substring(splitIndex);
+    questionsPart = afterSplit.replace(/^(?:\n+|\s+)?(?:Questions|Questions to Answer|QUESTIONS|Questions:|\bQuestions\b\s*:|سوالات|سوالات:)\s*:?\s*/i, '').trim();
+  } else {
+    const quoteMatch = text.match(/^(.*?["”'»])\s*(\d+[\.:\)].*)$/s);
+    if (quoteMatch) {
+      passagePart = quoteMatch[1];
+      questionsPart = quoteMatch[2];
+    } else {
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length > 1 && (/read the passage/i.test(lines[0]) || /عبارت کو غور سے پڑھیں/.test(lines[0]))) {
+        passagePart = lines.slice(0, -1).join('\n');
+        questionsPart = lines[lines.length - 1];
+      }
+    }
   }
+
+  if (!questionsPart) return { isComprehension: false, intro: '', passage: '', questionLines: [] as string[] };
 
   let intro = '';
   let passage = passagePart.trim();
-  const introMatch = passage.match(/^(Read the passage[^\n:]*[:.]?|Carefully read the passage[^\n:]*[:.]?|عبارت کو غور سے پڑھیں[^\n:]*[:.]?)\s*\n+/i);
+  const introMatch = passage.match(/^(Read the passage[^\n:"]*[:.]?|Carefully read the passage[^\n:"]*[:.]?|عبارت کو غور سے پڑھیں[^\n:"]*[:.]?)\s*/i);
   if (introMatch) {
-    intro = introMatch[1];
+    intro = introMatch[1].trim();
     passage = passage.slice(introMatch[0].length).trim();
   }
 
-  if ((passage.startsWith('"') && passage.endsWith('"')) || (passage.startsWith("'") && passage.endsWith("'"))) {
-    passage = passage.slice(1, -1).trim();
+  passage = passage.replace(/^["“'«](.*)["”'»]$/s, '$1').trim();
+
+  let questionLines: string[] = [];
+  if (questionsPart.includes('\n')) {
+    const rawLines = questionsPart.split('\n').map(l => l.trim()).filter(Boolean);
+    rawLines.forEach(l => {
+      const sub = l.split(/(?=\b\d+[\.:\)]\s+)|(?=\b\(\w+\)\s+)/i).map(s => s.trim()).filter(Boolean);
+      questionLines.push(...sub);
+    });
+  } else {
+    const sub = questionsPart.split(/(?=\b\d+[\.:\)]\s+)|(?=\b\(\w+\)\s+)/i).map(s => s.trim()).filter(Boolean);
+    questionLines = sub;
   }
 
-  const questionLines = questionsPart
-    ? questionsPart.split('\n').map(l => l.trim()).filter(Boolean)
-    : [];
-
-  return { intro, passage, questionLines };
+  return {
+    isComprehension: questionLines.length > 0 && !!passage,
+    intro,
+    passage,
+    questionLines
+  };
 };
 
 const ComprehensionQuestionView: React.FC<{
@@ -93,9 +114,9 @@ const ComprehensionQuestionView: React.FC<{
   isManualEdit?: boolean;
 }> = ({ text, isUrdu, fontSize, fontFamily, isManualEdit }) => {
   if (!text) return null;
-  const { intro, passage, questionLines } = parseComprehensionText(text);
+  const { isComprehension, intro, passage, questionLines } = parseComprehensionText(text);
 
-  if (!passage || questionLines.length === 0) {
+  if (!isComprehension) {
     return isManualEdit ? (
       <span contentEditable suppressContentEditableWarning className="outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-0.5">
         {text}
@@ -106,15 +127,15 @@ const ComprehensionQuestionView: React.FC<{
   }
 
   return (
-    <div className={`comprehension-block space-y-2 my-1 ${isUrdu ? 'text-right font-urdu' : 'text-left'}`} dir={isUrdu ? 'rtl' : 'ltr'}>
+    <div className={`comprehension-block space-y-2.5 my-1.5 w-full ${isUrdu ? 'text-right font-urdu' : 'text-left'}`} dir={isUrdu ? 'rtl' : 'ltr'}>
       {intro && (
-        <p className="font-bold text-slate-800 leading-snug" style={{ fontSize: `${fontSize}px` }}>
+        <p className="font-bold text-slate-900 leading-snug" style={{ fontSize: `${fontSize}px` }}>
           {intro}
         </p>
       )}
       {passage && (
         <div 
-          className="p-3 bg-slate-50/80 rounded-lg border border-slate-300/80 leading-relaxed print:bg-slate-50 print:border-slate-400"
+          className="p-3 bg-slate-50/90 rounded-lg border border-slate-300 shadow-xs leading-relaxed print:bg-slate-50 print:border-slate-400 text-justify"
           style={{ 
             fontSize: `${fontSize}px`, 
             fontFamily, 
@@ -126,14 +147,14 @@ const ComprehensionQuestionView: React.FC<{
         </div>
       )}
       {questionLines.length > 0 && (
-        <div className="pt-1 space-y-1">
+        <div className="pt-1.5 space-y-1.5">
           <p className="font-black text-xs uppercase tracking-wider text-slate-700" style={{ fontSize: `${fontSize - 1}px` }}>
             {isUrdu ? 'سوالات:' : 'Questions:'}
           </p>
-          <div className="space-y-1 pl-2 pr-2">
+          <div className="space-y-1.5 pl-1 pr-1">
             {questionLines.map((qLine, qIdx) => (
               <div key={qIdx} className="flex gap-2 items-start" style={{ fontSize: `${fontSize}px`, lineHeight: isUrdu ? '2' : '1.6' }}>
-                <MathRenderer text={qLine} inline className="font-bold" />
+                <MathRenderer text={qLine} inline className="font-bold text-slate-900" />
               </div>
             ))}
           </div>
@@ -2367,17 +2388,24 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                     <div className="space-y-2">
                       {(languageMode === 'Bilingual' || languageMode === 'English') && q.text && (q.medium !== 'Urdu' || languageMode === 'English') && (
                         <div className="question-content">
-                          {isManualEdit ?
-                            <p contentEditable={true} suppressContentEditableWarning={true} className="font-bold leading-relaxed outline-none">{q.text}</p> :
-                            <MathRenderer text={q.text} className="font-bold leading-relaxed" />}
+                          {parseComprehensionText(q.text).isComprehension ? (
+                            <ComprehensionQuestionView text={q.text} isUrdu={false} fontSize={englishFontSize} fontFamily={englishFont} isManualEdit={isManualEdit} />
+                          ) : isManualEdit ? (
+                            <p contentEditable={true} suppressContentEditableWarning={true} className="font-bold leading-relaxed outline-none">{q.text}</p>
+                          ) : (
+                            <MathRenderer text={q.text} className="font-bold leading-relaxed" />
+                          )}
                         </div>
                       )}
                       {(languageMode === 'Bilingual' || languageMode === 'Urdu') && q.textUrdu && (
                         <div dir="rtl" style={{ fontSize: `${urduFontSize}px` }} className="font-urdu text-right leading-[1.8] py-1 question-content">
-                          {isManualEdit ?
-                            <p contentEditable={true} suppressContentEditableWarning={true} className="outline-none">{q.textUrdu}</p> :
+                          {parseComprehensionText(q.textUrdu).isComprehension ? (
+                            <ComprehensionQuestionView text={q.textUrdu} isUrdu={true} fontSize={urduFontSize} fontFamily={urduFont} isManualEdit={isManualEdit} />
+                          ) : isManualEdit ? (
+                            <p contentEditable={true} suppressContentEditableWarning={true} className="outline-none">{q.textUrdu}</p>
+                          ) : (
                             <MathRenderer text={q.textUrdu} />
-                          }
+                          )}
                         </div>
                       )}
                       {q.imageUrl && (
@@ -2564,7 +2592,9 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                             </span>
                             <div className="flex-1 space-y-1 question-content">
                               {!isGenericStatement(displayTextEn) && (
-                                isManualEdit ? (
+                                parseComprehensionText(displayTextEn).isComprehension ? (
+                                  <ComprehensionQuestionView text={displayTextEn} isUrdu={false} fontSize={englishFontSize} fontFamily={englishFont} isManualEdit={isManualEdit} />
+                                ) : isManualEdit ? (
                                   <p contentEditable suppressContentEditableWarning={true} className="leading-relaxed outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-1 font-bold">{displayTextEn}</p>
                                 ) : (
                                   <MathRenderer text={displayTextEn} className="leading-relaxed font-bold" />
@@ -2583,7 +2613,9 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                             </span>
                             <div className="flex-1 min-w-0 space-y-1 question-content">
                               {!isGenericStatement(displayTextUr) && (
-                                isManualEdit ? (
+                                parseComprehensionText(displayTextUr).isComprehension ? (
+                                  <ComprehensionQuestionView text={displayTextUr} isUrdu={true} fontSize={urduFontSize} fontFamily={urduFont} isManualEdit={isManualEdit} />
+                                ) : isManualEdit ? (
                                   <p contentEditable suppressContentEditableWarning={true} style={{ fontSize: `${urduFontSize}px` }} className="bg-amber-50 rounded border-dashed border border-amber-300 p-1 outline-none font-bold text-black leading-[1.8]">{displayTextUr}</p>
                                 ) : (
                                   <div style={{ fontSize: `${urduFontSize}px` }} className="font-bold text-black leading-[1.8]">
@@ -2605,7 +2637,9 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                           <div className="flex-1 space-y-1 question-content">
                             <div className="flex justify-between items-start">
                               {!isGenericStatement(displayTextUr) && (
-                                isManualEdit ? (
+                                parseComprehensionText(displayTextUr).isComprehension ? (
+                                  <ComprehensionQuestionView text={displayTextUr} isUrdu={true} fontSize={urduFontSize} fontFamily={urduFont} isManualEdit={isManualEdit} />
+                                ) : isManualEdit ? (
                                   <p contentEditable suppressContentEditableWarning={true} style={{ fontSize: `${urduFontSize}px` }} className="bg-amber-50 rounded border-dashed border border-amber-300 p-1 outline-none font-bold text-black leading-[1.8] flex-1">{displayTextUr}</p>
                                 ) : (
                                   <div style={{ fontSize: `${urduFontSize}px` }} className="font-bold text-black leading-[1.8] flex-1">
@@ -2630,7 +2664,9 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
                           <div className="flex-1 space-y-1 question-content">
                             <div className="flex justify-between items-start">
                               {!isGenericStatement(displayTextEn) && (
-                                isManualEdit ? (
+                                parseComprehensionText(displayTextEn).isComprehension ? (
+                                  <ComprehensionQuestionView text={displayTextEn} isUrdu={false} fontSize={englishFontSize} fontFamily={englishFont} isManualEdit={isManualEdit} />
+                                ) : isManualEdit ? (
                                   <p contentEditable suppressContentEditableWarning={true} className="leading-relaxed outline-none bg-amber-50 rounded border-dashed border border-amber-300 p-1 font-bold flex-1">{displayTextEn}</p>
                                 ) : (
                                   <MathRenderer text={displayTextEn} className="leading-relaxed font-bold flex-1" />

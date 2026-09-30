@@ -93,35 +93,25 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
           <div className="flex justify-between items-center h-14 sm:h-16 gap-1 sm:gap-2">
             {/* Logo */}
             <div className="flex items-center cursor-pointer shrink-0 py-1" onClick={() => onNavigate('HOME')}>
-              {logoUrl ? (
-                <img 
-                  src={logoUrl} 
-                  alt={systemName || "PakParcha AI"} 
-                  width="168"
-                  height="40"
-                  fetchPriority="high"
-                  decoding="async"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    if (target.src.endsWith('.webp')) {
-                      target.src = '/logo.png';
-                    } else if (target.src.endsWith('.png')) {
-                      target.src = '/favicon.svg';
-                    }
-                  }}
-                  className="h-8 sm:h-9 md:h-10 w-auto max-w-[130px] sm:max-w-[170px] md:max-w-[200px] object-contain drop-shadow-sm transition-transform hover:scale-[1.02]" 
-                />
-              ) : (
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-lg flex items-center justify-center text-white shadow-sm font-black">
-                    <GraduationCap size={18} className="text-white" />
-                  </div>
-                  <div>
-                    <span className="font-black text-sm sm:text-base tracking-tight text-slate-900 block leading-tight">{systemName}</span>
-                    <span className="text-[9px] text-indigo-600 uppercase tracking-widest font-black block">Exam System</span>
-                  </div>
-                </div>
-              )}
+              <img 
+                src="/logo.webp" 
+                alt={systemName || "PakParcha AI"} 
+                width="168"
+                height="40"
+                fetchPriority="high"
+                decoding="async"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (logoUrl && target.src !== logoUrl) {
+                    target.src = logoUrl;
+                  } else if (target.src.endsWith('.webp')) {
+                    target.src = '/logo.png';
+                  } else {
+                    target.src = '/favicon.svg';
+                  }
+                }}
+                className="h-8 sm:h-9 md:h-10 w-auto max-w-[130px] sm:max-w-[170px] md:max-w-[200px] object-contain drop-shadow-sm transition-transform hover:scale-[1.02]" 
+              />
             </div>
 
             {/* Desktop Nav Items - Ultra Compact Spacing & Fits perfectly without wrapping */}
@@ -236,24 +226,20 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
             {/* Column 1: Brand Info */}
             <div className="col-span-1 md:col-span-1">
               <div className="flex items-center gap-2.5 mb-4">
-                {logoUrl ? (
-                  <img 
-                    src={logoUrl} 
-                    alt={systemName || "PakParcha AI"} 
-                    width="220"
-                    height="48"
-                    loading="lazy"
-                    decoding="async"
-                    className="h-10 md:h-12 w-auto max-w-[220px] object-contain brightness-110" 
-                  />
-                ) : (
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center text-slate-950 font-black">
-                      <GraduationCap size={18} />
-                    </div>
-                    <span className="font-black text-lg text-white">{systemName}</span>
-                  </div>
-                )}
+                <img 
+                  src="/logo.webp" 
+                  alt={systemName || "PakParcha AI"} 
+                  width="220"
+                  height="48"
+                  loading="lazy"
+                  decoding="async"
+                  onError={(e) => {
+                    if (logoUrl && e.currentTarget.src !== logoUrl) {
+                      e.currentTarget.src = logoUrl;
+                    }
+                  }}
+                  className="h-10 md:h-12 w-auto max-w-[220px] object-contain brightness-110" 
+                />
               </div>
               <p className="text-xs leading-relaxed text-slate-300 mb-5">
                 Pakistan’s gold standard in automated examination authoring, institutional test generation, and syllabus assessment. Aligned with PCTB (all 9 Punjab Boards), FBISE Islamabad, Sindh Board, and KPK Board specifications.

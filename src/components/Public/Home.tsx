@@ -492,21 +492,19 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           
           {/* Logo Branding */}
-          {platformConfig.logo && (
-            <div className="flex justify-center mb-5">
-              <div className="relative group p-2">
-                <img
-                  src={platformConfig.logo}
-                  alt={platformConfig.name || "PakParcha AI"}
-                  width="294"
-                  height="98"
-                  fetchPriority="high"
-                  decoding="async"
-                  className="h-14 sm:h-20 md:h-24 w-auto object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.8)] filter brightness-110 transition-transform hover:scale-105"
-                />
-              </div>
+          <div className="flex justify-center mb-5">
+            <div className="relative group p-2">
+              <img
+                src="/logo.webp"
+                alt={platformConfig.name || "PakParcha AI"}
+                width="294"
+                height="98"
+                fetchPriority="high"
+                decoding="async"
+                className="h-14 sm:h-20 md:h-24 w-auto object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.8)] filter brightness-110 transition-transform hover:scale-105"
+              />
             </div>
-          )}
+          </div>
 
           {/* Top Academic Badge */}
           <div className="flex justify-center mb-4">
@@ -645,7 +643,7 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
                 </button>
                 <button
                   onClick={() => onNavigate('SIGNUP')}
-                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95 uppercase tracking-wider"
+                  className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95 uppercase tracking-wider"
                 >
                   <span>Create Account</span>
                   <ArrowRight size={13} />
@@ -657,7 +655,7 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
           {/* REALISTIC HIGH-FIDELITY PAPER PREVIEW MOCKUP */}
           <div className="max-w-4xl mx-auto">
             <div className="relative rounded-2xl sm:rounded-3xl p-1 bg-gradient-to-b from-indigo-500/40 via-cyan-500/20 to-transparent shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]">
-              <div className="bg-white text-slate-900 rounded-[1.25rem] sm:rounded-[1.75rem] p-4 sm:p-8 shadow-2xl relative overflow-hidden border border-slate-200">
+              <div className="bg-white text-slate-900 rounded-[1.25rem] sm:rounded-[1.75rem] p-4 sm:p-8 shadow-2xl relative overflow-hidden border border-slate-200 min-h-[520px]">
                 
                 {/* Visual Watermark Mockup */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] rotate-[-25deg] select-none text-slate-900 font-black text-3xl sm:text-6xl">

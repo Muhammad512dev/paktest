@@ -343,9 +343,10 @@ const ResizableImage = ({
 };
 
 const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded = false, showPartHeadings = true, answerKeyDisplay = 'none', onShowQuestionMarksChange }) => {
-  const isMCQType = (type: string | undefined) => {
+  const isMCQType = (type: string | undefined, question?: any) => {
+    if (question && Array.isArray(question.options) && question.options.length > 0 && question.options.some((o: string) => String(o || '').trim() !== '')) return true;
     const t = (type || '').toLowerCase().trim();
-    return t === 'mcq' || t.includes('mcq') || t.includes('multiple choice') || t.includes('multi choice') || t.includes('spelling');
+    return t === 'mcq' || t.includes('mcq') || t.includes('multiple choice') || t.includes('multi choice') || t.includes('spelling') || t.includes('tick') || t.includes('choose') || t.includes('correct form') || t.includes('bubble');
   };
 
   const isGenericStatement = (text: string | undefined) => {
@@ -356,7 +357,7 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
            t === 'choose the word with correct spelling:' || t === 'choose the word with correct spelling' ||
            t === 'choose the word with correct spellings:' || t === 'choose the word with correct spellings' ||
            t === 'choose correct spelling:' || t === 'choose correct spelling' || 
-           t === 'choose the correct spelling:' || t === 'choose the correct spelling' ||
+           t === 'choose the correct spelling:' || t === 'choose the correct spelling' || 
            t === 'write the correct spellings of the following words:' || t === 'write the correct spellings of the following words' ||
            t === 'words / meanings' || t === 'words meanings' || t === 'pair of words' || t === 'words / sentences' || t === 'spelling check' ||
            t === 'singular / plural' || t === 'singular and plural' || t === 'singular plural' || t === 'words / opposites' || t === 'words opposites' || t === 'masculine / feminine' ||
@@ -364,9 +365,11 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
            t === 'کالم الف کو کالم ب سے ملائیں' || t === 'کالم ملائیں' || t === 'کالم ملائیے' || t === 'الفاظ و معانی / جوڑے' || t === 'الفاظ معنی' || t === 'الفاظ کے جوڑے' || t === 'واحد جمع' || t === 'واحد / جمع' || t === 'مذکر مؤنث' || t === 'الفاظ متضاد' || t === 'الفاظ مترادف';
   };
 
-  const isVocabQuestionType = (t?: string): boolean => {
+  const isVocabQuestionType = (t?: string, question?: any): boolean => {
+    if (question && Array.isArray(question.options) && question.options.length > 0 && question.options.some((o: string) => String(o || '').trim() !== '')) return false;
     if (!t) return false;
     const val = t.toLowerCase().trim();
+    if (val.includes('tick') || val.includes('choose') || val.includes('mcq') || val.includes('bubble')) return false;
     return val.includes('word') ||
            val.includes('meaning') ||
            val.includes('pair') ||
@@ -409,9 +412,11 @@ const PrintPreview: React.FC<PrintPreviewProps> = ({ paper, onClose, isEmbedded 
            val.includes('املا');
   };
 
-  const isVerbFormType = (t?: string): boolean => {
+  const isVerbFormType = (t?: string, question?: any): boolean => {
+    if (question && Array.isArray(question.options) && question.options.length > 0 && question.options.some((o: string) => String(o || '').trim() !== '')) return false;
     if (!t) return false;
     const val = t.toLowerCase().trim();
+    if (val.includes('tick') || val.includes('choose') || val.includes('mcq') || val.includes('bubble')) return false;
     return val.includes('verb form') || val.includes('form of verb') || val.includes('forms of verb') || val.includes('verb') || val.includes('اشکال فعل') || val.includes('فعل کی اشکال');
   };
 

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   getQuestionsPage, addQuestion, addQuestionsBulk, deleteQuestion, updateQuestion, getMetadata,
-  getSyllabuses, getClasses, getSubjects, getChapters, getTopics,
+  getSyllabuses, getClasses, getSubjects, getChapters, getTopics, getQuestionTypes,
   ensureCurriculumPath, uploadFile
 } from '../../services/dataService';
 import { 
@@ -31,7 +31,7 @@ const BUILT_IN_QUESTION_TYPES = [
   { id: QuestionType.DIAGRAM,          label: 'Diagram Based',                   icon: ImageIcon,    color: 'text-purple-600',  category: 'Subjective' },
   { id: QuestionType.DEFINITIONS,      label: 'Definitions',                     icon: BookOpen,     color: 'text-teal-600',    category: 'Subjective' },
   { id: QuestionType.NUMERICAL,        label: 'Numerical Problem',               icon: Calculator,   color: 'text-orange-600',  category: 'Subjective' },
-  { id: QuestionType.FORMS_OF_VERBS,   label: 'Forms of Verbs',                  icon: PenTool,      color: 'text-indigo-500',  category: 'Language' },
+  { id: QuestionType.FORMS_OF_VERBS,   label: 'Forms of Verbs (Subjective)',     icon: PenTool,      color: 'text-indigo-500',  category: 'Language' },
   { id: QuestionType.WORDS_OPPOSITES,  label: 'Words & Opposites / Antonyms',    icon: RefreshCw,    color: 'text-rose-500',    category: 'Language' },
   { id: QuestionType.SINGULAR_PLURAL,  label: 'Singular & Plural (واحد جمع)',    icon: Layers,       color: 'text-emerald-500', category: 'Language' },
   { id: QuestionType.WORDS_MEANINGS,   label: 'Words & Meanings (الفاظ معانی)',  icon: BookOpen,     color: 'text-sky-500',     category: 'Language' },
@@ -52,13 +52,17 @@ const BUILT_IN_QUESTION_TYPES = [
 
 const ALL_BUILT_IN_TYPE_IDS = BUILT_IN_QUESTION_TYPES.filter(t => t.id !== 'Custom').map(t => t.id);
 
-const normalizeQuestionType = (type: string): string => {
+const normalizeQuestionType = (type: string, hasOptions?: boolean): string => {
   const t = (type || '').toLowerCase().trim();
+  if (t.includes('tick') || t.includes('choose') || t.includes('correct form') || t.includes('bubble')) return type || QuestionType.MCQ;
   if (t === 'mcq' || t.includes('multiple choice') || t.includes('multi choice') || t.includes('objective')) return QuestionType.MCQ;
   if (t.includes('match') || t.includes('column')) return QuestionType.MATCH;
   if (t.includes('true') || t.includes('false')) return QuestionType.TRUE_FALSE;
   if (t.includes('blank') || t.includes('fill')) return QuestionType.FILL_BLANKS;
-  if (t.includes('verb')) return QuestionType.FORMS_OF_VERBS;
+  if (t.includes('verb')) {
+    if (hasOptions) return type || QuestionType.MCQ;
+    return QuestionType.FORMS_OF_VERBS;
+  }
   if (t.includes('opposite') || t.includes('antonym')) return QuestionType.WORDS_OPPOSITES;
   if (t.includes('singular') || t.includes('plural') || t.includes('plulrar')) return QuestionType.SINGULAR_PLURAL;
   if (t.includes('meaning') || t.includes('vocab')) return QuestionType.WORDS_MEANINGS;
@@ -112,22 +116,25 @@ const GlobalQuestionBank: React.FC = () => {
   const pageSize = typeof viewLimit === 'number' ? viewLimit : 50;
 
   const [metadata, setMetadata] = useState<{types: string[], sources: string[]}>({ types: [], sources: [] });
+  const [customQuestionTypes, setCustomQuestionTypes] = useState<any[]>([]);
 
   /* Load curriculum data asynchronously on mount */
   const loadCurriculumData = async () => {
     try {
-      const [syls, clss, subs, chs, tops] = await Promise.all([
+      const [syls, clss, subs, chs, tops, qTypes] = await Promise.all([
         getSyllabuses().catch(() => []),
         getClasses().catch(() => []),
         getSubjects().catch(() => []),
         getChapters().catch(() => []),
-        getTopics().catch(() => [])
+        getTopics().catch(() => []),
+        getQuestionTypes().catch(() => [])
       ]);
       setSyllabuses(syls);
       setClasses(clss);
       setSubjects(subs);
       setChapters(chs);
       setTopics(tops);
+      setCustomQuestionTypes(Array.isArray(qTypes) ? qTypes : []);
       
       const meta = await getMetadata().catch(() => ({ types: [], sources: [] }));
       setMetadata(meta);
@@ -688,16 +695,6 @@ const GlobalQuestionBank: React.FC = () => {
         if (subAnswersEn.length > 0 && !modelAnswerEn) modelAnswerEn = subAnswersEn.join('\n');
         if (subAnswersUr.length > 0 && !modelAnswerUr) modelAnswerUr = subAnswersUr.join('\n');
 
-        const rawType = (forceBatchType && batchTypeOverride && batchTypeOverride !== '__AUTO__')
-          ? batchTypeOverride
-          : (row.Type || (passageEn ? 'Comprehension' : row.detectedType || row.originalType || 'Short Answer'));
-        const type = normalizeQuestionType(rawType);
-        
-        // Prevent duplicate questions in same batch
-        if (finalQuestions.some(fq => fq.text === text && fq.textUrdu === textUrdu && fq.text !== '')) {
-            continue;
-        }
-
         const rawOptA = row.OptionA_EN || row.OptionA || row.Option1 || row.Option_A || row.Option_1 || row['Option A'] || row['Option 1'] || row['Option (A)'] || row['A'] || '';
         const rawOptB = row.OptionB_EN || row.OptionB || row.Option2 || row.Option_B || row.Option_2 || row['Option B'] || row['Option 2'] || row['Option (B)'] || row['B'] || '';
         const rawOptC = row.OptionC_EN || row.OptionC || row.Option3 || row.Option_C || row.Option_3 || row['Option C'] || row['Option 3'] || row['Option (C)'] || row['C'] || '';
@@ -716,6 +713,17 @@ const GlobalQuestionBank: React.FC = () => {
             optionsUrdu = [...options];
         } else if (optionsUrdu.length > 0 && options.length === 0) {
             options = [...optionsUrdu];
+        }
+
+        const hasRowOptions = options.length > 0 || optionsUrdu.length > 0;
+        const rawType = (forceBatchType && batchTypeOverride && batchTypeOverride !== '__AUTO__')
+          ? batchTypeOverride
+          : (row.Type || (passageEn ? 'Comprehension' : row.detectedType || row.originalType || (hasRowOptions ? 'MCQ' : 'Short Answer')));
+        const type = normalizeQuestionType(rawType, hasRowOptions || isChoiceQuestion(rawType));
+        
+        // Prevent duplicate questions in same batch
+        if (finalQuestions.some(fq => fq.text === text && fq.textUrdu === textUrdu && fq.text !== '')) {
+            continue;
         }
 
         // Parse matching pairs for Match Columns (supports text, LaTeX equations, and SVGs/pictures)
@@ -775,7 +783,7 @@ const GlobalQuestionBank: React.FC = () => {
             text: finalQuestionText,
             textUrdu: finalQuestionTextUrdu,
             type: type,
-            marks: parseInt(row.Marks) || (type === 'MCQ' ? 1 : type === 'Short Answer' ? 2 : type === 'Match Columns' ? 4 : 5),
+            marks: parseInt(row.Marks) || (isChoiceQuestion(type, undefined, row) ? 1 : type === 'Short Answer' ? 2 : type === 'Match Columns' ? 4 : 5),
             difficulty: (row.Difficulty || Difficulty.MEDIUM) as Difficulty,
             subject: path.subject.name,
             classLevel: path.grade || (path.class ? path.class.name : grade),
@@ -785,8 +793,8 @@ const GlobalQuestionBank: React.FC = () => {
             correctAnswer: String(row.CorrectAnswer_Letter || row.CorrectAnswer || modelAnswerEn || ''),
             sources: sourcesValue ? String(sourcesValue).split('|').map((s: string) => s.trim()).filter(Boolean) : [QuestionSource.MODEL_PAPER],
             source: sourcesValue ? String(sourcesValue).split('|')[0]?.trim() : QuestionSource.MODEL_PAPER,
-            options: options.length > 0 ? options : (type === 'MCQ' ? options : []),
-            optionsUrdu: optionsUrdu.length > 0 ? optionsUrdu : (type === 'MCQ' ? optionsUrdu : []),
+            options: options.length > 0 ? options : (isChoiceQuestion(type, undefined, row) ? options : []),
+            optionsUrdu: optionsUrdu.length > 0 ? optionsUrdu : (isChoiceQuestion(type, undefined, row) ? optionsUrdu : []),
             matchingPairs: matchingPairs.length > 0 ? matchingPairs : undefined,
             medium: ((text || options.length > 0 || matchingPairs.some(p => p.left || p.right)) && (textUrdu || optionsUrdu.length > 0 || matchingPairs.some(p => p.leftUrdu || p.rightUrdu))) ? 'Bilingual' : (textUrdu || optionsUrdu.length > 0) ? 'Urdu' : 'English'
         } as Question;
@@ -1887,7 +1895,35 @@ const GlobalQuestionBank: React.FC = () => {
     }
   };
 
-  const questionTypesList = BUILT_IN_QUESTION_TYPES;
+  const isChoiceQuestion = (typeName?: string, currentFormat?: string, rowOrQ?: any): boolean => {
+    if (currentFormat === 'CHOICE') return true;
+    if (currentFormat === 'TEXT' || currentFormat === 'LONG' || currentFormat === 'MATCH' || currentFormat === 'BLANK') return false;
+    const t = (typeName || '').toLowerCase().trim();
+    if (t === 'mcq' || t.includes('multiple choice') || t.includes('multi choice') || t.includes('objective') || t.includes('spelling') || t.includes('tick') || t.includes('choose') || t.includes('correct form') || t.includes('bubble')) return true;
+    const custom = customQuestionTypes.find(qt => (qt.name || '').toLowerCase() === t || (qt.id || '').toLowerCase() === t);
+    if (custom && (custom.format === 'CHOICE' || custom.category === 'Objective')) return true;
+    if (rowOrQ) {
+      if (Array.isArray(rowOrQ.options) && rowOrQ.options.length > 0 && rowOrQ.options.some((o: string) => String(o || '').trim() !== '')) return true;
+      if (rowOrQ.OptionA || rowOrQ.OptionA_EN || rowOrQ.Option1 || rowOrQ.Option_A || rowOrQ['Option A']) return true;
+    }
+    return false;
+  };
+
+  const questionTypesList = useMemo(() => {
+    const list = [...BUILT_IN_QUESTION_TYPES];
+    customQuestionTypes.forEach(ct => {
+      if (!list.some(item => item.id.toLowerCase() === (ct.name || '').toLowerCase() || item.label.toLowerCase() === (ct.name || '').toLowerCase())) {
+        list.splice(list.length - 1, 0, {
+          id: ct.name,
+          label: ct.name,
+          icon: ct.format === 'CHOICE' ? CheckSquare : PenTool,
+          color: ct.format === 'CHOICE' ? 'text-indigo-600' : 'text-slate-600',
+          category: ct.category || (ct.format === 'CHOICE' ? 'Objective' : 'Language')
+        });
+      }
+    });
+    return list;
+  }, [customQuestionTypes]);
 
   // Options Builder (Reusable)
   const renderOptionsBuilder = () => (
@@ -2838,9 +2874,14 @@ const GlobalQuestionBank: React.FC = () => {
                          onClick={() => { 
                              setNewQuestion({...newQuestion, type: type.id === 'Custom' ? '' : type.id}); 
                              setIsCustomType(type.id === 'Custom');
-                             // Default to Choice for MCQ-like types or Text for others
-                             if (type.id === 'Spelling Check' || type.id === 'MCQ' || type.id === 'Fill in the Blanks') setCustomFormat('CHOICE');
-                             else setCustomFormat('TEXT');
+                             const matchedCustom = customQuestionTypes.find(ct => (ct.name || '').toLowerCase() === type.id.toLowerCase() || (ct.id || '').toLowerCase() === type.id.toLowerCase());
+                             if (matchedCustom?.format) {
+                               setCustomFormat(matchedCustom.format);
+                             } else if (isChoiceQuestion(type.id)) {
+                               setCustomFormat('CHOICE');
+                             } else {
+                               setCustomFormat('TEXT');
+                             }
                              
                              setFormStep('CONTENT'); 
                          }}
@@ -2869,13 +2910,13 @@ const GlobalQuestionBank: React.FC = () => {
                                         <span className="text-[10px] font-bold text-indigo-600 uppercase mb-1 block">Category Name:</span>
                                         <input 
                                             type="text" 
-                                            placeholder="e.g. Spelling Check / Dictation" 
+                                            placeholder="e.g. Tick the correct form of verb" 
                                             className="border-b-2 border-indigo-200 bg-transparent px-2 py-1 text-sm font-bold text-slate-800 outline-none focus:border-indigo-600 w-full"
                                             value={newQuestion.type}
                                             onChange={e => {
                                                const val = e.target.value;
                                                setNewQuestion({...newQuestion, type: val});
-                                               if (val.toLowerCase().includes('spell') || val === 'MCQ') setCustomFormat('CHOICE');
+                                               if (isChoiceQuestion(val)) setCustomFormat('CHOICE');
                                             }}
                                         />
                                       </div>
@@ -3076,7 +3117,7 @@ const GlobalQuestionBank: React.FC = () => {
                         </div>
 
                         {/* 4. DYNAMIC TYPE SPECIFIC SECTIONS */}
-                        {(newQuestion.type === 'MCQ' || newQuestion.type === 'Spelling Check' || customFormat === 'CHOICE') && renderOptionsBuilder()}
+                        {isChoiceQuestion(newQuestion.type, customFormat, newQuestion) && renderOptionsBuilder()}
 
                         {(newQuestion.type === 'Match Columns' || 
                           newQuestion.type === 'Pair of Words' || 
@@ -3087,7 +3128,7 @@ const GlobalQuestionBank: React.FC = () => {
                           newQuestion.type === 'Missing Letters' || 
                           newQuestion.type === 'Synonyms' || 
                           newQuestion.type === 'Antonyms' || 
-                          customFormat === 'MATCH' || (newQuestion.matchingPairs && newQuestion.matchingPairs.length > 0 && customFormat !== 'CHOICE' && customFormat !== 'TEXT' && customFormat !== 'LONG' && customFormat !== 'BLANK')) && (
+                          customFormat === 'MATCH' || (newQuestion.matchingPairs && newQuestion.matchingPairs.length > 0 && !isChoiceQuestion(newQuestion.type, customFormat, newQuestion) && customFormat !== 'TEXT' && customFormat !== 'LONG' && customFormat !== 'BLANK')) && (
                            <div className="space-y-6 pt-6 border-t border-slate-100">
                               <div className="flex justify-between items-center">
                                  <h5 className="font-bold text-slate-800 text-sm uppercase tracking-widest">
@@ -3133,7 +3174,7 @@ const GlobalQuestionBank: React.FC = () => {
                         )}
                         
                         {/* Text Based Types (Short, Long, Custom Text) */}
-                        {(newQuestion.type === 'Short Answer' || newQuestion.type === 'Long Answer' || (customFormat === 'TEXT' && newQuestion.type !== 'MCQ' && newQuestion.type !== 'Match Columns' && newQuestion.type !== 'True/False')) && (
+                        {!isChoiceQuestion(newQuestion.type, customFormat, newQuestion) && (newQuestion.type === 'Short Answer' || newQuestion.type === 'Long Answer' || customFormat === 'TEXT' || customFormat === 'LONG' || (!newQuestion.matchingPairs?.length && newQuestion.type !== 'True/False' && newQuestion.type !== 'Match Columns')) && (
                             <div className="space-y-3 pt-6 border-t border-slate-100">
                                 <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Model Answer / Marking Rubric</label>
                                 <textarea 

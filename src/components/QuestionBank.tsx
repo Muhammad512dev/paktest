@@ -217,7 +217,7 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ questions, onAddQuestions, 
                     )}
                   </div>
                   
-                  {q.type === QuestionType.MCQ && (
+                  {(q.type === QuestionType.MCQ || (q.options && q.options.length > 0)) && (
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       {q.options?.map((opt, idx) => (
                         <div key={idx} className={`text-sm px-3 py-1.5 rounded border flex items-baseline gap-2 ${opt === q.correctAnswer ? 'bg-green-50 border-green-200 text-green-800 font-medium ring-1 ring-green-200' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
@@ -230,7 +230,7 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ questions, onAddQuestions, 
                   )}
                   
                   {/* Explicit Answer Display for Non-MCQ */}
-                  {q.type !== QuestionType.MCQ && (q.correctAnswer || q.correctAnswerUrdu) && (
+                  {q.type !== QuestionType.MCQ && (!q.options || q.options.length === 0) && (q.correctAnswer || q.correctAnswerUrdu) && (
                      <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-100 text-sm text-green-800">
                        <span className="font-bold text-green-900 text-xs uppercase tracking-wider block mb-1">Model Answer / Key:</span>
                        <div className="flex flex-col gap-1">
@@ -470,7 +470,7 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ questions, onAddQuestions, 
                    />
                 </div>
 
-                {newQuestion.type === QuestionType.MCQ && (
+                {(newQuestion.type === QuestionType.MCQ || (newQuestion.options && newQuestion.options.length > 0) || String(newQuestion.type).toLowerCase().includes('tick') || String(newQuestion.type).toLowerCase().includes('choose') || String(newQuestion.type).toLowerCase().includes('verb') || String(newQuestion.type).toLowerCase().includes('spell')) ? (
                    <div className="space-y-4">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Options & Correct Answer</p>
                       <div className="grid grid-cols-2 gap-4">
@@ -497,9 +497,7 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ questions, onAddQuestions, 
                          ))}
                       </div>
                    </div>
-                )}
-
-                {newQuestion.type !== QuestionType.MCQ && (
+                ) : (
                    <div>
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Model Answer / Key</label>
                       <textarea 

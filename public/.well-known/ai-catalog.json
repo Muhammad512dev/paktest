@@ -1,25 +1,62 @@
 {
   "$schema": "https://agenticresourcediscovery.org/spec/v1/schema.json",
+  "specVersion": "1.0",
   "name": "PakParcha AI",
   "description": "Pakistan's official curriculum assessment and bilingual exam generation platform for schools, colleges, and academies.",
-  "url": "https://www.pakparchaai.com",
-  "version": "1.0.0",
-  "provider": {
+  "host": {
     "name": "PakParcha AI Education Network",
     "url": "https://www.pakparchaai.com"
   },
   "documentation": "https://www.pakparchaai.com/llms.txt",
-  "capabilities": [
-    "Exam Paper Generation",
-    "Bilingual Urdu Nastaleeq Typography",
-    "Curriculum Alignment",
-    "Automated Grading & Answer Keys",
-    "Past Papers Archive"
-  ],
-  "endpoints": {
-    "home": "https://www.pakparchaai.com",
-    "pricing": "https://www.pakparchaai.com/#pricing",
-    "notes": "https://www.pakparchaai.com/#notes",
-    "blog": "https://www.pakparchaai.com/#blog"
-  }
+  "entries": [
+    {
+      "identifier": "urn:air:pakparchaai.com:service:exam-generator",
+      "displayName": "PakParcha AI Exam Generator",
+      "name": "PakParcha AI Exam Generator",
+      "type": "text/html",
+      "description": "Bilingual examination paper authoring, curriculum alignment, and assessment test generator for Pakistani educational boards (PCTB, FBISE, Sindh, KPK).",
+      "url": "https://www.pakparchaai.com",
+      "documentationUrl": "https://www.pakparchaai.com/llms.txt",
+      "representativeQueries": [
+        "generate matric physics exam paper pakparcha",
+        "bilingual urdu english exam generator pakistan",
+        "pakistan board examination pairing scheme test generator"
+      ]
+    },
+    {
+      "identifier": "urn:air:pakparchaai.com:doc:llms-txt",
+      "displayName": "PakParcha AI LLM Context & Capabilities",
+      "name": "PakParcha AI LLM Context & Capabilities",
+      "type": "text/plain",
+      "description": "Comprehensive LLM and AI agent discovery guide detailing platform capabilities, syllabus alignments, and official links.",
+      "url": "https://www.pakparchaai.com/llms.txt",
+      "documentationUrl": "https://www.pakparchaai.com/llms.txt",
+      "representativeQueries": [
+        "pakparcha ai capabilities",
+        "pakparcha syllabus guide llms.txt"
+      ]
+    },
+    {
+      "identifier": "urn:air:pakparchaai.com:service:pricing",
+      "displayName": "PakParcha Subscription & Pricing",
+      "name": "PakParcha Subscription & Pricing",
+      "type": "text/html",
+      "description": "Institutional and individual pricing plans for Pakistani schools, colleges, and academies.",
+      "url": "https://www.pakparchaai.com/#pricing",
+      "representativeQueries": [
+        "pakparcha subscription plans pricing pakistan"
+      ]
+    },
+    {
+      "identifier": "urn:air:pakparchaai.com:resource:notes-books",
+      "displayName": "Educational Notes & Official Textbooks",
+      "name": "Educational Notes & Official Textbooks",
+      "type": "text/html",
+      "description": "Official PCTB and FBISE textbooks, chapter-wise notes, and past paper solutions for Class 9 to 12.",
+      "url": "https://www.pakparchaai.com/#notes",
+      "representativeQueries": [
+        "class 9 10 notes pctb fbise books download"
+      ]
+    }
+  ]
 }

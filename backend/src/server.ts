@@ -2427,113 +2427,56 @@ const registerCurriculumRoutes = (modelName: string, model: any) => {
                 return res.status(403).json({ error: 'Incorrect administrator password. Deletion cancelled.' });
             }
 
-            // Cascade delete: remove all dependent curriculum items and questions
+            // Safe curriculum deletion: delete curriculum nodes without wiping the global question repository
             if (modelName === 'syllabuses') {
                 const targetSyllabus = await prisma.syllabus.findUnique({ where: { id } });
-                const classes = await prisma.classLevel.findMany({ where: { syllabusId: id }, select: { id: true, name: true } });
-                const classNames = classes.map((c: any) => c.name);
-                const subjects = await prisma.subject.findMany({ where: { syllabusId: id }, select: { id: true, name: true } });
-                const subjectNames = subjects.map((s: any) => s.name);
-                const chapters = await prisma.chapter.findMany({ where: { syllabusId: id }, select: { id: true, name: true } });
-                const chapterNames = chapters.map((c: any) => c.name);
-
-                // 1. Delete all Questions attached to these classes and subjects
-                if (classNames.length > 0 && subjectNames.length > 0) {
-                    await prisma.question.deleteMany({
-                        where: {
-                            classLevel: { in: classNames },
-                            subject: { in: subjectNames }
-                        }
-                    });
-                } else if (classNames.length > 0) {
-                    await prisma.question.deleteMany({
-                        where: { classLevel: { in: classNames } }
-                    });
-                } else if (subjectNames.length > 0) {
-                    await prisma.question.deleteMany({
-                        where: { subject: { in: subjectNames } }
-                    });
-                }
-
-                // 2. Delete Pairing Schemes
                 await prisma.pairingScheme.deleteMany({ where: { syllabusId: id } });
-
-                // 3. Delete Chapters, Topics, Subjects, Classes, and Syllabus
-                await prisma.topic.deleteMany({
-                    where: { chapter: { syllabusId: id } }
-                });
+                await prisma.topic.deleteMany({ where: { chapter: { syllabusId: id } } });
                 await prisma.chapter.deleteMany({ where: { syllabusId: id } });
                 await prisma.subject.deleteMany({ where: { syllabusId: id } });
                 await prisma.classLevel.deleteMany({ where: { syllabusId: id } });
                 await prisma.syllabus.delete({ where: { id } });
 
-                await trackActivity(req, 'CURRICULUM', `Deleted Board "${targetSyllabus?.name || id}" and its associated questions/subjects`);
+                await trackActivity(req, 'CURRICULUM', `Deleted Board "${targetSyllabus?.name || id}"`);
 
             } else if (modelName === 'classes') {
                 const targetClass = await prisma.classLevel.findUnique({ where: { id } });
                 const className = targetClass?.name;
-                const subjects = await prisma.subject.findMany({ where: { classId: id }, select: { id: true, name: true } });
-                const subjectNames = subjects.map((s: any) => s.name);
 
-                if (className) {
-                    await prisma.question.deleteMany({ where: { classLevel: className } });
-                    await prisma.pairingScheme.deleteMany({ where: { classId: id } });
-                }
-
+                await prisma.pairingScheme.deleteMany({ where: { classId: id } });
                 await prisma.topic.deleteMany({ where: { chapter: { classId: id } } });
                 await prisma.chapter.deleteMany({ where: { classId: id } });
                 await prisma.subject.deleteMany({ where: { classId: id } });
                 await prisma.classLevel.delete({ where: { id } });
 
-                await trackActivity(req, 'CURRICULUM', `Deleted Grade "${className || id}" and its questions`);
+                await trackActivity(req, 'CURRICULUM', `Deleted Grade "${className || id}"`);
 
             } else if (modelName === 'subjects') {
-                const targetSubject = await prisma.subject.findUnique({ where: { id }, include: { classLevel: true } });
+                const targetSubject = await prisma.subject.findUnique({ where: { id } });
                 const subjectName = targetSubject?.name;
-                const className = targetSubject?.classLevel?.name;
-
-                if (subjectName && className) {
-                    await prisma.question.deleteMany({
-                        where: { subject: subjectName, classLevel: className }
-                    });
-                } else if (subjectName) {
-                    await prisma.question.deleteMany({ where: { subject: subjectName } });
-                }
 
                 await prisma.pairingScheme.deleteMany({ where: { subjectId: id } });
                 await prisma.topic.deleteMany({ where: { chapter: { subjectId: id } } });
                 await prisma.chapter.deleteMany({ where: { subjectId: id } });
                 await prisma.subject.delete({ where: { id } });
 
-                await trackActivity(req, 'CURRICULUM', `Deleted Subject "${subjectName || id}" and its questions`);
+                await trackActivity(req, 'CURRICULUM', `Deleted Subject "${subjectName || id}"`);
 
             } else if (modelName === 'chapters') {
-                const targetChapter = await prisma.chapter.findUnique({ where: { id }, include: { subject: true, classLevel: true } });
+                const targetChapter = await prisma.chapter.findUnique({ where: { id } });
                 const chapterName = targetChapter?.name;
-                const subjectName = targetChapter?.subject?.name;
-                const className = targetChapter?.classLevel?.name;
-
-                if (chapterName && subjectName && className) {
-                    await prisma.question.deleteMany({
-                        where: { chapter: chapterName, subject: subjectName, classLevel: className }
-                    });
-                } else if (chapterName) {
-                    await prisma.question.deleteMany({ where: { chapter: chapterName } });
-                }
 
                 await prisma.topic.deleteMany({ where: { chapterId: id } });
                 await prisma.chapter.delete({ where: { id } });
 
-                await trackActivity(req, 'CURRICULUM', `Deleted Chapter "${chapterName || id}" and its questions`);
+                await trackActivity(req, 'CURRICULUM', `Deleted Chapter "${chapterName || id}"`);
 
             } else if (modelName === 'topics') {
-                const targetTopic = await prisma.topic.findUnique({ where: { id }, include: { chapter: true } });
+                const targetTopic = await prisma.topic.findUnique({ where: { id } });
                 const topicName = targetTopic?.name;
-                if (topicName) {
-                    await prisma.question.deleteMany({ where: { topic: topicName } });
-                }
                 await prisma.topic.delete({ where: { id } });
-                await trackActivity(req, 'CURRICULUM', `Deleted Topic "${topicName || id}" and its questions`);
+
+                await trackActivity(req, 'CURRICULUM', `Deleted Topic "${topicName || id}"`);
 
             } else {
                 await model.delete({ where: { id } });

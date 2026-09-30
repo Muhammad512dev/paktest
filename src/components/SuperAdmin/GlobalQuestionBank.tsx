@@ -54,13 +54,13 @@ const ALL_BUILT_IN_TYPE_IDS = BUILT_IN_QUESTION_TYPES.filter(t => t.id !== 'Cust
 
 const normalizeQuestionType = (type: string, hasOptions?: boolean): string => {
   const t = (type || '').toLowerCase().trim();
-  if (t.includes('tick') || t.includes('choose') || t.includes('correct form') || t.includes('bubble')) return type || QuestionType.MCQ;
+  if (t.includes('tick') || t.includes('choose') || t.includes('correct form') || t.includes('bubble') || t.includes('foam')) return type || QuestionType.MCQ;
   if (t === 'mcq' || t.includes('multiple choice') || t.includes('multi choice') || t.includes('objective')) return QuestionType.MCQ;
   if (t.includes('match') || t.includes('column')) return QuestionType.MATCH;
   if (t.includes('true') || t.includes('false')) return QuestionType.TRUE_FALSE;
   if (t.includes('blank') || t.includes('fill')) return QuestionType.FILL_BLANKS;
   if (t.includes('verb')) {
-    if (hasOptions) return type || QuestionType.MCQ;
+    if (hasOptions || t.includes('tick') || t.includes('choose') || t.includes('foam') || t.includes('correct') || t.includes('mcq')) return type || QuestionType.MCQ;
     return QuestionType.FORMS_OF_VERBS;
   }
   if (t.includes('opposite') || t.includes('antonym')) return QuestionType.WORDS_OPPOSITES;
@@ -873,7 +873,7 @@ const GlobalQuestionBank: React.FC = () => {
           CorrectAnswer: q.correctAnswer || ''
         };
 
-        if (q.type === 'MCQ' && q.options) {
+        if ((q.type === 'MCQ' || isChoiceQuestion(q.type, undefined, q) || (q.options && q.options.length > 0)) && q.options) {
             row.OptionA_EN = q.options[0] || '';
             row.OptionB_EN = q.options[1] || '';
             row.OptionC_EN = q.options[2] || '';
@@ -1383,6 +1383,33 @@ const GlobalQuestionBank: React.FC = () => {
         ModelAnswer_UR: "مناسب جملے",
         ImageURL: "",
         Sources: "Textbook Exercise"
+      },
+
+      // --- TICK / CHOOSE THE CORRECT FORM OF VERB (MCQ) ---
+      {
+        Board: defaultBoard,
+        Grade: contextualGrade || "Class 9",
+        Subject: contextualSubject || "English",
+        Chapter: "Grammar & Tenses",
+        Topic: "Correct Form of Verbs",
+        QuestionText_EN: "She ________ to school every day.",
+        QuestionText_UR: "وہ روزانہ سکول جاتی ہے۔",
+        Type: "Tick the correct form of verb",
+        Marks: 1,
+        Difficulty: "Easy",
+        OptionA_EN: "goes",
+        OptionA_UR: "goes",
+        OptionB_EN: "go",
+        OptionB_UR: "go",
+        OptionC_EN: "went",
+        OptionC_UR: "went",
+        OptionD_EN: "going",
+        OptionD_UR: "going",
+        CorrectAnswer_Letter: "A",
+        ModelAnswer_EN: "goes (Present Indefinite Tense: third-person singular)",
+        ModelAnswer_UR: "goes",
+        ImageURL: "",
+        Sources: "English Objective Grammar|Past Board Paper"
       },
 
       // --- FORMS OF VERBS EXAMPLE (2ND & 3RD FORM WRITING) ---
@@ -1899,7 +1926,7 @@ const GlobalQuestionBank: React.FC = () => {
     if (currentFormat === 'CHOICE') return true;
     if (currentFormat === 'TEXT' || currentFormat === 'LONG' || currentFormat === 'MATCH' || currentFormat === 'BLANK') return false;
     const t = (typeName || '').toLowerCase().trim();
-    if (t === 'mcq' || t.includes('multiple choice') || t.includes('multi choice') || t.includes('objective') || t.includes('spelling') || t.includes('tick') || t.includes('choose') || t.includes('correct form') || t.includes('bubble')) return true;
+    if (t === 'mcq' || t.includes('multiple choice') || t.includes('multi choice') || t.includes('objective') || t.includes('spelling') || t.includes('tick') || t.includes('choose') || t.includes('correct form') || t.includes('bubble') || t.includes('foam') || (t.includes('verb') && (t.includes('tick') || t.includes('choose') || t.includes('correct') || t.includes('form') || t.includes('foam')))) return true;
     const custom = customQuestionTypes.find(qt => (qt.name || '').toLowerCase() === t || (qt.id || '').toLowerCase() === t);
     if (custom && (custom.format === 'CHOICE' || custom.category === 'Objective')) return true;
     if (rowOrQ) {
@@ -2196,8 +2223,21 @@ const GlobalQuestionBank: React.FC = () => {
                    <MathRenderer text={q.text} className="text-sm font-medium text-gray-900" />
                    {q.textUrdu && <div className="text-base font-urdu text-gray-600 mt-1 leading-relaxed" dir="rtl"><MathRenderer text={q.textUrdu} /></div>}
                    
+                   {/* Options Display for MCQ & Choice Questions */}
+                   {(q.type === 'MCQ' || isChoiceQuestion(q.type, undefined, q) || (q.options && q.options.length > 0)) && (
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        {q.options?.map((opt, idx) => (
+                          <div key={idx} className={`text-xs px-2.5 py-1.5 rounded-lg border flex items-baseline gap-2 ${opt === q.correctAnswer ? 'bg-green-50 border-green-200 text-green-800 font-medium ring-1 ring-green-200' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
+                             <span className="text-[10px] font-bold text-slate-400">{String.fromCharCode(65+idx)}.</span>
+                             <MathRenderer text={opt} inline />
+                             {opt === q.correctAnswer && <CheckCircle size={12} className="ml-auto text-green-600 shrink-0" />}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                    {/* Correct Answer Display for Non-MCQ */}
-                   {q.type !== 'MCQ' && (q.correctAnswer || q.correctAnswerUrdu) && (
+                   {!isChoiceQuestion(q.type, undefined, q) && q.type !== 'MCQ' && (!q.options || q.options.length === 0) && (q.correctAnswer || q.correctAnswerUrdu) && (
                       <div className="mt-2 text-xs text-green-700 bg-green-50/50 p-2 rounded border border-green-100">
                          <span className="font-bold uppercase tracking-wider text-[10px]">Model Answer:</span>
                          <div className="mt-1">
@@ -2207,7 +2247,7 @@ const GlobalQuestionBank: React.FC = () => {
                       </div>
                    )}
                    {/* Correct Answer Indication for MCQ */}
-                   {q.type === 'MCQ' && q.correctAnswer && (
+                   {(q.type === 'MCQ' || isChoiceQuestion(q.type, undefined, q) || (q.options && q.options.length > 0)) && q.correctAnswer && (
                       <div className="mt-2 text-xs text-green-700 font-bold flex items-center gap-1">
                          <CheckCircle size={12}/> Correct: {q.correctAnswer}
                       </div>

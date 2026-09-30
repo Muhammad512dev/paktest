@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Plus, Sparkles, Filter, Search, MoreVertical, Trash2, CheckCircle2, FileSpreadsheet, X, Save, Upload } from 'lucide-react';
 import { Question, QuestionType, Difficulty } from '../types';
 import { generateQuestionsAI } from '../services/geminiService';
-import { addQuestionsBulk, addQuestion } from '../services/dataService';
+import { addQuestionsBulk, addQuestion, getQuestionTypes } from '../services/dataService';
 import MathRenderer from './MathRenderer';
 
 interface QuestionBankProps {
@@ -26,6 +26,13 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ questions, onAddQuestions, 
   const [showGenModal, setShowGenModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [availableTypes, setAvailableTypes] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    getQuestionTypes().then(types => {
+      if (Array.isArray(types)) setAvailableTypes(types);
+    }).catch(() => {});
+  }, []);
 
   // Manual Add State
   const [newQuestion, setNewQuestion] = useState<Partial<Question>>({

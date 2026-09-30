@@ -61,13 +61,30 @@ const CurriculumManager: React.FC = () => {
   const [previewTemplateType, setPreviewTemplateType] = useState<any | null>(null);
 
   const getQuestionTypeSample = (typeName: string) => {
-    const t = (typeName || '').toLowerCase();
-    if (t.includes('mcq')) {
+    const t = (typeName || '').toLowerCase().trim();
+    const customTypeObj = questionTypes.find(qt => (qt.name || '').toLowerCase() === t || (qt.id || '').toLowerCase() === t);
+    const isChoice = customTypeObj?.format === 'CHOICE' || customTypeObj?.category === 'Objective' || t === 'mcq' || t.includes('multiple choice') || t.includes('multi choice') || t.includes('tick') || t.includes('choose') || t.includes('foam') || (t.includes('verb') && (t.includes('tick') || t.includes('choose') || t.includes('correct') || t.includes('form') || t.includes('foam')));
+
+    if (isChoice) {
+      if (t.includes('verb') || t.includes('foam')) {
+        return {
+          Board: 'Punjab Board (PCTB)', Grade: 'Class 9', Subject: 'English', Chapter: 'Grammar', Topic: 'Correct Form of Verbs',
+          QuestionText_EN: 'She ________ to school every day.',
+          QuestionText_UR: 'وہ روزانہ سکول جاتی ہے۔',
+          Type: typeName || 'Tick the correct form of verb', Marks: 1, Difficulty: 'Easy',
+          OptionA_EN: 'goes', OptionA_UR: 'goes',
+          OptionB_EN: 'go', OptionB_UR: 'go',
+          OptionC_EN: 'went', OptionC_UR: 'went',
+          OptionD_EN: 'going', OptionD_UR: 'going',
+          CorrectAnswer_Letter: 'A', ModelAnswer_EN: 'goes (Present Indefinite Tense: third-person singular takes -s/-es)', ModelAnswer_UR: 'goes',
+          Sources: 'Grammar & Composition'
+        };
+      }
       return {
         Board: 'Punjab Board (PCTB)', Grade: 'Class 9', Subject: 'Chemistry', Chapter: 'Structure of Molecules', Topic: 'Covalent Bonds',
         QuestionText_EN: 'Which of the following diatomic gas molecules contains a triple covalent bond?',
         QuestionText_UR: 'درج ذیل میں سے کس مالیکیول میں ٹرپل کوویلنٹ بانڈ موجود ہوتا ہے؟',
-        Type: 'MCQ', Marks: 1, Difficulty: 'Medium',
+        Type: typeName || 'MCQ', Marks: 1, Difficulty: 'Medium',
         OptionA_EN: 'N₂ (Nitrogen)', OptionA_UR: 'N₂ (نائٹروجن)',
         OptionB_EN: 'O₂ (Oxygen)', OptionB_UR: 'O₂ (آکسیجن)',
         OptionC_EN: 'Cl₂ (Chlorine)', OptionC_UR: 'Cl₂ (کلورین)',
@@ -76,7 +93,7 @@ const CurriculumManager: React.FC = () => {
         Sources: 'Textbook Exercise'
       };
     }
-    if (t.includes('verb')) {
+    if (t.includes('verb') && !t.includes('tick') && !t.includes('choose')) {
       return {
         Board: 'Punjab Board (PCTB)', Grade: 'Class 9', Subject: 'English', Chapter: 'Grammar', Topic: 'Forms of Verbs',
         QuestionText_EN: 'Write the 2nd and 3rd forms of the following verbs:',
@@ -372,6 +389,10 @@ const CurriculumManager: React.FC = () => {
     if (editingItem) {
       const data: any = { name: newItemName.trim() };
       if (editingItem.type === 'syllabuses') data.description = newItemDesc.trim();
+      if (editingItem.type === 'question-types') {
+        data.format = newTypeFormat;
+        data.category = newTypeCategory;
+      }
       if (['syllabuses', 'classes', 'subjects'].includes(editingItem.type)) {
         if (newItemImage) data.logo = logoStr;
         else if (removeExistingImage) data.logo = '';
@@ -460,6 +481,10 @@ const CurriculumManager: React.FC = () => {
 
   const openEditModal = (type: string, item: any) => {
     setEditingItem({ id: item.id, type, name: item.name, description: item.description || '', logo: item.logo || '' });
+    if (type === 'question-types') {
+      if (item.format) setNewTypeFormat(item.format);
+      if (item.category) setNewTypeCategory(item.category);
+    }
     setNewItemName(item.name || '');
     setNewItemDesc(item.description || '');
     setNewItemImage(null);
@@ -645,6 +670,7 @@ const CurriculumManager: React.FC = () => {
                             </div>
                             {!t.isBuiltIn && (
                               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                <button onClick={() => downloadSingleTypeCsv(t.name)} className="text-gray-400 hover:text-emerald-600" title="Download Template CSV"><Download size={13}/></button>
                                 <button onClick={() => openEditModal('question-types', t)} className="text-gray-400 hover:text-indigo-600" title="Edit Type"><Edit2 size={13}/></button>
                                 <button onClick={() => handleDeleteItem('question-types', t.id, t.name)} className="text-gray-400 hover:text-red-500" title="Delete Type"><Trash2 size={13}/></button>
                               </div>

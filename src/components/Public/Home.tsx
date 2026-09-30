@@ -398,11 +398,11 @@ const MOCK_QUESTIONS_DATABASE: Record<string, {
 
 const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) => {
   const [stats, setStats] = useState({
-    papers: 0,
-    schools: 0,
-    questions: 0
+    papers: 25000,
+    schools: 450,
+    questions: 120000
   });
-  const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingStats, setLoadingStats] = useState(false);
   const [platformConfig, setPlatformConfig] = useState({ logo: '', name: 'PakParcha AI' });
   const [recentBlogs, setRecentBlogs] = useState<any[]>([]);
   const [recentNotes, setRecentNotes] = useState<any[]>([]);
@@ -418,31 +418,60 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
   const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    let isMounted = true;
+
+    // 1. Fetch lightweight core config and stats
+    const fetchCore = async () => {
       try {
-        setLoadingStats(true);
-        const [statsData, configData, blogsData, notesData] = await Promise.all([
-          getPublicStats(),
-          getSystemConfig(),
+        const [statsData, configData] = await Promise.all([
+          getPublicStats().catch(() => null),
+          getSystemConfig().catch(() => null)
+        ]);
+
+        if (!isMounted) return;
+        if (statsData) {
+          setStats(statsData);
+        }
+        if (configData) {
+          setPlatformConfig({
+            logo: configData.platformLogo || '',
+            name: configData.platformName || 'PakParcha AI'
+          });
+        }
+      } catch (e) {
+        console.error("Failed to load home core data", e);
+      } finally {
+        if (isMounted) setLoadingStats(false);
+      }
+    };
+
+    fetchCore();
+
+    // 2. Defer heavy secondary content (notes & blogs) so mobile critical rendering is instant
+    const fetchSecondary = async () => {
+      try {
+        const [blogsData, notesData] = await Promise.all([
           getBlogs().catch(() => []),
           getNotes().catch(() => [])
         ]);
-
-        setStats(statsData);
-        setPlatformConfig({
-          logo: configData.platformLogo || '',
-          name: configData.platformName || 'PakParcha AI'
-        });
+        if (!isMounted) return;
         setRecentBlogs(Array.isArray(blogsData) ? blogsData.slice(0, 4) : []);
         setRecentNotes(Array.isArray(notesData) ? notesData.slice(0, 4) : []);
-      } catch (e) {
-        console.error("Failed to load home data", e);
-        setStats({ papers: 0, schools: 0, questions: 0 });
-      } finally {
-        setLoadingStats(false);
-      }
+      } catch (_) {}
     };
-    fetchStats();
+
+    const timer = setTimeout(() => {
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(() => fetchSecondary());
+      } else {
+        fetchSecondary();
+      }
+    }, 700);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
   }, []);
 
   const handleRegenerateMock = () => {

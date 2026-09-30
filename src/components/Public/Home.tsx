@@ -498,6 +498,10 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
                 <img
                   src={platformConfig.logo}
                   alt={platformConfig.name || "PakParcha AI"}
+                  width="294"
+                  height="98"
+                  fetchPriority="high"
+                  decoding="async"
                   className="h-14 sm:h-20 md:h-24 w-auto object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.8)] filter brightness-110 transition-transform hover:scale-105"
                 />
               </div>
@@ -543,8 +547,10 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mb-4">
               {/* Board Selector */}
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-300 mb-1">1. Board / Syllabus</label>
+                <label htmlFor="mock-board-select" className="block text-[10px] font-black uppercase tracking-wider text-slate-300 mb-1">1. Board / Syllabus</label>
                 <select
+                  id="mock-board-select"
+                  aria-label="1. Board / Syllabus"
                   value={mockBoard}
                   onChange={e => { setMockBoard(e.target.value); handleRegenerateMock(); }}
                   className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-2.5 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
@@ -558,8 +564,10 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
 
               {/* Class Selector */}
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-300 mb-1">2. Class / Grade</label>
+                <label htmlFor="mock-class-select" className="block text-[10px] font-black uppercase tracking-wider text-slate-300 mb-1">2. Class / Grade</label>
                 <select
+                  id="mock-class-select"
+                  aria-label="2. Class / Grade"
                   value={mockClass}
                   onChange={e => { setMockClass(e.target.value); handleRegenerateMock(); }}
                   className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-2.5 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
@@ -573,8 +581,10 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
 
               {/* Subject Selector */}
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-300 mb-1">3. Select Subject</label>
+                <label htmlFor="mock-subject-select" className="block text-[10px] font-black uppercase tracking-wider text-slate-300 mb-1">3. Select Subject</label>
                 <select
+                  id="mock-subject-select"
+                  aria-label="3. Select Subject"
                   value={mockSubject}
                   onChange={e => { setMockSubject(e.target.value); handleRegenerateMock(); }}
                   className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-2.5 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
@@ -590,8 +600,10 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
 
               {/* Test Scope */}
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-300 mb-1">4. Test Scope</label>
+                <label htmlFor="mock-scope-select" className="block text-[10px] font-black uppercase tracking-wider text-slate-300 mb-1">4. Test Scope</label>
                 <select
+                  id="mock-scope-select"
+                  aria-label="4. Test Scope"
                   value={mockTestType}
                   onChange={e => { setMockTestType(e.target.value); handleRegenerateMock(); }}
                   className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-2.5 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
@@ -672,14 +684,14 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
                         className="text-center font-black text-base sm:text-2xl text-slate-900 border border-indigo-400 rounded px-2 py-0.5 outline-none w-full max-w-lg uppercase"
                       />
                     ) : (
-                      <h3
+                      <h2
                         onClick={() => setIsEditingSchoolName(true)}
                         className="text-base sm:text-2xl font-black text-slate-900 uppercase tracking-tight cursor-pointer hover:text-indigo-600 transition-colors"
                         title="Click to change school name"
                       >
                         {mockSchoolName}
                         <Edit2 size={14} className="inline ml-2 text-slate-400 opacity-0 group-hover/edit:opacity-100 transition-opacity" />
-                      </h3>
+                      </h2>
                     )}
                   </div>
 

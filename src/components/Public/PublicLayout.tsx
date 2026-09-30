@@ -97,6 +97,10 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
                 <img 
                   src={logoUrl} 
                   alt={systemName || "PakParcha AI"} 
+                  width="168"
+                  height="40"
+                  fetchPriority="high"
+                  decoding="async"
                   onError={(e) => {
                     const target = e.currentTarget;
                     if (target.src.endsWith('.webp')) {
@@ -236,6 +240,10 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
                   <img 
                     src={logoUrl} 
                     alt={systemName || "PakParcha AI"} 
+                    width="220"
+                    height="48"
+                    loading="lazy"
+                    decoding="async"
                     className="h-10 md:h-12 w-auto max-w-[220px] object-contain brightness-110" 
                   />
                 ) : (
@@ -247,7 +255,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
                   </div>
                 )}
               </div>
-              <p className="text-xs leading-relaxed text-slate-400 mb-5">
+              <p className="text-xs leading-relaxed text-slate-300 mb-5">
                 Pakistan’s gold standard in automated examination authoring, institutional test generation, and syllabus assessment. Aligned with PCTB (all 9 Punjab Boards), FBISE Islamabad, Sindh Board, and KPK Board specifications.
               </p>
               <div className="flex gap-3">
@@ -260,9 +268,9 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
             
             {/* Column 2: Academic Resources */}
             <div>
-              <h4 className="text-xs font-black text-amber-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+              <h3 className="text-xs font-black text-amber-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Academic Resources
-              </h4>
+              </h3>
               <ul className="space-y-2.5 text-xs font-medium text-slate-300">
                 <li><button onClick={() => onNavigate('HOME')} className="hover:text-amber-300 transition-colors">Platform Overview</button></li>
                 <li><button onClick={() => onNavigate('PRICING')} className="hover:text-amber-300 transition-colors">School & Academy Plans</button></li>
@@ -275,9 +283,9 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
 
             {/* Column 3: Trust & Institutional Policy */}
             <div>
-              <h4 className="text-xs font-black text-amber-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+              <h3 className="text-xs font-black text-amber-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Institutional Policy
-              </h4>
+              </h3>
               <ul className="space-y-2.5 text-xs font-medium text-slate-300">
                 <li><button onClick={() => onNavigate('ABOUT')} className="hover:text-amber-300 transition-colors">Academic Mission & Founder Story</button></li>
                 <li><button onClick={() => onNavigate('CONTACT')} className="hover:text-amber-300 transition-colors">Official Contact & Support</button></li>
@@ -290,17 +298,17 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
 
             {/* Column 4: Board Affiliation & Urdu Nastaleeq Support */}
             <div>
-              <h4 className="text-xs font-black text-amber-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+              <h3 className="text-xs font-black text-amber-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Pakistani Board Coverage
-              </h4>
-              <p className="text-xs text-slate-400 mb-3.5 leading-relaxed">
+              </h3>
+              <p className="text-xs text-slate-300 mb-3.5 leading-relaxed">
                 Dedicated question banks covering Matric (9th & 10th) and Intermediate (FSc Pre-Medical, Pre-Engineering, ICS, I.Com) with automatic chapter-wise schemes.
               </p>
               <div className="bg-[#0B192C] border border-slate-800 rounded-xl p-3 space-y-2">
                 <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
                   <Sparkles size={14} className="text-amber-400" /> 100% Urdu Nastaleeq Supported
                 </div>
-                <div className="text-[11px] text-slate-400">
+                <div className="text-[11px] text-slate-300">
                   Equations rendered via native LaTeX & InPage formatting.
                 </div>
               </div>
@@ -308,7 +316,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
 
           </div>
 
-          <div className="border-t border-slate-800/80 mt-10 pt-5 flex flex-col sm:flex-row justify-between items-center gap-3 text-center sm:text-left text-xs text-slate-500 font-medium">
+          <div className="border-t border-slate-800/80 mt-10 pt-5 flex flex-col sm:flex-row justify-between items-center gap-3 text-center sm:text-left text-xs text-slate-300 font-medium">
             <div>
               &copy; {new Date().getFullYear()} {systemName} (Pakistan). All rights reserved.
             </div>

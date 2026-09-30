@@ -1,0 +1,23 @@
+# PakParcha AI Examination Platform
+
+> Pakistan’s leading AI-powered bilingual examination authoring, institutional test generation, and syllabus assessment platform.
+
+## Overview
+PakParcha AI is an automated examination generation and curriculum management system engineered for schools, colleges, academies, and educators across Pakistan. The platform is aligned with Punjab Curriculum and Textbook Board (PCTB), Federal Board (FBISE), Sindh Board (BIEK), and Khyber Pakhtunkhwa (KPK) board specifications.
+
+## Key Features & Capabilities
+- **Automated Exam Generation**: Generate board-standard bilingual papers in under 60 seconds.
+- **Bilingual Typography**: Native Urdu Nastaleeq typography paired with standard English formatting.
+- **Official Pairing Schemes**: Built-in support for official Matric & Intermediate board assessment schemes.
+- **Comprehensive Question Bank**: MCQs, short questions, long questions, comprehension passages, and diagrams.
+- **Past Papers Archive**: Searchable database of 5-year and 10-year past papers.
+- **School Branding & Crest**: Automated watermark and institutional crest placement on printable PDFs.
+
+## Official Resources & Links
+- [Homepage & Live Demo](https://pakparchaai.com/)
+- [Pricing Plans](https://pakparchaai.com/#pricing)
+- [About the Platform](https://pakparchaai.com/about)
+- [Educational Blog & Exam Guides](https://pakparchaai.com/blog)
+- [Help & Support Center](https://pakparchaai.com/support)
+- [Privacy Policy](https://pakparchaai.com/privacy)
+- [Terms of Service](https://pakparchaai.com/terms)

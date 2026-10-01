@@ -296,37 +296,56 @@ const MathRenderer: React.FC<MathRendererProps> = ({
       
       let p = part;
 
-      // 1. Convert underlined HTML & Markdown tags (<u>...</u>, &lt;u&gt;...&lt;/u&gt;, [u]...[/u])
+      // 1. Convert poetry / misra separators ( | , --- , ؎ ) FIRST
+      p = p.replace(/\s+(?:\||؎|—|–)\s+/g, ' <span class="poetry-separator"> ؎ </span> ');
+
+      // 2. Protect and convert all HTML & BBCode tags before applying bidi Latin isolation
+      const tagPlaceholders: string[] = [];
+      const protectTag = (html: string) => {
+        const id = tagPlaceholders.length;
+        tagPlaceholders.push(html);
+        return `\u0000TAG${id}\u0000`;
+      };
+
+      // Convert underline tags
       p = p
-        .replace(/<u\b[^>]*>([\s\S]*?)<\/u>/gi, '<u class="urdu-underlined" style="text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 1.5px; text-decoration-color: currentColor; display: inline;">$1</u>')
-        .replace(/\[u\]([\s\S]*?)\[\/u\]/gi, '<u class="urdu-underlined" style="text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 1.5px; text-decoration-color: currentColor; display: inline;">$1</u>')
-        .replace(/&lt;u&gt;([\s\S]*?)&lt;\/u&gt;/gi, '<u class="urdu-underlined" style="text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 1.5px; text-decoration-color: currentColor; display: inline;">$1</u>');
+        .replace(/<u\b[^>]*>([\s\S]*?)<\/u>/gi, (_m, content) => protectTag(`<u class="urdu-underlined">${content}</u>`))
+        .replace(/\[u\]([\s\S]*?)\[\/u\]/gi, (_m, content) => protectTag(`<u class="urdu-underlined">${content}</u>`))
+        .replace(/&lt;u\b[^&]*&gt;([\s\S]*?)&lt;\/u&gt;/gi, (_m, content) => protectTag(`<u class="urdu-underlined">${content}</u>`));
 
-      // 2. Convert bold & italic HTML & Markdown tags
+      // Convert bold & italic tags
       p = p
-        .replace(/<strong\b[^>]*>(.*?)<\/strong>/gi, '<strong>$1</strong>')
-        .replace(/<b\b[^>]*>(.*?)<\/b>/gi, '<strong>$1</strong>')
-        .replace(/\[b\](.*?)\[\/b\]/gi, '<strong>$1</strong>')
-        .replace(/&lt;b&gt;(.*?)&lt;\/b&gt;/gi, '<strong>$1</strong>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/<em\b[^>]*>(.*?)<\/em>/gi, '<em>$1</em>')
-        .replace(/<i\b[^>]*>(.*?)<\/i>/gi, '<em>$1</em>')
-        .replace(/\[i\](.*?)\[\/i\]/gi, '<em>$1</em>')
-        .replace(/&lt;i&gt;(.*?)&lt;\/i&gt;/gi, '<em>$1</em>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/<mark\b[^>]*>(.*?)<\/mark>/gi, '<mark style="background-color: #fef3c7; padding: 1px 4px; border-radius: 3px;">$1</mark>')
-        .replace(/\[mark\](.*?)\[\/mark\]/gi, '<mark style="background-color: #fef3c7; padding: 1px 4px; border-radius: 3px;">$1</mark>');
+        .replace(/<strong\b[^>]*>([\s\S]*?)<\/strong>/gi, (_m, content) => protectTag(`<strong>${content}</strong>`))
+        .replace(/<b\b[^>]*>([\s\S]*?)<\/b>/gi, (_m, content) => protectTag(`<strong>${content}</strong>`))
+        .replace(/\[b\]([\s\S]*?)\[\/b\]/gi, (_m, content) => protectTag(`<strong>${content}</strong>`))
+        .replace(/&lt;b\b[^&]*&gt;([\s\S]*?)&lt;\/b&gt;/gi, (_m, content) => protectTag(`<strong>${content}</strong>`))
+        .replace(/\*\*(.*?)\*\*/g, (_m, content) => protectTag(`<strong>${content}</strong>`))
+        .replace(/<em\b[^>]*>([\s\S]*?)<\/em>/gi, (_m, content) => protectTag(`<em>${content}</em>`))
+        .replace(/<i\b[^>]*>([\s\S]*?)<\/i>/gi, (_m, content) => protectTag(`<em>${content}</em>`))
+        .replace(/\[i\]([\s\S]*?)\[\/i\]/gi, (_m, content) => protectTag(`<em>${content}</em>`))
+        .replace(/&lt;i\b[^&]*&gt;([\s\S]*?)&lt;\/i&gt;/gi, (_m, content) => protectTag(`<em>${content}</em>`))
+        .replace(/\*(.*?)\*/g, (_m, content) => protectTag(`<em>${content}</em>`))
+        .replace(/<mark\b[^>]*>([\s\S]*?)<\/mark>/gi, (_m, content) => protectTag(`<mark style="background-color: #fef3c7; padding: 1px 4px; border-radius: 3px;">${content}</mark>`))
+        .replace(/\[mark\]([\s\S]*?)\[\/mark\]/gi, (_m, content) => protectTag(`<mark style="background-color: #fef3c7; padding: 1px 4px; border-radius: 3px;">${content}</mark>`))
+        .replace(/\[align=(left|center|right)\]([\s\S]*?)\[\/align\]/gs, (_m, align, content) => protectTag(`<div style="text-align: ${align}">${content}</div>`))
+        .replace(/\[size=(\d+)\]([\s\S]*?)\[\/size\]/g, (_m, size, content) => protectTag(`<span style="font-size: ${size}px">${content}</span>`));
 
-      // 3. Convert poetry / misra separators (  |  ,  ---  ,  ؎  ) into well-spaced stanzas
-      p = p.replace(/\s+(?:\||؎|—|–)\s+/g, '<span class="poetry-separator" style="display:inline-block; margin: 0 24px; opacity: 0.75; font-size: 0.9em;"> ؎ </span>');
+      // 3. Auto-wrap Latin/formula words inside RTL text ONLY (placeholders use null-bytes and won't match)
+      p = p.replace(/\b([A-Za-z][A-Za-z0-9_+\-/*=^().]*|[0-9]+[A-Za-z][A-Za-z0-9_+\-/*=^().]*)\b/g, (match) => {
+        if (match.startsWith('TAG') || match === 'TAG') return match;
+        return `<bdi dir="ltr" class="ltr-isolate" style="unicode-bidi: isolate; display: inline-block;">${match}</bdi>`;
+      });
 
-      // 4. Auto-wrap Latin/formula words inside RTL text so bidi doesn't flip them
-      p = p.replace(/\b([A-Za-z][A-Za-z0-9_+\-/*=^().]*|[0-9]+[A-Za-z][A-Za-z0-9_+\-/*=^().]*)\b/g, '<bdi dir="ltr" class="ltr-isolate" style="unicode-bidi: isolate; display: inline-block;">$1</bdi>');
+      // 4. Restore protected HTML tags cleanly
+      let restored = p;
+      while (/\u0000TAG\d+\u0000/.test(restored)) {
+        restored = restored.replace(/\u0000TAG(\d+)\u0000/g, (_m, idx) => {
+          return tagPlaceholders[parseInt(idx, 10)] || '';
+        });
+      }
 
-      // 5. Process alignments, font size tags, bullet lists, and stanza linebreaks
-      return p
-        .replace(/\[align=(left|center|right)\](.*?)\[\/align\]/gs, '<div style="text-align: $1">$2</div>')
-        .replace(/\[size=(\d+)\](.*?)\[\/size\]/g, '<span style="font-size: $1px">$2</span>')
+      // 5. Linebreaks, stanzas, and bullet lists
+      return restored
         .replace(/^[\s]*[-•*][ \t]+(.*)$/gm, '• &nbsp;$1')
         .replace(/\n\n+/g, '<div style="margin-top: 10px;"></div>')
         .replace(/\n/g, '<br />');

@@ -142,6 +142,35 @@ select option:checked {
   unicode-bidi: plaintext;
 }
 
+/* Urdu Rich Text & Underline Formatting for Screen & Print */
+u,
+.urdu-underlined {
+  text-decoration: underline !important;
+  text-underline-offset: 6px !important;
+  text-decoration-thickness: 1.5px !important;
+  text-decoration-color: currentColor !important;
+  display: inline !important;
+}
+
+.font-urdu u,
+.font-urdu .urdu-underlined,
+[dir="rtl"] u,
+[dir="rtl"] .urdu-underlined {
+  text-decoration: underline !important;
+  text-underline-offset: 6px !important;
+  text-decoration-thickness: 1.5px !important;
+  text-decoration-color: currentColor !important;
+  display: inline !important;
+}
+
+/* Poetry separators */
+.poetry-separator {
+  display: inline-block !important;
+  margin: 0 1.5rem !important;
+  opacity: 0.8 !important;
+  font-size: 0.95em !important;
+}
+
 /* BiDi formula & equation isolation for Urdu & Math */
 .katex,
 .katex-display,

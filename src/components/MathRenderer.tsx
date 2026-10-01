@@ -298,9 +298,9 @@ const MathRenderer: React.FC<MathRendererProps> = ({
 
       // 1. Convert underlined HTML & Markdown tags (<u>...</u>, &lt;u&gt;...&lt;/u&gt;, [u]...[/u])
       p = p
-        .replace(/<u\b[^>]*>(.*?)<\/u>/gi, '<u class="urdu-underlined" style="text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px;">$1</u>')
-        .replace(/\[u\](.*?)\[\/u\]/gi, '<u class="urdu-underlined" style="text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px;">$1</u>')
-        .replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/gi, '<u class="urdu-underlined" style="text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px;">$1</u>');
+        .replace(/<u\b[^>]*>([\s\S]*?)<\/u>/gi, '<u class="urdu-underlined" style="text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 1.5px; text-decoration-color: currentColor; display: inline;">$1</u>')
+        .replace(/\[u\]([\s\S]*?)\[\/u\]/gi, '<u class="urdu-underlined" style="text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 1.5px; text-decoration-color: currentColor; display: inline;">$1</u>')
+        .replace(/&lt;u&gt;([\s\S]*?)&lt;\/u&gt;/gi, '<u class="urdu-underlined" style="text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 1.5px; text-decoration-color: currentColor; display: inline;">$1</u>');
 
       // 2. Convert bold & italic HTML & Markdown tags
       p = p

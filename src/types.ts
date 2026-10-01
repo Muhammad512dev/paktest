@@ -263,6 +263,22 @@ export const getDefaultSectionInstruction = (type: string, selectCount: number, 
     return `Change the gender of the following words${chooseStr}.`;
   } else if (normType.includes('meaning') || normType.includes('synonym') || normType.includes('معنی') || normType.includes('مترادف')) {
     return `Write the meanings / synonyms of the following words${chooseStr}.`;
+  } else if (normType.includes('poetry') || normType.includes('couplet') || normType.includes('stanza') || normType.includes('شعر') || normType.includes('اشعار') || normType.includes('نظم') || normType.includes('غزل') || normType.includes('بند')) {
+    return `Explain the following verses / stanza with reference to the context${chooseStr}.`;
+  } else if (normType.includes('نثر') || normType.includes('پیراگراف') || normType.includes('سیاق')) {
+    return `Explain the following paragraph with reference to the context${chooseStr}.`;
+  } else if (normType.includes('خلاصہ') || normType.includes('summary')) {
+    return 'Write a comprehensive summary of the given lesson / poem.';
+  } else if (normType.includes('مکالمہ') || normType.includes('dialogue')) {
+    return 'Write a dialogue on the given topic.';
+  } else if (normType.includes('آپ بیتی') || normType.includes('روزنامچہ') || normType.includes('autobiography')) {
+    return 'Write an autobiography / diary on the given topic.';
+  } else if (normType.includes('ضرب') || normType.includes('proverb')) {
+    return `Complete the following proverbs${chooseStr}.`;
+  } else if (normType.includes('درستی') || normType.includes('correct') || normType.includes('غلط')) {
+    return `Correct the following sentences${chooseStr}.`;
+  } else if (normType.includes('اعراب') || normType.includes('tashkeel') || normType.includes('diacritic')) {
+    return `Put diacritical marks (A'raab) on the following words${chooseStr}.`;
   } else if (normType.includes('sentence') || normType.includes('pair') || normType.includes('جملے') || normType.includes('جوڑے')) {
     return `Use the following words in sentences${chooseStr}.`;
   } else {
@@ -335,6 +351,22 @@ export const getDefaultSectionInstructionUrdu = (type: string, selectCount: numb
     return `درج ذیل جملوں کو بالواسطہ / براہ راست کلام میں بدلیں (${chooseAnyUrdu})۔`;
   } else if (normType.includes('active') || normType.includes('passive')) {
     return `درج ذیل جملوں کو فاعلی / مفعولی فعل میں بدلیں (${chooseAnyUrdu})۔`;
+  } else if (normType.includes('poetry') || normType.includes('couplet') || normType.includes('stanza') || normType.includes('شعر') || normType.includes('اشعار') || normType.includes('نظم') || normType.includes('غزل') || normType.includes('بند')) {
+    return `درج ذیل اشعار / بند کی تشریح نظم و شاعر کے حوالے سے کیجیے (${chooseAnyUrdu})۔`;
+  } else if (normType.includes('نثر') || normType.includes('پیراگراف') || normType.includes('سیاق')) {
+    return `درج ذیل پیراگراف کی تشریح سبق کے عنوان اور مصنف کے نام کے ساتھ کیجیے (${chooseAnyUrdu})۔`;
+  } else if (normType.includes('خلاصہ') || normType.includes('summary')) {
+    return 'درج ذیل سبق / نظم کا خلاصہ لکھیے۔';
+  } else if (normType.includes('مکالمہ') || normType.includes('dialogue')) {
+    return 'دیے گئے عنوان پر مکالمہ تحریر کریں۔';
+  } else if (normType.includes('آپ بیتی') || normType.includes('روزنامچہ') || normType.includes('autobiography')) {
+    return 'دیے گئے عنوان پر آپ بیتی / روزنامچہ تحریر کریں۔';
+  } else if (normType.includes('ضرب') || normType.includes('proverb')) {
+    return `درج ذیل ضرب الامثال کو مکمل کریں (${chooseAnyUrdu})۔`;
+  } else if (normType.includes('درستی') || normType.includes('غلط') || (normType.includes('correct') && !normType.includes('verb'))) {
+    return `درج ذیل غلط جملوں کی درستی کیجیے (${chooseAnyUrdu})۔`;
+  } else if (normType.includes('اعراب') || normType.includes('tashkeel')) {
+    return `درج ذیل الفاظ پر اعراب لگائیں (${chooseAnyUrdu})۔`;
   } else {
     return isAll
       ? `درج ذیل تمام سوالات حل کریں۔`

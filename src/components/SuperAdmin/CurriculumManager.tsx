@@ -280,6 +280,8 @@ const CurriculumManager: React.FC = () => {
   const [newItemImage, setNewItemImage] = useState<File | null>(null);
   const [newTypeFormat, setNewTypeFormat] = useState<'CHOICE' | 'TEXT' | 'LONG' | 'MATCH' | 'BLANK'>('CHOICE');
   const [newTypeCategory, setNewTypeCategory] = useState<'Objective' | 'Subjective' | 'Language' | 'Custom'>('Objective');
+  const [newTypeInstruction, setNewTypeInstruction] = useState('');
+  const [newTypeInstructionUrdu, setNewTypeInstructionUrdu] = useState('');
 
   // Secure Delete Confirmation Modal State
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -392,6 +394,8 @@ const CurriculumManager: React.FC = () => {
       if (editingItem.type === 'question-types') {
         data.format = newTypeFormat;
         data.category = newTypeCategory;
+        data.instruction = newTypeInstruction.trim();
+        data.instructionUrdu = newTypeInstructionUrdu.trim();
       }
       if (['syllabuses', 'classes', 'subjects'].includes(editingItem.type)) {
         if (newItemImage) data.logo = logoStr;
@@ -442,7 +446,14 @@ const CurriculumManager: React.FC = () => {
     } else if (activeTab === 'SOURCE') {
       await addSource({ id: `src_${timestamp}`, name: newItemName });
     } else if (activeTab === 'TYPE') {
-      await addQuestionType({ id: `type_${timestamp}`, name: newItemName, format: newTypeFormat, category: newTypeCategory });
+      await addQuestionType({
+        id: `type_${timestamp}`,
+        name: newItemName,
+        format: newTypeFormat,
+        category: newTypeCategory,
+        instruction: newTypeInstruction.trim(),
+        instructionUrdu: newTypeInstructionUrdu.trim()
+      });
     }
 
     await refreshData();
@@ -469,6 +480,8 @@ const CurriculumManager: React.FC = () => {
     setNewItemImage(null);
     setNewTypeFormat('CHOICE');
     setNewTypeCategory('Objective');
+    setNewTypeInstruction('');
+    setNewTypeInstructionUrdu('');
     setSelSyllabusId('');
     setSelClassId('');
     setSelSubjectId('');
@@ -484,6 +497,8 @@ const CurriculumManager: React.FC = () => {
     if (type === 'question-types') {
       if (item.format) setNewTypeFormat(item.format);
       if (item.category) setNewTypeCategory(item.category);
+      setNewTypeInstruction(item.instruction || item.defaultStatement || '');
+      setNewTypeInstructionUrdu(item.instructionUrdu || item.defaultStatementUrdu || '');
     }
     setNewItemName(item.name || '');
     setNewItemDesc(item.description || '');
@@ -829,7 +844,44 @@ const CurriculumManager: React.FC = () => {
 
                   {/* QUESTION TYPE FORMAT SELECTION (When adding Question Type) */}
                   {activeTab === 'TYPE' && (
-                     <div className="space-y-4 pt-4 border-t border-gray-100">
+                     <div className="space-y-5 pt-4 border-t border-gray-100">
+                        {/* Paper Heading / Statement Configuration */}
+                        <div className="p-4 bg-indigo-50/40 border border-indigo-100 rounded-2xl space-y-3">
+                           <div className="flex items-center gap-2">
+                              <span className="text-sm">📋</span>
+                              <div>
+                                 <h5 className="text-xs font-bold text-indigo-950">Printed Paper Question Statement / Heading (Optional)</h5>
+                                 <p className="text-[10px] text-indigo-600">The exact instruction or statement to display at the top of this question on the printed paper.</p>
+                              </div>
+                           </div>
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                              <div>
+                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                                    Statement in English
+                                 </label>
+                                 <input
+                                    type="text"
+                                    placeholder="e.g. Explain the following stanza with reference to the context:"
+                                    value={newTypeInstruction}
+                                    onChange={e => setNewTypeInstruction(e.target.value)}
+                                    className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-500 font-medium"
+                                 />
+                              </div>
+                              <div>
+                                 <label className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block mb-1 text-right">
+                                    سوال کی ہدایت (اردو)
+                                 </label>
+                                 <input
+                                    type="text"
+                                    dir="rtl"
+                                    placeholder="مثلاً: درج ذیل اشعار کی تشریح نظم و شاعر کے حوالے سے کیجیے:"
+                                    value={newTypeInstructionUrdu}
+                                    onChange={e => setNewTypeInstructionUrdu(e.target.value)}
+                                    className="w-full px-3 py-2 text-xs bg-white border border-indigo-200 rounded-xl outline-none focus:border-indigo-500 font-urdu text-right text-sm"
+                                 />
+                              </div>
+                           </div>
+                        </div>
                         <div>
                            <label className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest ml-1 block mb-1.5">
                               Classification Category

@@ -131,16 +131,31 @@ function sanitizeImportedText(raw: string): string {
     return `___MEDIA_BLOCK_${idx}___`;
   });
 
-  // 4. Strip structural and malformed HTML tags (<p>, </p>, <p dir="rtl">, <p 2>, </p 2>, < /p 2>, < /p>, < /p 2, <span>, </span>, <div>, </div>)
+  // 4. Protect rich formatting tags (u, b, i, em, strong, mark, sub, sup)
+  const formattingPlaceholders: string[] = [];
+  const formatRegex = /(<\/?(?:u|b|i|em|strong|mark|sub|sup)[^>]*>|\[\/?(?:u|b|i|em|strong|mark|sub|sup)\])/gi;
+  t = t.replace(formatRegex, (match) => {
+    const idx = formattingPlaceholders.length;
+    formattingPlaceholders.push(match);
+    return `___FORMAT_TAG_${idx}___`;
+  });
+
+  // 5. Strip unwanted wrapper tags (<p>, </p>, <div>, <span>) while preserving newlines
   t = t
     .replace(/<\s*\/?\s*p\s*\d*\s*>?/gi, ' ')
     .replace(/<\s*\/?\s*p[^>]*>/gi, ' ')
-    .replace(/<\s*\/?\s*(?:div|span|strong|em|b|i)\s*[^>]*>/gi, ' ')
+    .replace(/<\s*\/?\s*(?:div|span)\s*[^>]*>/gi, ' ')
     .replace(/<br\s*[\/]?>/gi, '\n')
-    .replace(/\s+/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n[ \t]+/g, '\n')
     .trim();
 
-  // 5. Strip leading '2 ' prefix left over from mangled '<p 2>' in Urdu or numbers
+  // 6. Restore formatting tags
+  t = t.replace(/___FORMAT_TAG_(\d+)___/g, (_m, idx) => {
+    return formattingPlaceholders[parseInt(idx, 10)] || '';
+  });
+
+  // 7. Strip leading '2 ' prefix left over from mangled '<p 2>' in Urdu or numbers
   t = t.replace(/^2\s+(?=[0-9\u0600-\u06FF])/g, '');
 
   // 6. Fix year options where leading '1' was mangled to '2' (e.g. 2900 -> 1900, 2909 -> 1909, 2990 -> 1990)
@@ -279,21 +294,41 @@ const MathRenderer: React.FC<MathRendererProps> = ({
         return img;
       }
       
-      let p = part
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+      let p = part;
 
-      // Auto-wrap Latin/chemical/formula sequences inside text so RTL doesn't reverse C3 -> 3C or H2O2 -> 2H2O
+      // 1. Convert underlined HTML & Markdown tags (<u>...</u>, &lt;u&gt;...&lt;/u&gt;, [u]...[/u])
+      p = p
+        .replace(/<u\b[^>]*>(.*?)<\/u>/gi, '<u class="urdu-underlined" style="text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px;">$1</u>')
+        .replace(/\[u\](.*?)\[\/u\]/gi, '<u class="urdu-underlined" style="text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px;">$1</u>')
+        .replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/gi, '<u class="urdu-underlined" style="text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px;">$1</u>');
+
+      // 2. Convert bold & italic HTML & Markdown tags
+      p = p
+        .replace(/<strong\b[^>]*>(.*?)<\/strong>/gi, '<strong>$1</strong>')
+        .replace(/<b\b[^>]*>(.*?)<\/b>/gi, '<strong>$1</strong>')
+        .replace(/\[b\](.*?)\[\/b\]/gi, '<strong>$1</strong>')
+        .replace(/&lt;b&gt;(.*?)&lt;\/b&gt;/gi, '<strong>$1</strong>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/<em\b[^>]*>(.*?)<\/em>/gi, '<em>$1</em>')
+        .replace(/<i\b[^>]*>(.*?)<\/i>/gi, '<em>$1</em>')
+        .replace(/\[i\](.*?)\[\/i\]/gi, '<em>$1</em>')
+        .replace(/&lt;i&gt;(.*?)&lt;\/i&gt;/gi, '<em>$1</em>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/<mark\b[^>]*>(.*?)<\/mark>/gi, '<mark style="background-color: #fef3c7; padding: 1px 4px; border-radius: 3px;">$1</mark>')
+        .replace(/\[mark\](.*?)\[\/mark\]/gi, '<mark style="background-color: #fef3c7; padding: 1px 4px; border-radius: 3px;">$1</mark>');
+
+      // 3. Convert poetry / misra separators (  |  ,  ---  ,  ؎  ) into well-spaced stanzas
+      p = p.replace(/\s+(?:\||؎|—|–)\s+/g, '<span class="poetry-separator" style="display:inline-block; margin: 0 24px; opacity: 0.75; font-size: 0.9em;"> ؎ </span>');
+
+      // 4. Auto-wrap Latin/formula words inside RTL text so bidi doesn't flip them
       p = p.replace(/\b([A-Za-z][A-Za-z0-9_+\-/*=^().]*|[0-9]+[A-Za-z][A-Za-z0-9_+\-/*=^().]*)\b/g, '<bdi dir="ltr" class="ltr-isolate" style="unicode-bidi: isolate; display: inline-block;">$1</bdi>');
 
-      // Process markdown bold (**text**), italic (*text*), size tags, alignment tags, bullet points, and newlines
+      // 5. Process alignments, font size tags, bullet lists, and stanza linebreaks
       return p
         .replace(/\[align=(left|center|right)\](.*?)\[\/align\]/gs, '<div style="text-align: $1">$2</div>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
         .replace(/\[size=(\d+)\](.*?)\[\/size\]/g, '<span style="font-size: $1px">$2</span>')
         .replace(/^[\s]*[-•*][ \t]+(.*)$/gm, '• &nbsp;$1')
+        .replace(/\n\n+/g, '<div style="margin-top: 10px;"></div>')
         .replace(/\n/g, '<br />');
     });
 

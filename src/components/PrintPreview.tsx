@@ -50,6 +50,11 @@ interface PrintPreviewProps {
 const parseComprehensionText = (text: string) => {
   if (!text) return { isComprehension: false, intro: '', passage: '', questionLines: [] as string[] };
   
+  // Guard: Never parse SVG code, HTML tags, or images as comprehension passages
+  if (/<svg[\s\S]*?<\/svg>/i.test(text) || /^<svg/i.test(text.trim()) || /<img/i.test(text) || /<div|<p|<span|<table/i.test(text)) {
+    return { isComprehension: false, intro: '', passage: '', questionLines: [] as string[] };
+  }
+
   const qSplitRegex = /(?:\n+|\s+)(?:Questions|Questions to Answer|QUESTIONS|Questions:|\bQuestions\b\s*:|سوالات|سوالات:)\s*(?::|\n|\s+)(?=\d+[\.:\)]|\(i\)|\(\d+\)|[\u0660-\u0669]+[\.:\)])/i;
   
   let passagePart = text;
@@ -61,24 +66,18 @@ const parseComprehensionText = (text: string) => {
     const afterSplit = text.substring(splitIndex);
     questionsPart = afterSplit.replace(/^(?:\n+|\s+)?(?:Questions|Questions to Answer|QUESTIONS|Questions:|\bQuestions\b\s*:|سوالات|سوالات:)\s*:?\s*/i, '').trim();
   } else {
-    const quoteMatch = text.match(/^(.*?["”'»])\s*(\d+[\.:\)].*)$/s);
-    if (quoteMatch) {
-      passagePart = quoteMatch[1];
-      questionsPart = quoteMatch[2];
-    } else {
-      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-      if (lines.length > 1 && (/read the passage/i.test(lines[0]) || /عبارت کو غور سے پڑھیں/.test(lines[0]))) {
-        passagePart = lines.slice(0, -1).join('\n');
-        questionsPart = lines[lines.length - 1];
-      }
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length > 1 && (/read the (?:following )?passage/i.test(lines[0]) || /عبارت کو (?:غور سے )?پڑھیں/.test(lines[0]) || /درج ذیل عبارت کو/.test(lines[0]))) {
+      passagePart = lines.slice(0, -1).join('\n');
+      questionsPart = lines[lines.length - 1];
     }
   }
 
-  if (!questionsPart) return { isComprehension: false, intro: '', passage: '', questionLines: [] as string[] };
+  if (!questionsPart || !passagePart) return { isComprehension: false, intro: '', passage: '', questionLines: [] as string[] };
 
   let intro = '';
   let passage = passagePart.trim();
-  const introMatch = passage.match(/^(Read the passage[^\n:"]*[:.]?|Carefully read the passage[^\n:"]*[:.]?|عبارت کو غور سے پڑھیں[^\n:"]*[:.]?)\s*/i);
+  const introMatch = passage.match(/^(Read the (?:following )?passage[^\n:"]*[:.]?|Carefully read the (?:following )?passage[^\n:"]*[:.]?|درج ذیل عبارت کو[^\n:"]*[:.]?|عبارت کو غور سے پڑھیں[^\n:"]*[:.]?)\s*/i);
   if (introMatch) {
     intro = introMatch[1].trim();
     passage = passage.slice(introMatch[0].length).trim();

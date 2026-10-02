@@ -30,12 +30,13 @@ const { PrismaClient } = Prisma as any;
 // pgbouncer-style pooling via the connection string is the other approach,
 // but Prisma's built-in pool works well for a single-server deployment.
 const POOL_SIZE = parseInt(process.env.DATABASE_POOL_SIZE || '20', 10);
+const rawDbUrl = process.env.DATABASE_URL || '';
+const prismaDbUrl = rawDbUrl
+    ? rawDbUrl + (rawDbUrl.includes('?') ? '&' : '?') + `connection_limit=${POOL_SIZE}&pool_timeout=20`
+    : undefined;
+
 const prisma = new PrismaClient({
-    datasources: {
-        db: {
-            url: process.env.DATABASE_URL + (process.env.DATABASE_URL?.includes('?') ? '&' : '?') + `connection_limit=${POOL_SIZE}&pool_timeout=20`,
-        },
-    },
+    datasources: prismaDbUrl ? { db: { url: prismaDbUrl } } : undefined,
     log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
 });
 
@@ -88,17 +89,19 @@ const upload = multer({
 
 // --- MIDDLEWARE ---
 
-// 1. CORS Middleware
+// 1. CORS Middleware (normalized trailing slashes)
 const configuredOrigins = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map((s: string) => s.trim()).filter(Boolean)
+    ? process.env.CORS_ORIGIN.split(',').map((s: string) => s.trim().replace(/\/$/, '')).filter(Boolean)
     : [];
 
 app.use(cors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        const cleanOrigin = origin ? origin.replace(/\/$/, '') : '';
         // Allow server-to-server, mobile, dev, or matching origins
-        if (!origin || configuredOrigins.length === 0 || configuredOrigins.includes('*') || configuredOrigins.includes(origin)) {
+        if (!origin || configuredOrigins.length === 0 || configuredOrigins.includes('*') || configuredOrigins.includes(cleanOrigin)) {
             callback(null, true);
         } else {
+            console.warn(`[CORS] Blocked request from origin: ${origin}`);
             callback(new Error(`Origin ${origin} not allowed by CORS`));
         }
     },

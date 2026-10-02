@@ -89,22 +89,9 @@ const upload = multer({
 
 // --- MIDDLEWARE ---
 
-// 1. CORS Middleware (normalized trailing slashes)
-const configuredOrigins = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map((s: string) => s.trim().replace(/\/$/, '')).filter(Boolean)
-    : [];
-
+// 1. CORS Middleware MUST BE FIRST so error responses (429, 500, etc.) include CORS headers
 app.use(cors({
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-        const cleanOrigin = origin ? origin.replace(/\/$/, '') : '';
-        // Allow server-to-server, mobile, dev, or matching origins
-        if (!origin || configuredOrigins.length === 0 || configuredOrigins.includes('*') || configuredOrigins.includes(cleanOrigin)) {
-            callback(null, true);
-        } else {
-            console.warn(`[CORS] Blocked request from origin: ${origin}`);
-            callback(new Error(`Origin ${origin} not allowed by CORS`));
-        }
-    },
+    origin: true, // Dynamically reflect requesting origin for Vercel, Render, preview URLs and custom domains
     credentials: true
 }));
 

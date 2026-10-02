@@ -88,9 +88,20 @@ const upload = multer({
 
 // --- MIDDLEWARE ---
 
-// 1. CORS Middleware MUST BE FIRST so error responses (429, 500, etc.) include CORS headers
+// 1. CORS Middleware
+const configuredOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((s: string) => s.trim()).filter(Boolean)
+    : [];
+
 app.use(cors({
-    origin: true, // Reflect request origin to allow all web and preview deployments
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        // Allow server-to-server, mobile, dev, or matching origins
+        if (!origin || configuredOrigins.length === 0 || configuredOrigins.includes('*') || configuredOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error(`Origin ${origin} not allowed by CORS`));
+        }
+    },
     credentials: true
 }));
 
@@ -1095,19 +1106,21 @@ app.get('/api/public/settings', async (req: any, res: any) => {
 
 app.get('/api/public/curriculum', async (req: any, res: any) => {
     try {
-        const syllabuses = await prisma.syllabus.findMany();
-        const classes = await prisma.classLevel.findMany();
-        const subjects = await prisma.subject.findMany();
-        const sources = await prisma.source.findMany();
-        const allChapters = await prisma.chapter.findMany();
-
-        res.json({
-            syllabuses,
-            classes,
-            subjects,
-            chapters: allChapters,
-            sources
+        const curriculum = await getOrSet('public:curriculum', 3600, async () => {
+            const syllabuses = await prisma.syllabus.findMany();
+            const classes = await prisma.classLevel.findMany();
+            const subjects = await prisma.subject.findMany();
+            const sources = await prisma.source.findMany();
+            const allChapters = await prisma.chapter.findMany();
+            return {
+                syllabuses,
+                classes,
+                subjects,
+                chapters: allChapters,
+                sources
+            };
         });
+        res.json(curriculum);
     } catch (e) {
         res.status(500).json({ error: "Failed to fetch curriculum" });
     }
@@ -1151,48 +1164,48 @@ app.post('/api/public/quiz/generate', async (req: any, res: any) => {
 
 app.get('/api/public/plans', async (req: any, res: any) => {
     try {
-        let plans = await prisma.subscriptionPlan.findMany({ orderBy: { price: 'asc' } });
+        const plans = await getOrSet('public:plans', 3600, async () => {
+            let p = await prisma.subscriptionPlan.findMany({ orderBy: { price: 'asc' } });
 
-        if (plans.length === 0) {
-            const defaultPlans = [
-                {
-                    id: 'starter',
-                    name: 'Starter',
-                    price: 0,
-                    currencySymbol: '$',
-                    features: ['50 Papers / Month', 'Basic AI Generation', '2 Staff Accounts', 'Standard Support'],
-                    limits: { papers: 50, staff: 2, storageGB: 1, aiRequestsPerDay: 5 }
-                },
-                {
-                    id: 'pro',
-                    name: 'Professional',
-                    price: 49,
-                    currencySymbol: '$',
-                    features: ['Unlimited Papers', 'Advanced AI Models', '10 Staff Accounts', 'Priority Support'],
-                    limits: { papers: 9999, staff: 10, storageGB: 10, aiRequestsPerDay: 50 }
-                },
-                {
-                    id: 'enterprise',
-                    name: 'Enterprise',
-                    price: 199,
-                    currencySymbol: '$',
-                    features: ['Unlimited Everything', 'Fine-tuned AI Models', 'Unlimited Staff', '24/7 Dedicated Support'],
-                    limits: { papers: 99999, staff: 999, storageGB: 100, aiRequestsPerDay: 500 }
-                }
-            ];
+            if (p.length === 0) {
+                const defaultPlans = [
+                    {
+                        id: 'starter',
+                        name: 'Starter',
+                        price: 0,
+                        currencySymbol: '$',
+                        features: ['50 Papers / Month', 'Basic AI Generation', '2 Staff Accounts', 'Standard Support'],
+                        limits: { papers: 50, staff: 2, storageGB: 1, aiRequestsPerDay: 5 }
+                    },
+                    {
+                        id: 'pro',
+                        name: 'Professional',
+                        price: 49,
+                        currencySymbol: '$',
+                        features: ['Unlimited Papers', 'Advanced AI Models', '10 Staff Accounts', 'Priority Support'],
+                        limits: { papers: 9999, staff: 10, storageGB: 10, aiRequestsPerDay: 50 }
+                    },
+                    {
+                        id: 'enterprise',
+                        name: 'Enterprise',
+                        price: 199,
+                        currencySymbol: '$',
+                        features: ['Unlimited Everything', 'Fine-tuned AI Models', 'Unlimited Staff', '24/7 Dedicated Support'],
+                        limits: { papers: 99999, staff: 999, storageGB: 100, aiRequestsPerDay: 500 }
+                    }
+                ];
 
-            try {
-                // Attempt to seed default plans
-                for (const p of defaultPlans) {
-                    await prisma.subscriptionPlan.create({ data: p });
+                try {
+                    for (const plan of defaultPlans) {
+                        await prisma.subscriptionPlan.create({ data: plan });
+                    }
+                    p = defaultPlans;
+                } catch (seedErr) {
+                    p = defaultPlans;
                 }
-                plans = defaultPlans;
-            } catch (seedErr) {
-                console.error("Auto-seeding plans failed:", seedErr);
-                // Even if write fails, return defaults for this request
-                plans = defaultPlans;
             }
-        }
+            return p;
+        });
 
         res.json(plans);
     } catch (e) {
@@ -1201,23 +1214,25 @@ app.get('/api/public/plans', async (req: any, res: any) => {
     }
 });
 
-// ... (Rest of the server file remains unchanged: Content Routes, School Routes, etc.)
-
 // 4. Content Routes
 app.get('/api/blogs', async (req: any, res: any) => {
     try {
-        const blogs = await prisma.blogPost.findMany({ orderBy: { date: 'desc' } });
+        const blogs = await getOrSet('public:blogs', 1800, async () => {
+            return await prisma.blogPost.findMany({ orderBy: { date: 'desc' } });
+        });
         res.json(blogs);
     } catch (e) { res.json([]) }
 });
 app.post('/api/blogs', authenticate, async (req: any, res: any) => {
     if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
     const blog = await prisma.blogPost.create({ data: req.body });
+    await cacheDelPattern('public:blogs*');
     res.json(blog);
 });
 app.delete('/api/blogs/:id', authenticate, async (req: any, res: any) => {
     if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
     await prisma.blogPost.delete({ where: { id: req.params.id } });
+    await cacheDelPattern('public:blogs*');
     res.json({ success: true });
 });
 app.put('/api/blogs/:id', authenticate, async (req: any, res: any) => {
@@ -1228,6 +1243,7 @@ app.put('/api/blogs/:id', authenticate, async (req: any, res: any) => {
             where: { id: req.params.id },
             data: updateData
         });
+        await cacheDelPattern('public:blogs*');
         res.json(updated);
     } catch (e: any) {
         console.error('Error updating blog:', e);
@@ -1243,72 +1259,76 @@ app.get('/api/notes', async (req: any, res: any) => {
         const board = String(req.query.board || '').trim();
         const noteType = String(req.query.noteType || '').trim();
 
-        const where: any = {};
-        if (subject) where.subject = { contains: subject, mode: 'insensitive' };
-        
-        if (grade) {
-            const rawNum = grade.replace(/[^0-9]/g, '');
-            if (rawNum) {
-                where.OR = [
-                    { grade: { equals: grade, mode: 'insensitive' } },
-                    { grade: { equals: rawNum, mode: 'insensitive' } },
-                    { grade: { contains: `Class ${rawNum}`, mode: 'insensitive' } },
-                    { grade: { contains: `Grade ${rawNum}`, mode: 'insensitive' } }
-                ];
-            } else {
-                where.grade = { contains: grade, mode: 'insensitive' };
+        const cacheKey = `notes:s=${search}:sub=${subject}:g=${grade}:b=${board}:nt=${noteType}`;
+        const notes = await getOrSet(cacheKey, 900, async () => {
+            const where: any = {};
+            if (subject) where.subject = { contains: subject, mode: 'insensitive' };
+            
+            if (grade) {
+                const rawNum = grade.replace(/[^0-9]/g, '');
+                if (rawNum) {
+                    where.OR = [
+                        { grade: { equals: grade, mode: 'insensitive' } },
+                        { grade: { equals: rawNum, mode: 'insensitive' } },
+                        { grade: { contains: `Class ${rawNum}`, mode: 'insensitive' } },
+                        { grade: { contains: `Grade ${rawNum}`, mode: 'insensitive' } }
+                    ];
+                } else {
+                    where.grade = { contains: grade, mode: 'insensitive' };
+                }
             }
-        }
 
-        if (board) {
-            const boardKeyword = board.split('(')[0].trim() || board.trim();
-            where.board = { contains: boardKeyword, mode: 'insensitive' };
-        }
+            if (board) {
+                const boardKeyword = board.split('(')[0].trim() || board.trim();
+                where.board = { contains: boardKeyword, mode: 'insensitive' };
+            }
 
-        if (noteType) {
-            if (noteType.toLowerCase() === 'textbook' || noteType.toLowerCase() === 'book') {
-                const bookOr = [
-                    { noteType: { contains: 'Textbook', mode: 'insensitive' } },
-                    { noteType: { contains: 'Book', mode: 'insensitive' } }
+            if (noteType) {
+                if (noteType.toLowerCase() === 'textbook' || noteType.toLowerCase() === 'book') {
+                    const bookOr = [
+                        { noteType: { contains: 'Textbook', mode: 'insensitive' } },
+                        { noteType: { contains: 'Book', mode: 'insensitive' } }
+                    ];
+                    if (where.OR) {
+                        where.AND = [{ OR: where.OR }, { OR: bookOr }];
+                        delete where.OR;
+                    } else {
+                        where.OR = bookOr;
+                    }
+                } else {
+                    where.noteType = { contains: noteType, mode: 'insensitive' };
+                }
+            }
+
+            if (search) {
+                const searchOr = [
+                    { title: { contains: search, mode: 'insensitive' } },
+                    { subject: { contains: search, mode: 'insensitive' } },
+                    { author: { contains: search, mode: 'insensitive' } },
+                    { book: { contains: search, mode: 'insensitive' } },
+                    { description: { contains: search, mode: 'insensitive' } }
                 ];
-                if (where.OR) {
-                    where.AND = [{ OR: where.OR }, { OR: bookOr }];
+                if (where.AND) {
+                    where.AND.push({ OR: searchOr });
+                } else if (where.OR) {
+                    where.AND = [
+                        { OR: where.OR },
+                        { OR: searchOr }
+                    ];
                     delete where.OR;
                 } else {
-                    where.OR = bookOr;
+                    where.OR = searchOr;
                 }
-            } else {
-                where.noteType = { contains: noteType, mode: 'insensitive' };
             }
-        }
 
-        if (search) {
-            const searchOr = [
-                { title: { contains: search, mode: 'insensitive' } },
-                { subject: { contains: search, mode: 'insensitive' } },
-                { author: { contains: search, mode: 'insensitive' } },
-                { book: { contains: search, mode: 'insensitive' } },
-                { description: { contains: search, mode: 'insensitive' } }
-            ];
-            if (where.AND) {
-                where.AND.push({ OR: searchOr });
-            } else if (where.OR) {
-                where.AND = [
-                    { OR: where.OR },
-                    { OR: searchOr }
-                ];
-                delete where.OR;
-            } else {
-                where.OR = searchOr;
-            }
-        }
-
-        const notes = await prisma.studyNote.findMany({ where, orderBy: { createdAt: 'desc' } });
+            return await prisma.studyNote.findMany({ where, orderBy: { createdAt: 'desc' } });
+        });
         res.json(notes);
     } catch (e) {
         res.json([]);
     }
 });
+
 app.post('/api/notes', authenticate, async (req: any, res: any) => {
     try {
         if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
@@ -1329,6 +1349,7 @@ app.post('/api/notes', authenticate, async (req: any, res: any) => {
                 description: description || null
             }
         });
+        await cacheDelPattern('notes:*');
         res.json(note);
     } catch (e: any) {
         console.error('Error creating note:', e);
@@ -1340,12 +1361,14 @@ app.delete('/api/notes/:id', authenticate, async (req: any, res: any) => {
     try {
         if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
         await prisma.studyNote.delete({ where: { id: req.params.id } });
+        await cacheDelPattern('notes:*');
         res.json({ success: true });
     } catch (e: any) {
         console.error('Error deleting note:', e);
         res.status(500).json({ error: e.message || 'Failed to delete note' });
     }
 });
+
 app.put('/api/notes/:id', authenticate, async (req: any, res: any) => {
     try {
         if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
@@ -1354,6 +1377,7 @@ app.put('/api/notes/:id', authenticate, async (req: any, res: any) => {
             where: { id: req.params.id },
             data: updateData
         });
+        await cacheDelPattern('notes:*');
         res.json(updated);
     } catch (e: any) {
         console.error('Error updating note:', e);
@@ -1364,18 +1388,21 @@ app.put('/api/notes/:id', authenticate, async (req: any, res: any) => {
 app.get('/api/past-papers', async (req: any, res: any) => {
     try {
         if (req.query.filters === 'true') {
-            const [boards, levels, subjects, years] = await Promise.all([
-                prisma.pastPaper.groupBy({ by: ['board'], orderBy: { board: 'asc' } }),
-                prisma.pastPaper.groupBy({ by: ['level'], orderBy: { level: 'asc' } }),
-                prisma.pastPaper.groupBy({ by: ['subject'], where: { subject: { not: null } }, orderBy: { subject: 'asc' } }),
-                prisma.pastPaper.groupBy({ by: ['year'], orderBy: { year: 'desc' } })
-            ]);
-            return res.json({
-                boards: boards.map((item: any) => item.board),
-                levels: levels.map((item: any) => item.level),
-                subjects: subjects.map((item: any) => item.subject),
-                years: years.map((item: any) => String(item.year))
+            const filters = await getOrSet('past-papers:filters', 3600, async () => {
+                const [boards, levels, subjects, years] = await Promise.all([
+                    prisma.pastPaper.groupBy({ by: ['board'], orderBy: { board: 'asc' } }),
+                    prisma.pastPaper.groupBy({ by: ['level'], orderBy: { level: 'asc' } }),
+                    prisma.pastPaper.groupBy({ by: ['subject'], where: { subject: { not: null } }, orderBy: { subject: 'asc' } }),
+                    prisma.pastPaper.groupBy({ by: ['year'], orderBy: { year: 'desc' } })
+                ]);
+                return {
+                    boards: boards.map((item: any) => item.board),
+                    levels: levels.map((item: any) => item.level),
+                    subjects: subjects.map((item: any) => item.subject),
+                    years: years.map((item: any) => String(item.year))
+                };
             });
+            return res.json(filters);
         }
 
         const { skip, pageSize, page } = getPaginationParams(req);
@@ -1384,27 +1411,31 @@ app.get('/api/past-papers', async (req: any, res: any) => {
         const level = String(req.query.level || '').trim();
         const subject = String(req.query.subject || '').trim();
         const year = Number(req.query.year);
-        const where: any = {};
 
-        if (board) where.board = { equals: board, mode: 'insensitive' };
-        if (level) where.level = { equals: level, mode: 'insensitive' };
-        if (subject) where.subject = { equals: subject, mode: 'insensitive' };
-        if (Number.isInteger(year) && year > 0) where.year = year;
-        if (search) {
-            where.OR = [
-                { title: { contains: search, mode: 'insensitive' } },
-                { board: { contains: search, mode: 'insensitive' } },
-                { level: { contains: search, mode: 'insensitive' } },
-                { subject: { contains: search, mode: 'insensitive' } },
-                ...(Number.isInteger(Number(search)) ? [{ year: Number(search) }] : [])
-            ];
-        }
+        const cacheKey = `past-papers:p=${page}:ps=${pageSize}:s=${search}:b=${board}:l=${level}:sub=${subject}:y=${year}`;
+        const result = await getOrSet(cacheKey, 900, async () => {
+            const where: any = {};
+            if (board) where.board = { equals: board, mode: 'insensitive' };
+            if (level) where.level = { equals: level, mode: 'insensitive' };
+            if (subject) where.subject = { equals: subject, mode: 'insensitive' };
+            if (Number.isInteger(year) && year > 0) where.year = year;
+            if (search) {
+                where.OR = [
+                    { title: { contains: search, mode: 'insensitive' } },
+                    { board: { contains: search, mode: 'insensitive' } },
+                    { level: { contains: search, mode: 'insensitive' } },
+                    { subject: { contains: search, mode: 'insensitive' } },
+                    ...(Number.isInteger(Number(search)) ? [{ year: Number(search) }] : [])
+                ];
+            }
 
-        const [papers, total] = await Promise.all([
-            prisma.pastPaper.findMany({ where, orderBy: [{ year: 'desc' }, { createdAt: 'desc' }], skip, take: pageSize }),
-            prisma.pastPaper.count({ where })
-        ]);
-        res.json({ data: papers, pagination: { page, pageSize, total, pages: Math.ceil(total / pageSize) } });
+            const [papers, total] = await Promise.all([
+                prisma.pastPaper.findMany({ where, orderBy: [{ year: 'desc' }, { createdAt: 'desc' }], skip, take: pageSize }),
+                prisma.pastPaper.count({ where })
+            ]);
+            return { data: papers, pagination: { page, pageSize, total, pages: Math.ceil(total / pageSize) } };
+        });
+        res.json(result);
     } catch (e) {
         res.status(500).json({ error: 'Failed to fetch past papers' });
     }
@@ -1427,6 +1458,7 @@ app.post('/api/past-papers', authenticate, async (req: any, res: any) => {
                 fileUrl: fileUrl || null
             }
         });
+        await cacheDelPattern('past-papers:*');
         res.json(paper);
     } catch (e: any) {
         console.error('Error creating past paper:', e);
@@ -1438,6 +1470,7 @@ app.delete('/api/past-papers/:id', authenticate, async (req: any, res: any) => {
     try {
         if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Forbidden' });
         await prisma.pastPaper.delete({ where: { id: req.params.id } });
+        await cacheDelPattern('past-papers:*');
         res.json({ success: true });
     } catch (e: any) {
         console.error('Error deleting past paper:', e);
@@ -1453,6 +1486,7 @@ app.put('/api/past-papers/:id', authenticate, async (req: any, res: any) => {
             where: { id: req.params.id },
             data: updateData
         });
+        await cacheDelPattern('past-papers:*');
         res.json(updated);
     } catch (e: any) {
         console.error('Error updating past paper:', e);

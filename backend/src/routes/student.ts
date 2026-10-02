@@ -286,34 +286,38 @@ router.post('/submit', authenticateStudent, async (req: any, res: any) => {
     const submissionAnswers: any = {};
 
     let hasSubjective = false;
+    // Pre-fetch missing answer keys in a single batch query to prevent N+1 database queries
+    const missingKeysQuestions = paperQuestions.filter(
+        (q: any) => ['MCQ', 'Match Columns', 'Fill in the Blanks', 'True/False'].includes(q.type) &&
+                    (!q.correctAnswer || String(q.correctAnswer).trim() === '') &&
+                    q.id
+    );
+
+    if (missingKeysQuestions.length > 0) {
+        try {
+            const qIds = missingKeysQuestions.map((q: any) => q.id).filter(Boolean);
+            const foundQuestions = await prisma.question.findMany({
+                where: { id: { in: qIds } },
+                select: { id: true, correctAnswer: true, correctAnswerUrdu: true }
+            });
+            const keyMap = new Map<string, any>(foundQuestions.map((fq: any) => [fq.id, fq]));
+            for (const q of missingKeysQuestions) {
+                const fq = keyMap.get(q.id);
+                if (fq) {
+                    if (fq.correctAnswer) q.correctAnswer = fq.correctAnswer;
+                    if (fq.correctAnswerUrdu) q.correctAnswerUrdu = fq.correctAnswerUrdu;
+                }
+            }
+        } catch (e) {
+            // Best-effort only; never block submission
+        }
+    }
+
     for (const q of paperQuestions) {
         const studentAns = answers[q.id];
         let autoScore = 0;
         let isCorrect = false;
         let isObjective = ['MCQ', 'Match Columns', 'Fill in the Blanks', 'True/False'].includes(q.type);
-
-        // If the saved paper question is missing an answer key, attempt to recover it from the question bank
-        // so the student review can still show the correct answer.
-        if (isObjective && (!q.correctAnswer || String(q.correctAnswer).trim() === '') && (q.text || q.textUrdu)) {
-            try {
-                const textEn = String(q.text || '').trim();
-                const textUr = String(q.textUrdu || '').trim();
-                const bankQ = await prisma.question.findFirst({
-                    where: {
-                        type: q.type,
-                        ...(textEn || textUr ? { OR: [ ...(textEn ? [{ text: textEn }] : []), ...(textUr ? [{ textUrdu: textUr }] : []) ] } : {}),
-                        subject: q.subject ? String(q.subject) : undefined,
-                        classLevel: q.classLevel ? String(q.classLevel) : undefined,
-                        OR: [{ schoolId: null }, { schoolId: req.student.schoolId }]
-                    },
-                    select: { correctAnswer: true, correctAnswerUrdu: true }
-                });
-                if (bankQ?.correctAnswer) q.correctAnswer = bankQ.correctAnswer;
-                if (bankQ?.correctAnswerUrdu) q.correctAnswerUrdu = bankQ.correctAnswerUrdu;
-            } catch (e) {
-                // Best-effort only; never block submission
-            }
-        }
 
         if (!isObjective) hasSubjective = true;
 

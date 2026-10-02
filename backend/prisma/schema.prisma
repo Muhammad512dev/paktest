@@ -220,6 +220,10 @@ model ExamPaper {
   school          School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   user            User             @relation(fields: [userId], references: [id])
   submissions     ExamSubmission[]
+
+  @@index([schoolId, classLevel, status, isOnline])
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model Notification {
@@ -230,6 +234,8 @@ model Notification {
   targetSchoolId String
   createdBy      String?
   timestamp      DateTime @default(now())
+
+  @@index([targetSchoolId, timestamp])
 }
 
 model ActivityLog {
@@ -243,6 +249,9 @@ model ActivityLog {
   timestamp DateTime @default(now())
   school    School?  @relation(fields: [schoolId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
+
+  @@index([schoolId, timestamp])
+  @@index([userId])
 }
 
 model SystemSetting {
@@ -272,6 +281,8 @@ model Transaction {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, date])
 }
 
 model BlogPost {
@@ -286,6 +297,8 @@ model BlogPost {
   readTime String   @default("5 min read")
   image    String?
   featured Boolean  @default(false)
+
+  @@index([featured, date])
 }
 
 model StudyNote {
@@ -300,6 +313,11 @@ model StudyNote {
   fileUrl     String?
   description String?
   createdAt   DateTime @default(now())
+
+  @@index([grade, subject])
+  @@index([board])
+  @@index([noteType])
+  @@index([createdAt])
 }
 
 model PastPaper {
@@ -311,6 +329,9 @@ model PastPaper {
   subject   String?
   fileUrl   String?
   createdAt DateTime @default(now())
+
+  @@index([board, level, subject, year])
+  @@index([year, createdAt])
 }
 
 model ContactQuery {
@@ -338,6 +359,8 @@ model Student {
   submissions      ExamSubmission[]
   classLevel       ClassLevel       @relation(fields: [classId], references: [id])
   school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, classId])
 }
 
 model ExamSubmission {
@@ -352,6 +375,10 @@ model ExamSubmission {
   submittedAt DateTime  @default(now())
   paper       ExamPaper @relation(fields: [paperId], references: [id], onDelete: Cascade)
   student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, paperId])
+  @@index([paperId, isGraded])
+  @@index([submittedAt])
 }
 
 model ExamDraft {

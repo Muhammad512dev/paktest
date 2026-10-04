@@ -481,11 +481,13 @@ const GlobalQuestionBank: React.FC = () => {
         const explicitBoard = selSyllabusId ? getSyllabusName(selSyllabusId) : '';
         const explicitGrade = selClassId ? getClassName(selClassId) : '';
         const explicitSubject = selSubjectId ? getSubjectName(selSubjectId) : '';
+        const explicitChapter = selChapterId ? getChapterName(selChapterId) : '';
 
         const parsedQuestions = parseMhtmlToQuestions(rawText, {
           board: (explicitBoard && explicitBoard !== 'N/A') ? explicitBoard : undefined,
           grade: (explicitGrade && explicitGrade !== 'N/A') ? explicitGrade : undefined,
-          subject: (explicitSubject && explicitSubject !== 'N/A') ? explicitSubject : undefined
+          subject: (explicitSubject && explicitSubject !== 'N/A') ? explicitSubject : undefined,
+          chapter: (explicitChapter && explicitChapter !== 'N/A') ? explicitChapter : undefined
         });
 
         if (parsedQuestions.length === 0) {

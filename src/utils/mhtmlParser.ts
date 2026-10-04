@@ -58,11 +58,12 @@ function decodeBase64Svg(cleanB64: string): string | null {
 
 export function parseMhtmlToQuestions(
   mhtmlContent: string,
-  defaultMeta: { board?: string; grade?: string; subject?: string } = {}
+  defaultMeta: { board?: string; grade?: string; subject?: string; chapter?: string } = {}
 ): ParsedMhtmlQuestion[] {
   let detectedGrade = defaultMeta.grade || '';
   let detectedSubject = defaultMeta.subject || '';
   let detectedBoard = defaultMeta.board || '';
+  let detectedChapter = defaultMeta.chapter || '';
 
   // 0. Extract embedded MIME resources (SVGs, PNGs, JPEGs) from MHTML boundaries
   const resourceMap: Record<string, string> = {};
@@ -213,25 +214,63 @@ export function parseMhtmlToQuestions(
   const finalGrade = detectedGrade || 'Class 9';
   const finalSubject = detectedSubject || 'General';
 
+  // 2c. Try extracting Chapter / Unit / Lesson from document metadata or selects if not explicitly passed
+  if (!detectedChapter) {
+    const chapterSelectMatch = mainHtmlContent.match(/<select[^>]*name=["']?(?:chapter|unit|lesson|chapterid|unitid|lessonid|chapter_id|unit_id|lesson_id)["']?[^>]*>[\s\S]*?<option[^>]*selected[^>]*>([\s\S]*?)<\/option>/i);
+    if (chapterSelectMatch) {
+      const chName = cleanHtmlContent(chapterSelectMatch[1]);
+      if (chName && !/select/i.test(chName)) {
+        detectedChapter = chName;
+      }
+    }
+    if (!detectedChapter) {
+      const chUrlMatch = mhtmlContent.match(/(?:ChapterName|UnitName|LessonName)=([^&\r\n]+)/i);
+      if (chUrlMatch) {
+        try {
+          detectedChapter = decodeURIComponent(chUrlMatch[1].trim().replace(/\+/g, ' '));
+        } catch (e) {
+          detectedChapter = chUrlMatch[1].trim();
+        }
+      }
+    }
+  }
+
+  // Detect preferred chapter naming convention in this document (Unit / Lesson / Chapter / سبق)
+  const isUnitContext = /\b(?:unit|unit\s*\d+)\b/i.test(mainHtmlContent);
+  const isLessonContext = /\b(?:lesson|lesson\s*\d+)\b/i.test(mainHtmlContent);
+  const isUrduSabqContext = /سبق|باب|نظم|غزل/i.test(mainHtmlContent);
+  const chapterPrefix = isUnitContext ? 'Unit' : isLessonContext ? 'Lesson' : isUrduSabqContext ? 'سبق' : 'Chapter';
+
   // Split by topic-heading containers
   const rawBlocks = mainHtmlContent.split(/<div[^>]*class=["'][^"']*topic-heading[^"']*["']>/i);
   const questions: ParsedMhtmlQuestion[] = [];
 
   let currentTopic = 'General Topic';
-  let currentChapter = 'Chapter 1';
+  let currentChapter = detectedChapter || `${chapterPrefix} 1`;
 
   for (let b = 0; b < rawBlocks.length; b++) {
     const block = rawBlocks[b];
 
     // Extract topic heading
-    const headingMatch = block.match(/<h5>(.*?)<\/h5>/i);
+    const headingMatch = block.match(/<(?:h\d|div|p)[^>]*class=["']?[^"']*(?:topic|heading|title)[^"']*["']?[^>]*>([\s\S]*?)<\/(?:h\d|div|p)>/i) || block.match(/<h5>(.*?)<\/h5>/i);
     if (headingMatch) {
       const rawHeading = cleanHtmlContent(headingMatch[1]);
       currentTopic = rawHeading;
-      // Extract chapter from numbering like "1.1 BIOLOGY..." -> "Chapter 1"
-      const numMatch = rawHeading.match(/^(\d+)\./);
-      if (numMatch) {
-        currentChapter = `Chapter ${numMatch[1]}`;
+
+      // Check if heading itself explicitly defines Unit / Lesson / Chapter / Sabq
+      const explicitChapterMatch = rawHeading.match(/^(Unit|Lesson|Chapter|Sabq|سبق|باب|نظم|غزل)\s*(\d+)[\s:\-–—]*(.*)$/i);
+      if (explicitChapterMatch) {
+        const pfx = explicitChapterMatch[1];
+        const num = explicitChapterMatch[2];
+        const rest = explicitChapterMatch[3]?.trim();
+        currentChapter = rest ? `${pfx} ${num} - ${rest}` : `${pfx} ${num}`;
+        currentTopic = rest || rawHeading;
+      } else {
+        // Extract chapter from numbering like "1.1 BIOLOGY..." -> "Chapter 1" / "Unit 1" / "Lesson 1"
+        const numMatch = rawHeading.match(/^(\d+)\./);
+        if (numMatch && !detectedChapter) {
+          currentChapter = `${chapterPrefix} ${numMatch[1]}`;
+        }
       }
     }
 

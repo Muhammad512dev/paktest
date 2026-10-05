@@ -235,6 +235,31 @@ export function parseMhtmlToQuestions(
     }
   }
 
+  // 2d. Extract structured Chapters and Topics from question-menu / ChaptersDiv if present
+  const chapterNumToNameMap: Record<string, string> = {};
+  const topicToChapterMap: Record<string, string> = {};
+
+  const chapterLiRegex = /<li[^>]*class=["'][^"']*list-inline-item[^"']*["'][\s\S]*?<input[^>]*class=["'][^"']*Chapters[^"']*["'][^>]*>[\s\S]*?<label[^>]*class=["'][^"']*form-check-label[^"']*["'][^>]*>([\s\S]*?)<\/label>([\s\S]*?)<\/li>/gi;
+  let chLiMatch;
+  while ((chLiMatch = chapterLiRegex.exec(mainHtmlContent)) !== null) {
+    const chapterLabel = cleanHtmlContent(chLiMatch[1]);
+    const innerUl = chLiMatch[2];
+
+    const numMatch = chapterLabel.match(/(?:unit|lesson|chapter|sabq|سبق|باب|نظم|غزل)\s*(\d+)/i);
+    if (numMatch) {
+      chapterNumToNameMap[numMatch[1]] = chapterLabel;
+    }
+
+    const topicRegex = /<label[^>]*class=["'][^"']*form-check-label[^"']*["'][^>]*>([\s\S]*?)<\/label>/gi;
+    let topMatch;
+    while ((topMatch = topicRegex.exec(innerUl)) !== null) {
+      const topicLabel = cleanHtmlContent(topMatch[1]);
+      if (topicLabel) {
+        topicToChapterMap[topicLabel.toLowerCase()] = chapterLabel;
+      }
+    }
+  }
+
   // Detect preferred chapter naming convention in this document (Unit / Lesson / Chapter / سبق)
   const isUnitContext = /\b(?:unit|unit\s*\d+)\b/i.test(mainHtmlContent);
   const isLessonContext = /\b(?:lesson|lesson\s*\d+)\b/i.test(mainHtmlContent);
@@ -246,7 +271,7 @@ export function parseMhtmlToQuestions(
   const questions: ParsedMhtmlQuestion[] = [];
 
   let currentTopic = 'General Topic';
-  let currentChapter = detectedChapter || `${chapterPrefix} 1`;
+  let currentChapter = detectedChapter || (chapterNumToNameMap['1'] || `${chapterPrefix} 1`);
 
   for (let b = 0; b < rawBlocks.length; b++) {
     const block = rawBlocks[b];
@@ -266,10 +291,18 @@ export function parseMhtmlToQuestions(
         currentChapter = rest ? `${pfx} ${num} - ${rest}` : `${pfx} ${num}`;
         currentTopic = rest || rawHeading;
       } else {
-        // Extract chapter from numbering like "1.1 BIOLOGY..." -> "Chapter 1" / "Unit 1" / "Lesson 1"
         const numMatch = rawHeading.match(/^(\d+)\./);
-        if (numMatch && !detectedChapter) {
+        const cleanTopicName = rawHeading.replace(/^\d+\.\d+\s*[-–—:]*\s*/, '').trim();
+
+        if (cleanTopicName && topicToChapterMap[cleanTopicName.toLowerCase()]) {
+          currentChapter = topicToChapterMap[cleanTopicName.toLowerCase()];
+          currentTopic = cleanTopicName;
+        } else if (numMatch && chapterNumToNameMap[numMatch[1]]) {
+          currentChapter = chapterNumToNameMap[numMatch[1]];
+          currentTopic = cleanTopicName || rawHeading;
+        } else if (numMatch && !detectedChapter) {
           currentChapter = `${chapterPrefix} ${numMatch[1]}`;
+          currentTopic = cleanTopicName || rawHeading;
         }
       }
     }

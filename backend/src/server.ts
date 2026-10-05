@@ -10,11 +10,12 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import helmet from 'helmet';
 import compression from 'compression';
 import cron from 'node-cron';
 import studentRoutes from './routes/student';
 
-// â”€â”€â”€ Performance: Redis cache + Rate limiters â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Performance: Redis cache + Rate limiters ─────────────────────────────────
 import { getOrSet, cacheDelPattern } from './lib/redis';
 import { globalLimiter, authLimiter, questionLimiter, aiLimiter, submitLimiter } from './middleware/rateLimiter';
 
@@ -24,7 +25,7 @@ dotenv.config();
 // Fixed: Resolve PrismaClient export error by extracting it from the namespace via any casting
 const { PrismaClient } = Prisma as any;
 
-// â”€â”€â”€ Connection Pooling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Connection Pooling ────────────────────────────────────────────────────────
 // Limits simultaneous DB connections. Without this, 8K users can exhaust
 // PostgreSQL's default max_connections (100) and crash the database.
 // pgbouncer-style pooling via the connection string is the other approach,
@@ -43,6 +44,13 @@ const prisma = new PrismaClient({
 const app = express();
 // Enable trust proxy for cloud deployment (Render, Vercel, Nginx reverse proxy)
 app.set('trust proxy', 1);
+
+// HTTP Security Headers via Helmet
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: false // API backend, CORS and frontend manage CSP
+}) as any);
 
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET;

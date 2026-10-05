@@ -283,27 +283,27 @@ const StudentManager: React.FC<StudentManagerProps> = ({ user }) => {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-3 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8">
       {/* Header with Glassmorphism */}
-      <div className="bg-white/40 backdrop-blur-md rounded-3xl p-8 border border-white/20 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div className="bg-white/60 backdrop-blur-md rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-white/40 shadow-xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 sm:gap-6">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Student Command Center</h1>
-          <p className="text-slate-500 font-medium mt-1">Enroll, track and manage your student database with ease.</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Student Command Center</h1>
+          <p className="text-slate-500 font-medium text-xs sm:text-sm mt-1">Enroll, track and manage your student database with ease.</p>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto">
           <button
             onClick={handleExport}
-            className="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-2xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
+            className="flex-1 sm:flex-none justify-center px-4 sm:px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
           >
-            <Download size={18} />
+            <Download size={16} />
             Export
           </button>
-          <div className="relative">
+          <div className="relative flex-1 sm:flex-none">
             <button
               onClick={() => document.getElementById('excel-import')?.click()}
-              className="px-5 py-2.5 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-2xl font-bold text-sm hover:bg-indigo-100 transition-all flex items-center gap-2 shadow-sm"
+              className="w-full justify-center px-4 sm:px-5 py-2.5 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm hover:bg-indigo-100 transition-all flex items-center gap-2 shadow-sm"
             >
-              <Upload size={18} />
+              <Upload size={16} />
               Import Excel
             </button>
             <input
@@ -317,56 +317,56 @@ const StudentManager: React.FC<StudentManagerProps> = ({ user }) => {
           </div>
           <button
             onClick={() => handleOpenModal()}
-            className="px-6 py-2.5 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-slate-800 transition-all flex items-center gap-2 shadow-xl shadow-slate-900/20"
+            className="w-full sm:w-auto justify-center px-5 sm:px-6 py-2.5 bg-slate-900 text-white rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm hover:bg-slate-800 transition-all flex items-center gap-2 shadow-lg shadow-slate-900/20"
           >
-            <Plus size={18} />
+            <Plus size={16} />
             New Student
           </button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-          <div className="flex justify-between items-center mb-4">
-            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl"><Users size={24} /></div>
-            <span className="text-2xl font-black text-slate-900">{pagination.total}</span>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
+        <div className="bg-white p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-100 shadow-sm">
+          <div className="flex justify-between items-center mb-3 sm:mb-4">
+            <div className="p-2.5 sm:p-3 bg-indigo-50 text-indigo-600 rounded-xl sm:rounded-2xl"><Users size={20} className="sm:w-6 sm:h-6" /></div>
+            <span className="text-xl sm:text-2xl font-black text-slate-900">{pagination.total}</span>
           </div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Enrolled</p>
+          <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest">Total Enrolled</p>
         </div>
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-          <div className="flex justify-between items-center mb-4">
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl"><BookOpen size={24} /></div>
-            <span className="text-2xl font-black text-slate-900">{syllabuses.length}</span>
+        <div className="bg-white p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-100 shadow-sm">
+          <div className="flex justify-between items-center mb-3 sm:mb-4">
+            <div className="p-2.5 sm:p-3 bg-emerald-50 text-emerald-600 rounded-xl sm:rounded-2xl"><BookOpen size={20} className="sm:w-6 sm:h-6" /></div>
+            <span className="text-xl sm:text-2xl font-black text-slate-900">{syllabuses.length}</span>
           </div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Active Boards/Syllabuses</p>
+          <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest">Active Boards/Syllabuses</p>
         </div>
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-          <div className="flex justify-between items-center mb-4">
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl"><GraduationCap size={24} /></div>
-            <span className="text-2xl font-black text-slate-900">{allClasses.length}</span>
+        <div className="bg-white p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-100 shadow-sm">
+          <div className="flex justify-between items-center mb-3 sm:mb-4">
+            <div className="p-2.5 sm:p-3 bg-amber-50 text-amber-600 rounded-xl sm:rounded-2xl"><GraduationCap size={20} className="sm:w-6 sm:h-6" /></div>
+            <span className="text-xl sm:text-2xl font-black text-slate-900">{allClasses.length}</span>
           </div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Configured Classes</p>
+          <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest">Configured Classes</p>
         </div>
       </div>
 
       {/* Main Table Container */}
-      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="bg-white rounded-2xl sm:rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
+        <div className="p-4 sm:p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 sm:gap-4">
           <div className="relative w-full md:max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+            <Search className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="text"
-              placeholder="Find student by name, email or roll number..."
-              className="w-full pl-12 pr-6 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium text-sm"
+              placeholder="Find student by name, email or roll..."
+              className="w-full pl-10 sm:pl-12 pr-4 sm:pr-6 py-2.5 sm:py-3 bg-white border border-slate-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium text-xs sm:text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <div className="flex flex-wrap gap-3 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto">
             <select 
-              className="px-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-xs"
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-slate-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-xs"
               value={filterSyllabus}
               onChange={(e) => { setFilterSyllabus(e.target.value); setFilterClass('ALL'); }}
             >
@@ -375,7 +375,7 @@ const StudentManager: React.FC<StudentManagerProps> = ({ user }) => {
             </select>
 
             <select 
-              className="px-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-xs disabled:opacity-50"
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-slate-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-xs disabled:opacity-50"
               value={filterClass}
               disabled={filterSyllabus === 'ALL'}
               onChange={(e) => setFilterClass(e.target.value)}
@@ -388,77 +388,77 @@ const StudentManager: React.FC<StudentManagerProps> = ({ user }) => {
 
             <button 
               onClick={() => loadStudents()}
-              className="p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+              className="p-2.5 sm:p-3 bg-indigo-600 text-white rounded-xl sm:rounded-2xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100 flex-shrink-0"
               title="Refresh Records"
             >
-              <Database size={18} />
+              <Database size={16} />
             </button>
           </div>
 
           <button
             onClick={handleDownloadTemplate}
-            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1.5 px-4 py-2 hover:bg-indigo-50 rounded-xl transition-all"
+            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center justify-center gap-1.5 px-3 py-2 hover:bg-indigo-50 rounded-xl transition-all w-full md:w-auto"
           >
-            <FileSpreadsheet size={16} />
+            <FileSpreadsheet size={15} />
             Get Import Template
           </button>
         </div>
 
         {loading ? (
-          <div className="flex flex-col justify-center items-center py-32 space-y-4">
-            <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <div className="flex flex-col justify-center items-center py-20 sm:py-32 space-y-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
             <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">Synchronizing Records...</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left min-w-[640px]">
               <thead>
                 <tr className="bg-slate-50 text-slate-400 text-[10px] uppercase font-black tracking-widest border-b border-slate-100">
-                  <th className="px-8 py-5">Profile & Contact</th>
-                  <th className="px-8 py-5">Roll No</th>
-                  <th className="px-8 py-5">Board/Syllabus</th>
-                  <th className="px-8 py-5">Academic Class</th>
-                  <th className="px-8 py-5 text-right">Operation</th>
+                  <th className="px-4 sm:px-8 py-3.5 sm:py-5">Profile & Contact</th>
+                  <th className="px-4 sm:px-8 py-3.5 sm:py-5">Roll No</th>
+                  <th className="px-4 sm:px-8 py-3.5 sm:py-5">Board/Syllabus</th>
+                  <th className="px-4 sm:px-8 py-3.5 sm:py-5">Academic Class</th>
+                  <th className="px-4 sm:px-8 py-3.5 sm:py-5 text-right">Operation</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {students.map(student => (
                   <tr key={student.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-4">
-                        <div className="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-lg border border-indigo-100 shadow-sm">
+                    <td className="px-4 sm:px-8 py-3.5 sm:py-5">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-sm sm:text-lg border border-indigo-100 shadow-sm flex-shrink-0">
                           {student.name.charAt(0)}
                         </div>
-                        <div>
-                          <p className="font-bold text-slate-900">{student.name}</p>
-                          <p className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                            <Mail size={12} /> {student.email}
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 text-xs sm:text-sm truncate">{student.name}</p>
+                          <p className="text-[11px] sm:text-xs text-slate-400 font-medium flex items-center gap-1 truncate">
+                            <Mail size={11} /> {student.email}
                           </p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-8 py-5">
-                      <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-black">
+                    <td className="px-4 sm:px-8 py-3.5 sm:py-5">
+                      <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 bg-slate-100 text-slate-600 rounded-md sm:rounded-lg text-[11px] sm:text-xs font-black">
                         {student.rollNo || 'UNSET'}
                       </span>
                     </td>
-                    <td className="px-8 py-5">
-                      <p className="text-sm font-bold text-slate-700">
+                    <td className="px-4 sm:px-8 py-3.5 sm:py-5">
+                      <p className="text-xs sm:text-sm font-bold text-slate-700">
                         {syllabuses.find(s => s.id === student.classLevel?.syllabusId)?.name || 'N/A'}
                       </p>
                     </td>
-                    <td className="px-8 py-5">
-                      <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold">
+                    <td className="px-4 sm:px-8 py-3.5 sm:py-5">
+                      <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 bg-indigo-50 text-indigo-600 rounded-md sm:rounded-lg text-[11px] sm:text-xs font-bold">
                         {student.classLevel?.name || 'Pending'}
                       </span>
                     </td>
-                    <td className="px-8 py-5 text-right">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                        <button onClick={() => handleOpenModal(student)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors">
-                          <Edit2 size={18} />
+                    <td className="px-4 sm:px-8 py-3.5 sm:py-5 text-right">
+                      <div className="flex justify-end gap-1 sm:gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200">
+                        <button onClick={() => handleOpenModal(student)} className="p-1.5 sm:p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg sm:rounded-xl transition-colors" title="Edit Student">
+                          <Edit2 size={16} />
                         </button>
-                        <button onClick={() => handleDelete(student.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors">
-                          <Trash2 size={18} />
+                        <button onClick={() => handleDelete(student.id)} className="p-1.5 sm:p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg sm:rounded-xl transition-colors" title="Delete Student">
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
@@ -467,25 +467,25 @@ const StudentManager: React.FC<StudentManagerProps> = ({ user }) => {
               </tbody>
             </table>
             {students.length === 0 && (
-              <div className="text-center py-32">
-                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
-                  <Search className="text-slate-300" size={32} />
+              <div className="text-center py-20 sm:py-32">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 border border-slate-100">
+                  <Search size={24} className="text-slate-300 sm:w-8 sm:h-8" />
                 </div>
-                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No records matching your search</p>
+                <p className="text-slate-400 font-bold uppercase tracking-widest text-[11px] sm:text-xs">No records matching your search</p>
               </div>
             )}
 
             {pagination.pages > 1 && (
-              <div className="px-8 py-4 border-t border-slate-100 bg-white flex items-center justify-between">
-                <div className="text-xs font-bold text-slate-500">
+              <div className="px-4 sm:px-8 py-3 sm:py-4 border-t border-slate-100 bg-white flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-xs font-bold text-slate-500 text-center sm:text-left">
                   Page {pagination.page} of {pagination.pages} · {pagination.total} students
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto justify-center">
                   <button
                     type="button"
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={pagination.page <= 1 || loading}
-                    className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs disabled:opacity-50 hover:bg-slate-50"
+                    className="flex-1 sm:flex-none px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs disabled:opacity-50 hover:bg-slate-50"
                   >
                     Prev
                   </button>
@@ -493,7 +493,7 @@ const StudentManager: React.FC<StudentManagerProps> = ({ user }) => {
                     type="button"
                     onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
                     disabled={pagination.page >= pagination.pages || loading}
-                    className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs disabled:opacity-50 hover:bg-slate-50"
+                    className="flex-1 sm:flex-none px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs disabled:opacity-50 hover:bg-slate-50"
                   >
                     Next
                   </button>
@@ -504,61 +504,61 @@ const StudentManager: React.FC<StudentManagerProps> = ({ user }) => {
         )}
       </div>
 
-      {/* Modern Modal */}
+      {/* Modern Responsive Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden border border-white/20 animate-in zoom-in-95 duration-200">
-            <div className="px-10 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-2.5 sm:p-4 md:p-6 animate-in fade-in duration-200 overflow-y-auto">
+          <div className="bg-white rounded-2xl sm:rounded-[2.5rem] shadow-2xl w-full max-w-xl max-h-[92vh] flex flex-col overflow-hidden border border-white/20 animate-in zoom-in-95 duration-200 my-auto">
+            <div className="px-5 sm:px-8 py-4 sm:py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 flex-shrink-0">
               <div>
-                <h3 className="font-black text-xl text-slate-900 tracking-tight">{editingStudent.id ? 'Refine Profile' : 'Student Enrollment'}</h3>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">Official Academic Records</p>
+                <h3 className="font-black text-lg sm:text-xl text-slate-900 tracking-tight">{editingStudent.id ? 'Refine Profile' : 'Student Enrollment'}</h3>
+                <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">Official Academic Records</p>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all shadow-sm">
-                <X size={20} />
+              <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all shadow-sm">
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="p-10 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="col-span-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Full Identity Name</label>
+            <form onSubmit={handleSave} className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 overflow-y-auto flex-1 custom-scrollbar">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <div className="sm:col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Full Identity Name</label>
                   <input
                     required
                     type="text"
                     value={editingStudent.name}
                     onChange={e => setEditingStudent({ ...editingStudent, name: e.target.value })}
-                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-slate-700"
+                    className="w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-xs sm:text-sm text-slate-700"
                     placeholder="e.g. Alexander Pierce"
                   />
                 </div>
-                <div className="col-span-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Official Email Address</label>
+                <div className="sm:col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Official Email Address</label>
                   <input
                     required
                     type="email"
                     value={editingStudent.email}
                     onChange={e => setEditingStudent({ ...editingStudent, email: e.target.value })}
-                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-slate-700"
+                    className="w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-xs sm:text-sm text-slate-700"
                     placeholder="alexander@school.edu"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Unique Roll Number</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Unique Roll Number</label>
                   <input
                     type="text"
                     value={editingStudent.rollNo}
                     onChange={e => setEditingStudent({ ...editingStudent, rollNo: e.target.value })}
-                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-slate-700"
+                    className="w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-xs sm:text-sm text-slate-700"
                     placeholder="e.g. 2024-001"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Academic Board/Syllabus</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Academic Board/Syllabus</label>
                   <select
                     required
                     value={selectedSyllabusId}
                     onChange={e => setSelectedSyllabusId(e.target.value)}
-                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-slate-700 appearance-none"
+                    className="w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-xs sm:text-sm text-slate-700"
                   >
                     <option value="">Select Board...</option>
                     {syllabuses.map(s => (
@@ -566,14 +566,14 @@ const StudentManager: React.FC<StudentManagerProps> = ({ user }) => {
                     ))}
                   </select>
                 </div>
-                <div className="col-span-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Designated Academic Class</label>
+                <div className="sm:col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Designated Academic Class</label>
                   <select
                     required
                     disabled={!selectedSyllabusId}
                     value={editingStudent.classId}
                     onChange={e => setEditingStudent({ ...editingStudent, classId: e.target.value })}
-                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-slate-700 appearance-none disabled:opacity-50"
+                    className="w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-xs sm:text-sm text-slate-700 disabled:opacity-50"
                   >
                     <option value="">Select Class...</option>
                     {filteredClasses.map(cls => (
@@ -583,13 +583,13 @@ const StudentManager: React.FC<StudentManagerProps> = ({ user }) => {
                 </div>
 
                 {editingStudent.classId && (
-                  <div className="col-span-2 space-y-4">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
-                      <BookOpen size={14} /> Subject Entitlements
+                  <div className="sm:col-span-2 space-y-3">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1 flex items-center gap-2">
+                      <BookOpen size={13} /> Subject Entitlements
                     </label>
-                    <div className="grid grid-cols-2 gap-3 p-6 bg-slate-50 border border-slate-200 rounded-3xl max-h-48 overflow-y-auto custom-scrollbar">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 p-3 sm:p-5 bg-slate-50 border border-slate-200 rounded-2xl max-h-44 overflow-y-auto custom-scrollbar">
                       {subjects.filter(s => s.classId === editingStudent.classId).map(sub => (
-                        <label key={sub.id} className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-500 transition-all group">
+                        <label key={sub.id} className="flex items-center gap-2.5 p-2.5 bg-white border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-500 transition-all group">
                           <input
                             type="checkbox"
                             checked={editingStudent.assignedSubjects?.includes(sub.name)}
@@ -602,31 +602,31 @@ const StudentManager: React.FC<StudentManagerProps> = ({ user }) => {
                             }}
                             className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                           />
-                          <span className="text-xs font-bold text-slate-700 group-hover:text-indigo-600">{sub.name}</span>
+                          <span className="text-xs font-bold text-slate-700 group-hover:text-indigo-600 truncate">{sub.name}</span>
                         </label>
                       ))}
                     </div>
                   </div>
                 )}
                 {!editingStudent.id && (
-                  <div className="col-span-2">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Portal Access Password</label>
+                  <div className="sm:col-span-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Portal Access Password</label>
                     <input
                       required
                       type="password"
                       value={editingStudent.password}
                       onChange={e => setEditingStudent({ ...editingStudent, password: e.target.value })}
-                      className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-slate-700"
+                      className="w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-xs sm:text-sm text-slate-700"
                       placeholder="••••••••"
                     />
-                    <p className="text-[10px] text-slate-400 font-bold mt-2 ml-1">* Defaults to 'student123' if left blank</p>
+                    <p className="text-[10px] text-slate-400 font-bold mt-1.5 ml-1">* Defaults to 'student123' if left blank</p>
                   </div>
                 )}
               </div>
 
-              <div className="pt-8 flex justify-end gap-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-4 text-xs font-black text-slate-400 hover:text-slate-900 transition-all uppercase tracking-widest">Discard</button>
-                <button type="submit" className="px-10 py-4 bg-slate-900 text-white rounded-[1.25rem] font-black uppercase tracking-[0.2em] text-xs hover:bg-slate-800 shadow-xl shadow-slate-900/20 active:scale-[0.98] transition-all">
+              <div className="pt-4 sm:pt-6 flex flex-col-reverse sm:flex-row justify-end gap-2.5 sm:gap-4 flex-shrink-0">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="w-full sm:w-auto px-6 py-3 text-xs font-black text-slate-400 hover:text-slate-900 transition-all uppercase tracking-widest text-center">Discard</button>
+                <button type="submit" className="w-full sm:w-auto px-8 py-3.5 bg-slate-900 text-white rounded-xl sm:rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:bg-slate-800 shadow-xl shadow-slate-900/20 active:scale-[0.98] transition-all text-center">
                   {editingStudent.id ? 'Save Changes' : 'Confirm Enrollment'}
                 </button>
               </div>

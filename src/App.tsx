@@ -118,6 +118,79 @@ const App: React.FC = () => {
     platformLogo: '/logo.webp'
   });
 
+  // Dynamic SEO Meta & Title Manager for Google Indexing
+  useEffect(() => {
+    if (!user) {
+      const seoMap: Record<string, { title: string; desc: string }> = {
+        HOME: {
+          title: 'PakParcha AI – Exam Paper Generator, Notes, Past Papers & Online Tests (New Syllabus 2026)',
+          desc: "PakParcha AI is Pakistan's #1 exam paper generator and study portal. Download Class 9, 10, 11, 12 Notes PDF, Solved Past Papers, Pairing Schemes, and Online Tests."
+        },
+        NOTES: {
+          title: 'Class 9, 10, 11, 12 Notes PDF – All Subjects Solved (New Syllabus 2026) | PakParcha AI',
+          desc: 'Download free Class 9, 10, 11, and 12 chapter-wise solved notes, numericals, short questions, and MCQs in PDF for Punjab & Federal Board (FBISE).'
+        },
+        PAST_PAPERS: {
+          title: 'Past Papers PDF Download – Punjab Board & Federal Board FBISE | PakParcha AI',
+          desc: 'Download 5-year solved past papers for Class 9, 10, 11, and 12 in PDF. Includes all Punjab boards (BISE Lahore, Rawalpindi, Gujranwala) and FBISE.'
+        },
+        BOOKS: {
+          title: 'Textbooks PDF Download – Punjab Curriculum & National Book Foundation | PakParcha AI',
+          desc: 'Free PDF download of government textbooks for Class 9, 10, 11, and 12 according to the Single National Curriculum (SNC).'
+        },
+        QUIZ: {
+          title: 'Online Test Preparation & Chapter-Wise MCQs Practice | PakParcha AI',
+          desc: 'Take instant online tests and MCQs self-assessment quizzes for matric and intermediate board exam preparation with live scorecards.'
+        },
+        LESSON_PLANS: {
+          title: 'Lesson Plans & Academic Scheme of Work for Teachers | PakParcha AI',
+          desc: 'Download structured lesson plans, student activity sheets, and curriculum distribution guides for schools and teachers.'
+        },
+        PRICING: {
+          title: 'Pricing Plans & Institute Subscriptions | PakParcha AI',
+          desc: 'Affordable subscription packages for schools, colleges, and academies to generate unlimited custom bilingual exam papers.'
+        },
+        BLOG: {
+          title: 'Educational Blog, Board Exam Tips & Pairing Schemes 2026 | PakParcha AI',
+          desc: 'Latest educational updates, board pairing schemes 2026, date sheets, exam preparation tips, and study guides for students.'
+        },
+        ABOUT: {
+          title: 'About PakParcha AI – Leading Automated Exam Platform in Pakistan',
+          desc: 'Learn how PakParcha AI is revolutionizing education and exam preparation across Pakistani schools and academies.'
+        },
+        CONTACT: {
+          title: 'Contact Us & Customer Support | PakParcha AI',
+          desc: 'Get in touch with PakParcha AI customer support team for inquiries, school onboardings, and platform guidance.'
+        },
+        PRIVACY: {
+          title: 'Privacy Policy | PakParcha AI',
+          desc: 'Privacy policy and user data protection details of PakParcha AI.'
+        },
+        TERMS: {
+          title: 'Terms of Service | PakParcha AI',
+          desc: 'Terms and conditions for using PakParcha AI exam generation and educational resources.'
+        },
+        DISCLAIMER: {
+          title: 'Disclaimer & Fair Use Notice | PakParcha AI',
+          desc: 'Legal disclaimer and educational fair use guidelines for PakParcha AI.'
+        },
+        REFUND: {
+          title: 'Refund Policy | PakParcha AI',
+          desc: 'Refund and cancellation policy for PakParcha AI subscriptions.'
+        }
+      };
+
+      const currentSeo = seoMap[publicView] || seoMap.HOME;
+      document.title = currentSeo.title;
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) {
+        metaDesc.setAttribute('content', currentSeo.desc);
+      }
+    } else {
+      document.title = `${activeView.charAt(0).toUpperCase() + activeView.slice(1)} – ${systemConfig.platformName}`;
+    }
+  }, [publicView, activeView, user, systemConfig.platformName]);
+
   useEffect(() => {
     initializeDB();
     loadSystemConfig();

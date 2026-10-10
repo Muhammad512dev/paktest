@@ -58,27 +58,22 @@ function decodeBase64Svg(cleanB64: string): string | null {
 
 function decodeQuotedPrintable(str: string): string {
   // 1. Remove soft line breaks: =\r\n or =\n
-  const withoutSoftBreaks = str.replace(/=(?:\r\n|\r|\n)/g, '');
-  
-  // 2. Safely decode =XX hex encoded bytes to utf-8 text
-  const percentEncoded = withoutSoftBreaks
-    .replace(/%([0-9A-Fa-f]{2})/g, '___PCT_$1___')
-    .replace(/%/g, '%25')
-    .replace(/___PCT_([0-9A-Fa-f]{2})___/g, '%$1')
-    .replace(/=([0-9A-Fa-f]{2})/g, '%$1');
+  const clean = str.replace(/=(?:\r\n|\r|\n)/g, '');
 
-  try {
-    return decodeURIComponent(percentEncoded);
-  } catch (e) {
-    // Fallback: decode byte by byte
-    return percentEncoded.replace(/%([0-9A-Fa-f]{2})/g, (_m, hex) => {
-      try {
-        return decodeURIComponent('%' + hex);
-      } catch {
-        return String.fromCharCode(parseInt(hex, 16));
-      }
-    });
+  // 2. Collect raw bytes preserving multi-byte UTF-8 sequences (Urdu, Arabic, Math symbols)
+  const bytes: number[] = [];
+  const len = clean.length;
+  for (let i = 0; i < len; i++) {
+    if (clean[i] === '=' && i + 2 < len && /[0-9A-Fa-f]{2}/.test(clean.substring(i + 1, i + 3))) {
+      bytes.push(parseInt(clean.substring(i + 1, i + 3), 16));
+      i += 2;
+    } else {
+      bytes.push(clean.charCodeAt(i));
+    }
   }
+
+  // 3. Decode natively as UTF-8 (prevents Ø§Ù mojibake and restores perfect Urdu)
+  return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
 }
 
 export function parseMhtmlToQuestions(

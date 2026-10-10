@@ -276,7 +276,7 @@ export function parseMhtmlToQuestions(
     const chapterLabel = cleanHtmlContent(chLiMatch[1]);
     const innerUl = chLiMatch[2];
 
-    const numMatch = chapterLabel.match(/(?:unit|lesson|chapter|sabq|سبق|باب|نظم|غزل)\s*(\d+)/i);
+    const numMatch = chapterLabel.match(/(?:unit|lesson|chapter|sabq|سبق|باب|نظم|غزل|یونٹ)\s*(?:نمبر|no\.?|#)?\s*(\d+)/i);
     if (numMatch) {
       chapterNumToNameMap[numMatch[1]] = chapterLabel;
     }
@@ -307,14 +307,15 @@ export function parseMhtmlToQuestions(
   for (let b = 0; b < rawBlocks.length; b++) {
     const block = rawBlocks[b];
 
-    // Extract topic heading
-    const headingMatch = block.match(/<(?:h\d|div|p)[^>]*class=["']?[^"']*(?:topic|heading|title)[^"']*["']?[^>]*>([\s\S]*?)<\/(?:h\d|div|p)>/i) || block.match(/<h5>(.*?)<\/h5>/i);
+    // Extract topic heading: prioritize true heading tags (h1-h6) or explicit topic-title, NOT topicref-col!
+    const headingMatch = block.match(/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/i) ||
+                         block.match(/<(?:div|p)[^>]*class=["']?[^"']*(?:topic_title|topic-title)[^"']*["']?[^>]*>([\s\S]*?)<\/(?:div|p)>/i);
     if (headingMatch) {
       const rawHeading = cleanHtmlContent(headingMatch[1]);
       currentTopic = rawHeading;
 
       // Check if heading itself explicitly defines Unit / Lesson / Chapter / Sabq
-      const explicitChapterMatch = rawHeading.match(/^(Unit|Lesson|Chapter|Sabq|سبق|باب|نظم|غزل)\s*(\d+)[\s:\-–—]*(.*)$/i);
+      const explicitChapterMatch = rawHeading.match(/^(Unit|Lesson|Chapter|Sabq|سبق|باب|نظم|غزل|یونٹ)\s*(?:نمبر|no\.?|#)?\s*(\d+)[\s:\-–—]*(.*)$/i);
       if (explicitChapterMatch) {
         const pfx = explicitChapterMatch[1];
         const num = explicitChapterMatch[2];
@@ -323,7 +324,7 @@ export function parseMhtmlToQuestions(
         currentTopic = rest || rawHeading;
       } else {
         const numMatch = rawHeading.match(/^(\d+)\./);
-        const cleanTopicName = rawHeading.replace(/^\d+\.\d+\s*[-–—:]*\s*/, '').trim();
+        const cleanTopicName = rawHeading.replace(/^\d+(?:\.\d+)?\s*[-–—:]*\s*/, '').trim();
 
         if (cleanTopicName && topicToChapterMap[cleanTopicName.toLowerCase()]) {
           currentChapter = topicToChapterMap[cleanTopicName.toLowerCase()];

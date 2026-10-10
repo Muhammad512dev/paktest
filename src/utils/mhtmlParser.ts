@@ -321,20 +321,20 @@ export function parseMhtmlToQuestions(
         const num = explicitChapterMatch[2];
         const rest = explicitChapterMatch[3]?.trim();
         currentChapter = rest ? `${pfx} ${num} - ${rest}` : `${pfx} ${num}`;
-        currentTopic = rest || rawHeading;
+        currentTopic = rawHeading;
       } else {
         const numMatch = rawHeading.match(/^(\d+)\./);
         const cleanTopicName = rawHeading.replace(/^\d+(?:\.\d+)?\s*[-–—:]*\s*/, '').trim();
 
         if (cleanTopicName && topicToChapterMap[cleanTopicName.toLowerCase()]) {
           currentChapter = topicToChapterMap[cleanTopicName.toLowerCase()];
-          currentTopic = cleanTopicName;
+          currentTopic = rawHeading;
         } else if (numMatch && chapterNumToNameMap[numMatch[1]]) {
           currentChapter = chapterNumToNameMap[numMatch[1]];
-          currentTopic = cleanTopicName || rawHeading;
+          currentTopic = rawHeading;
         } else if (numMatch && !detectedChapter) {
           currentChapter = `${chapterPrefix} ${numMatch[1]}`;
-          currentTopic = cleanTopicName || rawHeading;
+          currentTopic = rawHeading;
         }
       }
     }

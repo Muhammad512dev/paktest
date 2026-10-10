@@ -303,7 +303,7 @@ export function parseMhtmlToQuestions(
   const chapterPrefix = isUnitContext ? 'Unit' : isLessonContext ? 'Lesson' : isUrduSabqContext ? 'سبق' : 'Chapter';
 
   // Split by topic-heading containers
-  const rawBlocks = mainHtmlContent.split(/<div[^>]*(?:class|class=3D)["'][^"']*topic-heading[^"']*["']>/i);
+  const rawBlocks = mainHtmlContent.split(/<div[^>]*topic-heading[^>]*>/i);
   const questions: ParsedMhtmlQuestion[] = [];
 
   let currentTopic = 'General Topic';
@@ -344,7 +344,7 @@ export function parseMhtmlToQuestions(
     }
 
     // Match all question rows inside TableHover
-    const qRows = block.match(/(?:<|&lt;)div[^>]*(?:class|class=3D)["']?[^"']*TableHover[^"']*["']?[\s\S]*?(?=(?:<|&lt;)div[^>]*(?:class|class=3D)["']?[^"']*TableHover[^"']*["']?|$)/gi) || [];
+    const qRows = block.match(/<div[^>]*TableHover[\s\S]*?(?=<div[^>]*TableHover|$)/gi) || [];
 
     for (const qRow of qRows) {
       const isMcq = /multiple-options-col|class=["']abcd["']/i.test(qRow);
@@ -435,8 +435,8 @@ export function parseMhtmlToQuestions(
 
       // Fallback to basic regex if DOMParser didn't find anything
       if (!rawEng && !rawUrdu) {
-        const engMatch = qRow.match(/(?:<|&lt;)div[^>]*class=["']?[^"']*english-col[^"']*["']?(?:>|&gt;)([\s\S]*?)(?:<|&lt;)\/div(?:>|&gt;)/i);
-        const urduMatch = qRow.match(/(?:<|&lt;)div[^>]*class=["']?[^"']*urdu-col[^"']*["']?(?:>|&gt;)([\s\S]*?)(?:<|&lt;)\/div(?:>|&gt;)/i);
+        const engMatch = qRow.match(/<div[^>]*english-col[^>]*>([\s\S]*?)<\/div>/i);
+        const urduMatch = qRow.match(/<div[^>]*urdu-col[^>]*>([\s\S]*?)<\/div>/i);
         rawEng = engMatch ? engMatch[1] : '';
         rawUrdu = urduMatch ? urduMatch[1] : '';
       }
@@ -469,8 +469,8 @@ export function parseMhtmlToQuestions(
             correctAnswer = letter;
           }
 
-          const optUrduMatch = li.match(/<div[^>]*class=["'][^"']*urdu-text[^"']*["']>([\s\S]*?)<\/div>/i);
-          const optEngMatch = li.match(/<div[^>]*class=["'][^"']*english-text[^"']*["']>([\s\S]*?)<\/div>/i);
+          const optUrduMatch = li.match(/<div[^>]*urdu-text[^>]*>([\s\S]*?)<\/div>/i);
+          const optEngMatch = li.match(/<div[^>]*english-text[^>]*>([\s\S]*?)<\/div>/i);
 
           const uTxt = optUrduMatch ? cleanHtmlContent(optUrduMatch[1]) : '';
           const eTxt = optEngMatch ? cleanHtmlContent(optEngMatch[1]) : '';

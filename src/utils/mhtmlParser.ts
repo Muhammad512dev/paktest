@@ -56,6 +56,31 @@ function decodeBase64Svg(cleanB64: string): string | null {
   return null;
 }
 
+function decodeQuotedPrintable(str: string): string {
+  // 1. Remove soft line breaks: =\r\n or =\n
+  const withoutSoftBreaks = str.replace(/=(?:\r\n|\r|\n)/g, '');
+  
+  // 2. Safely decode =XX hex encoded bytes to utf-8 text
+  const percentEncoded = withoutSoftBreaks
+    .replace(/%([0-9A-Fa-f]{2})/g, '___PCT_$1___')
+    .replace(/%/g, '%25')
+    .replace(/___PCT_([0-9A-Fa-f]{2})___/g, '%$1')
+    .replace(/=([0-9A-Fa-f]{2})/g, '%$1');
+
+  try {
+    return decodeURIComponent(percentEncoded);
+  } catch (e) {
+    // Fallback: decode byte by byte
+    return percentEncoded.replace(/%([0-9A-Fa-f]{2})/g, (_m, hex) => {
+      try {
+        return decodeURIComponent('%' + hex);
+      } catch {
+        return String.fromCharCode(parseInt(hex, 16));
+      }
+    });
+  }
+}
+
 export function parseMhtmlToQuestions(
   mhtmlContent: string,
   defaultMeta: { board?: string; grade?: string; subject?: string; chapter?: string } = {}
@@ -108,9 +133,20 @@ export function parseMhtmlToQuestions(
       }
     }
 
-    if (parts.length > 1 && /<html|<div|<body/i.test(parts[1])) {
-      mainHtmlContent = parts[1];
+    // Extract and decode the primary HTML content part
+    for (const part of parts) {
+      if (/<html|<div|<body/i.test(part)) {
+        const encMatch = part.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i);
+        if ((encMatch && /quoted-printable/i.test(encMatch[1])) || /=3D|=0D|=0A/i.test(part)) {
+          mainHtmlContent = decodeQuotedPrintable(part);
+        } else {
+          mainHtmlContent = part;
+        }
+        break;
+      }
     }
+  } else if (/quoted-printable/i.test(mainHtmlContent) || /=3D|=0D|=0A/i.test(mainHtmlContent)) {
+    mainHtmlContent = decodeQuotedPrintable(mainHtmlContent);
   }
 
   // Replace external image URLs with embedded data URIs or inline SVGs so they display 100% offline
@@ -267,7 +303,7 @@ export function parseMhtmlToQuestions(
   const chapterPrefix = isUnitContext ? 'Unit' : isLessonContext ? 'Lesson' : isUrduSabqContext ? 'سبق' : 'Chapter';
 
   // Split by topic-heading containers
-  const rawBlocks = mainHtmlContent.split(/<div[^>]*class=["'][^"']*topic-heading[^"']*["']>/i);
+  const rawBlocks = mainHtmlContent.split(/<div[^>]*(?:class|class=3D)["'][^"']*topic-heading[^"']*["']>/i);
   const questions: ParsedMhtmlQuestion[] = [];
 
   let currentTopic = 'General Topic';
@@ -308,7 +344,7 @@ export function parseMhtmlToQuestions(
     }
 
     // Match all question rows inside TableHover
-    const qRows = block.match(/(?:<|&lt;)div[^>]*class=["']?[^"']*TableHover[^"']*["']?[\s\S]*?(?=(?:<|&lt;)div[^>]*class=["']?[^"']*TableHover[^"']*["']?|$)/gi) || [];
+    const qRows = block.match(/(?:<|&lt;)div[^>]*(?:class|class=3D)["']?[^"']*TableHover[^"']*["']?[\s\S]*?(?=(?:<|&lt;)div[^>]*(?:class|class=3D)["']?[^"']*TableHover[^"']*["']?|$)/gi) || [];
 
     for (const qRow of qRows) {
       const isMcq = /multiple-options-col|class=["']abcd["']/i.test(qRow);

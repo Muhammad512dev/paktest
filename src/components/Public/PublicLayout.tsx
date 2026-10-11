@@ -94,7 +94,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
             {/* Logo */}
             <div className="flex items-center cursor-pointer shrink-0 py-1" onClick={() => onNavigate('HOME')}>
               <img 
-                src="/logo.webp" 
+                src={logoUrl || "/logo.webp"} 
                 alt={systemName || "PakParcha AI"} 
                 width="168"
                 height="40"
@@ -102,8 +102,8 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
                 decoding="async"
                 onError={(e) => {
                   const target = e.currentTarget;
-                  if (logoUrl && target.src !== logoUrl) {
-                    target.src = logoUrl;
+                  if (target.src !== window.location.origin + '/logo.webp' && target.src !== '/logo.webp') {
+                    target.src = '/logo.webp';
                   } else if (target.src.endsWith('.webp')) {
                     target.src = '/logo.png';
                   } else {
@@ -227,15 +227,20 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, currentView, onNa
             <div className="col-span-1 md:col-span-1">
               <div className="flex items-center gap-2.5 mb-4">
                 <img 
-                  src="/logo.webp" 
+                  src={logoUrl || "/logo.webp"} 
                   alt={systemName || "PakParcha AI"} 
                   width="220"
                   height="48"
                   loading="lazy"
                   decoding="async"
                   onError={(e) => {
-                    if (logoUrl && e.currentTarget.src !== logoUrl) {
-                      e.currentTarget.src = logoUrl;
+                    const target = e.currentTarget;
+                    if (target.src !== window.location.origin + '/logo.webp' && target.src !== '/logo.webp') {
+                      target.src = '/logo.webp';
+                    } else if (target.src.endsWith('.webp')) {
+                      target.src = '/logo.png';
+                    } else {
+                      target.src = '/favicon.svg';
                     }
                   }}
                   className="h-10 md:h-12 w-auto max-w-[220px] object-contain brightness-110" 

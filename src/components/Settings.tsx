@@ -215,8 +215,16 @@ const Settings: React.FC<SettingsProps> = ({ userRole, onConfigUpdate, onUserUpd
     if (file) {
       try {
         const url = await uploadFile(file);
-        if (target === 'SCHOOL' && schoolData) setSchoolData({ ...schoolData, logo: url });
-        else if (target === 'PLATFORM') setSystemConfigState({ ...systemConfig, platformLogo: url });
+        if (target === 'SCHOOL' && schoolData) {
+          const updated = { ...schoolData, logo: url };
+          setSchoolData(updated);
+          await updateSchool(updated).catch(err => console.error("Auto-save school logo failed:", err));
+        } else if (target === 'PLATFORM') {
+          const updated = { ...systemConfig, platformLogo: url, branding };
+          setSystemConfigState(updated);
+          await updateSystemConfig(updated).catch(err => console.error("Auto-save platform logo failed:", err));
+          onConfigUpdate?.();
+        }
       } catch (e) {
         alert("Failed to upload logo.");
       }

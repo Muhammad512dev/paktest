@@ -344,7 +344,7 @@ const App: React.FC = () => {
         systemName={systemConfig.platformName || 'PakParcha'}
         logoUrl={systemConfig.platformLogo}
       >
-        {publicView === 'HOME' && <Home onNavigate={setPublicView} />}
+        {publicView === 'HOME' && <Home onNavigate={setPublicView} logoUrl={systemConfig.platformLogo} systemName={systemConfig.platformName} />}
         {publicView === 'PRICING' && <Pricing onNavigate={setPublicView} />}
         {publicView === 'ABOUT' && <About appName={systemConfig.platformName || 'PakParcha'} videoUrl={systemConfig.aboutVideoUrl} />}
         {publicView === 'CONTACT' && <Contact />}

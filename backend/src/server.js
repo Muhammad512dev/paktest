@@ -740,7 +740,7 @@ app.get('/api/public/stats', async (req, res) => {
 });
 app.get('/api/public/settings', async (req, res) => {
     try {
-        const settings = await prisma.systemSetting.findFirst({ where: { id: 'global' } });
+        const settings = await prisma.systemSetting.findFirst();
         if (!settings) {
             // Return defaults if DB is empty
             return res.json({
@@ -2510,15 +2510,7 @@ app.get('/api/logs', authenticate, async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch logs' });
     }
 });
-app.get('/api/public/settings', async (req, res) => {
-    try {
-        const settings = await prisma.systemSetting.findFirst();
-        res.json(settings || { platformName: 'ExamForge AI' });
-    }
-    catch (e) {
-        res.json({ platformName: 'ExamForge AI' });
-    }
-});
+
 app.put('/api/settings', authenticate, async (req, res) => {
     if (req.user?.role !== 'SUPER_ADMIN')
         return res.status(403).json({ error: 'Forbidden' });

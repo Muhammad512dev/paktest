@@ -396,16 +396,37 @@ const MOCK_QUESTIONS_DATABASE: Record<string, {
   }
 };
 
-const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) => {
+interface HomeProps {
+  onNavigate: (view: string) => void;
+  logoUrl?: string;
+  systemName?: string;
+}
+
+const Home: React.FC<HomeProps> = ({ onNavigate, logoUrl, systemName }) => {
   const [stats, setStats] = useState({
     papers: 25000,
     schools: 450,
     questions: 120000
   });
   const [loadingStats, setLoadingStats] = useState(false);
-  const [platformConfig, setPlatformConfig] = useState({ logo: '', name: 'PakParcha AI' });
+  const [platformConfig, setPlatformConfig] = useState({ 
+    logo: logoUrl || '', 
+    name: systemName || 'PakParcha AI' 
+  });
   const [recentBlogs, setRecentBlogs] = useState<any[]>([]);
   const [recentNotes, setRecentNotes] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (logoUrl) {
+      setPlatformConfig(prev => ({ ...prev, logo: logoUrl }));
+    }
+  }, [logoUrl]);
+
+  useEffect(() => {
+    if (systemName) {
+      setPlatformConfig(prev => ({ ...prev, name: systemName }));
+    }
+  }, [systemName]);
 
   // Interactive Mock Generator State
   const [mockBoard, setMockBoard] = useState('Punjab Board (PCTB)');
@@ -434,8 +455,8 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
         }
         if (configData) {
           setPlatformConfig({
-            logo: configData.platformLogo || '',
-            name: configData.platformName || 'PakParcha AI'
+            logo: configData.platformLogo || logoUrl || '',
+            name: configData.platformName || systemName || 'PakParcha AI'
           });
         }
       } catch (e) {
@@ -524,12 +545,22 @@ const Home: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) 
           <div className="flex justify-center mb-5">
             <div className="relative group p-2">
               <img
-                src="/logo.webp"
+                src={platformConfig.logo || "/logo.webp"}
                 alt={platformConfig.name || "PakParcha AI"}
                 width="294"
                 height="98"
                 fetchPriority="high"
                 decoding="async"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (target.src !== window.location.origin + '/logo.webp' && target.src !== '/logo.webp') {
+                    target.src = '/logo.webp';
+                  } else if (target.src.endsWith('.webp')) {
+                    target.src = '/logo.png';
+                  } else {
+                    target.src = '/favicon.svg';
+                  }
+                }}
                 className="h-14 sm:h-20 md:h-24 w-auto object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.8)] filter brightness-110 transition-transform hover:scale-105"
               />
             </div>

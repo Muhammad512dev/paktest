@@ -2925,7 +2925,7 @@ async function processImagesInText(text: string, userId: string, fallbackBaseUrl
         console.log(`Found ${matches.length} images (Base64/HTTP) in text payload to process.`);
     }
 
-    for (const img of matches) {
+    const processedReplacements = await Promise.all(matches.map(async (img) => {
         try {
             let buffer: Buffer;
             
@@ -2936,7 +2936,7 @@ async function processImagesInText(text: string, userId: string, fallbackBaseUrl
                 const fetchRes = await fetch(img.url);
                 if (!fetchRes.ok) {
                     console.error(`Failed to download ${img.url}: ${fetchRes.statusText}`);
-                    continue;
+                    return null;
                 }
                 const arrayBuffer = await fetchRes.arrayBuffer();
                 buffer = Buffer.from(arrayBuffer);
@@ -3020,10 +3020,16 @@ async function processImagesInText(text: string, userId: string, fallbackBaseUrl
                 publicUrlToReplace = `${publicBase}/uploads/${filename}`;
             }
 
-            processedText = processedText.replace(img.fullMatch, `src="${publicUrlToReplace}"`);
-
+            return { fullMatch: img.fullMatch, url: publicUrlToReplace };
         } catch (e) {
             console.error('Failed to process image:', e);
+            return null;
+        }
+    }));
+
+    for (const item of processedReplacements) {
+        if (item && item.url) {
+            processedText = processedText.replace(item.fullMatch, `src="${item.url}"`);
         }
     }
 
@@ -3075,22 +3081,29 @@ app.post('/api/questions/bulk', authenticate, async (req: any, res: any) => {
         const validQuestions = [];
         const fallbackBaseUrl = `${req.protocol}://${req.get('host')}`;
 
-        for (let i = 0; i < questions.length; i++) {
-            let q = sanitizeQuestionInput(questions[i], schoolId);
-            q = await processQuestionImages(q, req.user?.id || 'admin', fallbackBaseUrl);
-            const validation = validateQuestion(q);
+        const batchConcurrency = 5;
+        for (let i = 0; i < questions.length; i += batchConcurrency) {
+            const batch = questions.slice(i, i + batchConcurrency);
+            const processedBatch = await Promise.all(batch.map(async (rawQ, offset) => {
+                const idx = i + offset;
+                let q = sanitizeQuestionInput(rawQ, schoolId);
+                q = await processQuestionImages(q, req.user?.id || 'admin', fallbackBaseUrl);
+                const validation = validateQuestion(q);
+                return { q, validation, index: idx };
+            }));
 
-            if (!validation.valid) {
-                results.skipped++;
-                results.errors.push({
-                    index: i,
-                    text: q.text?.substring(0, 50),
-                    errors: validation.errors
-                });
-                continue;
+            for (const item of processedBatch) {
+                if (!item.validation.valid) {
+                    results.skipped++;
+                    results.errors.push({
+                        index: item.index,
+                        text: item.q.text?.substring(0, 50),
+                        errors: item.validation.errors
+                    });
+                } else {
+                    validQuestions.push(item.q);
+                }
             }
-
-            validQuestions.push(q);
         }
 
         // Batch insert valid questions in chunks of 500

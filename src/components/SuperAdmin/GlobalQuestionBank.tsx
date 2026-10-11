@@ -802,28 +802,50 @@ const GlobalQuestionBank: React.FC = () => {
         } as Question;
 
         finalQuestions.push(q);
-        setSyncProgress(Math.round(((i + 1) / importRows.length) * 100));
+        // Stage 1: Fast local mapping (0% to 15%)
+        setSyncProgress(Math.round(((i + 1) / importRows.length) * 15));
       } catch (err) {
         console.error(`Failed to sync row ${i}:`, err);
       }
     }
 
-     if (finalQuestions.length > 0) {
-         const res = await addQuestionsBulk(finalQuestions);
-         const imported = res?.imported ?? finalQuestions.length;
-         const skipped = res?.skipped ?? 0;
-         const failed = res?.failed ?? 0;
-         const errCount = Array.isArray(res?.errors) ? res.errors.length : 0;
-         await setRefreshCounter(prev => prev + 1);
-         const sampleErrors = Array.isArray(res?.errors) ? res.errors.slice(0, 3) : [];
-         const sampleText = sampleErrors.length
-           ? `\n\nExamples:\n${sampleErrors.map((e: any) => `Row ${e.index ?? '?'}: ${(e.errors || []).join('; ')}`).join('\n')}`
-           : '';
-         alert(`Synchronization Complete: imported ${imported}, skipped ${skipped}, failed ${failed}${errCount ? ` (see console for ${errCount} errors)` : ''}.${sampleText}`);
-         if (errCount) console.error('Question import errors:', res.errors);
-     } else {
-         alert("No valid questions were processed during synchronization.");
-     }
+    if (finalQuestions.length > 0) {
+      // Stage 2: Chunked synchronization to prevent timeouts and slow freezes on files with heavy diagrams
+      const CHUNK_SIZE = 25;
+      let totalImported = 0;
+      let totalSkipped = 0;
+      let totalFailed = 0;
+      const allErrors: any[] = [];
+
+      for (let c = 0; c < finalQuestions.length; c += CHUNK_SIZE) {
+        const chunk = finalQuestions.slice(c, c + CHUNK_SIZE);
+        try {
+          const res = await addQuestionsBulk(chunk);
+          totalImported += res?.imported ?? chunk.length;
+          totalSkipped += res?.skipped ?? 0;
+          totalFailed += res?.failed ?? 0;
+          if (Array.isArray(res?.errors)) allErrors.push(...res.errors);
+        } catch (chunkErr: any) {
+          console.error(`Chunk starting at index ${c} failed:`, chunkErr);
+          totalFailed += chunk.length;
+          allErrors.push({ chunk: Math.floor(c / CHUNK_SIZE), error: chunkErr?.message || 'Network error' });
+        }
+
+        // Live progress tracking from 15% to 100%
+        const currentProgress = 15 + Math.round(((c + chunk.length) / finalQuestions.length) * 85);
+        setSyncProgress(Math.min(currentProgress, 100));
+      }
+
+      await setRefreshCounter(prev => prev + 1);
+      const sampleErrors = allErrors.slice(0, 3);
+      const sampleText = sampleErrors.length
+        ? `\n\nExamples:\n${sampleErrors.map((e: any) => `Error: ${(e.error || e.errors || []).toString()}`).join('\n')}`
+        : '';
+      alert(`Synchronization Complete: imported ${totalImported}, skipped ${totalSkipped}, failed ${totalFailed}${allErrors.length ? ` (see console for ${allErrors.length} errors)` : ''}.${sampleText}`);
+      if (allErrors.length) console.error('Question import errors:', allErrors);
+    } else {
+      alert("No valid questions were processed during synchronization.");
+    }
 
     setIsSyncing(false);
     setIsSyncScreenOpen(false);

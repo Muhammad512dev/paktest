@@ -441,98 +441,10 @@ const inferMedium = (q: any): 'English' | 'Urdu' | 'Bilingual' => {
     return 'English';
 };
 
-/**
- * Automatically extracts embedded base64 data URIs (SVGs, PNGs, JPEGs) from question text / options
-/**
- * Automatically extracts embedded base64 data URIs (SVGs, PNGs, JPEGs) and raw SVG strings from question text, options, and pairs
- * and writes them as permanent files organized cleanly in class and subject folders:
- * uploads/{Class_Name}/{Subject}/
- */
-function extractAndSaveEmbeddedMedia(content: string, classLevel: string, subject: string): string {
-    if (!content || typeof content !== 'string') return content;
-
-    const classFolder = (classLevel || 'General').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
-    const subjFolder = (subject || 'General').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
-    const targetDir = path.join(uploadDir, classFolder, subjFolder);
-
-    const ensureDir = () => {
-        if (!fs.existsSync(targetDir)) {
-            try {
-                fs.mkdirSync(targetDir, { recursive: true });
-            } catch (dirErr) {
-                console.error('Error creating class upload directory:', dirErr);
-            }
-        }
-    };
-
-    let result = content;
-
-    // 1. Convert Base64 SVGs inside <img> tags directly into clean inline <svg> markup
-    const svgImgRegex = /<img\b[^>]*src=["']data:image\/svg\+xml;base64,([a-zA-Z0-9+/=]+)["'][^>]*>/gi;
-    if (svgImgRegex.test(result)) {
-        svgImgRegex.lastIndex = 0;
-        result = result.replace(svgImgRegex, (_match, b64Data) => {
-            try {
-                const decoded = Buffer.from(b64Data.replace(/\s+/g, ''), 'base64').toString('utf-8');
-                if (decoded.includes('<svg') && decoded.includes('</svg>')) {
-                    return decoded.replace(/<\?xml[\s\S]*?\?>/i, '').replace(/<!DOCTYPE[\s\S]*?>/i, '').trim();
-                }
-            } catch (err) {}
-            return _match;
-        });
-    }
-
-    // 2. Convert unencoded / URL-encoded SVG Data URIs inside <img> tags into clean inline <svg>
-    const svgUtf8ImgRegex = /<img\b[^>]*src=["']data:image\/svg\+xml(?:;utf8)?,([\s\S]*?)["'][^>]*>/gi;
-    if (svgUtf8ImgRegex.test(result)) {
-        svgUtf8ImgRegex.lastIndex = 0;
-        result = result.replace(svgUtf8ImgRegex, (_match, raw) => {
-            try {
-                const decoded = decodeURIComponent(raw);
-                if (decoded.includes('<svg') && decoded.includes('</svg>')) {
-                    return decoded.replace(/<\?xml[\s\S]*?\?>/i, '').replace(/<!DOCTYPE[\s\S]*?>/i, '').trim();
-                }
-            } catch (err) {}
-            return _match;
-        });
-    }
-
-    // 3. Convert standalone Base64 SVG data URIs into clean inline <svg>
-    const standaloneSvgB64Regex = /data:image\/svg\+xml;base64,([a-zA-Z0-9+/=]+)/gi;
-    if (standaloneSvgB64Regex.test(result)) {
-        standaloneSvgB64Regex.lastIndex = 0;
-        result = result.replace(standaloneSvgB64Regex, (_match, b64Data) => {
-            try {
-                const decoded = Buffer.from(b64Data.replace(/\s+/g, ''), 'base64').toString('utf-8');
-                if (decoded.includes('<svg') && decoded.includes('</svg>')) {
-                    return decoded.replace(/<\?xml[\s\S]*?\?>/i, '').replace(/<!DOCTYPE[\s\S]*?>/i, '').trim();
-                }
-            } catch (err) {}
-            return _match;
-        });
-    }
-
-    // 4. Save Base64 bitmap data URIs (PNG, JPEG, WEBP, GIF) to local uploads directory
-    const bitmapDataUriRegex = /data:image\/(png|jpeg|jpg|webp|gif);base64,([a-zA-Z0-9+/=]+)/gi;
-    if (bitmapDataUriRegex.test(result)) {
-        ensureDir();
-        bitmapDataUriRegex.lastIndex = 0;
-        result = result.replace(bitmapDataUriRegex, (_match, format, b64Data) => {
-            try {
-                const ext = format.toLowerCase().includes('png') ? '.png' : format.toLowerCase().includes('webp') ? '.webp' : format.toLowerCase().includes('gif') ? '.gif' : '.jpg';
-                const uniqueName = `img_${Date.now()}_${Math.round(Math.random() * 1e6)}${ext}`;
-                const filePath = path.join(targetDir, uniqueName);
-                const buffer = Buffer.from(b64Data, 'base64');
-                fs.writeFileSync(filePath, buffer);
-                return `/uploads/${classFolder}/${subjFolder}/${uniqueName}`;
-            } catch (err) {
-                console.error('Error saving embedded media to class folder:', err);
-                return _match;
-            }
-        });
-    }
-
-    return result;
+// Note: Image/SVG extraction and uploading is handled asynchronously by processQuestionImages
+// to upload to permanent cloud storage (Supabase/R2) instead of saving to local ephemeral disk or inlining in Postgres.
+function extractAndSaveEmbeddedMedia(content: string, _classLevel?: string, _subject?: string): string {
+    return content || '';
 }
 
 const ensureStringArray = (val: any): string[] => {
@@ -555,8 +467,8 @@ const sanitizeQuestionInput = (raw: any, schoolId: string | null) => {
     q.classLevel = typeof q.classLevel === 'string' ? q.classLevel : '';
 
     q.type = normalizeQuestionType(q.type);
-    q.text = typeof q.text === 'string' ? extractAndSaveEmbeddedMedia(q.text.trim(), q.classLevel, q.subject) : '';
-    q.textUrdu = typeof q.textUrdu === 'string' ? extractAndSaveEmbeddedMedia(q.textUrdu.trim(), q.classLevel, q.subject) : '';
+    q.text = typeof q.text === 'string' ? q.text.trim() : '';
+    q.textUrdu = typeof q.textUrdu === 'string' ? q.textUrdu.trim() : '';
 
     // Handle Pair & Vocabulary questions where statements are omitted
     const isPairOrWordType = [
@@ -595,10 +507,10 @@ const sanitizeQuestionInput = (raw: any, schoolId: string | null) => {
     }
 
     q.options = ensureStringArray(q.options)
-        .map((s: string) => extractAndSaveEmbeddedMedia(s.trim(), q.classLevel, q.subject))
+        .map((s: string) => s.trim())
         .filter(Boolean);
     q.optionsUrdu = ensureStringArray(q.optionsUrdu)
-        .map((s: string) => extractAndSaveEmbeddedMedia(s.trim(), q.classLevel, q.subject))
+        .map((s: string) => s.trim())
         .filter(Boolean);
 
     // Auto-fallback options for Math/English/Physics/Chemistry where one language options apply to both
@@ -2868,7 +2780,9 @@ app.post('/api/questions', authenticate, async (req: any, res: any) => {
     try {
         const { id, createdAt, updatedAt, schoolId: _schoolId, ...data } = req.body || {};
         const schoolId = req.user?.role === 'SUPER_ADMIN' ? null : req.user?.schoolId;
-        const sanitized = sanitizeQuestionInput(data, schoolId);
+        const fallbackBaseUrl = `${req.protocol}://${req.get('host')}`;
+        let sanitized = sanitizeQuestionInput(data, schoolId);
+        sanitized = await processQuestionImages(sanitized, req.user?.id || 'admin', fallbackBaseUrl);
         const validation = validateQuestion(sanitized);
         if (!validation.valid) {
             return res.status(400).json({ error: 'Validation failed', details: validation.errors });
@@ -2893,22 +2807,53 @@ async function processImagesInText(text: string, userId: string, fallbackBaseUrl
     let match;
     const matches: any[] = [];
     
-    // 1. Find all base64 matches
+    // 1. Find all base64 matches (SVG, PNG, JPG, WEBP, GIF)
     const regexB64 = /src=["']?(data:image\/([^;]+);base64,([a-zA-Z0-9+/=\s]+))["']?/g;
     while ((match = regexB64.exec(text)) !== null) {
         matches.push({
             fullMatch: match[0],
             isBase64: true,
-            ext: match[2] === 'svg+xml' ? 'svg' : match[2],
+            ext: match[2].includes('svg') ? 'svg' : match[2],
             base64Data: match[3].replace(/\s+/g, '')
         });
     }
 
-    // 2. Find all HTTP matches
+    // 2. Find URL-encoded or UTF-8 SVG data URIs
+    const regexUtf8Svg = /src=["']?(data:image\/svg\+xml(?:;utf8)?,([\s\S]*?))["']/gi;
+    while ((match = regexUtf8Svg.exec(text)) !== null) {
+        let decoded = '';
+        try {
+            decoded = decodeURIComponent(match[2]);
+        } catch {
+            decoded = match[2];
+        }
+        matches.push({
+            fullMatch: match[0],
+            isRawSvg: true,
+            isBase64: false,
+            ext: 'svg',
+            svgContent: decoded
+        });
+    }
+
+    // 3. Find raw inline <svg ...>...</svg> blocks to extract and upload as permanent .svg files
+    const regexRawSvg = /<svg\b[^>]*>[\s\S]*?<\/svg>/gi;
+    while ((match = regexRawSvg.exec(text)) !== null) {
+        matches.push({
+            fullMatch: match[0],
+            isRawSvg: true,
+            isInlineSvgTag: true,
+            isBase64: false,
+            ext: 'svg',
+            svgContent: match[0]
+        });
+    }
+
+    // 4. Find all HTTP/HTTPS matches
     const regexHttp = /src=["']?(https?:\/\/[^"'\s>]+)["']?/gi;
     while ((match = regexHttp.exec(text)) !== null) {
         const url = match[1];
-        if (url.includes('supabase.co') || url.includes('/uploads/img_') || url.includes('examforge-uploads')) {
+        if (url.includes('supabase.co') || url.includes('/storage/v1/object/public') || url.includes('examforge-uploads')) {
             continue;
         }
         const extMatch = url.match(/\.(svg|png|jpg|jpeg|gif|webp)(?:[?#]|$)/i);
@@ -2921,8 +2866,25 @@ async function processImagesInText(text: string, userId: string, fallbackBaseUrl
         });
     }
 
+    // 5. Find relative /uploads/ matches - if storageProvider is supabase/r2 and file exists on disk, upload to cloud storage!
+    const regexLocalUpload = /src=["']?(\/uploads\/([^"'\s>]+))["']?/gi;
+    while ((match = regexLocalUpload.exec(text)) !== null) {
+        const subPath = match[2];
+        const localCandidate = path.join(uploadDir, subPath);
+        if (fs.existsSync(localCandidate)) {
+            const extMatch = subPath.match(/\.([a-zA-Z0-9]+)$/);
+            const ext = extMatch ? extMatch[1].toLowerCase() : 'png';
+            matches.push({
+                fullMatch: match[0],
+                isLocalFile: true,
+                localPath: localCandidate,
+                ext: ext === 'svg' ? 'svg' : ext
+            });
+        }
+    }
+
     if (matches.length > 0) {
-        console.log(`Found ${matches.length} images (Base64/HTTP) in text payload to process.`);
+        console.log(`Found ${matches.length} media items in text payload to process into cloud storage.`);
     }
 
     const processedReplacements = await Promise.all(matches.map(async (img) => {
@@ -2931,6 +2893,10 @@ async function processImagesInText(text: string, userId: string, fallbackBaseUrl
             
             if (img.isBase64) {
                 buffer = Buffer.from(img.base64Data, 'base64');
+            } else if (img.isRawSvg) {
+                buffer = Buffer.from(img.svgContent, 'utf-8');
+            } else if (img.isLocalFile) {
+                buffer = await fs.promises.readFile(img.localPath);
             } else {
                 console.log(`Downloading external image: ${img.url}`);
                 const fetchRes = await fetch(img.url);
@@ -2949,7 +2915,11 @@ async function processImagesInText(text: string, userId: string, fallbackBaseUrl
             const subj = subject ? subject.replace(/\s+/g, '_') : 'General';
             const objectKey = `${userId || 'public'}/${cLevel}/${subj}/${filename}`;
             
-            const storageProvider = (process.env.STORAGE_PROVIDER || 'local').toLowerCase();
+            // Auto-detect Supabase if credentials are provided in environment
+            const storageProvider = (
+                process.env.STORAGE_PROVIDER || 
+                (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY ? 'supabase' : 'local')
+            ).toLowerCase();
 
             let publicUrlToReplace = '';
 
@@ -2997,7 +2967,7 @@ async function processImagesInText(text: string, userId: string, fallbackBaseUrl
                         
                         if (storageResponse.ok) {
                             publicUrlToReplace = `${baseUrl}/storage/v1/object/public/${bucket}/${objectKey}`;
-                            console.log(`Successfully uploaded to Supabase: ${publicUrlToReplace}`);
+                            console.log(`Successfully uploaded SVG/media to Supabase: ${publicUrlToReplace}`);
                         } else {
                             const errText = await storageResponse.text();
                             console.error(`Supabase upload failed! Status: ${storageResponse.status}, Error: ${errText}`);
@@ -3010,17 +2980,21 @@ async function processImagesInText(text: string, userId: string, fallbackBaseUrl
             
             if (!publicUrlToReplace) {
                 console.log(`Falling back to local storage for: ${filename}`);
-                const uploadDir = path.join((process as any).cwd(), 'uploads');
-                if (!fs.existsSync(uploadDir)) {
-                    fs.mkdirSync(uploadDir, { recursive: true });
+                const targetFolder = path.join(uploadDir, cLevel, subj);
+                if (!fs.existsSync(targetFolder)) {
+                    fs.mkdirSync(targetFolder, { recursive: true });
                 }
-                const localFilePath = path.join(uploadDir, filename);
+                const localFilePath = path.join(targetFolder, filename);
                 await fs.promises.writeFile(localFilePath, buffer);
                 const publicBase = process.env.PUBLIC_API_URL?.replace(/\/$/, '') || fallbackBaseUrl;
-                publicUrlToReplace = `${publicBase}/uploads/${filename}`;
+                publicUrlToReplace = `${publicBase}/uploads/${cLevel}/${subj}/${filename}`;
             }
 
-            return { fullMatch: img.fullMatch, url: publicUrlToReplace };
+            return { 
+                fullMatch: img.fullMatch, 
+                url: publicUrlToReplace,
+                isInlineSvgTag: img.isInlineSvgTag 
+            };
         } catch (e) {
             console.error('Failed to process image:', e);
             return null;
@@ -3029,7 +3003,14 @@ async function processImagesInText(text: string, userId: string, fallbackBaseUrl
 
     for (const item of processedReplacements) {
         if (item && item.url) {
-            processedText = processedText.replace(item.fullMatch, `src="${item.url}"`);
+            if (item.isInlineSvgTag) {
+                processedText = processedText.replace(
+                    item.fullMatch, 
+                    `<img src="${item.url}" style="max-height:160px; max-width:100%; object-fit:contain; display:inline-block; vertical-align:middle; margin:4px 2px;" />`
+                );
+            } else {
+                processedText = processedText.replace(item.fullMatch, `src="${item.url}"`);
+            }
         }
     }
 
@@ -3144,14 +3125,19 @@ app.post('/api/questions/bulk', authenticate, async (req: any, res: any) => {
 app.put('/api/questions/:id', authenticate, async (req: any, res: any) => {
     const { id, ...data } = req.body;
     try {
-        const updated = await prisma.question.update({ where: { id: req.params.id }, data });
+        const schoolId = req.user?.role === 'SUPER_ADMIN' ? null : req.user?.schoolId;
+        const fallbackBaseUrl = `${req.protocol}://${req.get('host')}`;
+        let sanitized = sanitizeQuestionInput(data, schoolId);
+        sanitized = await processQuestionImages(sanitized, req.user?.id || 'admin', fallbackBaseUrl);
+        const updated = await prisma.question.update({ where: { id: req.params.id }, data: sanitized });
         // Bust caches for both school-specific and global questions
-        const schoolId = req.user?.schoolId || 'global';
-        await cacheDelPattern(`questions:${schoolId}:*`);
+        const cacheSchoolId = req.user?.schoolId || 'global';
+        await cacheDelPattern(`questions:${cacheSchoolId}:*`);
         await cacheDelPattern('questions:global:*');
         res.json(updated);
-    } catch (e) {
-        res.status(500).json({ error: "Update failed" });
+    } catch (e: any) {
+        console.error('Update question failed:', e);
+        res.status(500).json({ error: "Update failed", details: e?.message });
     }
 });
 
